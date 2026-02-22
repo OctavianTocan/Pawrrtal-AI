@@ -1,15 +1,26 @@
 import { NavChats } from "./nav-chats";
 import { Separator } from "./ui/separator";
-import { Sidebar, SidebarContent, SidebarInset, SidebarProvider, SidebarTrigger } from "./ui/sidebar";
+import { Sidebar, SidebarContent, SidebarInset, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarTrigger } from "./ui/sidebar";
+import Link from "next/link";
 
 export function NewSidebar({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-    <Sidebar variant="inset">
-      <SidebarContent>
-        <NavChats />
-      </SidebarContent>
-    </Sidebar>
+      <Sidebar variant="inset">
+        <SidebarContent>
+          {/* New Conversation Button */}
+          <SidebarMenuItem>
+            <SidebarMenuButton>
+              {/* Using link for soft navigation. */}
+              <Link href={"/"}>
+                <span>New Conversation</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* Chat History */}
+          <NavChats />
+        </SidebarContent>
+      </Sidebar>
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-4">
