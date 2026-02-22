@@ -4,6 +4,7 @@ import ChatView from "./ChatView";
 import { useRef, useState } from "react";
 import { useChat } from "./hooks/use-chat";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
+import { useQueryClient } from "@tanstack/react-query";
 
 // TODO: Docstring
 interface ChatContainerProps {
@@ -16,6 +17,8 @@ interface ChatContainerProps {
 export default function ChatContainer({ conversationId, initialChatHistory }: ChatContainerProps) {
   // Chat Hook.
   const { streamMessage } = useChat();
+  // Query Client.
+  const queryClient = useQueryClient();
   // This ref is used to track whether we've already navigated to the conversation URL. We want to make sure that we only navigate once, when the user sends their first message, so that we don't mess with the browser history and cause issues with the back button.
   const hasNavigated = useRef(false);
 
@@ -78,12 +81,17 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       // Stop the loading state. (We're already receiving the response, so we can stop the loading state).
       setIsLoading(false);
     }
-  };
+
+    // This makes sure that the sidebar is updated with the new conversation.
+    if (chatHistory.length > 0) {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    };
+  }
 
   // This is called when the user edits the message in the text area. We update the message state with the new content. This allows us to keep track of the current message that the user is typing, so that we can send it when they click the send button.
   const onUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage({ ...message, content: e.currentTarget.value });
   };
 
-   return <ChatView message={message} isLoading={isLoading} chatHistory={chatHistory} onSendMessage={handleSendMessage} onUpdateMessage={onUpdateMessage} />;
+  return <ChatView message={message} isLoading={isLoading} chatHistory={chatHistory} onSendMessage={handleSendMessage} onUpdateMessage={onUpdateMessage} />;
 }

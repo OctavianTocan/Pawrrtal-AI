@@ -3,12 +3,12 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 
 interface NewConversationButtonProps {
-    handleNewConversation: () => void;
-    createConversationMutation: UseMutationResult<any, any, any, any>;
+  handleNewConversation: () => void;
+  createConversationMutation: UseMutationResult<any, any, any, any>;
 }
 
 export default function NewConversationButtonView({ handleNewConversation, createConversationMutation
- }: NewConversationButtonProps) {
+}: NewConversationButtonProps) {
   return (
     <Button
       className="w-50 mx-auto cursor-pointer h-10"
