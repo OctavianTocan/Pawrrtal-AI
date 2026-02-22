@@ -11,6 +11,7 @@
     "commit": "bun run commit.ts"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "^5.91.3",
     "@types/bun": "latest"
   },
   "peerDependencies": {

@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { getQueryClient } from './get-query-client'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 /**
  * Providers is a React component that provides the query client to the application.
@@ -16,6 +17,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} />
       {children}
     </QueryClientProvider>
   )
