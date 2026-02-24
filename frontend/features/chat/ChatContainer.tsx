@@ -93,11 +93,6 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       // Stop the loading state. (We're already receiving the response, so we can stop the loading state).
       setIsLoading(false);
     }
-
-    // This makes sure that the sidebar is updated with the new conversation.
-    if (chatHistory.length > 0) {
-      queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    };
   }
 
   // This is called when the user edits the message in the text area. We update the message state with the new content. This allows us to keep track of the current message that the user is typing, so that we can send it when they click the send button.
