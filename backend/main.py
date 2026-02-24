@@ -168,6 +168,7 @@ async def generate_conversation_title(
     response = agent.run(
         "Generate a title for the conversation based on the first message: "
         + first_message
+        + ". Return only the title, no other text or explanation.",
     )
 
     # Update the conversation title.
@@ -177,7 +178,7 @@ async def generate_conversation_title(
         conversation_id=conversation_id,
         session=session,
     )
-    console.log(response.content)
+    print(response.content)
     return response.content
 
 
