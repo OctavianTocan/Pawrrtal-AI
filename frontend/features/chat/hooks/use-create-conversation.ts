@@ -13,7 +13,7 @@ export function useCreateConversation(conversationId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["conversations", conversationId],
+    mutationKey: ["conversations"],
     mutationFn: async () => {
       const response = await fetcher(API_ENDPOINTS.conversations.create(conversationId), {
         method: "POST",
@@ -25,7 +25,7 @@ export function useCreateConversation(conversationId: string) {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversations", conversationId] });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
     },
   });
 }
