@@ -11,9 +11,8 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
   const handleNewConversation = () => {
     // window.history.replaceState(null, "", "/");
     // router.refresh();
-    // router.push("/");
-    window.location.href = "/";
-  }
+    router.push("/");
+  };
 
   return (
     <SidebarProvider>

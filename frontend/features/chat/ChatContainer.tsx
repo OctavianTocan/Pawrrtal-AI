@@ -7,6 +7,7 @@ import { useCreateConversation } from "./hooks/use-create-conversation";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGenerateConversationTitle } from "./hooks/use-generate-conversation-title";
+import { useRouter } from "next/navigation";
 
 // TODO: Docstring
 interface ChatContainerProps {
@@ -25,6 +26,8 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
   const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
   // Query Client.
   const queryClient = useQueryClient();
+  // Router.
+  const router = useRouter();
   // This ref is used to track whether we've already navigated to the conversation URL. We want to make sure that we only navigate once, when the user sends their first message, so that we don't mess with the browser history and cause issues with the back button.
   const hasNavigated = useRef(false);
 
@@ -92,6 +95,11 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       });
       // Stop the loading state. (We're already receiving the response, so we can stop the loading state).
       setIsLoading(false);
+    }
+
+    // Sync the Next.js router with the current URL. We used replaceState earlier for an instant URL swap without interrupting the stream, but that leaves the router desynced. Now that streaming is done, we call router.replace to sync the router's internal state so that future navigations (like "New Conversation") work correctly.
+    if (hasNavigated.current) {
+      router.replace(`/c/${conversationId}`);
     }
   }
 
