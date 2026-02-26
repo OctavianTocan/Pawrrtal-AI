@@ -6,7 +6,9 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
-    "lint": "eslint"
+    "lint": "bunx --bun @biomejs/biome lint --write",
+    "format": "bunx --bun @biomejs/biome format --write",
+    "fix": "bunx --bun @biomejs/biome check --write"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
@@ -36,12 +38,11 @@
     "use-stick-to-bottom": "^1.1.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.4",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.2.2",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.0.0",
-    "eslint-config-next": "16.1.6",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
   }
