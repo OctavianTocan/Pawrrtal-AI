@@ -1,7 +1,7 @@
 // proxy.ts
 // The point of this file is to proxy requests to the backend.
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 const protectedRoutes = [
     "/",

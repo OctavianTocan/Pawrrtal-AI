@@ -16,7 +16,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
