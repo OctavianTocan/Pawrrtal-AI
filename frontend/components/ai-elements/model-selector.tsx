@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from "react";
 import {
 	Command,
 	CommandDialog,
@@ -16,7 +17,6 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import type { ComponentProps, ReactNode } from "react";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 
@@ -170,6 +170,7 @@ export const ModelSelectorLogo = ({
 	className,
 	...props
 }: ModelSelectorLogoProps) => (
+	// biome-ignore lint/performance/noImgElement: external SVG logos from models.dev are not suitable for next/image optimization
 	<img
 		{...props}
 		alt={`${provider} logo`}

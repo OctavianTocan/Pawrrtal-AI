@@ -1,7 +1,7 @@
-import ChatContainer from "@/features/chat/ChatContainer";
-import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
 import { cookies } from "next/headers";
 import { notFound, unauthorized } from "next/navigation";
+import ChatContainer from "@/features/chat/ChatContainer";
+import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
 
 /** Route params for `/c/:conversationId`. */
 interface ConversationPageProps {

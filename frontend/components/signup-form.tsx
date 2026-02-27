@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -15,10 +17,8 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	const [errorMessage, setErrorMessage] = useState("");

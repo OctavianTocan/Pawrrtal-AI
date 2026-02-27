@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthedFetch } from "../../../hooks/use-authed-fetch";
 import { API_ENDPOINTS } from "@/lib/api";
+import { useAuthedFetch } from "../../../hooks/use-authed-fetch";
 
 /**
  * useCreateConversation is a hook that creates a new conversation.

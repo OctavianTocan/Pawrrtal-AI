@@ -1,4 +1,4 @@
-import { useQuery, type QueryKey } from "@tanstack/react-query";
+import { type QueryKey, useQuery } from "@tanstack/react-query";
 import { useAuthedFetch } from "./use-authed-fetch";
 
 // This hook is a wrapper around useQuery that automatically includes the session token in the request and handles 401 errors by redirecting to the login page.

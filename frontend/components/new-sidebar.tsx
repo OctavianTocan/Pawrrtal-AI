@@ -1,16 +1,16 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { NavChats } from "./nav-chats";
 import { Separator } from "./ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarInset,
-	SidebarMenuItem,
 	SidebarMenuButton,
+	SidebarMenuItem,
 	SidebarProvider,
 	SidebarTrigger,
 } from "./ui/sidebar";
-import { useRouter } from "next/navigation";
 
 /**
  * Application sidebar layout wrapper.

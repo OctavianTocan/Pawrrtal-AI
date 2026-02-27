@@ -1,6 +1,8 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import type React from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -16,11 +18,9 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type React from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 export function LoginForm({
 	className,
@@ -107,7 +107,7 @@ export function LoginForm({
 								<div className="flex items-center">
 									<FieldLabel htmlFor="password">Password</FieldLabel>
 									<a
-										href="#"
+										href="/forgot-password"
 										className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
 									>
 										Forgot your password?

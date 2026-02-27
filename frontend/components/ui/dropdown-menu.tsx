@@ -1,10 +1,9 @@
 "use client";
 
-import type * as React from "react";
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
-
-import { cn } from "@/lib/utils";
 import { IconCheck, IconChevronRight } from "@tabler/icons-react";
+import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
+import type * as React from "react";
+import { cn } from "@/lib/utils";
 
 function DropdownMenu({
 	...props

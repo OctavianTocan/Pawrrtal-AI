@@ -1,5 +1,13 @@
 "use client";
 
+import {
+	IconBell,
+	IconCreditCard,
+	IconLogout,
+	IconRosetteDiscountCheck,
+	IconSelector,
+	IconSparkles,
+} from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -16,14 +24,6 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import {
-	IconSelector,
-	IconSparkles,
-	IconRosetteDiscountCheck,
-	IconCreditCard,
-	IconBell,
-	IconLogout,
-} from "@tabler/icons-react";
 
 export function NavUser({
 	user,

@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { ButtonGroup as BaseButtonGroup } from "@/components/ui/button-group";
-import { cn } from "@/lib/utils";
 import type { GlassCustomization } from "@/lib/glass-utils";
-import { hoverEffects, type HoverEffect } from "@/lib/hover-effects";
+import { type HoverEffect, hoverEffects } from "@/lib/hover-effects";
+import { cn } from "@/lib/utils";
 
 export interface ButtonGroupProps
 	extends React.ComponentProps<typeof BaseButtonGroup> {

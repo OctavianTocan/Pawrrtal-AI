@@ -1,13 +1,12 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import type { AgnoMessage } from "@/lib/types";
 import ChatView from "./ChatView";
-import { useRef, useState } from "react";
 import { useChat } from "./hooks/use-chat";
 import { useCreateConversation } from "./hooks/use-create-conversation";
-import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
-import { useQueryClient } from "@tanstack/react-query";
 import { useGenerateConversationTitle } from "./hooks/use-generate-conversation-title";
-import { useRouter } from "next/navigation";
 
 /**
  * Props for the {@link ChatContainer} component.
@@ -38,7 +37,6 @@ export default function ChatContainer({
 	const createConversationMutation = useCreateConversation(conversationId);
 	const generateConversationTitleMutation =
 		useGenerateConversationTitle(conversationId);
-	const queryClient = useQueryClient();
 	const router = useRouter();
 
 	/**

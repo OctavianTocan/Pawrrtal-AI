@@ -1,24 +1,14 @@
 "use client";
 
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import Link from "next/link";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
-	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { IconChevronRight } from "@tabler/icons-react";
 import useGetConversations from "@/hooks/get-conversations";
-import Link from "next/link";
 
 // TODO: This needs to take in conversations/chats.
 export function NavChats() {

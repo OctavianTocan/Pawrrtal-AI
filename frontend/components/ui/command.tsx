@@ -1,9 +1,8 @@
 "use client";
 
-import type * as React from "react";
+import { IconCheck, IconSearch } from "@tabler/icons-react";
 import { Command as CommandPrimitive } from "cmdk";
-
-import { cn } from "@/lib/utils";
+import type * as React from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -12,7 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
-import { IconSearch, IconCheck } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 function Command({
 	className,

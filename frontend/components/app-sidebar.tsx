@@ -1,25 +1,13 @@
 "use client";
 
-import type * as React from "react";
-
-import { NavUser } from "@/components/nav-user";
 import {
-	Sidebar,
-	SidebarContent,
-	SidebarFooter,
-} from "@/components/ui/sidebar";
-import {
-	IconTerminal2,
-	IconRobot,
 	IconBook,
+	IconRobot,
 	IconSettings,
-	IconLifebuoy,
-	IconSend,
-	IconFrame,
-	IconChartPie,
-	IconMap,
-	IconCommand,
+	IconTerminal2,
 } from "@tabler/icons-react";
+import type * as React from "react";
+import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
 import { NavChats } from "./nav-chats";
 
 const data = {

@@ -1,8 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
-
-import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const buttonGroupVariants = cva(
 	"has-[>[data-slot=button-group]]:gap-2 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-4xl flex w-fit items-stretch *:focus-visible:z-10 *:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
@@ -27,11 +26,14 @@ function ButtonGroup({
 	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
 	return (
-		<div
-			role="group"
+		<fieldset
 			data-slot="button-group"
 			data-orientation={orientation}
-			className={cn(buttonGroupVariants({ orientation }), className)}
+			className={cn(
+				buttonGroupVariants({ orientation }),
+				"border-none p-0 m-0",
+				className,
+			)}
 			{...props}
 		/>
 	);

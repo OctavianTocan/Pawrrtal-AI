@@ -1,5 +1,5 @@
-import type { Conversation } from "@/lib/types";
 import { API_ENDPOINTS } from "@/lib/api";
+import type { Conversation } from "@/lib/types";
 import { useAuthedQuery } from "./use-authed-query";
 
 /*
