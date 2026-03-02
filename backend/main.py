@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
+from app.api.conversations import get_conversations_router
 from app.crud.conversation import (
     get_conversation_service,
 )
@@ -71,6 +72,10 @@ def create_app() -> FastAPI:
         fastapi_users.get_users_router(UserRead, UserUpdate),
         prefix="/users",
         tags=["users"],
+    )
+
+    fastapi_app.include_router(
+        get_conversations_router(),
     )
 
     return fastapi_app
