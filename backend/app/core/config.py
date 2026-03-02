@@ -1,3 +1,8 @@
+"""
+Application settings.
+"""
+
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +13,9 @@ class Settings(BaseSettings):
 
     # Load environment variables from a .env file in the current directory, with UTF-8 encoding. This allows you to define your settings in a .env file instead of setting them directly in the environment.
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=Path(__file__).resolve().parents[2] / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     # The URL for the database connection. By default, it uses SQLite with a file named "agno.db" in the current directory.

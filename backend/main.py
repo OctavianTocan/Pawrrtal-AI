@@ -5,32 +5,26 @@ Defines all API routes, configures middleware, and wires up authentication.
 """
 
 import json
-import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import Optional
 
-from agno.agent import Agent, Message
+from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
 from agno.models.google import Gemini
 from agno.tools.mcp import MCPTools
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.crud.conversation import (
-    create_conversation_service,
     get_conversation_service,
-    get_conversations_for_user_service,
-    update_conversation_title_service,
 )
 from app.db import User, create_db_and_tables, get_async_session
 from app.models import Conversation
 from app.schemas import (
     ChatRequest,
-    ConversationCreate,
-    ConversationResponse,
     UserCreate,
     UserRead,
     UserUpdate,
@@ -49,159 +43,45 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 # --- App & Middleware --------------------------------------------------------
 
-app = FastAPI(lifespan=lifespan)
 
-# TODO: Make CORS origins configurable via environment variable.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3001"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def create_app() -> FastAPI:
+    """
+    Create a FastAPI app instance with middleware and routes.
+    """
+    fastapi_app = FastAPI(lifespan=lifespan)
 
-# --- Auth routes (provided by fastapi-users) ---------------------------------
+    # TODO: Make CORS origins configurable via environment variable.
+    fastapi_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3001"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-app.include_router(
-    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
-)
-app.include_router(
-    fastapi_users.get_register_router(UserRead, UserCreate),
-    prefix="/auth",
-    tags=["auth"],
-)
-app.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
-    prefix="/users",
-    tags=["users"],
-)
+    fastapi_app.include_router(
+        fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+    )
+    fastapi_app.include_router(
+        fastapi_users.get_register_router(UserRead, UserCreate),
+        prefix="/auth",
+        tags=["auth"],
+    )
+    fastapi_app.include_router(
+        fastapi_users.get_users_router(UserRead, UserUpdate),
+        prefix="/users",
+        tags=["users"],
+    )
+
+    return fastapi_app
+
+
+# Create the app instance.
+app = create_app()
 
 # --- Agno agent database -----------------------------------------------------
 
 agno_db = SqliteDb(db_file="agno.db")
-
-
-# --- Conversation endpoints --------------------------------------------------
-
-
-@app.get("/api/v1/conversations/{conversation_id}/messages")
-async def get_conversation_messages(
-    conversation_id: uuid.UUID,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> Optional[List[Message]]:
-    """Return the message history for a conversation.
-
-    Verifies ownership first, then reads from the Agno database using the
-    conversation ID as the Agno session ID. Returns an empty list for new
-    conversations that have no messages yet.
-    """
-    conversation = await get_conversation_service(user.id, session, conversation_id)
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    try:
-        agent = Agent(db=agno_db)
-        return agent.get_chat_history(session_id=str(conversation_id))
-    except (ValueError, KeyError, AttributeError):
-        return []
-
-
-@app.get("/api/v1/conversations/{conversation_id}")
-async def get_conversation(
-    conversation_id: uuid.UUID,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> Optional[ConversationResponse]:
-    """Return metadata for a single conversation."""
-    conversation: Optional[Conversation] = await get_conversation_service(
-        user.id, session, conversation_id
-    )
-    if conversation:
-        return ConversationResponse(
-            title=conversation.title,
-            id=conversation.id,
-            user_id=conversation.user_id,
-            created_at=conversation.created_at,
-            updated_at=conversation.updated_at,
-        )
-    return None
-
-
-@app.post("/api/v1/conversations/{conversation_id}/title")
-async def generate_conversation_title(
-    conversation_id: uuid.UUID,
-    first_message: str = None,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> str:
-    """Generate an LLM-based title for a conversation and persist it.
-
-    Uses the first user message as context for the Gemini model to produce
-    a short, descriptive title.
-    """
-    agent = Agent(
-        model=Gemini(id="gemini-3-flash-preview"),
-    )
-    response = agent.run(
-        "Generate a title for the conversation based on the first message: "
-        + first_message
-        + ". Return only the title, no other text or explanation.",
-    )
-
-    await update_conversation_title_service(
-        title=response.content,
-        user_id=user.id,
-        conversation_id=conversation_id,
-        session=session,
-    )
-    return response.content
-
-
-@app.get("/api/v1/conversations")
-async def list_conversations(
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> List[ConversationResponse]:
-    """List all conversations for the authenticated user, most-recent first."""
-    conversations: List[Conversation] = await get_conversations_for_user_service(
-        user.id, session
-    )
-    return [
-        ConversationResponse(
-            title=conversation.title,
-            id=conversation.id,
-            user_id=conversation.user_id,
-            created_at=conversation.created_at,
-            updated_at=conversation.updated_at,
-        )
-        for conversation in conversations
-    ]
-
-
-@app.post("/api/v1/conversations/{conversation_id}")
-async def create_conversation(
-    conversation_id: uuid.UUID,
-    user: User = Depends(current_active_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> ConversationResponse:
-    """Create a new conversation with a default title.
-
-    The ``conversation_id`` is provided as a path parameter because the
-    frontend pre-generates UUIDs before the first message is sent.
-    The title will be updated asynchronously via LLM title generation.
-    """
-    new_conversation: Conversation = await create_conversation_service(
-        user.id, session, ConversationCreate(id=conversation_id)
-    )
-    return ConversationResponse(
-        title=new_conversation.title,
-        id=new_conversation.id,
-        user_id=new_conversation.user_id,
-        created_at=new_conversation.created_at,
-        updated_at=new_conversation.updated_at,
-    )
-
 
 # --- Chat endpoint -----------------------------------------------------------
 
