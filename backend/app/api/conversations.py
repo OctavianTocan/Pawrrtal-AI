@@ -2,23 +2,23 @@
 This module contains the conversation endpoints for the API.
 """
 
-from typing import List, Optional
 import uuid
+from typing import List, Optional
 
 from agno.agent import Agent, Message
 from agno.models.google import Gemini
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db import User
-from app.db import get_async_session
+
 from app.crud.conversation import (
+    create_conversation_service,
     get_conversation_service,
     get_conversations_for_user_service,
-    create_conversation_service,
     update_conversation_title_service,
 )
+from app.db import User, get_async_session
 from app.models import Conversation
-from app.schemas import ConversationResponse, ConversationCreate
+from app.schemas import ConversationCreate, ConversationResponse
 from app.users import current_active_user
 
 
@@ -41,7 +41,7 @@ def get_conversations_router() -> APIRouter:
         conversation = await get_conversation_service(user.id, session, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-
+        # TODO: Bring in the DB from somewhere, or call some custom agent to do this instead.
         try:
             agent = Agent(db=agno_db)
             return agent.get_chat_history(session_id=str(conversation_id))

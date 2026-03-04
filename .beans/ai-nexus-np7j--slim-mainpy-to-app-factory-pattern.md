@@ -1,14 +1,14 @@
 ---
 # ai-nexus-np7j
 title: Slim main.py to app factory pattern
-status: todo
+status: completed
 type: task
 priority: high
 tags:
     - Sprint-A
     - backend
 created_at: 2026-02-27T16:09:27Z
-updated_at: 2026-02-28T09:05:05Z
+updated_at: 2026-03-04T09:53:31Z
 parent: ai-nexus-pva0
 ---
 
@@ -32,3 +32,7 @@ Do all three beans together as one coupled refactor (no logic changes, pure reor
 ### Related beans
 - ai-nexus-dsg3 (extract conversation routes)
 - ai-nexus-fxhs (extract chat endpoint + agent factory)
+
+## Summary of Changes
+
+Already implemented in commit d0a4f68. main.py now uses create_app() factory pattern with middleware and router includes.
