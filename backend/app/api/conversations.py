@@ -5,11 +5,11 @@ This module contains the conversation endpoints for the API.
 import uuid
 from typing import List, Optional
 
-from agno.agent import Agent, Message
-from agno.models.google import Gemini
+from agno.agent import Message
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.agents import create_history_reader_agent, create_utility_agent
 from app.crud.conversation import (
     create_conversation_service,
     get_conversation_service,
@@ -43,8 +43,8 @@ def get_conversations_router() -> APIRouter:
             raise HTTPException(status_code=404, detail="Conversation not found")
         # TODO: Bring in the DB from somewhere, or call some custom agent to do this instead.
         try:
-            agent = Agent(db=agno_db)
-            return agent.get_chat_history(session_id=str(conversation_id))
+            # Returns the conversation history, using an Agno agent.
+            return create_history_reader_agent(conversation_id)
         except (ValueError, KeyError, AttributeError):
             return []
 
@@ -80,10 +80,9 @@ def get_conversations_router() -> APIRouter:
         Uses the first user message as context for the Gemini model to produce
         a short, descriptive title.
         """
-        agent = Agent(
-            model=Gemini(id="gemini-3-flash-preview"),
-        )
-        response = agent.run(
+
+        # Title agent one-off.
+        response = create_utility_agent(
             "Generate a title for the conversation based on the first message: "
             + first_message
             + ". Return only the title, no other text or explanation.",
