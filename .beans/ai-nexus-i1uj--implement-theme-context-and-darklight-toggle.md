@@ -8,8 +8,13 @@ tags:
     - Sprint-C
     - frontend
 created_at: 2026-02-27T16:09:52Z
-updated_at: 2026-02-27T16:09:52Z
+updated_at: 2026-03-07T22:26:00Z
 parent: ai-nexus-5e5d
 ---
 
-Add next-themes package. Create ThemeProvider. Wire into root layout. Add toggle to sidebar footer and settings. Extend CSS variables for dark mode.
+CSS variables for .dark already fully defined in globals.css (all color tokens, glass effects, code blocks). Remaining work:
+
+- [ ] bun add next-themes
+- [ ] Create ThemeProvider wrapping layout
+- [ ] Add suppressHydrationWarning to html tag
+- [ ] Add toggle UI to sidebar footer and settings

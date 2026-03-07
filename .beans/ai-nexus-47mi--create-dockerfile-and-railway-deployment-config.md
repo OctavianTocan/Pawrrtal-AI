@@ -1,11 +1,11 @@
 ---
 # ai-nexus-47mi
 title: Create Dockerfile and Railway deployment config
-status: todo
+status: scrapped
 type: task
 priority: normal
 created_at: 2026-03-04T10:02:11Z
-updated_at: 2026-03-04T10:02:21Z
+updated_at: 2026-03-07T22:27:07Z
 blocked_by:
     - ai-nexus-05rb
     - ai-nexus-vj5l
@@ -24,3 +24,7 @@ Create Dockerfile, railway.json, scripts/entrypoint.sh, and .dockerignore for Ra
 ## Reference
 
 Based on agno-agi/agentos-railway-template patterns.
+
+## Reasons for Scrapping
+
+Duplicate of ai-nexus-sx1v (Set Up Production Deployment) which has identical Dockerfile/railway.json/entrypoint deliverables.

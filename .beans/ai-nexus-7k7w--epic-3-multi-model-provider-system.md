@@ -9,11 +9,11 @@ tags:
     - backend
     - frontend
 created_at: 2026-02-27T16:09:04Z
-updated_at: 2026-02-27T16:10:35Z
+updated_at: 2026-03-07T22:09:39Z
 parent: ai-nexus-zomp
 blocked_by:
     - ai-nexus-pva0
     - ai-nexus-9ygz
 ---
 
-Provider adapter pattern for Gemini/Claude/OpenAI. Agent factory accepts model selection. Model selector dropdown in frontend. Per-conversation model memory.
+Multi-model support via Agno's built-in provider adapters. No custom provider abstraction needed — just a model mapping dict, updated agent factory, and frontend selector. Per-conversation model info already stored by Agno in agno_sessions.agent_data.

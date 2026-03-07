@@ -8,8 +8,13 @@ tags:
     - Sprint-C
     - backend
 created_at: 2026-02-27T16:09:47Z
-updated_at: 2026-02-27T16:09:47Z
+updated_at: 2026-03-07T22:26:41Z
 parent: ai-nexus-ntkp
 ---
 
-Create GET/PUT /api/v1/settings endpoints. GET returns current settings (create defaults if none exist). PUT updates. CRUD in app/crud/settings.py.
+UserPreferences model already exists in models.py. Remaining work:
+
+- [ ] Create CRUD in app/crud/settings.py
+- [ ] Create GET/PUT /api/v1/settings endpoints
+- [ ] GET creates default row if none exists, returns current settings
+- [ ] PUT updates settings
