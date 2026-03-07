@@ -11,6 +11,7 @@ from enum import Enum
 
 from sqlalchemy import DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import Text
 from sqlalchemy_utils import StringEncryptedType
 from sqlalchemy_utils.types.encrypted.encrypted_type import FernetEngine
 
@@ -38,20 +39,40 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
-    # TODO: Add relationship back to User for bi-directional access
-    # user: Mapped["User"] = relationship("User", back_populates="conversations")
+
+class UserPreferences(Base):
+    """
+    User preferences stored in the application database.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id"), ondelete="CASCADE", primary_key=True
+    )
+    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    accent_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
+    font_size: Mapped[int] = mapped_column()
 
 
 class APIKey(Base):
+    """
+    API key for a user's provider account.
+    """
+
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     provider: Mapped[str] = mapped_column(String(50))
     encrypted_key: Mapped[str] = mapped_column(
         StringEncryptedType(String, config.settings.fernet_key, FernetEngine)

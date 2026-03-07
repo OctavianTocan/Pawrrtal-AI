@@ -1,17 +1,21 @@
 ---
 # ai-nexus-ghd9
 title: Add model field to Conversation
-status: todo
+status: scrapped
 type: task
 priority: high
 tags:
     - Sprint-A
     - backend
 created_at: 2026-02-27T16:09:34Z
-updated_at: 2026-03-07T21:46:32Z
+updated_at: 2026-03-07T21:51:35Z
 parent: ai-nexus-9ygz
 ---
 
-Add model field (String, nullable) to Conversation table to track which LLM was used.
+Both ToolEvent and model field scrapped — Agno already stores both natively:
+- Tool calls via `store_tool_messages` (default: True)
+- Model info in `agno_sessions.agent_data` JSON (id, name, provider)
 
-ToolEvent table was scrapped — Agno already persists tool calls natively via `store_tool_messages` (default: True).
+## Reasons for Scrapping
+
+Would duplicate data Agno already persists. Read it from agno_sessions when needed.
