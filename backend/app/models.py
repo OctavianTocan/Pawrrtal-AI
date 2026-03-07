@@ -11,6 +11,10 @@ from enum import Enum
 
 from sqlalchemy import DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy_utils import StringEncryptedType
+from sqlalchemy_utils.types.encrypted.encrypted_type import FernetEngine
+
+from app.core import config
 
 from .db import Base
 
@@ -41,3 +45,15 @@ class Conversation(Base):
 
     # TODO: Add relationship back to User for bi-directional access
     # user: Mapped["User"] = relationship("User", back_populates="conversations")
+
+
+class APIKey(Base):
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id"))
+    provider: Mapped[str] = mapped_column(String(50))
+    encrypted_key: Mapped[str] = mapped_column(
+        StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
+    )
+    is_active: Mapped[bool] = mapped_column(default=True)

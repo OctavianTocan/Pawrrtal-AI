@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     env: str = "dev"
     # The API key for Google services.
     google_api_key: str
+    # Fernet Encryption Key (used to encrypt API keys)
+    fernet_key: str
 
     @property
     def is_production(self) -> bool:
