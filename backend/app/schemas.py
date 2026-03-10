@@ -66,10 +66,12 @@ class ChatRequest(BaseModel):
     Attributes:
         question: The user's message to send to the Agno agent.
         conversation_id: UUID linking this message to a conversation.
+        model_id: The ID of the model to use for the agent. (Just Gemini models right now).
     """
 
     question: str
     conversation_id: uuid.UUID
+    model_id: str = "gemini-3-flash-preview"
 
 
 class ChatResponse(BaseModel):

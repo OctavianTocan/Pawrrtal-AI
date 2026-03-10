@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import {
 	Message,
 	MessageContent,
 	MessageResponse,
 } from "@/components/ai-elements/message";
+import {
+	ModelSelector,
+	ModelSelectorContent,
+	ModelSelectorEmpty,
+	ModelSelectorGroup,
+	ModelSelectorInput,
+	ModelSelectorItem,
+	ModelSelectorList,
+	ModelSelectorLogo,
+	ModelSelectorName,
+	ModelSelectorSeparator,
+	ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector";
+import { Button } from "@/components/ui/button";
 import type { AgnoMessage } from "@/lib/types";
 import {
 	Conversation,
@@ -16,6 +30,8 @@ import { Loader } from "../../components/ai-elements/loader";
 import type { PromptInputMessage } from "../../components/ai-elements/prompt-input";
 import {
 	PromptInput,
+	PromptInputFooter,
+	PromptInputProvider,
 	PromptInputSubmit,
 	PromptInputTextarea,
 } from "../../components/ai-elements/prompt-input";
@@ -66,6 +82,10 @@ const ChatView = ({
 	onSendMessage,
 	onUpdateMessage,
 }: ChatProps) => {
+	// Need to fix this.
+	const [open, setOpen] = useState(false);
+	const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview");
+
 	return (
 		<div className="overflow-hidden sm:max-w-[80%] lg:max-w-[60%] xl:max-w-[50%] mx-auto">
 			<div className="h-[90vh] flex flex-col overflow-hidden">
@@ -108,11 +128,46 @@ const ChatView = ({
 						onChange={onUpdateMessage}
 						value={message.content}
 					/>
-					<PromptInputSubmit
-						disabled={message.content.length === 0}
-						className="absolute bottom-1 right-1 cursor-pointer"
-						status={isLoading ? "streaming" : "ready"}
-					/>
+
+					<PromptInputFooter>
+						<ModelSelector open={open} onOpenChange={setOpen}>
+							<ModelSelectorTrigger asChild>
+								<Button variant="outline">
+									<ModelSelectorLogo provider="google" />
+									{selectedModel}
+								</Button>
+							</ModelSelectorTrigger>
+
+							<ModelSelectorContent>
+								<ModelSelectorInput placeholder="Search models..." />
+								<ModelSelectorList>
+									<ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+
+									<ModelSelectorGroup heading="Google">
+										<ModelSelectorItem
+											value="gemini-3-flash-preview"
+											onSelect={() => {
+												setSelectedModel("gemini-3-flash-preview");
+												setOpen(false);
+											}}
+										>
+											<ModelSelectorLogo provider="google" />
+											<ModelSelectorName>
+												Gemini 3 Flash Preview
+											</ModelSelectorName>
+										</ModelSelectorItem>
+									</ModelSelectorGroup>
+
+									<ModelSelectorSeparator />
+								</ModelSelectorList>
+							</ModelSelectorContent>
+						</ModelSelector>
+						<PromptInputSubmit
+							disabled={message.content.length === 0}
+							className="absolute bottom-1 right-1 cursor-pointer"
+							status={isLoading ? "streaming" : "ready"}
+						/>
+					</PromptInputFooter>
 				</PromptInput>
 			</div>
 		</div>

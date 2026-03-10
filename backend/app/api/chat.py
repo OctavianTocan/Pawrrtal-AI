@@ -54,7 +54,7 @@ def get_chat_router() -> APIRouter:
         if user_conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        agno_agent = create_agent(user.id, conversation_id)
+        agno_agent = create_agent(user.id, conversation_id, request.model_id)
 
         def event_stream() -> Generator[str, Any, None]:
             """Yield SSE-formatted chunks from the Agno agent."""

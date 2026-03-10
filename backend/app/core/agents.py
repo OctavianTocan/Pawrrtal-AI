@@ -12,7 +12,11 @@ from agno.tools.mcp.mcp import MCPTools
 agno_db = SqliteDb(db_file="agno.db")
 
 
-def create_agent(user_id: uuid.UUID, conversation_id: uuid.UUID) -> Agent:
+def create_agent(
+    user_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    model_id: str = "gemini-3-flash-preview",
+) -> Agent:
     """
     This function allows us to create an Agno agent.
     """
@@ -21,7 +25,7 @@ def create_agent(user_id: uuid.UUID, conversation_id: uuid.UUID) -> Agent:
         name="Agno Agent",
         user_id=str(user_id),
         session_id=str(conversation_id),
-        model=Gemini(id="gemini-3-flash-preview"),
+        model=Gemini(id=model_id),
         db=agno_db,
         tools=[MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp")],
         add_history_to_context=True,
@@ -51,8 +55,7 @@ def create_utility_agent(prompt: str) -> RunOutput:
     return agent.run(prompt)
 
 
-# TODO: What is the problem here?
+# This helps you run this directly.
 if __name__ == "__main__":
-    # Standalone test
-    # agent = create_agent("test-user", "test-session")
-    # agent.print_response("Hello!", stream=True)
+    agent = create_agent(uuid.uuid4(), uuid.uuid4(), "gemini-3-flash-preview")
+    agent.print_response("Hello!", stream=True)
