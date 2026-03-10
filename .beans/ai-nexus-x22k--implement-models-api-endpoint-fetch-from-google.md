@@ -5,11 +5,13 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-09T23:13:30Z
-updated_at: 2026-03-09T23:21:44Z
+updated_at: 2026-03-10T19:25:57Z
 parent: ai-nexus-7k7w
 ---
 
 Implement GET /api/v1/models by calling Google's Generative AI REST endpoint and filtering to chat-capable models.
+
+> **Current state:** Route exists as a stub in `backend/app/api/models.py` returning `None`. No real implementation yet.
 
 ## Tasks
 
