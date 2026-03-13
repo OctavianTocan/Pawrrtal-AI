@@ -147,25 +147,25 @@ export function AccessRequestBanner({
 					)}
 
 					{/* Text area: crossfade between summary and title.
-					   "Access Requests" bounces from scale-0 at top-left origin.
-					   Summary text bounces back from top while scaling up from small.
-					   Exit is quick so outgoing text clears the way fast. */}
-					<div className="relative min-w-0 flex-1 overflow-hidden">
+					   Both items are absolutely positioned so scale transforms
+					   don't affect layout or push siblings around. The container
+					   has a min-height to hold space. */}
+					<div className="relative min-h-[1.25rem] min-w-0 flex-1">
 						<AnimatePresence mode="wait" initial={false}>
 							{isExpanded ? (
 								<motion.div
 									key="title"
-									/* Bounce from zero scale at top-left corner */
-									initial={{ opacity: 0, scale: 0, y: -4 }}
-									animate={{ opacity: 1, scale: 1, y: 0 }}
+									className="absolute inset-0"
+									/* Scale from top edge, purely visual transform */
+									initial={{ opacity: 0, scaleY: 0 }}
+									animate={{ opacity: 1, scaleY: 1 }}
 									exit={{
 										opacity: 0,
-										scale: 0,
-										y: -4,
-										transition: { duration: 0.12 },
+										scaleY: 0,
+										transition: { duration: 0.1 },
 									}}
 									transition={BOUNCY_SPRING}
-									style={{ transformOrigin: "top left" }}
+									style={{ transformOrigin: "top" }}
 								>
 									<span className="text-sm font-semibold text-foreground">
 										Access Requests
@@ -174,19 +174,17 @@ export function AccessRequestBanner({
 							) : (
 								<motion.div
 									key="summary"
-									/* Bounce in from top while scaling up from small */
-									initial={{ opacity: 0, scale: 0.7, y: -10 }}
-									animate={{ opacity: 1, scale: 1, y: 0 }}
+									className="absolute inset-0 line-clamp-2"
+									/* Scale from top edge, purely visual transform */
+									initial={{ opacity: 0, scaleY: 0 }}
+									animate={{ opacity: 1, scaleY: 1 }}
 									exit={{
 										opacity: 0,
-										scale: 0.7,
-										y: -10,
-										transition: { duration: 0.12 },
+										scaleY: 0,
+										transition: { duration: 0.1 },
 									}}
 									transition={BOUNCY_SPRING}
-									style={{ transformOrigin: "top left" }}
-									/* Allow wrapping up to 2 lines for narrow widths */
-									className="line-clamp-2"
+									style={{ transformOrigin: "top" }}
 								>
 									<SummaryText requests={requests} />
 								</motion.div>
