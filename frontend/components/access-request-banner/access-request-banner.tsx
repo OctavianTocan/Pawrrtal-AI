@@ -165,7 +165,7 @@ export function AccessRequestBanner({
 										transition: { duration: 0.1 },
 									}}
 									transition={BOUNCY_SPRING}
-									style={{ transformOrigin: "top left" }}
+									style={{ transformOrigin: "top center" }}
 								>
 									<span className="text-sm font-semibold text-foreground">
 										Access Requests
@@ -184,7 +184,7 @@ export function AccessRequestBanner({
 										transition: { duration: 0.1 },
 									}}
 									transition={BOUNCY_SPRING}
-									style={{ transformOrigin: "top left" }}
+									style={{ transformOrigin: "top center" }}
 								>
 									<SummaryText requests={requests} />
 								</motion.div>
