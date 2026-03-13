@@ -146,26 +146,29 @@ export function AccessRequestBanner({
 						</AvatarGroup>
 					)}
 
-					{/* Text area: gentle crossfade between summary and title.
-					   Absolutely positioned to avoid layout shifts.
-					   Subtle scale (0.94 -> 1) with a soft spring, not bouncy. */}
-					<div className="relative min-h-[1.25rem] min-w-0 flex-1">
+					{/* Text area: text enters from outside the card (y offset + small scale)
+					   and exits back out. "Access Requests" drops in from above,
+					   summary rises in from below. Clip with overflow-hidden. */}
+					<div className="relative min-h-[1.25rem] min-w-0 flex-1 overflow-hidden">
 						<AnimatePresence mode="wait" initial={false}>
 							{isExpanded ? (
 								<motion.div
 									key="title"
 									className="absolute inset-0"
-									initial={{ opacity: 0, scale: 0.94 }}
-									animate={{ opacity: 1, scale: 1 }}
+									/* Enter: slide down from above the card, slightly scaled down */
+									initial={{ opacity: 0, y: -20, scale: 0.9 }}
+									animate={{ opacity: 1, y: 0, scale: 1 }}
+									/* Exit: slide back up and out */
 									exit={{
 										opacity: 0,
-										scale: 0.94,
-										transition: { duration: 0.1 },
+										y: -20,
+										scale: 0.9,
+										transition: { duration: 0.12 },
 									}}
 									transition={{
 										type: "spring",
-										stiffness: 400,
-										damping: 30,
+										stiffness: 350,
+										damping: 25,
 									}}
 								>
 									<span className="text-sm font-semibold text-foreground">
@@ -176,12 +179,15 @@ export function AccessRequestBanner({
 								<motion.div
 									key="summary"
 									className="absolute inset-0 line-clamp-2"
-									initial={{ opacity: 0, scale: 0.94 }}
-									animate={{ opacity: 1, scale: 1 }}
+									/* Enter: slide up from below the card, slightly scaled down */
+									initial={{ opacity: 0, y: 20, scale: 0.9 }}
+									animate={{ opacity: 1, y: 0, scale: 1 }}
+									/* Exit: slide back down and out */
 									exit={{
 										opacity: 0,
-										scale: 0.94,
-										transition: { duration: 0.1 },
+										y: 20,
+										scale: 0.9,
+										transition: { duration: 0.12 },
 									}}
 									transition={{
 										type: "spring",
