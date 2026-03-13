@@ -26,7 +26,9 @@ export default function AccessRequestsDevPage() {
 	const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
 	return (
-		<div className="mx-auto flex max-w-3xl flex-col gap-10 p-8">
+		/* scrollbar-gutter reserves space so content doesn't shift when
+		   scrollbar appears/disappears. [&::-webkit-scrollbar]:hidden hides it. */
+		<div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-10 overflow-y-auto p-8 [scrollbar-gutter:stable] [&::-webkit-scrollbar]:hidden">
 			<h1 className="text-2xl font-bold">Access Request Banner - Dev</h1>
 
 			{/* Full width variants */}

@@ -146,16 +146,18 @@ export function AccessRequestBanner({
 						</AvatarGroup>
 					)}
 
-					{/* Text area: crossfade between summary and title */}
+					{/* Text area: bouncy crossfade between summary and title.
+					   Uses spring for enter (bouncy) and quick tween for exit
+					   so the outgoing text gets out of the way fast. */}
 					<div className="relative min-w-0 flex-1">
 						<AnimatePresence mode="wait" initial={false}>
 							{isExpanded ? (
 								<motion.div
 									key="title"
-									initial={{ opacity: 0, y: 6 }}
+									initial={{ opacity: 0, y: 10 }}
 									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -6 }}
-									transition={{ duration: 0.12 }}
+									exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
+									transition={BOUNCY_SPRING}
 								>
 									<span className="text-sm font-semibold text-foreground">
 										Access Requests
@@ -164,10 +166,10 @@ export function AccessRequestBanner({
 							) : (
 								<motion.div
 									key="summary"
-									initial={{ opacity: 0, y: 6 }}
+									initial={{ opacity: 0, y: 10 }}
 									animate={{ opacity: 1, y: 0 }}
-									exit={{ opacity: 0, y: -6 }}
-									transition={{ duration: 0.12 }}
+									exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
+									transition={BOUNCY_SPRING}
 									/* Allow wrapping up to 2 lines for narrow widths */
 									className="line-clamp-2"
 								>
