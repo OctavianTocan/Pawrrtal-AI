@@ -1,7 +1,7 @@
 "use client";
 
 import { IconChevronDown, IconX } from "@tabler/icons-react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
 	Avatar,
 	AvatarFallback,
@@ -70,71 +70,46 @@ function CollapsedAvatarGroup({
 }
 
 /**
- * Crossfades between the "Access Requests" title (expanded) and the
- * `SummaryText` sentence (collapsed) using `AnimatePresence` with `mode="wait"`.
+ * Shows either the "Access Requests" title (expanded) or the summary text
+ * (collapsed). Each is independently positioned via absolute positioning
+ * inside a shared container, so one never pushes the other around.
  *
- * **WHY `mode="wait"` enables natural flow instead of absolute positioning?**
- * `mode="wait"` guarantees at most one child is in the DOM at a time — the
- * exiting child fully unmounts before the entering child mounts. Because
- * they never coexist, both can participate in normal document flow and the
- * container height adjusts to fit the content. This lets the summary text
- * wrap to two lines at narrow widths (matching the reference design) instead
- * of being clipped to one line by a fixed-height absolute box.
- *
- * `min-h-[1.25rem]` prevents the container from collapsing to zero height
- * during the brief gap between exit and enter.
- *
- * **WHY opposite `y` directions?**
- * The title enters from above (`y: -20`) — it conceptually "drops down" to
- * replace the summary. The summary enters from below (`y: 20`) — it
- * "rises up" when the banner collapses. This directional intent makes the
- * swap feel purposeful rather than an arbitrary crossfade.
+ * Both elements are always in the DOM but toggled between `opacity-0` /
+ * `opacity-1` and `pointer-events-none` / `pointer-events-auto` so layout
+ * is driven solely by the visible element's intrinsic size via `invisible`
+ * duplicate technique — the container always sizes to the *taller* of the
+ * two, preventing any height jumps.
  */
-function HeaderTextCrossfade({
+function HeaderTextBlock({
 	bannerState,
 	requests,
 }: {
 	bannerState: BannerState;
 	requests: AccessRequest[];
 }) {
+	const isExpanded = bannerState.status === "expanded";
+
 	return (
-		<div className="min-h-[1.25rem] min-w-0 flex-1 overflow-hidden">
-			<AnimatePresence mode="wait" initial={false}>
-				{bannerState.status === "expanded" ? (
-					<motion.div
-						key="title"
-						initial={{ opacity: 0, y: -20, scale: 0.9 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{
-							opacity: 0,
-							y: -20,
-							scale: 0.9,
-							transition: { duration: 0.12 },
-						}}
-						transition={{ type: "spring", stiffness: 350, damping: 25 }}
-					>
-						<span className="text-sm font-semibold text-foreground">
-							Access Requests
-						</span>
-					</motion.div>
-				) : (
-					<motion.div
-						key="summary"
-						className="line-clamp-2"
-						initial={{ opacity: 0, y: 20, scale: 0.9 }}
-						animate={{ opacity: 1, y: 0, scale: 1 }}
-						exit={{
-							opacity: 0,
-							y: 20,
-							scale: 0.9,
-							transition: { duration: 0.12 },
-						}}
-						transition={{ type: "spring", stiffness: 400, damping: 30 }}
-					>
-						<SummaryText requests={requests} />
-					</motion.div>
-				)}
-			</AnimatePresence>
+		<div className="relative min-w-0 flex-1">
+			{/* "Access Requests" — visible when expanded */}
+			<motion.span
+				animate={{ opacity: isExpanded ? 1 : 0 }}
+				transition={{ duration: 0.15 }}
+				className={`text-sm font-semibold text-foreground ${
+					isExpanded ? "" : "pointer-events-none absolute inset-0"
+				}`}
+			>
+				Access Requests
+			</motion.span>
+
+			{/* Summary text — visible when collapsed */}
+			<motion.div
+				animate={{ opacity: isExpanded ? 0 : 1 }}
+				transition={{ duration: 0.15 }}
+				className={isExpanded ? "pointer-events-none absolute inset-0" : ""}
+			>
+				<SummaryText requests={requests} />
+			</motion.div>
 		</div>
 	);
 }
@@ -147,7 +122,7 @@ function HeaderTextCrossfade({
  * Header row for the access-request banner.
  *
  * Contains two sibling `<button>` elements inside a flex `<div>`:
- * 1. **Toggle button** — wraps `CollapsedAvatarGroup`, `HeaderTextCrossfade`,
+ * 1. **Toggle button** — wraps `CollapsedAvatarGroup`, `HeaderTextBlock`,
  *    and the animated chevron. Clicking expands or collapses the list.
  * 2. **Dismiss button** — removes the banner entirely.
  *
@@ -184,7 +159,7 @@ export function BannerHeader({
 					/>
 				)}
 
-				<HeaderTextCrossfade bannerState={bannerState} requests={requests} />
+				<HeaderTextBlock bannerState={bannerState} requests={requests} />
 
 				{/*
 				 * Chevron rotates 180° to signal open/close state.

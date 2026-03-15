@@ -161,11 +161,21 @@ export const BOUNCY_SPRING = {
 	damping: 20,
 };
 
-/** Softer spring for expanding section so it feels weighty, not snappy. */
+/**
+ * Critically-damped spring for the card expand/collapse.
+ *
+ * Uses high damping relative to stiffness so the height settles smoothly
+ * into place without overshooting. This prevents the card from "bouncing"
+ * (growing past its final height then snapping back), which felt jarring
+ * when combined with the inner row animations.
+ *
+ * The playful bounce is preserved on micro-interactions (avatars, pills)
+ * via `BOUNCY_SPRING` — the card itself stays calm.
+ */
 export const EXPAND_SPRING = {
 	type: "spring" as const,
-	stiffness: 250,
-	damping: 22,
+	stiffness: 400,
+	damping: 40,
 };
 
 /**

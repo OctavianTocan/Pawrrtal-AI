@@ -1,9 +1,9 @@
 "use client";
 
-import { LayoutGroup, motion } from "motion/react";
+import { LayoutGroup } from "motion/react";
 import { BannerHeader } from "./banner-header";
 import { ExpandedRequestList } from "./expanded-request-list";
-import { type AccessRequestBannerViewProps, EXPAND_SPRING } from "./types";
+import type { AccessRequestBannerViewProps } from "./types";
 
 /**
  * Pure presentation layer for the access-request banner.
@@ -21,9 +21,11 @@ import { type AccessRequestBannerViewProps, EXPAND_SPRING } from "./types";
  * `LayoutGroup` at the view root ensures Motion can track the same id across
  * both subtrees and animate the positional hand-off.
  *
- * **WHY `motion.div` with `layout` here?**
- * The card's height changes when the list expands. The `layout` prop tells
- * Motion to animate the card's bounding box smoothly instead of snapping.
+ * **WHY no `layout` on the outer card?**
+ * The `ExpandedRequestList` already animates its own `height: 0 → auto`.
+ * Adding `layout` to the card would make Motion *also* spring-animate the
+ * card's bounding box in response to the content change — two springs
+ * fighting each other, causing a compounded double-bounce.
  * `overflow-hidden` prevents content from peeking outside the card during
  * the height tween.
  *
@@ -45,10 +47,7 @@ export function AccessRequestBannerView({
 }: AccessRequestBannerViewProps) {
 	return (
 		<LayoutGroup>
-			<motion.div
-				transition={EXPAND_SPRING}
-				className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-			>
+			<div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
 				<BannerHeader
 					bannerState={bannerState}
 					requests={requests}
@@ -66,7 +65,7 @@ export function AccessRequestBannerView({
 					onRejectRequest={onRejectRequest}
 					onResetRequest={onResetRequest}
 				/>
-			</motion.div>
+			</div>
 		</LayoutGroup>
 	);
 }
