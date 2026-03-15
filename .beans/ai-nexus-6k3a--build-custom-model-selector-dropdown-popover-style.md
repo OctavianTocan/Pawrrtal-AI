@@ -66,14 +66,14 @@ interface UseModelSelectorReturn {
 - `isOpen` (boolean) - popover visibility
 - `inputValue` (string) - filter/search text
 - `focusedKey` (string | null) - which item has virtual keyboard focus
-- `selectedKey` (string | null) - which model is selected
+- `selectedKey` (string | null) - which model is selected (internal state; external selection is exposed through `selectedModelId`/public callbacks)
 
 ### Layer 2: Filtering
 
 ```typescript
 // Client-side filtering on each keystroke
 const filteredGroups = useMemo(() => {
-  if (\!inputValue) return groups;
+  if (!inputValue) return groups;
   return groups
     .map(group => ({
       ...group,
@@ -123,7 +123,7 @@ function getNextKey(currentKey, flatItems) {
 ```typescript
 const updatePosition = useCallback(() => {
   const rect = triggerRef.current?.getBoundingClientRect();
-  if (\!rect) return;
+  if (!rect) return;
   const spaceBelow = window.innerHeight - rect.bottom;
   const flipUp = spaceBelow < MAX_HEIGHT;
   setPosition({
@@ -183,10 +183,10 @@ const updatePosition = useCallback(() => {
 ```typescript
 // Close on click outside
 useEffect(() => {
-  if (\!isOpen) return;
+  if (!isOpen) return;
   const handler = (e: MouseEvent) => {
-    if (\!popoverRef.current?.contains(e.target as Node) &&
-        \!triggerRef.current?.contains(e.target as Node)) {
+    if (!popoverRef.current?.contains(e.target as Node) &&
+        !triggerRef.current?.contains(e.target as Node)) {
       close();
     }
   };
@@ -197,7 +197,7 @@ useEffect(() => {
 
 ## Component Structure
 
-```
+```text
 <ModelSelectorPopover>                    // Wrapper, manages context
   <ModelSelectorTrigger />                // Button: "Gemini 3 Flash v"
   <ModelSelectorContent>                  // Portal'd popover

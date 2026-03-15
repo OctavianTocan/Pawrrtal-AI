@@ -37,7 +37,7 @@ This is the "last mile" task that makes the model selector actually usable in th
 ## Design Target
 
 The trigger should look like this in the input bar:
-```
+```text
 [📎 Attach] [🔍 Search] ................ [🟢 gemini-3-flash v] [➡️ Send]
 ```
 - Small pill/button

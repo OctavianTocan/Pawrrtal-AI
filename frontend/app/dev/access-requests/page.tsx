@@ -131,9 +131,9 @@ export default function AccessRequestsDevPage() {
 				{/* Medium width variant */}
 				<section className="flex flex-col gap-6">
 					<h2 className="text-lg font-semibold text-muted-foreground">
-						Medium (w-96 / 384px)
+						Medium (w-[26rem] / 416px)
 					</h2>
-					<div className="flex w-96 flex-col gap-4">
+					<div className="flex w-[26rem] flex-col gap-4">
 						{!dismissed.medium && (
 							<div>
 								<p className="mb-2 text-xs text-muted-foreground">

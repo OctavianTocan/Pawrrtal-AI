@@ -12,7 +12,7 @@ updated_at: 2026-03-12T00:19:35Z
 
 Every time a chat is opened, a runtime SyntaxError fires:
 
-```
+```text
 SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON
 ```
 

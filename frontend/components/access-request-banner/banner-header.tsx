@@ -72,14 +72,6 @@ function CollapsedAvatarGroup({
 /**
  * Shows either the "Access Requests" title (expanded) or the summary text
  * (collapsed) with a purely vertical swap animation.
- *
- * **WHY `mode="popLayout"`?**
- * When collapsing, the collapsed avatars appear as a flex sibling *before*
- * this container, pushing it rightward. With a normal `AnimatePresence` the
- * exiting title would follow that horizontal shift. `popLayout` immediately
- * takes the exiting element out of flow (absolute-positioned at its current
- * visual coordinates), so it stays put at the left edge and animates
- * straight up — as if the incoming avatars physically pushed it out.
  */
 function HeaderTextBlock({
 	bannerState,
@@ -139,17 +131,6 @@ function HeaderTextBlock({
 
 /**
  * Header row for the access-request banner.
- *
- * Contains two sibling `<button>` elements inside a flex `<div>`:
- * 1. **Toggle button** — wraps `CollapsedAvatarGroup`, `HeaderTextBlock`,
- *    and the animated chevron. Clicking expands or collapses the list.
- * 2. **Dismiss button** — removes the banner entirely.
- *
- * **WHY two sibling buttons instead of one outer button?**
- * Nesting `<button>` inside `<button>` is invalid per the HTML interactive
- * content model and triggers a lint error. Keeping them as siblings means
- * dismiss clicks cannot bubble to the toggle handler — no `stopPropagation`
- * needed.
  */
 export function BannerHeader({
 	bannerState,
@@ -161,13 +142,15 @@ export function BannerHeader({
 }: BannerHeaderProps) {
 	return (
 		<div className="flex items-center gap-3 px-4 py-3">
-			{/*
-			 * Toggle button — flex-1 + min-w-0 lets it fill all remaining space
-			 * while allowing the text area inside to truncate correctly.
-			 */}
 			<button
 				type="button"
 				onClick={onToggleExpand}
+				aria-expanded={bannerState.status === "expanded"}
+				aria-label={
+					bannerState.status === "expanded"
+						? "Collapse access requests"
+						: "Expand access requests"
+				}
 				className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
 			>
 				{/* Unmounted when expanded so the layoutId hero animation can fire */}
@@ -180,13 +163,6 @@ export function BannerHeader({
 
 				<HeaderTextBlock bannerState={bannerState} requests={requests} />
 
-				{/*
-				 * Chevron rotates 180° to signal open/close state.
-				 * WHY animate rotate instead of a CSS class toggle?
-				 * Motion interpolates through the shortest rotation arc, so
-				 * collapsing from 180° → 0° animates counter-clockwise without
-				 * any extra logic.
-				 */}
 				<motion.div
 					animate={{ rotate: bannerState.status === "expanded" ? 180 : 0 }}
 					transition={BOUNCY_SPRING}
@@ -196,16 +172,16 @@ export function BannerHeader({
 				</motion.div>
 			</button>
 
-			{/* Dismiss button — sibling of the toggle button, not a descendant,
-			    so no stopPropagation is needed. */}
-			<button
-				type="button"
-				onClick={onDismiss}
-				className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-				aria-label="Dismiss"
-			>
-				<IconX className="size-4" />
-			</button>
+			{onDismiss && (
+				<button
+					type="button"
+					onClick={onDismiss}
+					className="shrink-0 cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+					aria-label="Dismiss"
+				>
+					<IconX className="size-4" />
+				</button>
+			)}
 		</div>
 	);
 }

@@ -11,7 +11,6 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import useGetConversations from "@/hooks/get-conversations";
-import LoaderSVG from "../public/bars-rotate-fade.svg";
 
 // TODO: This needs to take in conversations/chats.
 export function NavChats() {
@@ -31,7 +30,7 @@ export function NavChats() {
 							{/* Using link for soft navigation. */}
 							<Link href={`/c/${conversation.id}`}>
 								<Image
-									src={LoaderSVG}
+									src="/bars-rotate-fade.svg"
 									width={15}
 									height={15}
 									alt="Animated Loader"

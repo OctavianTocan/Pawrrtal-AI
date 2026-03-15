@@ -6,7 +6,7 @@ A collapsible notification banner that shows users requesting access. Collapsed 
 
 ## Component Structure
 
-```
+```text
 AccessRequestBanner (main wrapper)
   CollapsedBar (always visible)
     AvatarGroup (left) - stacked user avatars, max 3 shown

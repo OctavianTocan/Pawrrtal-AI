@@ -31,6 +31,8 @@ export type AccessRequestBannerProps = {
 	onApprove?: (id: string) => void;
 	/** Called when the user rejects a request. Receives the request's `id`. */
 	onReject?: (id: string) => void;
+	/** Called when the user clears a previously chosen decision. */
+	onReset?: (id: string) => void;
 	/** Called when the user dismisses the entire banner. */
 	onDismiss?: () => void;
 };
@@ -76,7 +78,7 @@ export type AccessRequestBannerViewProps = {
 	onApproveRequest: (id: string) => void;
 	/** Rejects the given request id and notifies the parent. */
 	onRejectRequest: (id: string) => void;
-	/** Reverts the given request's decision back to undecided (no parent notification). */
+	/** Reverts the given request's decision back to undecided. */
 	onResetRequest: (id: string) => void;
 };
 
@@ -184,9 +186,15 @@ export const EXPAND_SPRING = {
  * "Octavian Tocan" -> "OT", "Jane" -> "J"
  */
 export function getInitials(name: string): string {
+	name = name.trim();
+	if (!name) {
+		return "";
+	}
+
 	return name
-		.split(" ")
-		.map((n) => n[0])
+		.split(/\s+/)
+		.filter(Boolean)
+		.map((n) => n[0] ?? "")
 		.join("")
 		.slice(0, 2)
 		.toUpperCase();

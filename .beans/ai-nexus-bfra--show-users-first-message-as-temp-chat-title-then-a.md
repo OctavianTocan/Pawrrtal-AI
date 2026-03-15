@@ -35,7 +35,7 @@ The UX should be:
 
 - [ ] **Clear flag on title arrival**: When `useGenerateConversationTitle` succeeds and invalidates `["conversations"]`, the refetched data replaces the optimistic entry (which had the flag). The real data won't have `_isGeneratingTitle`, so the loader disappears automatically.
 
-- [ ] **Fallback**: If title generation fails, the optimistic title (user's message) stays until next refetch replaces it with "New Conversation". Consider updating `onError` to clear the flag so the loader doesn't spin forever.
+- [ ] **Fallback**: If title generation fails, the optimistic title (user's message) stays until next refetch replaces it with "New Conversation". Update `onError` to clear the generating flag immediately so the loader stops even when refetch is delayed.
 
 ## Key Files
 

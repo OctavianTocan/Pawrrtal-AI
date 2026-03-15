@@ -15,14 +15,15 @@ const MAX_COLLAPSED_AVATARS = 2;
  * Internal state that the Component layer uses to track banner open/close.
  *
  * Extends the public {@link BannerState} by adding `nextExpandKey` to the
- * `collapsed` variant. This is an implementation detail — the View never
+ * `collapsed` variant. This is an implementation detail: the View never
  * sees it. It exists because:
  * - `expandKey` belongs on `expanded` (it is only meaningful when the list
  *   is visible and must change on every open).
  * - When collapsing, we pre-compute `nextExpandKey = expandKey + 1` so the
  *   reducer can produce a new key on the next expand without any external
  *   counter or ref.
- * - This keeps the entire state machine self-contained in one `useReducer`.
+ *
+ * This keeps the entire state machine self-contained in one `useReducer`.
  */
 type InternalBannerState =
 	| { status: "collapsed"; nextExpandKey: number }
@@ -31,11 +32,11 @@ type InternalBannerState =
 /**
  * Pure state transition for the banner toggle.
  *
- * - `collapsed → expanded`: promote `nextExpandKey` to the active key.
- * - `expanded → collapsed`: store `expandKey + 1` as the next key, ready
+ * - `collapsed -> expanded`: promote `nextExpandKey` to the active key.
+ * - `expanded -> collapsed`: store `expandKey + 1` as the next key, ready
  *   for the following open.
  *
- * No action payload is needed — toggle is the only transition.
+ * No action payload is needed; toggle is the only transition.
  */
 function reduceBannerState(state: InternalBannerState): InternalBannerState {
 	if (state.status === "collapsed") {
@@ -59,20 +60,20 @@ function toBannerState(state: InternalBannerState): BannerState {
 /**
  * Stateful Component layer for the access-request banner.
  *
- * **Responsibilities (Component layer):**
+ * Responsibilities (Component layer):
  * - Own all local state: `bannerState` (via reducer), `decisions`.
  * - Derive computed values from props (`collapsedAvatars`, `remainingCount`).
  * - Wire user interactions to state transitions and optional external callbacks.
  * - Render nothing when there are no pending requests.
  * - Delegate all presentation to {@link AccessRequestBannerView}.
  *
- * **Why separate Component from View?**
- * - The View is a pure function of props — trivially testable and previewable
+ * Why separate Component from View?
+ * - The View is a pure function of props; trivially testable and previewable
  *   in isolation (e.g., Storybook) without needing to mock React state.
  * - This Component can be unit-tested by asserting what props it passes down,
  *   without mounting any DOM.
- * - If the banner ever needs server-driven state (e.g., optimistic mutations),
- *   only this file changes; the View stays untouched.
+ * - If the banner ever needs server-driven state (for example, optimistic
+ *   mutations), only this file changes; the View stays untouched.
  *
  * @example
  * ```tsx
@@ -80,6 +81,7 @@ function toBannerState(state: InternalBannerState): BannerState {
  *   requests={[{ id: "1", name: "Octavian Tocan" }]}
  *   onApprove={(id) => mutate({ id, action: "approve" })}
  *   onReject={(id) => mutate({ id, action: "reject" })}
+ *   onReset={(id) => clearDraftDecision(id)}
  *   onDismiss={() => setVisible(false)}
  * />
  * ```
@@ -88,6 +90,7 @@ export function AccessRequestBanner({
 	requests,
 	onApprove,
 	onReject,
+	onReset,
 	onDismiss,
 }: AccessRequestBannerProps) {
 	/**
@@ -120,13 +123,10 @@ export function AccessRequestBanner({
 		onReject?.(id);
 	};
 
-	/**
-	 * Reverts a decision back to undecided — allows the user to change
-	 * their mind before a final submission action is triggered.
-	 * No external callback needed because the parent hasn't been notified yet.
-	 */
+	/** Reverts a decision back to undecided and mirrors that state to the parent. */
 	const handleReset = (id: string) => {
 		setDecisions((prev) => ({ ...prev, [id]: "undecided" }));
+		onReset?.(id);
 	};
 
 	// Nothing to show — bail before rendering anything.
