@@ -43,6 +43,9 @@ export default async function ConversationPage({
 	if (response.status === 404) {
 		notFound();
 	}
+	if (response.status === 500) {
+		throw new Error("Internal server error");
+	}
 
 	const messages = await response.json();
 
