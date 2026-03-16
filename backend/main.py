@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.core.config import settings
 from app.db import create_db_and_tables
 from app.schemas import (
     UserCreate,
@@ -39,11 +40,9 @@ def create_app() -> FastAPI:
     Create a FastAPI app instance with middleware and routes.
     """
     fastapi_app = FastAPI(lifespan=lifespan)
-
-    # TODO: Make CORS origins configurable via environment variable.
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3001"],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

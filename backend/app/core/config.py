@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     google_api_key: str
     # Fernet Encryption Key (used to encrypt API keys)
     fernet_key: str
+    # CORS
+    cors_origins: list[str]
 
     @property
     def is_production(self) -> bool:

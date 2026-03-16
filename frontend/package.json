@@ -3,9 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "next dev --port 3001",
+		"dev": "portless run next dev",
 		"build": "next build",
-		"start": "next start --port 3001",
+		"start": "portless run next start",
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write"

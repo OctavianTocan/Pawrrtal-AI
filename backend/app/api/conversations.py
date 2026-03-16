@@ -45,8 +45,8 @@ def get_conversations_router() -> APIRouter:
         try:
             # Returns the conversation history, using an Agno agent.
             return create_history_reader_agent(conversation_id)
-        except (ValueError, KeyError, AttributeError):
-            raise HTTPException(status_code=500, detail="Internal server error")
+        except (ValueError, KeyError, AttributeError, Exception) as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     @router.get("/{conversation_id}")
     async def get_conversation(
