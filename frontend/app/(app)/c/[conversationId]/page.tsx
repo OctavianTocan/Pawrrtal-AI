@@ -47,6 +47,13 @@ export default async function ConversationPage({
 		throw new Error("Internal server error");
 	}
 
+	// Ensures we catch any other non-OK responses that we didn't explicitly handle above.
+	if (!response.ok) {
+		throw new Error(
+			`Failed to fetch conversation messages: ${response.statusText}`,
+		);
+	}
+
 	const messages = await response.json();
 
 	return (
