@@ -4,31 +4,36 @@
 [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 [![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 
-A "second brain" chatbot with real-time streaming LLM responses, built with Next.js and FastAPI.
+Full-stack AI chatbot with real-time streaming responses, built with **Next.js 16** and **FastAPI**. Uses the **Agno** agentic framework with **Google Gemini** for conversational AI, featuring persistent conversation history, secure authentication, and a modern chat UI.
 
 ## Features
 
-- **Streaming Chat** - Real-time AI responses via Server-Sent Events
-- **Conversation Management** - Create and organize multiple conversations
-- **Secure Authentication** - JWT-based auth with httpOnly cookies
-- **Modern Stack** - Next.js 16, React 19, FastAPI, Tailwind CSS 4
+- **Real-time Streaming** - Chunk-by-chunk AI responses via Server-Sent Events (SSE)
+- **Conversation Management** - Create, list, and resume multiple conversations with auto-generated titles
+- **Model Selection** - Choose between available AI models from a dropdown
+- **Secure Authentication** - JWT-based auth with httpOnly cookies via FastAPI-Users
+- **User Preferences** - Custom instructions, accent color, and font size settings
+- **API Key Management** - Encrypted storage for provider API keys (Fernet encryption)
+- **Dual Database Architecture** - App metadata in SQLite + Agno-managed message history
+- **Modern UI** - Responsive chat interface with Radix UI, Shadcn, and Tailwind CSS 4
 
 ## Tech Stack
 
-| Layer    | Technology                       |
-| -------- | -------------------------------- |
-| Frontend | Next.js 16, React 19, Tailwind 4 |
-| Backend  | FastAPI, Python 3.13             |
-| AI       | Agno framework, Google Gemini    |
-| Auth     | FastAPI-Users (JWT cookies)      |
-| Database | SQLite + aiosqlite               |
-| UI       | Radix UI, Shadcn                 |
+| Layer    | Technology                         |
+| -------- | ---------------------------------- |
+| Frontend | Next.js 16, React 19, Tailwind 4   |
+| Backend  | FastAPI, Python 3.13, Uvicorn      |
+| AI/LLM   | Agno framework, Google Gemini      |
+| Auth     | FastAPI-Users (JWT httpOnly cookies)|
+| Database | SQLite + aiosqlite (async ORM)     |
+| UI       | Radix UI, Shadcn                   |
+| Tooling  | Bun, uv, Biome, Just, Lefthook    |
 
 ## Quick Start
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (JavaScript runtime)
+- [Bun](https://bun.sh) (JavaScript runtime & package manager)
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Python 3.13+
 - Google Gemini API key
@@ -37,12 +42,11 @@ A "second brain" chatbot with real-time streaming LLM responses, built with Next
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/OctavianTocan/ai-nexus.git
 cd ai-nexus
 
-# Install dependencies
-bun install
-cd backend && uv sync && cd ..
+# Install all dependencies
+just install
 
 # Configure environment
 cp backend/.env.example backend/.env
@@ -54,25 +58,25 @@ cp frontend/.env.example frontend/.env
 
 ```bash
 # Start both frontend and backend
+just dev
+
+# Or use bun directly
 bun dev
-
-# Frontend only (port 3001)
-bun frontend:dev
-
-# Backend only (port 8000)
-bun dev:backend
 ```
 
-Visit [http://localhost:3001](http://localhost:3001) to use the app.
+Frontend runs at [http://localhost:3001](http://localhost:3001), backend at [http://localhost:8000](http://localhost:8000).
 
 ## Environment Variables
 
 ### Backend (`backend/.env`)
 
 ```bash
-AUTH_SECRET=your-jwt-secret      # Required: JWT signing key
-GOOGLE_API_KEY=your-gemini-key   # Required: Google AI API key
-ENV=dev                          # Optional: 'dev' or 'prod'
+AUTH_SECRET=your-jwt-secret        # Required: JWT signing key
+GOOGLE_API_KEY=your-gemini-key     # Required: Google AI API key
+FERNET_KEY=your-fernet-key         # Required: API key encryption
+ENV=dev                            # Optional: 'dev' or 'prod'
+DATABASE_URL=sqlite+aiosqlite:///./app.db  # Optional: database path
+CORS_ORIGINS=http://localhost:3001 # Optional: allowed origins
 ```
 
 ### Frontend (`frontend/.env`)
@@ -85,76 +89,65 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ```
 ai-nexus/
-├── backend/           # FastAPI Python backend
-│   ├── main.py        # API entry point
-│   └── app/           # Models, schemas, auth
-├── frontend/          # Next.js React frontend
-│   ├── app/           # App Router pages
-│   ├── components/    # React components
-│   └── hooks/         # Custom hooks
-└── docs/              # Documentation
+├── backend/             # FastAPI Python backend
+│   ├── main.py          # App entry point
+│   └── app/
+│       ├── api/         # Route handlers (chat, conversations, models)
+│       ├── core/        # Config, agent factory
+│       ├── crud/        # Database operations
+│       ├── models.py    # ORM models
+│       ├── schemas.py   # Pydantic schemas
+│       ├── users.py     # Auth configuration
+│       └── db.py        # Database setup
+├── frontend/            # Next.js React frontend
+│   ├── app/             # App Router pages & layouts
+│   ├── features/        # Feature modules (chat)
+│   ├── components/      # UI components (ai-elements, shadcn)
+│   ├── hooks/           # Custom React hooks
+│   └── lib/             # Utilities, types, API client
+├── justfile             # Task runner commands
+└── dev.ts               # Dev server orchestrator
 ```
-
-## Documentation
-
-- [API Reference](docs/API.md) - Complete API documentation
-- [Architecture](docs/ARCHITECTURE.md) - System design and diagrams
-- [Development Guide](docs/DEVELOPMENT.md) - Developer setup and patterns
-- [User Guide](docs/USER_GUIDE.md) - End-user documentation
-- [OpenAPI Spec](docs/openapi.yaml) - API specification
 
 ## Commands
 
 ```bash
-# Development
-bun dev                  # Start all services
-bun frontend:dev         # Frontend only
-bun dev:backend          # Backend only
-
-# Frontend
-cd frontend
-bun build                # Production build
-bun lint                 # Run ESLint
-
-# Backend
-cd backend
-uv run pytest            # Run tests
-uv run pytest -v         # Verbose tests
+just dev       # Start frontend + backend dev servers
+just test      # Run backend tests (pytest)
+just lint      # Lint and auto-fix with Biome
+just format    # Format with Biome
+just check     # Read-only Biome check
+just install   # Install all dependencies
+just clean     # Remove build caches
 ```
 
 ## API Overview
 
-| Endpoint                | Method | Description         |
-| ----------------------- | ------ | ------------------- |
-| `/auth/jwt/login`       | POST   | User login          |
-| `/auth/register`        | POST   | User registration   |
-| `/api/v1/conversations` | POST   | Create conversation |
-| `/api/chat`             | POST   | Stream chat (SSE)   |
-
-See [API Documentation](docs/API.md) for full details.
+| Endpoint                      | Method | Description              |
+| ----------------------------- | ------ | ------------------------ |
+| `/auth/register`              | POST   | User registration        |
+| `/auth/jwt/login`             | POST   | User login               |
+| `/api/v1/conversations`       | GET    | List conversations       |
+| `/api/v1/conversations`       | POST   | Create conversation      |
+| `/api/v1/conversations/:id`   | GET    | Get conversation details |
+| `/api/v1/chat`                | POST   | Stream chat response (SSE)|
+| `/api/v1/models`              | GET    | List available models    |
 
 ## Architecture
 
 ```
-┌───────────┐     ┌───────────┐     ┌───────────┐
-│  Browser  │────►│  Next.js  │────►│  FastAPI  │
-│           │     │   :3001   │     │   :8000   │
-└───────────┘     └───────────┘     └─────┬─────┘
-                                          │
-                                          ▼
-                                    ┌───────────┐
-                                    │   Agno    │
-                                    │ + Gemini  │
-                                    └───────────┘
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Browser    │────►│  Next.js    │────►│  FastAPI     │
+│              │ SSE │   :3001     │     │   :8000      │
+└─────────────┘◄────└─────────────┘     └──────┬───────┘
+                                               │
+                                    ┌──────────┼──────────┐
+                                    ▼          ▼          ▼
+                              ┌─────────┐ ┌────────┐ ┌────────┐
+                              │  Agno   │ │ App DB │ │Agno DB │
+                              │+ Gemini │ │(SQLite)│ │(SQLite)│
+                              └─────────┘ └────────┘ └────────┘
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Commit changes: `git commit -m 'Add new feature'`
-4. Push to branch: `git push origin feature/new-feature`
-5. Open a Pull Request
 
 ## License
 
