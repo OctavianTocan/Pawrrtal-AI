@@ -15,5 +15,6 @@ await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 // This starts both dev servers at the same time and combines the output.
 await Promise.all([
 	$`bun --cwd frontend dev`,
-	$`uv run --project backend fastapi dev backend/main.py`,
+	$`portless api.app.nexus-ai --app-port 8000 uv run --project backend fastapi dev backend/main.py
+`,
 ]);

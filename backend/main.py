@@ -39,7 +39,12 @@ def create_app() -> FastAPI:
     """
     Create a FastAPI app instance with middleware and routes.
     """
-    fastapi_app = FastAPI(lifespan=lifespan)
+    fastapi_app = FastAPI(
+        lifespan=lifespan,
+        title="Nexus-AI",
+        description="An AI assistant platform",
+        version="0.1.0",
+    )
     fastapi_app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

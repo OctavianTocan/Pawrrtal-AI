@@ -1,11 +1,11 @@
 {
-	"name": "ai-nexus",
+	"name": "app.nexus-ai",
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "portless run next dev",
+		"dev": "portless run --name app.nexus-ai next dev",
 		"build": "next build",
-		"start": "portless run next start",
+		"start": "portless run --name app.nexus-ai next start",
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write"
