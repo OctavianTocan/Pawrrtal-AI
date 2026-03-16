@@ -13,13 +13,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.core.config import settings
 from app.db import create_db_and_tables
+from app.logger_setup import (
+    configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
+)
 from app.schemas import (
     UserCreate,
     UserRead,
     UserUpdate,
 )
 from app.users import auth_backend, fastapi_users
+
+# Configure logging at the very start of the application. This ensures that all loggers in the app will use this configuration.
+configure_logging()
 
 # --- Lifespan ----------------------------------------------------------------
 
@@ -38,12 +45,15 @@ def create_app() -> FastAPI:
     """
     Create a FastAPI app instance with middleware and routes.
     """
-    fastapi_app = FastAPI(lifespan=lifespan)
-
-    # TODO: Make CORS origins configurable via environment variable.
+    fastapi_app = FastAPI(
+        lifespan=lifespan,
+        title="Nexus-AI",
+        description="An AI assistant platform",
+        version="0.1.0",
+    )
     fastapi_app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3001"],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -6,6 +6,7 @@ function makeQueryClient() {
 			queries: {
 				// SSR tip: avoid immediate client refetch after hydration
 				staleTime: 60 * 1000,
+				gcTime: 60 * 30 * 1000,
 			},
 		},
 	});

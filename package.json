@@ -6,7 +6,7 @@
 	"private": true,
 	"scripts": {
 		"frontend:dev": "bun --cwd frontend dev",
-		"dev:backend": "uv run --project backend fastapi dev main.py",
+		"dev:backend": "portless api.app.nexus-ai --app-port 8000 uv run --project backend fastapi dev backend/main.py",
 		"dev": "bun run dev.ts",
 		"commit": "bun run commit.ts"
 	},

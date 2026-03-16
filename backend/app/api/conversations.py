@@ -2,6 +2,7 @@
 This module contains the conversation endpoints for the API.
 """
 
+import logging
 import uuid
 from typing import List, Optional
 
@@ -20,6 +21,9 @@ from app.db import User, get_async_session
 from app.models import Conversation
 from app.schemas import ConversationCreate, ConversationResponse
 from app.users import current_active_user
+
+# This creates a logger named after the current module (e.g., 'my_package.my_module')
+logger = logging.getLogger(__name__)
 
 
 def get_conversations_router() -> APIRouter:
@@ -43,10 +47,12 @@ def get_conversations_router() -> APIRouter:
             raise HTTPException(status_code=404, detail="Conversation not found")
         # TODO: Bring in the DB from somewhere, or call some custom agent to do this instead.
         try:
-            # Returns the conversation history, using an Agno agent.
             return create_history_reader_agent(conversation_id)
-        except (ValueError, KeyError, AttributeError):
-            return []
+        except Exception as e:
+            logger.error(
+                f"Error reading conversation history for {conversation_id}: {e}"
+            )
+            raise
 
     @router.get("/{conversation_id}")
     async def get_conversation(
