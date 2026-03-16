@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     fernet_key: str
     # CORS
     cors_origins: list[str]
+    # The domain to set for cookies (e.g., "example.com"). This is important for authentication cookies to work correctly across subdomains.
+    cookie_domain: str
 
     @property
     def is_production(self) -> bool:
