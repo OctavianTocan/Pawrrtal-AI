@@ -8,8 +8,13 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Optional
 
-from fastapi import Depends, Request, Response
-from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+from fastapi import Depends, HTTPException, Request, Response
+from fastapi_users import (
+    BaseUserManager,
+    FastAPIUsers,
+    UUIDIDMixin,
+    schemas,
+)
 from fastapi_users.authentication import (
     AuthenticationBackend,
     CookieTransport,
@@ -20,6 +25,7 @@ from typing_extensions import cast
 
 from app.core.config import settings
 from app.db import User, get_user_db
+from app.schemas import UserCreate
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
@@ -27,6 +33,28 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     reset_password_token_secret = settings.auth_secret
     verification_token_secret = settings.auth_secret
+
+    async def validate_password(self, password: str, user: UserCreate | User) -> None:  # type: ignore[override]
+        """Enforce minimum password length."""
+        if len(password) < 8:
+            raise HTTPException(
+                status_code=400, detail="Password must be at least 8 characters."
+            )
+
+    async def create(
+        self,
+        user_create: schemas.BaseUserCreate,
+        safe: bool = False,
+        request: Request | None = None,
+    ) -> User:
+        """Check invite_code before delegating to the default create logic."""
+        expected = settings.registration_secret
+        invite_code = getattr(user_create, "invite_code", "")
+        if expected and invite_code != expected:
+            raise HTTPException(
+                status_code=403, detail="Invalid or missing invite code."
+            )
+        return await super().create(user_create, safe=safe, request=request)
 
     async def on_after_register(
         self, user: User, request: Optional[Request] = None

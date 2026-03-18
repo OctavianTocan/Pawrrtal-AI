@@ -22,9 +22,9 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 
 
 class UserCreate(schemas.BaseUserCreate):
-    """Request schema for user registration (email, password)."""
+    """Request schema for user registration (email, password, invite_code)."""
 
-    pass
+    invite_code: str = ""
 
 
 class UserUpdate(schemas.BaseUserUpdate):

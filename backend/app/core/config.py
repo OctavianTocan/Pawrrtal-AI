@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     cors_origins: list[str]
     # The domain to set for cookies (e.g., "example.com"). This is important for authentication cookies to work correctly across subdomains.
     cookie_domain: str
+    # Optional secret required to register a new account. When set, anyone
+    # attempting to register must supply this value as ``invite_code`` in the
+    # request body. Leave unset (or empty) to allow open registration.
+    registration_secret: str = ""
 
     @property
     def is_production(self) -> bool:
