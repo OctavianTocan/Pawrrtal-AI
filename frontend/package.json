@@ -6,6 +6,7 @@
 		"dev": "portless run --name app.nexus-ai next dev",
 		"build": "next build",
 		"start": "portless run --name app.nexus-ai next start",
+		"typecheck": "tsc --noEmit",
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write"

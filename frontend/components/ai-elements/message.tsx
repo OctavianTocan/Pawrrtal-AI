@@ -208,7 +208,7 @@ export const MessageBranchContent = ({
 	));
 };
 
-export type MessageBranchSelectorProps = HTMLAttributes<HTMLDivElement> & {
+export type MessageBranchSelectorProps = HTMLAttributes<HTMLFieldSetElement> & {
 	from: UIMessage["role"];
 };
 

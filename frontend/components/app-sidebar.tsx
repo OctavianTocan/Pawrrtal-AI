@@ -109,7 +109,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar variant="inset" {...props}>
 			<SidebarContent>
-				<NavChats items={data.navMain} />
+				<NavChats />
 			</SidebarContent>
 		</Sidebar>
 	);
