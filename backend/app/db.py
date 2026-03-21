@@ -1,7 +1,7 @@
 """
 Database configuration and session management.
 
-Uses SQLAlchemy async engine with aiosqlite. The User model is defined here
+Uses SQLAlchemy async engine with postgresql. The User model is defined here
 (rather than in models.py) because fastapi-users requires it at import time
 for its dependency chain.
 """
@@ -28,7 +28,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     pass
 
 
-engine = create_async_engine(settings.db_url)
+engine = create_async_engine(settings.db_url_async)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 

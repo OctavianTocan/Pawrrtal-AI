@@ -31,8 +31,7 @@ class Conversation(Base):
     """
     Conversation metadata stored in the application database.
 
-    Actual message content is persisted by the Agno library in its own
-    SQLite database. The two are linked via ``Conversation.id`` ==
+    Actual message content is persisted by the Agno library in its own database. The two are linked via ``Conversation.id`` ==
     Agno's ``session_id``.
     """
 

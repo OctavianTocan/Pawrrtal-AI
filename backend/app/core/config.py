@@ -19,8 +19,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # The URL for the database connection. By default, it uses SQLite with a file named "agno.db" in the current directory.
-    db_url: str = "sqlite+aiosqlite:///./agno.db"
+    # The URL for the database connection.
+    database_url: str = ""
     # The secret key used for signing authentication tokens. This should be set to a secure random value in production.
     auth_secret: str
     # The environment in which the application is running. Can be "dev" for development or "prod" for production.
@@ -44,6 +44,23 @@ class Settings(BaseSettings):
         A convenience property that returns True if the application is running in production mode (i.e., if env is set to "prod").
         """
         return self.env == "prod"
+
+    @property
+    def db_url_sync(self) -> str:
+        """
+        Returns the database URL formatted for synchronous connections. If the original database URL starts with "postgresql+psycopg://", it replaces it with "postgresql://" to ensure compatibility with sync database drivers.
+        """
+        return self.db_url_async
+
+    @property
+    def db_url_async(self) -> str:
+        """
+        Returns the database URL formatted for asynchronous connections. If the original database URL starts with "postgresql://", it replaces it with "postgresql+psycopg://" to ensure compatibility with async database drivers.
+        """
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg://")
+        return url
 
 
 settings = Settings()  # type: ignore[call-arg]

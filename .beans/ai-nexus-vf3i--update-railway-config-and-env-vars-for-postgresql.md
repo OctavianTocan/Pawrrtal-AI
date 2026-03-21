@@ -5,8 +5,10 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-19T23:10:10Z
-updated_at: 2026-03-19T23:10:10Z
+updated_at: 2026-03-21T17:42:43Z
 parent: ai-nexus-inwh
+blocked_by:
+    - ai-nexus-cx7v
 ---
 
 ## Description
