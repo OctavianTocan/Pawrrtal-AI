@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     # attempting to register must supply this value as ``invite_code`` in the
     # request body. Leave unset (or empty) to allow open registration.
     registration_secret: str = ""
+    # The base directory where workspaces will be stored. Each workspace can contain files, configurations, and other resources specific to a user's project or environment.
+    workspace_base_dir: str = "/data/workspaces"
+    # Admin user credentials (for testing).
+    admin_email: str = "admin@nexus.local"
+    admin_password: str = "admin1234"
 
     @property
     def is_production(self) -> bool:

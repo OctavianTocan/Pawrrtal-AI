@@ -6,9 +6,11 @@ from agno.agent.agent import Agent
 from agno.db.postgres.postgres import PostgresDb
 from agno.models.google.gemini import Gemini
 from agno.run.agent import RunOutput
+from agno.tools.local_file_system import LocalFileSystemTools
 from agno.tools.mcp.mcp import MCPTools
 
 from app.core.config import settings
+from app.core.workspace import get_user_workspace
 
 # Initialize the Agno database.
 agno_db = PostgresDb(settings.db_url_sync)
@@ -23,13 +25,19 @@ def create_agent(
     This function allows us to create an Agno agent.
     """
 
+    # Grab the user's workspace path. This is where the agent will be able to read/write files, so it's important to set this up correctly.
+    user_workspace = get_user_workspace(user_id)
+
     agno_agent = Agent(
         name="Agno Agent",
         user_id=str(user_id),
         session_id=str(conversation_id),
         model=Gemini(id=model_id),
         db=agno_db,
-        tools=[MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp")],
+        tools=[
+            MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp"),
+            LocalFileSystemTools(target_directory=user_workspace),
+        ],
         add_history_to_context=True,
         num_history_runs=3,
         markdown=True,

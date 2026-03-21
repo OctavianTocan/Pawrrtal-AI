@@ -1,7 +1,5 @@
 """
-Authentication and user management configuration.
-
-Uses fastapi-users with JWT tokens transported via HTTP-only cookies.
+User management and authentication using FastAPI-Users. This module defines the UserManager class that handles user lifecycle events (registration, login, etc.) and sets up the authentication backend using JWTs stored in secure cookies. It also provides FastAPI dependencies for accessing the user manager and the current active user.
 """
 
 import uuid

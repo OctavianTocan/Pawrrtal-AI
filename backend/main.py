@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.core.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.db import create_db_and_tables
 from app.logger_setup import (
@@ -35,6 +36,8 @@ configure_logging()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Run startup tasks (database table creation) before the app begins serving."""
     await create_db_and_tables()
+    # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
+    await seed_admin_user()
     yield
 
 
