@@ -16,7 +16,7 @@ from agno.models.google.gemini import Gemini
 from dotenv import load_dotenv
 
 # Load .env from project root (two levels up from backend/app/cli/)
-_project_root = Path(__file__).resolve().parents[3]
+_project_root = Path(__file__).resolve().parents[2]
 load_dotenv(_project_root / ".env")
 
 # Verify the API key is available after loading .env
