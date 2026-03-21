@@ -6,9 +6,9 @@ default:
 dev:
     bun run dev.ts
 
-# Auto-generate conventional commits via Claude
+# Auto-generate conventional commit via Gemini
 commit:
-    bun run commit.ts
+    cd backend && uv run python -m app.cli.commit
 
 # Push with GitHub auth switching
 push:

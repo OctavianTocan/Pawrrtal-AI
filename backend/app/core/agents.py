@@ -17,7 +17,7 @@ agno_db = PostgresDb(settings.db_url_sync)
 def create_agent(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
-    model_id: str = "gemini-3-flash-preview",
+    model_id: str = "gemini-3.1-flash-lite-preview",
 ) -> Agent:
     """
     This function allows us to create an Agno agent.
@@ -52,12 +52,12 @@ def create_utility_agent(prompt: str) -> RunOutput:
     Helps with one-off requests, using an Agno agent.
     """
     agent = Agent(
-        model=Gemini(id="gemini-3-flash-preview"),
+        model=Gemini(id="gemini-3.1-flash-lite-preview"),
     )
     return agent.run(prompt)
 
 
 # This helps you run this directly.
 if __name__ == "__main__":
-    agent = create_agent(uuid.uuid4(), uuid.uuid4(), "gemini-3-flash-preview")
+    agent = create_agent(uuid.uuid4(), uuid.uuid4(), "gemini-3.1-flash-lite-preview")
     agent.print_response("Hello!", stream=True)
