@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "portless run --name app.nexus-ai next dev",
+		"dev": "portless run --name app.nexus-ai --app-port 3001 --force next dev",
 		"build": "next build",
 		"start": "portless run --name app.nexus-ai next start",
 		"typecheck": "tsc --noEmit",

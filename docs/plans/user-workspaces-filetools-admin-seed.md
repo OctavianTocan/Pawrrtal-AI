@@ -17,7 +17,7 @@ The AI Nexus backend currently creates Agno agents with only an MCP tool (docs s
 Add to `Settings`:
 ```python
 workspace_base_dir: str = "/data/workspaces"
-admin_email: str = "admin@nexus.local"
+admin_email: str = "admin@nexus-ai.dev"
 admin_password: str = "admin1234"
 ```
 
@@ -129,7 +129,7 @@ await seed_admin_user()
 Add:
 ```
 WORKSPACE_BASE_DIR=/data/workspaces
-ADMIN_EMAIL=admin@nexus.local
+ADMIN_EMAIL=admin@nexus-ai.dev
 ADMIN_PASSWORD=admin1234
 ```
 
@@ -150,7 +150,7 @@ ADMIN_PASSWORD=admin1234
 ## Verification
 
 1. Run the app locally, check logs for "Admin user created/exists"
-2. Login as admin via `POST /auth/jwt/login` with form data `username=admin@nexus.local&password=admin1234`
+2. Login as admin via `POST /auth/jwt/login` with form data `username=admin@nexus-ai.dev&password=admin1234`
 3. Send a chat message asking the agent to "create a file called hello.txt with 'Hello World' in it"
 4. Verify the file appears in `workspace_base_dir/{user_id}/hello.txt`
 5. Ask the agent to "list files in the workspace" and "read hello.txt"
