@@ -7,7 +7,8 @@ from agno.db.postgres.postgres import PostgresDb
 from agno.models.google.gemini import Gemini
 from agno.run.agent import RunOutput
 from agno.tools.mcp.mcp import MCPTools
-from config import settings
+
+from app.core.config import settings
 
 # Initialize the Agno database.
 agno_db = PostgresDb(settings.db_url_sync)
