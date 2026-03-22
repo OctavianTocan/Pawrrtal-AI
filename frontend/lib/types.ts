@@ -28,3 +28,13 @@ export interface AgnoMessage {
 	role: "user" | "assistant";
 	content: string;
 }
+
+/**
+ * Shape of a message submitted from the prompt input.
+ * Extracted here so it can be shared across features without
+ * importing from the ai-elements component tree.
+ */
+export interface PromptInputMessage {
+	content: string;
+	files: import("ai").FileUIPart[];
+}

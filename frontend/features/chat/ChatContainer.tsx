@@ -1,8 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
-import type { AgnoMessage } from "@/lib/types";
+import type { AgnoMessage, PromptInputMessage } from "@/lib/types";
 import ChatView from "./ChatView";
 import { useChat } from "./hooks/use-chat";
 import { useCreateConversation } from "./hooks/use-create-conversation";

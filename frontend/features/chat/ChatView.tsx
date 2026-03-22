@@ -21,13 +21,12 @@ import {
 	ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import { Button } from "@/components/ui/button";
-import type { AgnoMessage } from "@/lib/types";
+import type { AgnoMessage, PromptInputMessage } from "@/lib/types";
 import {
 	Conversation,
 	ConversationContent,
 } from "../../components/ai-elements/conversation";
 import { Loader } from "../../components/ai-elements/loader";
-import type { PromptInputMessage } from "../../components/ai-elements/prompt-input";
 import {
 	PromptInput,
 	PromptInputFooter,
