@@ -1,6 +1,6 @@
 # Craft Agents UI Reskin
 
-Full visual replacement of the Minnetonka frontend with the design system from [Craft Agents OSS](https://github.com/lukilabs/craft-agents-oss/tree/main/apps/electron). Business logic (streaming, auth, routing, API layer) stays. UI behavior logic is adopted where needed to make the visual result correct.
+Wholesale replacement of all Minnetonka frontend UI components with Craft Agents OSS equivalents. Grab their components, styling, behavior, and animations. Wire them to our hooks and backend. The only things we keep are the integration layer: hooks, API calls, auth, routing, and backend types.
 
 ## Source Reference
 
@@ -11,9 +11,9 @@ Full visual replacement of the Minnetonka frontend with the design system from [
 
 ## Ground Rules
 
-1. **Visual: 100% Craft.** Every pixel the user sees should feel like Craft Agents, adapted for web.
-2. **Behavior: adopt as needed.** If Craft's UI requires specific state/logic to look right (turn grouping, session search, attachment preview behavior), bring that in.
-3. **Core architecture: keep ours.** Streaming (`useChat`), auth (`useAuthedFetch`), Next.js app router, API layer stay unless forced.
+1. **Grab wholesale.** Take Craft's components — styling, behavior, internal state, animations — as-is. Don't preserve our UI component logic; replace it entirely.
+2. **Wire to our hooks.** The integration boundary is our hooks and backend: `useChat`, `useCreateConversation`, `useGetConversations`, `useAuthedFetch`, Next.js routing, API types. These stay. Everything above them gets replaced.
+3. **Don't over-adapt.** If Craft's component does something slightly differently than ours (attachments, input behavior, model selection), take their approach. Only deviate when something is truly Electron-specific and has no web equivalent.
 4. **Electron to web equivalents.** Craft is Electron — we build web equivalents that capture the same visual feel (TopBar without traffic lights, no IPC, standard web scrollbars with custom styling, responsive breakpoints).
 5. **Animation library: Motion (v12).** Already in `package.json` as `"motion": "^12.34.0"`. Import from `motion/react` (not the legacy `framer-motion` package). Provides springs, stagger, `AnimatePresence`.
 
@@ -74,15 +74,18 @@ Replace with Craft's pattern:
 - Turn-grouping utility function: takes flat message array, returns grouped turns
 - Timer state for `ProcessingIndicator` (track when streaming started)
 
-### Input Area & Model Selector (restyle + rewrite)
+### Input Area & Model Selector (wholesale replace)
 
-Our current input: `PromptInput` form with `InputGroup`, `PromptInputTextarea` (auto-growing), `PromptInputFooter` with `ModelSelector` combobox and `PromptInputSubmit`.
+Our current input: `PromptInput` form (~1400 lines) with `InputGroup`, `PromptInputTextarea`, `ModelSelector` combobox, `PromptInputSubmit`. The `ModelSelector` is non-functional (single hardcoded model).
 
-Changes:
-- **Input visual treatment**: adopt Craft's `FreeFormInput` styling. Note: `prompt-input.tsx` is ~1400 lines with deeply interleaved visual markup and business logic. This is a significant refactor of JSX structure throughout the file, not a simple CSS swap — the business logic (file validation, blob URL conversion, paste/drop, speech recognition, form submission) stays but the visual markup around it changes substantially.
-- **Model selector**: replace our `ModelSelector` combobox with Craft's grouped connection selector pattern. The current selector is essentially non-functional (single hardcoded model, local state only, no backend integration), so the rewrite scope is purely visual — no behavior migration needed.
-- **Attachment previews**: keep our drag/drop/paste business logic but adapt the visual rendering of attachment badges/previews to match Craft's style
-- **ToolbarStatusSlot**: contextual status indicators in the input area (e.g., streaming state)
+**Approach: grab Craft's `FreeFormInput` wholesale.** Take their component with its internal behavior (auto-growing textarea, attachment handling, model/connection selection, status indicators). Wire it to our `useChat` submit handler and streaming state. Delete our `prompt-input.tsx`, `model-selector.tsx`, and `input-group.tsx` — they're fully replaced, not refactored.
+
+What we adopt from Craft:
+- **FreeFormInput**: their complete input component with its styling and behavior
+- **Connection/model selector**: their grouped selector pattern, wired to our `useModels` hook
+- **Attachment handling**: their drag/drop/paste/preview approach replaces ours
+- **ToolbarStatusSlot**: contextual status indicators (streaming state, etc.)
+- **Input chrome**: borders, backgrounds, focus states, spacing — all Craft's
 
 ### Animations (Motion throughout)
 
@@ -104,15 +107,18 @@ All existing `ui/*.tsx` components get restyled to use the new token system:
 - Auth pages (`login/signup`) restyled to match
 - Toast overrides updated for new shadow/color system
 
-## What We Keep (unchanged)
+## What We Keep (the integration layer)
+
+Only hooks, backend integration, and routing survive. Everything else is replaced.
 
 - `useChat` hook — streaming logic, message accumulation
 - `useCreateConversation` + `useGenerateConversationTitle` mutations
+- `useGetConversations` — conversation list query
+- `useModels` — model list query (wired into Craft's selector)
 - `useAuthedFetch` / `useAuthedQuery` auth layer
-- `ChatContainer` state management (URL sync, stream loop, optimistic messages)
-- `PromptInput` business logic (file validation, blob URL conversion, submit flow, paste/drop handling, speech recognition)
+- `ChatContainer` state management (URL sync, stream loop, optimistic messages) — may need light adaptation to interface with Craft's components
 - Next.js app router structure (`app/(app)/`, `app/(auth)/`, route params)
-- `Streamdown` for markdown rendering (Craft's `StreamingMarkdown` is a potential future upgrade but out of scope for this reskin)
+- `Streamdown` for markdown rendering (Craft's `StreamingMarkdown` is a potential future upgrade but out of scope)
 - Backend API integration (`lib/api.ts`, `lib/types.ts`)
 
 ## Execution Chunks
@@ -153,9 +159,9 @@ Turn-based message grouping, rotating empty state hints, processing indicator wi
 
 ### Chunk 5: Input Area & Model Selector
 
-**Files**: `prompt-input.tsx` (visual refactor — ~1400 lines, significant JSX restructuring), `model-selector.tsx` (rewrite), `input-group.tsx` (restyle)
+**Files**: `prompt-input.tsx` (delete, replace with Craft's FreeFormInput), `model-selector.tsx` (delete, replace with Craft's selector), `input-group.tsx` (delete)
 
-Craft's input visual treatment, new model selector pattern, adapted attachment previews.
+Wholesale replacement of input area with Craft's components. Wire to our hooks.
 
 **Verify**: typing, sending, file attachments, model selection all work with new styling.
 
