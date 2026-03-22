@@ -1,6 +1,6 @@
 # Craft Agents UI Reskin
 
-Fork Craft Agents OSS renderer code directly into our project. Their Electron app is just React running in Chromium — the renderer IS web code. We take it as-is, shim the thin Electron IPC layer (no-ops for now), replace their Jotai data layer with our hooks, and flatten `@craft-agent/ui` imports. Zero design interpretation needed. Bonus: keeping the Electron-compatible structure means we can wrap this in Electron later for a desktop app.
+Fork Craft Agents OSS renderer code directly into our project. Their Electron app is React + Jotai + Tailwind + Motion running in Chromium — the renderer IS web code. We take it as-is, adopt Jotai for state management, shim the Electron IPC layer, and only rewire the data-fetching atoms that talk to their backend. This is effectively a UI fork of Craft Agents wired to our backend.
 
 ## Source Reference
 
@@ -11,11 +11,11 @@ Fork Craft Agents OSS renderer code directly into our project. Their Electron ap
 
 ## Ground Rules
 
-1. **Their renderer IS web code.** Electron renderer = React + Tailwind + Motion running in Chromium. We take it directly — no rewriting, no design interpretation.
-2. **Shim, don't strip.** Instead of removing Electron APIs, create a thin shim layer (`lib/electron-shim.ts`) that no-ops IPC calls in the browser. This keeps the code Electron-compatible for a future desktop app.
-3. **Replace only the data layer.** Swap their Jotai atoms and IPC-based data fetching with our hooks (`useChat`, `useGetConversations`, `useAuthedFetch`, etc.). Flatten `@craft-agent/ui` imports to local paths. Everything else stays as-is.
-4. **Future Electron path.** By keeping the Electron structure intact (shimmed, not stripped), wrapping this in Electron later is straightforward — just replace the shims with real IPC handlers.
-5. **Animation library: Motion (v12).** Already in `package.json` as `"motion": "^12.34.0"`. Import from `motion/react` (not the legacy `framer-motion` package). Provides springs, stagger, `AnimatePresence`.
+1. **Pure UI fork.** Take Craft's renderer code as-is. No rewriting, no design interpretation, no selective adoption. It's a fork.
+2. **Adopt Jotai.** Keep their Jotai atoms for all UI state (sidebar, selections, panels, etc.). Only rewire the data-fetching atoms that call their backend — those get replaced with atoms that call our API via `useAuthedFetch`.
+3. **Shim Electron.** Create `lib/electron-shim.ts` with no-op implementations of `window.electron.*` APIs. Keeps the code Electron-compatible — we can wrap in Electron later for a desktop app.
+4. **Flatten `@craft-agent/ui`.** Their shared UI package lives at `packages/ui/` — copy those components locally and update import paths.
+5. **New dependencies**: `jotai` (state management), keep existing `motion` v12 (already installed). Import Motion from `motion/react`.
 
 ## What Gets Replaced
 
@@ -107,34 +107,44 @@ All existing `ui/*.tsx` components get restyled to use the new token system:
 - Auth pages (`login/signup`) restyled to match
 - Toast overrides updated for new shadow/color system
 
-## What We Keep (the integration layer)
+## What We Keep (backend integration only)
 
-Only hooks, backend integration, and routing survive. Everything else is replaced.
+The only code we keep is what connects to our backend. Everything else is Craft's.
 
-- `useChat` hook — streaming logic, message accumulation
-- `useCreateConversation` + `useGenerateConversationTitle` mutations
-- `useGetConversations` — conversation list query
-- `useModels` — model list query (wired into Craft's selector)
-- `useAuthedFetch` / `useAuthedQuery` auth layer
-- `ChatContainer` state management (URL sync, stream loop, optimistic messages) — may need light adaptation to interface with Craft's components
+- `useAuthedFetch` / `useAuthedQuery` — auth layer for API calls
+- `lib/api.ts` — API endpoint definitions
+- `lib/types.ts` — backend response types
 - Next.js app router structure (`app/(app)/`, `app/(auth)/`, route params)
-- `Streamdown` for markdown rendering (Craft's `StreamingMarkdown` is a potential future upgrade but out of scope)
-- Backend API integration (`lib/api.ts`, `lib/types.ts`)
+- Auth pages (`login/signup`) — restyled but structurally kept since they're our auth flow
+
+Everything that was previously in our hooks (`useChat`, `useCreateConversation`, `useGetConversations`, `useModels`) gets rewritten as **Jotai atoms** that call our API, matching Craft's data-fetching patterns. This way the forked components work without any prop-drilling or adapter layers.
 
 ## Adaptation Playbook
 
 For each Craft component we fork, the adaptation steps are:
 
 1. **Copy** the source file from the Craft repo into our project
-2. **Create Electron shim** (`lib/electron-shim.ts`): no-op implementations of `window.electron.*` APIs used by the component. This keeps code Electron-compatible for future desktop builds.
-3. **Replace data layer**: Jotai atoms → our React hooks (`useGetConversations`, `useChat`, etc.) or local state
-4. **Flatten imports**: `@craft-agent/ui` → local relative paths to our forked copies
-5. **Wire to our hooks**: replace their IPC-based data-fetching with our `useAuthedFetch`-based hooks
-6. **Verify it renders**: check that the component works in our Next.js app
+2. **Flatten imports**: `@craft-agent/ui` → local relative paths to our forked copies
+3. **Rewire data-fetching atoms only**: find Jotai atoms that call their backend via IPC → replace with atoms that call our API via `useAuthedFetch`. Keep all UI-state atoms as-is.
+4. **Electron shim** (`lib/electron-shim.ts`): created once, provides no-op implementations of `window.electron.*` APIs. All components import from the shim.
+5. **Verify it renders**: check that the component works in our Next.js app
+
+Note: steps 2-4 are mostly mechanical find-and-replace. UI state atoms, component logic, styling, and animations are untouched.
 
 ## Execution Chunks
 
 Each chunk is independently shippable and testable.
+
+### Chunk 0: Foundation (Jotai + Electron Shim + Package Imports)
+
+**Tasks**:
+- Install `jotai` dependency
+- Create `lib/electron-shim.ts` with no-op implementations of Craft's `window.electron.*` API surface
+- Clone Craft's `packages/ui/` components into our project (local path, not package import)
+- Create Jotai atoms for our backend data-fetching: sessions atom (calls our conversations API), messages atom (calls our chat API), models atom (calls our models API) — all using `useAuthedFetch` under the hood
+- Delete our current hooks that get replaced by atoms: `useGetConversations`, `useChat`, `useCreateConversation`, `useGenerateConversationTitle`, `useModels` (their logic moves into atoms)
+
+**Verify**: `jotai` installed, shim imports resolve, `@craft-agent/ui` imports resolve to local paths, data-fetching atoms return data from our API.
 
 ### Chunk 1: Design Tokens & Theme
 
@@ -156,7 +166,7 @@ Fork their shell components as-is. Shim Electron APIs (traffic light offsets bec
 
 **Source**: Craft's `SessionList.tsx`, `SessionItem.tsx`, `EntityRow.tsx`, `LeftSidebar.tsx`
 
-Fork their session list components. Replace Jotai session atoms with our `useGetConversations` hook. Wire navigation to Next.js `router.push`. Delete `nav-chats.tsx`.
+Fork their session list components with Jotai atoms intact. Rewire the session-data atom to fetch from our API instead of IPC. Wire navigation to Next.js `router.push`. Delete `nav-chats.tsx`.
 
 **Verify**: conversations load and group by date, search filters work, clicking navigates to conversation, new conversation button works.
 
@@ -164,7 +174,7 @@ Fork their session list components. Replace Jotai session atoms with our `useGet
 
 **Source**: Craft's `ChatDisplay.tsx`, `UserMessageBubble`, `TurnCard`, `EmptyStateHint.tsx`, `ProcessingIndicator`
 
-Fork their chat display and message components. Replace their session/message atoms with our `chatHistory` prop from `ChatContainer`. Keep `Streamdown` for markdown rendering. Delete `message.tsx`, `loader.tsx`.
+Fork their chat display and message components with Jotai atoms intact. Rewire message-data atoms to our API. Keep `Streamdown` for markdown rendering (or adopt their `StreamingMarkdown` if it comes along easily). Delete our `message.tsx`, `loader.tsx`.
 
 **Verify**: messages render in turns, streaming works, empty state cycles hints, loading shows timer.
 
@@ -172,7 +182,7 @@ Fork their chat display and message components. Replace their session/message at
 
 **Source**: Craft's `FreeFormInput.tsx`, `RichTextInput.tsx`, `InputContainer.tsx`, connection selector
 
-Fork their input components wholesale. Wire submit to our `useChat` handler, model list to our `useModels` hook. Delete `prompt-input.tsx`, `model-selector.tsx`, `input-group.tsx`.
+Fork their input components with all internal logic intact. Rewire the submit atom to call our API, model-list atom to fetch our models. Delete our `prompt-input.tsx`, `model-selector.tsx`, `input-group.tsx`.
 
 **Verify**: typing, sending, file attachments, model selection all work.
 
