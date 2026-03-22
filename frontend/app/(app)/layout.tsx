@@ -1,13 +1,9 @@
-import { NewSidebar } from "@/components/new-sidebar";
+import { AppShell } from "@/components/shell/AppShell";
 
 export default function AppLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	return (
-		<>
-			<NewSidebar>{children}</NewSidebar>
-		</>
-	);
+	return <AppShell>{children}</AppShell>;
 }
