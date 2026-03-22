@@ -14,6 +14,12 @@
 			"linter": { "enabled": false },
 			"formatter": { "enabled": false },
 			"assist": { "enabled": false }
+		},
+		{
+			"includes": ["frontend/components/craft-ui/**"],
+			"linter": { "enabled": false },
+			"formatter": { "enabled": false },
+			"assist": { "enabled": false }
 		}
 	],
 	"formatter": {
