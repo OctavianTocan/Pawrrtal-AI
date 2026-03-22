@@ -1,6 +1,6 @@
 # Craft Agents UI Reskin
 
-Fork Craft Agents OSS component source code directly into our project. Adapt it to our stack (strip Electron/IPC, replace Jotai with our hooks, flatten `@craft-agent/ui` imports). This gives us exact visual fidelity with mechanical adaptation work instead of design interpretation. The only things we keep from our current frontend are the integration layer: hooks, API calls, auth, routing, and backend types.
+Fork Craft Agents OSS renderer code directly into our project. Their Electron app is just React running in Chromium — the renderer IS web code. We take it as-is, shim the thin Electron IPC layer (no-ops for now), replace their Jotai data layer with our hooks, and flatten `@craft-agent/ui` imports. Zero design interpretation needed. Bonus: keeping the Electron-compatible structure means we can wrap this in Electron later for a desktop app.
 
 ## Source Reference
 
@@ -11,10 +11,10 @@ Fork Craft Agents OSS component source code directly into our project. Adapt it 
 
 ## Ground Rules
 
-1. **Fork, don't rewrite.** Copy Craft's component source files directly into our project. Adapt them with mechanical changes (strip IPC, replace Jotai atoms, fix imports) rather than rewriting from scratch to match their design.
-2. **Adaptation is mechanical.** The work per component is: copy file → strip Electron-specific code (IPC calls, traffic light offsets, window management) → replace Jotai state atoms with our hooks → flatten `@craft-agent/ui` imports to local paths → verify it renders.
-3. **Wire to our hooks.** The integration boundary is our hooks and backend: `useChat`, `useCreateConversation`, `useGetConversations`, `useAuthedFetch`, Next.js routing, API types. These stay. Everything above them gets replaced.
-4. **Don't over-adapt.** Take Craft's approach for everything. Only deviate when something is truly Electron-specific with no web equivalent (e.g., native window controls → web-native top bar).
+1. **Their renderer IS web code.** Electron renderer = React + Tailwind + Motion running in Chromium. We take it directly — no rewriting, no design interpretation.
+2. **Shim, don't strip.** Instead of removing Electron APIs, create a thin shim layer (`lib/electron-shim.ts`) that no-ops IPC calls in the browser. This keeps the code Electron-compatible for a future desktop app.
+3. **Replace only the data layer.** Swap their Jotai atoms and IPC-based data fetching with our hooks (`useChat`, `useGetConversations`, `useAuthedFetch`, etc.). Flatten `@craft-agent/ui` imports to local paths. Everything else stays as-is.
+4. **Future Electron path.** By keeping the Electron structure intact (shimmed, not stripped), wrapping this in Electron later is straightforward — just replace the shims with real IPC handlers.
 5. **Animation library: Motion (v12).** Already in `package.json` as `"motion": "^12.34.0"`. Import from `motion/react` (not the legacy `framer-motion` package). Provides springs, stagger, `AnimatePresence`.
 
 ## What Gets Replaced
@@ -32,14 +32,14 @@ Replace our current color system and glass variants with Craft's:
 - **Scenic mode**: `data-scenic="true"` attribute enables glassmorphism with backdrop blur on background images
 - **Sonner toast integration**: tinted backgrounds matching their pattern
 
-### App Shell & Top Bar (new components)
+### App Shell & Top Bar (fork directly)
 
 Our current layout: `NewSidebar` wraps `SidebarProvider > Sidebar + SidebarInset`. Header is a minimal 64px bar with sidebar toggle + separator.
 
-Replace with Craft's pattern:
+Fork Craft's shell directly:
 - **Panel.tsx**: base container (`h-full flex flex-col min-w-0 overflow-hidden`), two sizing variants (`grow`/`shrink`)
 - **PanelHeader.tsx**: standardized 42px headers with left/center/right content areas, Motion animations for content shifting
-- **TopBar.tsx** (web equivalent): persistent bar with sidebar toggle, app title/breadcrumbs, and right-side utility area. No traffic light offsets or IPC — web-native implementation capturing the same visual density and layout
+- **TopBar.tsx**: fork as-is including traffic light offset logic (shimmed to no-op on web, functional in future Electron build)
 - **AppShell layout**: sidebar + main content panel, replaces `SidebarInset` wrapper
 
 ### Sidebar: Session List (rewrite NavChats)
@@ -126,10 +126,10 @@ Only hooks, backend integration, and routing survive. Everything else is replace
 For each Craft component we fork, the adaptation steps are:
 
 1. **Copy** the source file from the Craft repo into our project
-2. **Strip Electron-specific code**: IPC calls (`window.electron.*`), traffic light offsets, native window management, `BrowserWindow` references
-3. **Replace state management**: Jotai atoms → our React hooks or local state
+2. **Create Electron shim** (`lib/electron-shim.ts`): no-op implementations of `window.electron.*` APIs used by the component. This keeps code Electron-compatible for future desktop builds.
+3. **Replace data layer**: Jotai atoms → our React hooks (`useGetConversations`, `useChat`, etc.) or local state
 4. **Flatten imports**: `@craft-agent/ui` → local relative paths to our forked copies
-5. **Wire to our hooks**: replace their data-fetching/mutation patterns with our `useChat`, `useGetConversations`, `useAuthedFetch`, etc.
+5. **Wire to our hooks**: replace their IPC-based data-fetching with our `useAuthedFetch`-based hooks
 6. **Verify it renders**: check that the component works in our Next.js app
 
 ## Execution Chunks
@@ -148,7 +148,7 @@ Fork Craft's CSS into our `globals.css`. Their 6-color system, `@property` defin
 
 **Source**: Craft's `AppShell.tsx`, `TopBar.tsx`, `Panel.tsx`, `PanelHeader.tsx`
 
-Fork their shell components. Strip traffic light offsets and IPC from TopBar. Adapt to wrap our Next.js layout. Replace `new-sidebar.tsx` and update `app/(app)/layout.tsx`.
+Fork their shell components as-is. Shim Electron APIs (traffic light offsets become no-ops on web). Adapt to wrap our Next.js layout. Replace `new-sidebar.tsx` and update `app/(app)/layout.tsx`.
 
 **Verify**: sidebar toggles, content area fills correctly, TopBar renders with sidebar control.
 
