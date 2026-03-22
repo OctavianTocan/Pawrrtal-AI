@@ -4,13 +4,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Field,
 	FieldDescription,
@@ -73,24 +67,22 @@ export function LoginForm({
 
 	return (
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
-			<Card>
-				<CardHeader>
-					<CardTitle>Login to your account</CardTitle>
-					<CardDescription>
-						Enter your email below to login to your account
-					</CardDescription>
-				</CardHeader>
+			<div className="mb-2 text-center">
+				<h1 className="text-xl font-medium text-foreground">Welcome back</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
+					Sign in to your account to continue
+				</p>
+			</div>
+			<Card className="shadow-minimal">
 				<CardContent>
 					<form onSubmit={handleSubmit}>
 						<FieldGroup>
-							{/* -- Alert -- */}
 							{errorMessage && (
 								<Alert variant="destructive">
 									<AlertTitle>Error</AlertTitle>
 									<AlertDescription>{errorMessage}</AlertDescription>
 								</Alert>
 							)}
-							{/* -- Field -- */}
 							<Field>
 								<FieldLabel htmlFor="email">Email</FieldLabel>
 								<Input
@@ -108,7 +100,7 @@ export function LoginForm({
 									<FieldLabel htmlFor="password">Password</FieldLabel>
 									<a
 										href="/forgot-password"
-										className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+										className="ml-auto inline-block text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
 									>
 										Forgot your password?
 									</a>
@@ -125,17 +117,25 @@ export function LoginForm({
 								/>
 							</Field>
 							<Field>
-								{/* Login */}
-								<Button type="submit" disabled={isLoading}>
-									Login
+								<Button type="submit" disabled={isLoading} className="w-full">
+									Sign in
 								</Button>
-								{/* TODO: Link to login with Google. */}
-								<Button variant="outline" type="button" disabled={isLoading}>
-									Login with Google
+								<Button
+									variant="outline"
+									type="button"
+									disabled={isLoading}
+									className="w-full"
+								>
+									Sign in with Google
 								</Button>
-								{/* Signup */}
 								<FieldDescription className="text-center">
-									Don&apos;t have an account? <a href="/signup">Sign up</a>
+									Don&apos;t have an account?{" "}
+									<a
+										href="/signup"
+										className="text-foreground underline underline-offset-4 hover:text-accent"
+									>
+										Sign up
+									</a>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>

@@ -73,7 +73,7 @@ export function useChat() {
 
 						// Yield the delta content.
 						yield json.type === "delta" ? json.content : null;
-					} catch (error) {
+					} catch (_error) {
 						// Ignore errors for incomplete messages.
 					}
 				}

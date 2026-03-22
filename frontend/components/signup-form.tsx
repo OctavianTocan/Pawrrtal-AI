@@ -3,13 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
 	Field,
 	FieldDescription,
@@ -102,96 +96,98 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	};
 
 	return (
-		<Card {...props}>
-			<CardHeader>
-				<CardTitle>Create an account</CardTitle>
-				<CardDescription>
-					Enter your information below to create your account
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<form onSubmit={handleSubmit}>
-					<FieldGroup>
-						{/* -- Alert -- */}
-						{errorMessage && (
-							<Alert variant="destructive">
-								<AlertTitle>Error</AlertTitle>
-								<AlertDescription>{errorMessage}</AlertDescription>
-							</Alert>
-						)}
-						<Field>
-							<FieldLabel htmlFor="name">Full Name</FieldLabel>
-							<Input
-								id="name"
-								type="text"
-								placeholder="John Doe"
-								required
-								name="name"
-							/>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="email">Email</FieldLabel>
-							<Input
-								id="email"
-								type="email"
-								placeholder="m@example.com"
-								required
-								name="email"
-							/>
-							<FieldDescription>
-								We&apos;ll use this to contact you. We will not share your email
-								with anyone else.
-							</FieldDescription>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="password">Password</FieldLabel>
-							<Input id="password" type="password" required name="password" />
-							{/* TODO: We're not validating the password strength here. */}
-							<FieldDescription>
-								Must be at least 8 characters long.
-							</FieldDescription>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="confirm-password">
-								Confirm Password
-							</FieldLabel>
-							<Input
-								id="confirm-password"
-								type="password"
-								required
-								name="confirm-password"
-							/>
-							<FieldDescription>Please confirm your password.</FieldDescription>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="invite-code">Invite Code</FieldLabel>
-							<Input
-								id="invite-code"
-								type="password"
-								required
-								name="invite-code"
-								placeholder="Enter your invite code"
-							/>
-							<FieldDescription>
-								An invite code is required to create an account.
-							</FieldDescription>
-						</Field>
+		<div className="flex flex-col gap-6">
+			<div className="mb-2 text-center">
+				<h1 className="text-xl font-medium text-foreground">
+					Create an account
+				</h1>
+				<p className="mt-1 text-sm text-muted-foreground">
+					Enter your information below to get started
+				</p>
+			</div>
+			<Card className="shadow-minimal" {...props}>
+				<CardContent>
+					<form onSubmit={handleSubmit}>
 						<FieldGroup>
+							{errorMessage && (
+								<Alert variant="destructive">
+									<AlertTitle>Error</AlertTitle>
+									<AlertDescription>{errorMessage}</AlertDescription>
+								</Alert>
+							)}
 							<Field>
-								<Button type="submit" disabled={isLoading}>
+								<FieldLabel htmlFor="name">Full Name</FieldLabel>
+								<Input
+									id="name"
+									type="text"
+									placeholder="John Doe"
+									required
+									name="name"
+								/>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="email">Email</FieldLabel>
+								<Input
+									id="email"
+									type="email"
+									placeholder="m@example.com"
+									required
+									name="email"
+								/>
+								<FieldDescription>
+									We&apos;ll use this to contact you. We will not share your
+									email with anyone else.
+								</FieldDescription>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="password">Password</FieldLabel>
+								<Input id="password" type="password" required name="password" />
+								<FieldDescription>
+									Must be at least 8 characters long.
+								</FieldDescription>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="confirm-password">
+									Confirm Password
+								</FieldLabel>
+								<Input
+									id="confirm-password"
+									type="password"
+									required
+									name="confirm-password"
+								/>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="invite-code">Invite Code</FieldLabel>
+								<Input
+									id="invite-code"
+									type="password"
+									required
+									name="invite-code"
+									placeholder="Enter your invite code"
+								/>
+								<FieldDescription>
+									An invite code is required to create an account.
+								</FieldDescription>
+							</Field>
+							<Field>
+								<Button type="submit" disabled={isLoading} className="w-full">
 									Create Account
 								</Button>
-								{/* <Button variant="outline" type="button">
-                                    Sign up with Google
-                                </Button> */}
-								<FieldDescription className="px-6 text-center">
-									Already have an account? <a href="/login">Sign in</a>
+								<FieldDescription className="text-center">
+									Already have an account?{" "}
+									<a
+										href="/login"
+										className="text-foreground underline underline-offset-4 hover:text-accent"
+									>
+										Sign in
+									</a>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>
-					</FieldGroup>
-				</form>
-			</CardContent>
-		</Card>
+					</form>
+				</CardContent>
+			</Card>
+		</div>
 	);
 }
