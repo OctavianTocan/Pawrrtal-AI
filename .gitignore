@@ -72,3 +72,6 @@ __pycache__
 agno.db
 agno.db-shm
 agno.db-wal
+
+# Craft Agents source (vendored, not committed)
+.craft-source/
