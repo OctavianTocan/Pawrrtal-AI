@@ -1,6 +1,6 @@
 # Craft Agents UI Reskin
 
-Wholesale replacement of all Minnetonka frontend UI components with Craft Agents OSS equivalents. Grab their components, styling, behavior, and animations. Wire them to our hooks and backend. The only things we keep are the integration layer: hooks, API calls, auth, routing, and backend types.
+Fork Craft Agents OSS component source code directly into our project. Adapt it to our stack (strip Electron/IPC, replace Jotai with our hooks, flatten `@craft-agent/ui` imports). This gives us exact visual fidelity with mechanical adaptation work instead of design interpretation. The only things we keep from our current frontend are the integration layer: hooks, API calls, auth, routing, and backend types.
 
 ## Source Reference
 
@@ -11,10 +11,10 @@ Wholesale replacement of all Minnetonka frontend UI components with Craft Agents
 
 ## Ground Rules
 
-1. **Grab wholesale.** Take Craft's components — styling, behavior, internal state, animations — as-is. Don't preserve our UI component logic; replace it entirely.
-2. **Wire to our hooks.** The integration boundary is our hooks and backend: `useChat`, `useCreateConversation`, `useGetConversations`, `useAuthedFetch`, Next.js routing, API types. These stay. Everything above them gets replaced.
-3. **Don't over-adapt.** If Craft's component does something slightly differently than ours (attachments, input behavior, model selection), take their approach. Only deviate when something is truly Electron-specific and has no web equivalent.
-4. **Electron to web equivalents.** Craft is Electron — we build web equivalents that capture the same visual feel (TopBar without traffic lights, no IPC, standard web scrollbars with custom styling, responsive breakpoints).
+1. **Fork, don't rewrite.** Copy Craft's component source files directly into our project. Adapt them with mechanical changes (strip IPC, replace Jotai atoms, fix imports) rather than rewriting from scratch to match their design.
+2. **Adaptation is mechanical.** The work per component is: copy file → strip Electron-specific code (IPC calls, traffic light offsets, window management) → replace Jotai state atoms with our hooks → flatten `@craft-agent/ui` imports to local paths → verify it renders.
+3. **Wire to our hooks.** The integration boundary is our hooks and backend: `useChat`, `useCreateConversation`, `useGetConversations`, `useAuthedFetch`, Next.js routing, API types. These stay. Everything above them gets replaced.
+4. **Don't over-adapt.** Take Craft's approach for everything. Only deviate when something is truly Electron-specific with no web equivalent (e.g., native window controls → web-native top bar).
 5. **Animation library: Motion (v12).** Already in `package.json` as `"motion": "^12.34.0"`. Import from `motion/react` (not the legacy `framer-motion` package). Provides springs, stagger, `AnimatePresence`.
 
 ## What Gets Replaced
@@ -121,54 +121,65 @@ Only hooks, backend integration, and routing survive. Everything else is replace
 - `Streamdown` for markdown rendering (Craft's `StreamingMarkdown` is a potential future upgrade but out of scope)
 - Backend API integration (`lib/api.ts`, `lib/types.ts`)
 
+## Adaptation Playbook
+
+For each Craft component we fork, the adaptation steps are:
+
+1. **Copy** the source file from the Craft repo into our project
+2. **Strip Electron-specific code**: IPC calls (`window.electron.*`), traffic light offsets, native window management, `BrowserWindow` references
+3. **Replace state management**: Jotai atoms → our React hooks or local state
+4. **Flatten imports**: `@craft-agent/ui` → local relative paths to our forked copies
+5. **Wire to our hooks**: replace their data-fetching/mutation patterns with our `useChat`, `useGetConversations`, `useAuthedFetch`, etc.
+6. **Verify it renders**: check that the component works in our Next.js app
+
 ## Execution Chunks
 
 Each chunk is independently shippable and testable.
 
 ### Chunk 1: Design Tokens & Theme
 
-**Files**: `globals.css` (rewrite), tailwind config updates
+**Source**: Craft's `index.css` (theme system)
 
-Rewrite `globals.css` with Craft's 6-color system, `@property` definitions, shadow system, z-index registry, foreground mix variants, scrollbar styles, scenic mode support. Remove all 4 glass variants (standard, frosted, fluted, crystal) and replace with Craft's shadow/surface approach.
+Fork Craft's CSS into our `globals.css`. Their 6-color system, `@property` definitions, shadow system, z-index registry, foreground mix variants, scrollbar styles, scenic mode. Delete our 4 glass utility classes and all associated CSS variables.
 
-**Verify**: app renders with new colors, light/dark mode works, no visual regressions in existing components (they'll look different but shouldn't break).
+**Verify**: app renders with new colors, light/dark mode works, existing components look different but don't break.
 
 ### Chunk 2: App Shell & Top Bar
 
-**Files**: `new-sidebar.tsx` (rewrite), `app/(app)/layout.tsx` (adapt), new `TopBar.tsx`, `Panel.tsx`, `PanelHeader.tsx`
+**Source**: Craft's `AppShell.tsx`, `TopBar.tsx`, `Panel.tsx`, `PanelHeader.tsx`
 
-New layout structure with Craft's proportions. TopBar as web equivalent of their Electron top bar. PanelHeader for consistent headers.
+Fork their shell components. Strip traffic light offsets and IPC from TopBar. Adapt to wrap our Next.js layout. Replace `new-sidebar.tsx` and update `app/(app)/layout.tsx`.
 
 **Verify**: sidebar toggles, content area fills correctly, TopBar renders with sidebar control.
 
 ### Chunk 3: Sidebar Session List
 
-**Files**: `nav-chats.tsx` (rewrite), new `SessionList.tsx`, `SessionItem.tsx`, `EntityRow.tsx`, `get-conversations.ts` (adapt if needed)
+**Source**: Craft's `SessionList.tsx`, `SessionItem.tsx`, `EntityRow.tsx`, `LeftSidebar.tsx`
 
-Craft-style session list with date grouping, search, badges. Motion animations.
+Fork their session list components. Replace Jotai session atoms with our `useGetConversations` hook. Wire navigation to Next.js `router.push`. Delete `nav-chats.tsx`.
 
 **Verify**: conversations load and group by date, search filters work, clicking navigates to conversation, new conversation button works.
 
 ### Chunk 4: Chat Messages + Empty State + Loading
 
-**Files**: `ChatView.tsx` (rewrite), `message.tsx` (rewrite), new `TurnCard.tsx`, `EmptyStateHint.tsx`, `ProcessingIndicator.tsx`, `loader.tsx` (delete — replaced by ProcessingIndicator)
+**Source**: Craft's `ChatDisplay.tsx`, `UserMessageBubble`, `TurnCard`, `EmptyStateHint.tsx`, `ProcessingIndicator`
 
-Turn-based message grouping, rotating empty state hints, processing indicator with timer.
+Fork their chat display and message components. Replace their session/message atoms with our `chatHistory` prop from `ChatContainer`. Keep `Streamdown` for markdown rendering. Delete `message.tsx`, `loader.tsx`.
 
 **Verify**: messages render in turns, streaming works, empty state cycles hints, loading shows timer.
 
 ### Chunk 5: Input Area & Model Selector
 
-**Files**: `prompt-input.tsx` (delete, replace with Craft's FreeFormInput), `model-selector.tsx` (delete, replace with Craft's selector), `input-group.tsx` (delete)
+**Source**: Craft's `FreeFormInput.tsx`, `RichTextInput.tsx`, `InputContainer.tsx`, connection selector
 
-Wholesale replacement of input area with Craft's components. Wire to our hooks.
+Fork their input components wholesale. Wire submit to our `useChat` handler, model list to our `useModels` hook. Delete `prompt-input.tsx`, `model-selector.tsx`, `input-group.tsx`.
 
-**Verify**: typing, sending, file attachments, model selection all work with new styling.
+**Verify**: typing, sending, file attachments, model selection all work.
 
 ### Chunk 6: Polish & Consistency
 
-**Files**: all `ui/*.tsx`, auth pages, toast overrides
+**Source**: Craft's `ui/` primitives (Button, Badge, Dialog, etc.)
 
-Final pass — every shadcn/ui component uses new tokens, auth pages match, toasts styled correctly.
+Fork Craft's shadcn/ui variants or restyle ours to match their token system. Update auth pages, toast overrides. Final consistency pass.
 
 **Verify**: full app walkthrough, no visual inconsistencies, light/dark mode clean.
