@@ -1,6 +1,29 @@
 import { atom } from "jotai";
 import type { Conversation } from "@/lib/types";
 
+// Re-export Craft session atoms for components that import from @/atoms/sessions
+export {
+	type SessionMeta,
+	type BackgroundTask,
+	extractSessionMeta,
+	sessionAtomFamily,
+	sessionMetaMapAtom,
+	sessionIdsAtom,
+	loadedSessionsAtom,
+	activeSessionIdAtom,
+	updateSessionAtom,
+	updateSessionMetaAtom,
+	appendMessageAtom,
+	updateStreamingContentAtom,
+	initializeSessionsAtom,
+	addSessionAtom,
+	removeSessionAtom,
+	syncSessionsToAtomsAtom,
+	ensureSessionMessagesLoadedAtom,
+	backgroundTasksAtomFamily,
+	windowWorkspaceIdAtom,
+} from "./craft-sessions";
+
 /** All conversations for the current user (populated by TanStack Query). */
 export const conversationsAtom = atom<Conversation[]>([]);
 

@@ -9,18 +9,31 @@
  */
 
 import { FileText } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
 import { CopyButton } from "./CopyButton";
 import { ItemNavigator } from "./ItemNavigator";
 import { PreviewOverlay } from "./PreviewOverlay";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Configure pdf.js worker using Vite's ?url import for cross-platform dev/prod compatibility
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+const Document = dynamic(
+	() => import("react-pdf").then((mod) => mod.Document),
+	{ ssr: false },
+) as React.ComponentType<any>;
 
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
+	ssr: false,
+}) as React.ComponentType<any>;
+
+if (typeof window !== "undefined") {
+	void import("react-pdf").then(({ pdfjs }) => {
+		pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+			"pdfjs-dist/build/pdf.worker.min.mjs",
+			import.meta.url,
+		).toString();
+	});
+}
 
 interface PreviewItem {
 	src: string;

@@ -11,7 +11,6 @@ import {
 	selectedModelIdAtom,
 	streamingStartedAtAtom,
 } from "@/atoms";
-import { ChatInput } from "@/components/input/ChatInput";
 import type { AgnoMessage } from "@/lib/types";
 import ChatView from "./ChatView";
 import { useChat } from "./hooks/use-chat";
@@ -79,29 +78,13 @@ export default function ChatContainer({
 		setMessages(chatHistory);
 	}, [chatHistory, setMessages]);
 
-	/**
-	 * Handles sending a message from the user.
-	 *
-	 * On the first message in a new conversation this will:
-	 * 1. Persist the conversation to the backend.
-	 * 2. Kick off async title generation.
-	 * 3. Swap the URL bar to `/c/:id` via `replaceState` (avoiding a re-render mid-stream).
-	 *
-	 * Then it streams the assistant's response chunk-by-chunk and appends to chat history.
-	 * After streaming completes, it syncs the Next.js router so future client-side
-	 * navigations (e.g. "New Conversation") work correctly.
-	 */
 	const handleSubmit = useCallback(async () => {
 		const content = messageContent.trim();
 		if (!content) return;
 
 		if (!hasNavigated.current) {
 			await createConversationMutation.mutateAsync();
-			// Fire-and-forget: title generation shouldn't block the conversation flow.
 			generateConversationTitleMutation.mutateAsync(content);
-
-			// Use replaceState for an instant URL swap without interrupting the stream.
-			// The Next.js router is synced after streaming finishes (see below).
 			window.history.replaceState(null, "", `/c/${conversationId}`);
 			hasNavigated.current = true;
 		}
@@ -111,7 +94,6 @@ export default function ChatContainer({
 		setIsStreaming(true);
 		setStreamingStartedAt(Date.now());
 
-		// Optimistically append the user message and an empty assistant placeholder.
 		setChatHistory((prev) => [
 			...prev,
 			{ role: "user", content } as AgnoMessage,
@@ -137,9 +119,6 @@ export default function ChatContainer({
 		setIsStreaming(false);
 		setStreamingStartedAt(null);
 
-		// Sync the Next.js router now that streaming is done.
-		// replaceState earlier left the router desynced -- this call aligns its
-		// internal state so that router.push("/") in the sidebar works correctly.
 		if (hasNavigated.current) {
 			router.replace(`/c/${conversationId}`);
 		}
@@ -154,7 +133,6 @@ export default function ChatContainer({
 		setStreamingStartedAt,
 	]);
 
-	/** Updates the controlled message state as the user types. */
 	const onUpdateMessage = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
 		setMessageContent(e.currentTarget.value);
 	}, []);
@@ -166,19 +144,31 @@ export default function ChatContainer({
 		[setSelectedModelId],
 	);
 
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+			if (e.key === "Enter" && !e.shiftKey) {
+				e.preventDefault();
+				handleSubmit();
+			}
+		},
+		[handleSubmit],
+	);
+
 	return (
 		<div className="overflow-hidden sm:max-w-[80%] lg:max-w-[60%] xl:max-w-[50%] mx-auto">
 			<div className="h-[90vh] flex flex-col overflow-hidden">
 				<ChatView />
-				<ChatInput
-					value={messageContent}
-					onChange={onUpdateMessage}
-					onSubmit={handleSubmit}
-					onModelChange={handleModelChange}
-					disabled={isLoading}
-					placeholder="Ask anything about your memories or search the web..."
-					className="mx-2 mb-2"
-				/>
+				<div className="mx-2 mb-2">
+					<textarea
+						value={messageContent}
+						onChange={onUpdateMessage}
+						onKeyDown={handleKeyDown}
+						disabled={isLoading}
+						placeholder="Ask anything about your memories or search the web..."
+						className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						rows={3}
+					/>
+				</div>
 			</div>
 		</div>
 	);

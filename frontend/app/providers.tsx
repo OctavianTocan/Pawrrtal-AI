@@ -3,6 +3,8 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import type * as React from "react";
+import { ActionRegistryProvider } from "@/actions";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { getQueryClient } from "./get-query-client";
 
 /**
@@ -17,8 +19,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<ReactQueryDevtools initialIsOpen={false} />
-			{children}
+			<ActionRegistryProvider>
+				<ThemeProvider>
+					<ReactQueryDevtools initialIsOpen={false} />
+					{children}
+				</ThemeProvider>
+			</ActionRegistryProvider>
 		</QueryClientProvider>
 	);
 }

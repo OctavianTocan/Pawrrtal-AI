@@ -256,9 +256,4 @@ export function installElectronShim(): void {
 // Auto-install on module load (safe for SSR — guarded by typeof window check)
 installElectronShim();
 
-// Global type augmentation so TypeScript knows about window.electronAPI
-declare global {
-	interface Window {
-		electronAPI?: typeof electronAPIShim;
-	}
-}
+// Note: window.electronAPI type is declared in @/lib/craft-shared/types.ts

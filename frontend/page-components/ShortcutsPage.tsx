@@ -1,0 +1,148 @@
+/**
+ * ShortcutsPage
+ *
+ * Displays keyboard shortcuts reference from the centralized action registry.
+ */
+
+import type * as React from 'react'
+import { PanelHeader } from '@/components/shell/PanelHeader'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { HeaderMenu } from '@/components/ui/HeaderMenu'
+import { routes } from '@/lib/navigate'
+import { isMac } from '@/lib/platform'
+import { actionsByCategory, useActionLabel, type ActionId } from '@/actions'
+
+interface ShortcutItem {
+  keys: string[]
+  description: string
+}
+
+interface ShortcutSection {
+  title: string
+  shortcuts: ShortcutItem[]
+}
+
+// Component-specific shortcuts that aren't in the centralized registry
+const componentSpecificSections: ShortcutSection[] = [
+  {
+    title: 'List Navigation',
+    shortcuts: [
+      { keys: ['↑', '↓'], description: 'Navigate items in list' },
+      { keys: ['Home'], description: 'Go to first item' },
+      { keys: ['End'], description: 'Go to last item' },
+    ],
+  },
+  {
+    title: 'Session List',
+    shortcuts: [
+      { keys: ['Enter'], description: 'Focus chat input' },
+      { keys: ['Right-click'], description: 'Open context menu' },
+      { keys: [isMac ? '⌥' : 'Alt', 'Click'], description: 'Add filter as excluded' },
+    ],
+  },
+  {
+    title: 'Agent Tree',
+    shortcuts: [
+      { keys: ['←'], description: 'Collapse folder' },
+      { keys: ['→'], description: 'Expand folder' },
+    ],
+  },
+  {
+    title: 'Chat Input',
+    shortcuts: [
+      { keys: ['Enter'], description: 'Send message' },
+      { keys: ['Shift', 'Enter'], description: 'New line' },
+      { keys: ['Esc'], description: 'Close dialog / blur input' },
+    ],
+  },
+]
+
+function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <kbd className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-medium font-sans bg-muted border border-border rounded ${className || ''}`}>
+      {children}
+    </kbd>
+  )
+}
+
+/**
+ * Renders a shortcut row for an action from the registry
+ */
+function ActionShortcutRow({ actionId }: { actionId: ActionId }) {
+  const { label, hotkey } = useActionLabel(actionId)
+
+  if (!hotkey) return null
+
+  // Split hotkey into individual keys for display
+  // Mac: symbols are concatenated (⌘⇧N) - need smart splitting
+  // Windows: separated by + (Ctrl+Shift+N) - split on +
+  const keys = isMac
+    ? hotkey.match(/[⌘⇧⌥←→]|Tab|Esc|./g) || []
+    : hotkey.split('+')
+
+  return (
+    <div className="group flex items-center justify-between py-1.5">
+      <span className="text-sm">{label}</span>
+      <div className="flex-1 mx-3 h-px bg-[repeating-linear-gradient(90deg,currentColor_0_2px,transparent_2px_8px)] opacity-0 group-hover:opacity-15" />
+      <div className="flex items-center gap-1">
+        {keys.map((key, keyIndex) => (
+          <Kbd key={keyIndex} className="group-hover:bg-foreground/10 group-hover:border-foreground/20">{key}</Kbd>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function ShortcutsPage() {
+  return (
+    <div className="h-full flex flex-col">
+      <PanelHeader title="Shortcuts" actions={<HeaderMenu route={routes.view.settings('shortcuts')} />} />
+      <Separator />
+      <ScrollArea className="flex-1">
+        <div className="px-5 py-4">
+          <div className="space-y-6">
+            {/* Registry-driven sections */}
+            {Object.entries(actionsByCategory).map(([category, actions]) => (
+              <div key={category}>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b border-border/50">
+                  {category}
+                </h3>
+                <div className="space-y-0.5">
+                  {actions.map(action => (
+                    <ActionShortcutRow key={action.id} actionId={action.id as ActionId} />
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Component-specific sections */}
+            {componentSpecificSections.map((section) => (
+              <div key={section.title}>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b border-border/50">
+                  {section.title}
+                </h3>
+                <div className="space-y-0.5">
+                  {section.shortcuts.map((shortcut, index) => (
+                    <div
+                      key={index}
+                      className="group flex items-center justify-between py-1.5"
+                    >
+                      <span className="text-sm">{shortcut.description}</span>
+                      <div className="flex-1 mx-3 h-px bg-[repeating-linear-gradient(90deg,currentColor_0_2px,transparent_2px_8px)] opacity-0 group-hover:opacity-15" />
+                      <div className="flex items-center gap-1">
+                        {shortcut.keys.map((key, keyIndex) => (
+                          <Kbd key={keyIndex} className="group-hover:bg-foreground/10 group-hover:border-foreground/20">{key}</Kbd>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}

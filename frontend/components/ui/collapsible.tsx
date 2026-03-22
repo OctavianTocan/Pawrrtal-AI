@@ -1,33 +1,58 @@
-"use client";
+import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
+import { motion, AnimatePresence } from "motion/react"
+import * as React from "react"
 
-import { Collapsible as CollapsiblePrimitive } from "radix-ui";
+// Radix primitives (unchanged)
+const Collapsible = CollapsiblePrimitive.Root
+const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger
+const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent
 
-function Collapsible({
-	...props
-}: React.ComponentProps<typeof CollapsiblePrimitive.Root>) {
-	return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />;
+// Spring config - snappy, no bounce
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 1400,
+  damping: 75,
 }
 
-function CollapsibleTrigger({
-	...props
-}: React.ComponentProps<typeof CollapsiblePrimitive.CollapsibleTrigger>) {
-	return (
-		<CollapsiblePrimitive.CollapsibleTrigger
-			data-slot="collapsible-trigger"
-			{...props}
-		/>
-	);
+interface AnimatedCollapsibleContentProps {
+  isOpen: boolean
+  children: React.ReactNode
+  className?: string
 }
 
-function CollapsibleContent({
-	...props
-}: React.ComponentProps<typeof CollapsiblePrimitive.CollapsibleContent>) {
-	return (
-		<CollapsiblePrimitive.CollapsibleContent
-			data-slot="collapsible-content"
-			{...props}
-		/>
-	);
+/**
+ * AnimatedCollapsibleContent - Motion-powered collapsible content
+ *
+ * Uses spring physics to animate height (0 → auto) and opacity.
+ * Motion handles height: "auto" natively, which CSS cannot do.
+ */
+function AnimatedCollapsibleContent({
+  isOpen,
+  children,
+  className
+}: AnimatedCollapsibleContentProps) {
+  return (
+    <AnimatePresence initial={false}>
+      {isOpen && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={springTransition}
+          className={className}
+          style={{ clipPath: "inset(0 -20px)" }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
-export { Collapsible, CollapsibleTrigger, CollapsibleContent };
+export {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  AnimatedCollapsibleContent,
+  springTransition,
+}

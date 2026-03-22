@@ -8,7 +8,9 @@
 		"moduleDetection": "force",
 		// Strictness.
 		"strict": true,
-		"noUncheckedIndexedAccess": true,
+		"allowImportingTsExtensions": true,
+		// noUncheckedIndexedAccess disabled: Craft source code assumes standard indexing behavior
+		// "noUncheckedIndexedAccess": true,
 		// Not transpiling with Typescript:
 		"moduleResolution": "bundler",
 		"module": "esnext",
@@ -25,7 +27,12 @@
 			}
 		],
 		"paths": {
-			"@/*": ["./*"]
+			"@/*": ["./*"],
+			"@craft-agent/core": ["./lib/craft-core/index.ts"],
+			"@craft-agent/core/*": ["./lib/craft-core/*"],
+			"@craft-agent/shared": ["./lib/craft-shared/index.ts"],
+			"@craft-agent/shared/*": ["./lib/craft-shared/*"],
+			"@craft-agent/ui": ["./components/craft-ui/index.ts"]
 		},
 		"esModuleInterop": true
 	},
@@ -37,5 +44,13 @@
 		".next/dev/types/**/*.ts",
 		"**/*.mts"
 	],
-	"exclude": ["node_modules", "components/craft-ui"]
+	"exclude": [
+		"node_modules",
+		"components/craft-ui/**/*",
+		"**/__tests__/**",
+		"**/*.test.ts",
+		"**/*.test.tsx",
+		"lib/craft-shared/**/*",
+		"lib/craft-core-stubs.ts"
+	]
 }
