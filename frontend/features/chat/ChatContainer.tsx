@@ -3,34 +3,16 @@
 import { useSetAtom } from "jotai";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	isStreamingAtom,
 	messagesAtom,
 	selectedConversationIdAtom,
+	selectedModelIdAtom,
 	streamingStartedAtAtom,
 } from "@/atoms";
-import {
-	ModelSelector,
-	ModelSelectorContent,
-	ModelSelectorEmpty,
-	ModelSelectorGroup,
-	ModelSelectorInput,
-	ModelSelectorItem,
-	ModelSelectorList,
-	ModelSelectorLogo,
-	ModelSelectorName,
-	ModelSelectorSeparator,
-	ModelSelectorTrigger,
-} from "@/components/ai-elements/model-selector";
-import {
-	PromptInput,
-	PromptInputFooter,
-	PromptInputSubmit,
-	PromptInputTextarea,
-} from "@/components/ai-elements/prompt-input";
-import { Button } from "@/components/ui/button";
-import type { AgnoMessage, PromptInputMessage } from "@/lib/types";
+import { ChatInput } from "@/components/input/ChatInput";
+import type { AgnoMessage } from "@/lib/types";
 import ChatView from "./ChatView";
 import { useChat } from "./hooks/use-chat";
 import { useCreateConversation } from "./hooks/use-create-conversation";
@@ -73,6 +55,7 @@ export default function ChatContainer({
 	const setIsStreaming = useSetAtom(isStreamingAtom);
 	const setStreamingStartedAt = useSetAtom(streamingStartedAtAtom);
 	const setSelectedConversationId = useSetAtom(selectedConversationIdAtom);
+	const setSelectedModelId = useSetAtom(selectedModelIdAtom);
 
 	/**
 	 * Tracks whether we've already updated the URL to `/c/:id`.
@@ -80,10 +63,7 @@ export default function ChatContainer({
 	 */
 	const hasNavigated = useRef(false);
 
-	const [message, setMessage] = useState<PromptInputMessage>({
-		content: "",
-		files: [],
-	});
+	const [messageContent, setMessageContent] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(
 		initialChatHistory || [],
@@ -99,10 +79,6 @@ export default function ChatContainer({
 		setMessages(chatHistory);
 	}, [chatHistory, setMessages]);
 
-	// Model selector state
-	const [open, setOpen] = useState(false);
-	const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview");
-
 	/**
 	 * Handles sending a message from the user.
 	 *
@@ -115,11 +91,14 @@ export default function ChatContainer({
 	 * After streaming completes, it syncs the Next.js router so future client-side
 	 * navigations (e.g. "New Conversation") work correctly.
 	 */
-	const handleSendMessage = async (msg: PromptInputMessage) => {
+	const handleSubmit = useCallback(async () => {
+		const content = messageContent.trim();
+		if (!content) return;
+
 		if (!hasNavigated.current) {
 			await createConversationMutation.mutateAsync();
 			// Fire-and-forget: title generation shouldn't block the conversation flow.
-			generateConversationTitleMutation.mutateAsync(msg.content);
+			generateConversationTitleMutation.mutateAsync(content);
 
 			// Use replaceState for an instant URL swap without interrupting the stream.
 			// The Next.js router is synced after streaming finishes (see below).
@@ -127,8 +106,7 @@ export default function ChatContainer({
 			hasNavigated.current = true;
 		}
 
-		const newMessage = msg;
-		setMessage({ content: "", files: [] });
+		setMessageContent("");
 		setIsLoading(true);
 		setIsStreaming(true);
 		setStreamingStartedAt(Date.now());
@@ -136,16 +114,13 @@ export default function ChatContainer({
 		// Optimistically append the user message and an empty assistant placeholder.
 		setChatHistory((prev) => [
 			...prev,
-			{ role: "user", content: newMessage.content } as AgnoMessage,
+			{ role: "user", content } as AgnoMessage,
 			{ role: "assistant", content: "" } as AgnoMessage,
 		]);
 
 		let assistantMessage = "";
 
-		for await (const chunk of streamMessage(
-			newMessage.content,
-			conversationId,
-		)) {
+		for await (const chunk of streamMessage(content, conversationId)) {
 			assistantMessage += chunk || "";
 			setChatHistory((prev) => {
 				const updated = [...prev];
@@ -163,66 +138,47 @@ export default function ChatContainer({
 		setStreamingStartedAt(null);
 
 		// Sync the Next.js router now that streaming is done.
-		// replaceState earlier left the router desynced — this call aligns its
+		// replaceState earlier left the router desynced -- this call aligns its
 		// internal state so that router.push("/") in the sidebar works correctly.
 		if (hasNavigated.current) {
 			router.replace(`/c/${conversationId}`);
 		}
-	};
+	}, [
+		messageContent,
+		conversationId,
+		createConversationMutation,
+		generateConversationTitleMutation,
+		streamMessage,
+		router,
+		setIsStreaming,
+		setStreamingStartedAt,
+	]);
 
 	/** Updates the controlled message state as the user types. */
-	const onUpdateMessage = (e: ChangeEvent<HTMLTextAreaElement>) => {
-		setMessage({ ...message, content: e.currentTarget.value });
-	};
+	const onUpdateMessage = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+		setMessageContent(e.currentTarget.value);
+	}, []);
+
+	const handleModelChange = useCallback(
+		(modelId: string) => {
+			setSelectedModelId(modelId);
+		},
+		[setSelectedModelId],
+	);
 
 	return (
 		<div className="overflow-hidden sm:max-w-[80%] lg:max-w-[60%] xl:max-w-[50%] mx-auto">
 			<div className="h-[90vh] flex flex-col overflow-hidden">
 				<ChatView />
-				<PromptInput onSubmit={handleSendMessage} className="px-2 pb-2">
-					<PromptInputTextarea
-						placeholder="Ask anything about your memories or search the web..."
-						className="pr-16 bg-white min-h-12.5"
-						onChange={onUpdateMessage}
-						value={message.content}
-					/>
-					<PromptInputFooter>
-						<ModelSelector open={open} onOpenChange={setOpen}>
-							<ModelSelectorTrigger asChild>
-								<Button variant="outline">
-									<ModelSelectorLogo provider="google" />
-									{selectedModel}
-								</Button>
-							</ModelSelectorTrigger>
-							<ModelSelectorContent>
-								<ModelSelectorInput placeholder="Search models..." />
-								<ModelSelectorList>
-									<ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-									<ModelSelectorGroup heading="Google">
-										<ModelSelectorItem
-											value="gemini-3-flash-preview"
-											onSelect={() => {
-												setSelectedModel("gemini-3-flash-preview");
-												setOpen(false);
-											}}
-										>
-											<ModelSelectorLogo provider="google" />
-											<ModelSelectorName>
-												Gemini 3 Flash Preview
-											</ModelSelectorName>
-										</ModelSelectorItem>
-									</ModelSelectorGroup>
-									<ModelSelectorSeparator />
-								</ModelSelectorList>
-							</ModelSelectorContent>
-						</ModelSelector>
-						<PromptInputSubmit
-							disabled={message.content.length === 0}
-							className="absolute bottom-1 right-1 cursor-pointer"
-							status={isLoading ? "streaming" : "ready"}
-						/>
-					</PromptInputFooter>
-				</PromptInput>
+				<ChatInput
+					value={messageContent}
+					onChange={onUpdateMessage}
+					onSubmit={handleSubmit}
+					onModelChange={handleModelChange}
+					disabled={isLoading}
+					placeholder="Ask anything about your memories or search the web..."
+					className="mx-2 mb-2"
+				/>
 			</div>
 		</div>
 	);

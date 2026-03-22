@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useSyncConversations } from "@/hooks/use-sync-conversations";
+import { useSyncModels } from "@/hooks/use-sync-models";
 import { cn } from "@/lib/utils";
 import { LeftSidebar } from "./LeftSidebar";
 import { MainContentPanel } from "./MainContentPanel";
@@ -54,8 +55,9 @@ export function AppShell({ children }: AppShellProps) {
 		router.push("/");
 	}, [router]);
 
-	// Sync TanStack Query conversations into Jotai atom
+	// Sync TanStack Query data into Jotai atoms
 	useSyncConversations();
+	useSyncModels();
 
 	return (
 		<TooltipProvider delayDuration={300}>
