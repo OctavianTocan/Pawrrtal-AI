@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useSyncConversations } from "@/hooks/use-sync-conversations";
 import { cn } from "@/lib/utils";
 import { LeftSidebar } from "./LeftSidebar";
 import { MainContentPanel } from "./MainContentPanel";
@@ -27,6 +28,7 @@ import {
 	SIDEBAR_DEFAULT_WIDTH,
 	TOPBAR_HEIGHT,
 } from "./panel-constants";
+import { SessionList } from "./SessionList";
 import { TopBar } from "./TopBar";
 
 // Spring transition matching Craft's sidebar animations
@@ -51,6 +53,9 @@ export function AppShell({ children }: AppShellProps) {
 	const handleNewChat = useCallback(() => {
 		router.push("/");
 	}, [router]);
+
+	// Sync TanStack Query conversations into Jotai atom
+	useSyncConversations();
 
 	return (
 		<TooltipProvider delayDuration={300}>
@@ -95,7 +100,7 @@ export function AppShell({ children }: AppShellProps) {
 								}}
 							>
 								<LeftSidebar isCollapsed={false}>
-									{/* Sidebar content will be populated in Chunk 3 */}
+									<SessionList />
 								</LeftSidebar>
 							</div>
 						</motion.div>
