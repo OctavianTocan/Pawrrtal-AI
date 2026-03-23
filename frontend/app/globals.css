@@ -69,6 +69,10 @@
   /* === 6 BASE COLORS === */
   --background: oklch(0.98 0.003 265);
   --background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
+  --background-image:
+    radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
+    radial-gradient(circle at bottom left, oklch(from var(--info) l c h / 0.12), transparent 40%),
+    linear-gradient(180deg, var(--background), var(--foreground-3));
   --foreground: oklch(0.185 0.01 270);
   --foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
   --foreground-rgb: 38, 36, 42;
@@ -198,6 +202,10 @@
   /* === 6 BASE COLORS === */
   --background: oklch(0.2 0.005 270);
   --background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
+  --background-image:
+    radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.28), transparent 45%),
+    radial-gradient(circle at bottom right, oklch(from var(--info) l c h / 0.16), transparent 40%),
+    linear-gradient(180deg, var(--background), var(--foreground-5));
   --foreground: oklch(0.92 0.005 270);
   --foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
   --foreground-rgb: 227, 226, 229;
