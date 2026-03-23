@@ -1030,8 +1030,16 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 }
 
 [data-sonner-toast].group:hover [data-close-button],
-[data-sonner-toast]:hover [data-close-button] {
+[data-sonner-toast]:hover [data-close-button],
+[data-sonner-toast]:focus-within [data-close-button],
+[data-sonner-toast] [data-close-button]:focus-visible {
   opacity: 1 !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  [data-sonner-toast] [data-close-button] {
+    opacity: 1 !important;
+  }
 }
 
 [data-sonner-toast] [data-close-button]:hover {
