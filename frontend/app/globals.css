@@ -152,6 +152,17 @@
   --ring-width: 1px;
   --ring-offset: 0px;
 
+  /* Sidebar tokens */
+  --sidebar: var(--background-elevated);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: var(--foreground-5);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --sidebar-hover: oklch(from var(--foreground) l c h / 0.02);
+
   /* Markdown list markers */
   --md-bullets: var(--foreground-50);
   --md-counters: var(--foreground-50);
@@ -263,6 +274,17 @@
   --input: oklch(from var(--foreground) l c h / 0.1);
   --ring: oklch(from var(--foreground) l c h / 0.25);
 
+  /* Sidebar tokens */
+  --sidebar: var(--background-elevated);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: var(--foreground-5);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --sidebar-hover: oklch(from var(--foreground) l c h / 0.02);
+
   /* Markdown list markers */
   --md-bullets: var(--foreground-50);
   --md-counters: var(--foreground-50);
@@ -363,16 +385,6 @@ html[data-font="inter"] {
   --color-foreground-95: var(--foreground-95);
 
   /* === SEMANTIC SURFACE COLORS === */
-  --sidebar: var(--background-elevated);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--accent);
-  --sidebar-primary-foreground: var(--background);
-  --sidebar-accent: var(--foreground-5);
-  --sidebar-accent-foreground: var(--foreground);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-  --sidebar-hover: oklch(from var(--foreground) l c h / 0.02);
-
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
