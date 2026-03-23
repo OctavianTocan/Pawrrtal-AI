@@ -1,15 +1,11 @@
 "use client";
 
-import { Calligraph } from "calligraph";
-import Image from "next/image";
-import Link from "next/link";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { ConversationSidebarItem } from "@/components/conversation-sidebar-item";
 import useGetConversations from "@/hooks/get-conversations";
 
 // TODO: This needs to take in conversations/chats.
@@ -24,22 +20,14 @@ export function NavChats() {
 		<SidebarGroup>
 			<SidebarGroupLabel>Your Chats</SidebarGroupLabel>
 			<SidebarMenu>
-				{conversations.map((conversation) => (
-					<SidebarMenuItem key={conversation.id}>
-						<SidebarMenuButton asChild tooltip={conversation.title}>
-							{/* Using link for soft navigation. */}
-							<Link href={`/c/${conversation.id}`}>
-								<Image
-									src="/bars-rotate-fade.svg"
-									width={15}
-									height={15}
-									alt="Animated Loader"
-									unoptimized // Recommended for some animated SVGs to prevent caching issues
-								/>
-								<Calligraph>{conversation.title}</Calligraph>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
+				{conversations.map((conversation, index) => (
+					<ConversationSidebarItem
+						key={conversation.id}
+						id={conversation.id}
+						title={conversation.title}
+						updatedAt={conversation.updated_at}
+						showSeparator={index > 0}
+					/>
 				))}
 			</SidebarMenu>
 		</SidebarGroup>
