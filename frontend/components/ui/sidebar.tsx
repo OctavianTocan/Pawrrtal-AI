@@ -20,6 +20,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TopBarButton } from "@/components/ui/top-bar-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
@@ -253,16 +254,15 @@ function SidebarTrigger({
 	className,
 	onClick,
 	...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ComponentProps<typeof TopBarButton>) {
 	const { toggleSidebar } = useSidebar();
 
 	return (
-		<Button
+		<TopBarButton
 			data-sidebar="trigger"
 			data-slot="sidebar-trigger"
-			variant="ghost"
-			size="icon-sm"
-			className={cn(className)}
+			aria-label="Toggle Sidebar"
+			className={cn("[&_svg]:size-4", className)}
 			onClick={(event) => {
 				onClick?.(event);
 				toggleSidebar();
@@ -271,7 +271,7 @@ function SidebarTrigger({
 		>
 			<IconLayoutSidebar />
 			<span className="sr-only">Toggle Sidebar</span>
-		</Button>
+		</TopBarButton>
 	);
 }
 
