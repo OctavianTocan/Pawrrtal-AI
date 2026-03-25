@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { SquarePenRounded } from "./icons/SquarePenRounded";
 import { NavChats } from "./nav-chats";
+import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import {
 	Sidebar,
@@ -38,15 +39,16 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<div>
-									<button
+									<Button
+										variant="ghost"
 										type="button"
 										onClick={handleNewConversation}
-										className="inline-flex items-center justify-start gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 w-full py-[7px] px-2 text-[13px] rounded-[6px] shadow-minimal bg-background border-none text-foreground/85 font-normal hover:bg-foreground/3"
+										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background border-0 transition-colors hover:bg-foreground/3 focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-transparent focus-visible:outline-none"
 										aria-label="New Session"
 									>
 										<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
 										New Session
-									</button>
+									</Button>
 								</div>
 							</TooltipTrigger>
 							<TooltipContent side="right">⌘N</TooltipContent>
