@@ -69,7 +69,12 @@ export function EntityRow({
 								</div>
 							</div>
 						) : (
-							<div className="flex items-center gap-[10px] w-full pr-6 min-w-0">
+							<div
+								className={cn(
+									"flex items-center gap-[10px] w-full min-w-0",
+									icon && "pr-6",
+								)}
+							>
 								{icon && (
 									<div className="shrink-0 flex items-center gap-[10px] [&>*]:w-3 [&>*]:h-3">
 										{icon}
