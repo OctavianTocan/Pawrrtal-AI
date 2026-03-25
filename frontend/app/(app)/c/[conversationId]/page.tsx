@@ -57,10 +57,7 @@ export default async function ConversationPage({
 	const messages = await response.json();
 
 	return (
-		<div>
-			<h1 className="flex-1 items-center text-center">
-				Conversation {conversationId}
-			</h1>
+		<div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col">
 			<ChatContainer
 				key={conversationId}
 				conversationId={conversationId}

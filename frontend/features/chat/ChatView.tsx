@@ -25,13 +25,13 @@ import type { AgnoMessage } from "@/lib/types";
 import {
 	Conversation,
 	ConversationContent,
+	ConversationEmptyState,
 } from "../../components/ai-elements/conversation";
 import { Loader } from "../../components/ai-elements/loader";
 import type { PromptInputMessage } from "../../components/ai-elements/prompt-input";
 import {
 	PromptInput,
 	PromptInputFooter,
-	PromptInputProvider,
 	PromptInputSubmit,
 	PromptInputTextarea,
 } from "../../components/ai-elements/prompt-input";
@@ -87,16 +87,34 @@ const ChatView = ({
 	const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview");
 
 	return (
-		<div className="overflow-hidden sm:max-w-[80%] lg:max-w-[60%] xl:max-w-[50%] mx-auto">
-			<div className="h-[90vh] flex flex-col overflow-hidden">
-				<Conversation className="flex-1 overflow-y-auto" resize="smooth">
-					<ConversationContent>
+		<div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col px-4 pb-4 md:px-6 md:pb-6">
+			<div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-foreground/8 bg-background-elevated/90 shadow-modal-small backdrop-blur-sm">
+				<div className="border-b border-foreground/8 px-5 py-4 sm:px-6">
+					<p className="text-[11px] font-medium uppercase tracking-[0.18em] text-foreground/45">
+						AI Nexus
+					</p>
+					<h1 className="mt-1 font-medium text-base tracking-tight text-foreground">
+						Chat
+					</h1>
+					<p className="mt-1 text-muted-foreground text-sm">
+						Stay focused on the conversation.
+					</p>
+				</div>
+				<Conversation
+					className="min-h-0 flex-1 overflow-y-auto"
+					resize="smooth"
+				>
+					<ConversationContent className="mx-auto flex w-full max-w-3xl flex-1 gap-6 px-5 py-6 sm:px-6">
 						{chatHistory.length === 0 ? (
-							<div className="text-center my-auto font-semibold mt-8">
-								<p className="text-3xl mt-4 bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
-									What can we build together?
-								</p>
-							</div>
+							<ConversationEmptyState
+								className="min-h-[40vh] gap-4"
+								description="Ask about your memories, explore an idea, or pick up where you left off."
+								title="Start a conversation"
+							>
+								<div className="flex size-12 items-center justify-center rounded-full border border-foreground/10 bg-background shadow-minimal">
+									<div className="size-2 rounded-full bg-accent" />
+								</div>
+							</ConversationEmptyState>
 						) : (
 							<>
 								{chatHistory.map((message, index) => (
@@ -121,54 +139,59 @@ const ChatView = ({
 					</ConversationContent>
 					<ChatScrollAnchor track={chatHistory.length} />
 				</Conversation>
-				<PromptInput onSubmit={onSendMessage} className="px-2 pb-2">
-					<PromptInputTextarea
-						placeholder="Ask anything about your memories or search the web..."
-						className="pr-16 bg-white min-h-12.5"
-						onChange={onUpdateMessage}
-						value={message.content}
-					/>
-
-					<PromptInputFooter>
-						<ModelSelector open={open} onOpenChange={setOpen}>
-							<ModelSelectorTrigger asChild>
-								<Button variant="outline">
-									<ModelSelectorLogo provider="google" />
-									{selectedModel}
-								</Button>
-							</ModelSelectorTrigger>
-
-							<ModelSelectorContent>
-								<ModelSelectorInput placeholder="Search models..." />
-								<ModelSelectorList>
-									<ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-
-									<ModelSelectorGroup heading="Google">
-										<ModelSelectorItem
-											value="gemini-3-flash-preview"
-											onSelect={() => {
-												setSelectedModel("gemini-3-flash-preview");
-												setOpen(false);
-											}}
-										>
-											<ModelSelectorLogo provider="google" />
-											<ModelSelectorName>
-												Gemini 3 Flash Preview
-											</ModelSelectorName>
-										</ModelSelectorItem>
-									</ModelSelectorGroup>
-
-									<ModelSelectorSeparator />
-								</ModelSelectorList>
-							</ModelSelectorContent>
-						</ModelSelector>
-						<PromptInputSubmit
-							disabled={message.content.length === 0}
-							className="absolute bottom-1 right-1 cursor-pointer"
-							status={isLoading ? "streaming" : "ready"}
+				<div className="border-t border-foreground/8 bg-background/80 px-3 py-3 sm:px-4">
+					<PromptInput
+						onSubmit={onSendMessage}
+						className="mx-auto w-full max-w-3xl"
+					>
+						<PromptInputTextarea
+							placeholder="Ask anything about your memories or search the web..."
+							className="min-h-12.5 pr-16"
+							onChange={onUpdateMessage}
+							value={message.content}
 						/>
-					</PromptInputFooter>
-				</PromptInput>
+
+						<PromptInputFooter>
+							<ModelSelector open={open} onOpenChange={setOpen}>
+								<ModelSelectorTrigger asChild>
+									<Button variant="outline">
+										<ModelSelectorLogo provider="google" />
+										{selectedModel}
+									</Button>
+								</ModelSelectorTrigger>
+
+								<ModelSelectorContent>
+									<ModelSelectorInput placeholder="Search models..." />
+									<ModelSelectorList>
+										<ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+
+										<ModelSelectorGroup heading="Google">
+											<ModelSelectorItem
+												value="gemini-3-flash-preview"
+												onSelect={() => {
+													setSelectedModel("gemini-3-flash-preview");
+													setOpen(false);
+												}}
+											>
+												<ModelSelectorLogo provider="google" />
+												<ModelSelectorName>
+													Gemini 3 Flash Preview
+												</ModelSelectorName>
+											</ModelSelectorItem>
+										</ModelSelectorGroup>
+
+										<ModelSelectorSeparator />
+									</ModelSelectorList>
+								</ModelSelectorContent>
+							</ModelSelector>
+							<PromptInputSubmit
+								disabled={message.content.length === 0}
+								className="absolute bottom-1 right-1 cursor-pointer"
+								status={isLoading ? "streaming" : "ready"}
+							/>
+						</PromptInputFooter>
+					</PromptInput>
+				</div>
 			</div>
 		</div>
 	);

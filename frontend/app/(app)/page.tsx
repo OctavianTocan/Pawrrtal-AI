@@ -11,7 +11,7 @@ export default async function ConversationPage() {
 	const uuid: string = crypto.randomUUID();
 
 	return (
-		<div>
+		<div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col">
 			<ChatContainer key={uuid} conversationId={uuid} />
 		</div>
 	);
