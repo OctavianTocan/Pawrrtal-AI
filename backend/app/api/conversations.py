@@ -85,10 +85,19 @@ def get_conversations_router() -> APIRouter:
                 create_history_reader_agent(conversation_id)
             )
         except Exception as e:
-            logger.error(
-                f"Error reading conversation history for {conversation_id}: {e}"
+            if "Session not found" in str(e):
+                logger.warning(
+                    "No history session found for conversation %s; returning empty history",
+                    conversation_id,
+                )
+                return []
+
+            logger.exception(
+                "Error reading conversation history for %s",
+                conversation_id,
+                exc_info=e,
             )
-            raise
+            raise HTTPException(status_code=500, detail="Failed to read conversation history")
 
     @router.get("/{conversation_id}")
     async def get_conversation(
