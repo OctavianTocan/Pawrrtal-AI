@@ -26,21 +26,70 @@ from app.users import current_active_user
 logger = logging.getLogger(__name__)
 
 
-def _extract_message_text(content: Any) -> str:
-    """Flatten nested Agno/Gemini content into a plain text message body."""
+def _extract_message_text(
+    content: Any, *, _depth: int = 0, _max_depth: int = 5, _max_length: int = 4000
+) -> str:
+    """Flatten Agno/Gemini message content into safe plain text for the frontend.
+
+    - Limits recursion depth to avoid very deep/recursive structures.
+    - Avoids stringifying arbitrary objects to prevent leaking internal structures.
+    - Restricts which dict keys are traversed to keep irrelevant fields out of the UI.
+    - Applies a max-length cap on the returned text.
+    """
     if content is None:
         return ""
+
+    if _depth > _max_depth:
+        return ""
+
+    # Fast path for strings
     if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "".join(_extract_message_text(item) for item in content)
+        return content[:_max_length]
+
+    # Bytes: try to decode as UTF-8, otherwise drop
+    if isinstance(content, (bytes, bytearray, memoryview)):
+        try:
+            text = bytes(content).decode("utf-8", errors="ignore")
+        except Exception:
+            return ""
+        return text[:_max_length]
+
+    # Lists/tuples: concatenate child text, respecting depth/length limits
+    if isinstance(content, (list, tuple)):
+        parts: List[str] = []
+        remaining = _max_length
+        for item in content:
+            if remaining <= 0:
+                break
+            part = _extract_message_text(
+                item, _depth=_depth + 1, _max_depth=_max_depth, _max_length=remaining
+            )
+            if not part:
+                continue
+            if len(part) > remaining:
+                part = part[:remaining]
+            parts.append(part)
+            remaining -= len(part)
+        return "".join(parts)
+
+    # Dicts: only traverse a limited set of text-like keys to avoid large/irrelevant data
     if isinstance(content, dict):
-        for key in ("text", "content"):
-            text = _extract_message_text(content.get(key))
-            if text:
-                return text
-        return "".join(_extract_message_text(value) for value in content.values())
-    return str(content)
+        candidate_keys = ("text", "content", "message", "output")
+        for key in candidate_keys:
+            if key in content:
+                value = content.get(key)
+                if value is not None:
+                    return _extract_message_text(
+                        value,
+                        _depth=_depth + 1,
+                        _max_depth=_max_depth,
+                        _max_length=_max_length,
+                    )
+        # If no known text-like keys are present, do not traverse the entire structure
+        return ""
+
+    # Avoid str()-casting arbitrary objects (e.g., large tool payloads)
+    return ""
 
 
 def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
