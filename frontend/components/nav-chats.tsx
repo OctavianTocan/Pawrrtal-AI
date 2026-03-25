@@ -67,7 +67,9 @@ function formatDateGroupLabel(date: Date) {
 	}).format(date);
 }
 
-function buildConversationGroups(conversations: Conversation[]): ConversationGroup[] {
+function buildConversationGroups(
+	conversations: Conversation[],
+): ConversationGroup[] {
 	const sortedConversations = [...conversations].sort(
 		(left, right) =>
 			getConversationTimestamp(right) - getConversationTimestamp(left),
