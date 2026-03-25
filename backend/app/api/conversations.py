@@ -22,12 +22,12 @@ from app.models import Conversation
 from app.schemas import ConversationCreate, ConversationResponse
 from app.users import current_active_user
 
-# This creates a logger named after the current module (e.g., 'my_package.my_module')
+# Logger follows module namespace conventions for consistent filtering and tracing.
 logger = logging.getLogger(__name__)
 
 
 def _extract_message_text(content: Any) -> str:
-    """Flatten Agno/Gemini message content into plain text for the frontend."""
+    """Flatten nested Agno/Gemini content into a plain text message body."""
     if content is None:
         return ""
     if isinstance(content, str):
@@ -44,7 +44,12 @@ def _extract_message_text(content: Any) -> str:
 
 
 def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
-    """Convert raw Agno messages into the minimal chat shape the UI expects."""
+    """Convert Agno messages into the minimal chat shape expected by the UI.
+
+    The response contract for the ConversationPage is intentionally minimal:
+    ``{"role": "user"|"assistant", "content": str}``.
+    """
+
     serialized_messages: List[dict[str, str]] = []
 
     for message in messages:
@@ -60,6 +65,13 @@ def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
     return serialized_messages
 
 
+def _is_missing_session_error(error: Exception) -> bool:
+    """Return whether the error indicates an absent Agno session."""
+
+    return "session not found" in str(error).lower()
+
+
+
 def get_conversations_router() -> APIRouter:
     """Get a router for the conversations API."""
     router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
@@ -70,22 +82,20 @@ def get_conversations_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> List[dict[str, str]]:
-        """Return the message history for a conversation.
+        """Return message history for a conversation.
 
-        Verifies ownership first, then reads from the Agno database using the
-        conversation ID as the Agno session ID. Returns an empty list for new
-        conversations that have no messages yet.
+        Verifies ownership first, then reads from Agno using conversation ID as
+        session ID. Returns an empty list for new conversations without history.
         """
+
         conversation = await get_conversation_service(user.id, session, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        # TODO: Bring in the DB from somewhere, or call some custom agent to do this instead.
+
         try:
-            return _serialize_chat_history(
-                create_history_reader_agent(conversation_id)
-            )
-        except Exception as e:
-            if "Session not found" in str(e):
+            return _serialize_chat_history(create_history_reader_agent(conversation_id))
+        except Exception as error:
+            if _is_missing_session_error(error):
                 logger.warning(
                     "No history session found for conversation %s; returning empty history",
                     conversation_id,
@@ -95,9 +105,12 @@ def get_conversations_router() -> APIRouter:
             logger.exception(
                 "Error reading conversation history for %s",
                 conversation_id,
-                exc_info=e,
+                exc_info=error,
             )
-            raise HTTPException(status_code=500, detail="Failed to read conversation history")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to read conversation history",
+            ) from error
 
     @router.get("/{conversation_id}")
     async def get_conversation(
@@ -126,13 +139,8 @@ def get_conversations_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> str:
-        """Generate an LLM-based title for a conversation and persist it.
+        """Generate and persist a short conversation title from the first message."""
 
-        Uses the first user message as context for the Gemini model to produce
-        a short, descriptive title.
-        """
-
-        # Title agent one-off.
         response = create_utility_agent(
             "Generate a title for the conversation based on the first message: "
             + first_message
@@ -152,7 +160,7 @@ def get_conversations_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> List[ConversationResponse]:
-        """List all conversations for the authenticated user, most-recent first."""
+        """List all conversations for the authenticated user, most recent first."""
         conversations: List[Conversation] = await get_conversations_for_user_service(
             user.id, session
         )
@@ -175,10 +183,10 @@ def get_conversations_router() -> APIRouter:
     ) -> ConversationResponse:
         """Create a new conversation with a default title.
 
-        The ``conversation_id`` is provided as a path parameter because the
-        frontend pre-generates UUIDs before the first message is sent.
-        The title will be updated asynchronously via LLM title generation.
+        Frontend generates the UUID first; this endpoint persists metadata before
+        the first streamed turn.
         """
+
         new_conversation: Conversation = await create_conversation_service(
             user.id, session, ConversationCreate(id=conversation_id)
         )
