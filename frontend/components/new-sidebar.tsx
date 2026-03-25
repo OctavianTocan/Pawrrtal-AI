@@ -34,10 +34,10 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 		<SidebarProvider>
 			<Sidebar variant="inset">
 				<SidebarContent>
-					<SidebarHeader className="pb-1">
+					<SidebarHeader className="pt-2 pb-2">
 						<SidebarMenuItem>
 							<SidebarMenuButton
-								className="h-auto cursor-pointer justify-start rounded-[6px] bg-background px-2 py-[7px] text-[13px] shadow-minimal hover:bg-background active:bg-background"
+								className="h-auto cursor-pointer justify-start rounded-[6px] bg-background px-2 py-[7px] gap-2 text-[13px] shadow-minimal hover:bg-background active:bg-background"
 								onClick={handleNewConversation}
 								type="button"
 							>
