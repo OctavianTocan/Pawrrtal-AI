@@ -44,12 +44,12 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 				</SidebarContent>
 			</Sidebar>
 			<SidebarInset>
-				<header className="flex h-16 shrink-0 items-center gap-2">
-					<div className="flex items-center gap-2 px-4">
-						<SidebarTrigger className="-ml-1 cursor-pointer" />
+				<header className="flex h-14 shrink-0 items-center">
+					<div className="flex items-center gap-1.5 px-3 py-2">
+						<SidebarTrigger className="-ml-0.5 cursor-pointer" />
 						<Separator
 							orientation="vertical"
-							className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+							className="bg-border/60 mr-1 data-vertical:h-3.5 data-vertical:self-auto"
 						/>
 					</div>
 				</header>
