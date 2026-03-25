@@ -4,7 +4,7 @@ This module contains the conversation endpoints for the API.
 
 import logging
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from agno.agent import Message
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,6 +26,40 @@ from app.users import current_active_user
 logger = logging.getLogger(__name__)
 
 
+def _extract_message_text(content: Any) -> str:
+    """Flatten Agno/Gemini message content into plain text for the frontend."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(_extract_message_text(item) for item in content)
+    if isinstance(content, dict):
+        for key in ("text", "content"):
+            text = _extract_message_text(content.get(key))
+            if text:
+                return text
+        return "".join(_extract_message_text(value) for value in content.values())
+    return str(content)
+
+
+def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
+    """Convert raw Agno messages into the minimal chat shape the UI expects."""
+    serialized_messages: List[dict[str, str]] = []
+
+    for message in messages:
+        if message.role not in {"user", "assistant"}:
+            continue
+
+        content = _extract_message_text(message.content)
+        if not content:
+            continue
+
+        serialized_messages.append({"role": message.role, "content": content})
+
+    return serialized_messages
+
+
 def get_conversations_router() -> APIRouter:
     """Get a router for the conversations API."""
     router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
@@ -35,7 +69,7 @@ def get_conversations_router() -> APIRouter:
         conversation_id: uuid.UUID,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> Optional[List[Message]]:
+    ) -> List[dict[str, str]]:
         """Return the message history for a conversation.
 
         Verifies ownership first, then reads from the Agno database using the
@@ -47,7 +81,9 @@ def get_conversations_router() -> APIRouter:
             raise HTTPException(status_code=404, detail="Conversation not found")
         # TODO: Bring in the DB from somewhere, or call some custom agent to do this instead.
         try:
-            return create_history_reader_agent(conversation_id)
+            return _serialize_chat_history(
+                create_history_reader_agent(conversation_id)
+            )
         except Exception as e:
             logger.error(
                 f"Error reading conversation history for {conversation_id}: {e}"
