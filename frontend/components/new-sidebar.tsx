@@ -1,4 +1,5 @@
 "use client";
+
 import { IconPencilPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { NavChats } from "./nav-chats";
@@ -8,16 +9,15 @@ import {
 	SidebarContent,
 	SidebarHeader,
 	SidebarInset,
-	SidebarMenuButton,
-	SidebarMenuItem,
 	SidebarProvider,
 	SidebarTrigger,
 } from "./ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 /**
  * Application sidebar layout wrapper.
  *
- * Renders the sidebar with a "New Conversation" button and conversation history,
+ * Renders the sidebar with a "New Session" button and conversation history,
  * alongside the main content area with a sidebar toggle and header.
  *
  * @param children - The page content to render in the main area.
@@ -34,17 +34,23 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 		<SidebarProvider>
 			<Sidebar variant="inset">
 				<SidebarContent>
-					<SidebarHeader className="pt-2 pb-2">
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								className="h-auto cursor-pointer justify-start rounded-[6px] bg-background px-2 py-[7px] gap-2 text-[13px] shadow-minimal hover:bg-background active:bg-background"
-								onClick={handleNewConversation}
-								type="button"
-							>
-								<IconPencilPlus />
-								<span>New Conversation</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
+					<SidebarHeader className="px-2 pb-2 shrink-0">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<div>
+									<button
+										type="button"
+										onClick={handleNewConversation}
+										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+										aria-label="New Session"
+									>
+										<IconPencilPlus className="h-3.5 w-3.5 shrink-0" />
+										New Session
+									</button>
+								</div>
+							</TooltipTrigger>
+							<TooltipContent side="right">⌘N</TooltipContent>
+						</Tooltip>
 					</SidebarHeader>
 					<NavChats />
 				</SidebarContent>
