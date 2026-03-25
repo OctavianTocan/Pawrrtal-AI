@@ -110,11 +110,12 @@ const ChatView = ({
 								className="min-h-[40vh] gap-4"
 								description="Ask about your memories, explore an idea, or pick up where you left off."
 								title="Start a conversation"
-							>
-								<div className="flex size-12 items-center justify-center rounded-full border border-foreground/10 bg-background shadow-minimal">
-									<div className="size-2 rounded-full bg-accent" />
-								</div>
-							</ConversationEmptyState>
+								icon={
+									<div className="flex size-12 items-center justify-center rounded-full border border-foreground/10 bg-background shadow-minimal">
+										<div className="size-2 rounded-full bg-accent" />
+									</div>
+								}
+							/>
 						) : (
 							<>
 								{chatHistory.map((message, index) => (
