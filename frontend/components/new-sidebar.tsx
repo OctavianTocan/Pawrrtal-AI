@@ -43,7 +43,7 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 										variant="ghost"
 										type="button"
 										onClick={handleNewConversation}
-										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] rounded-[6px] shadow-minimal bg-background border-none hover:bg-foreground/3 transition-colors focus-visible:ring-0 focus-visible:border-transparent"
 										aria-label="New Session"
 									>
 										<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
