@@ -1,13 +1,10 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Inbox, Search, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import { ConversationSearchHeader } from "@/components/conversation-search-header";
 import { ConversationSidebarItem } from "@/components/conversation-sidebar-item";
-import {
-	SidebarGroup,
-	SidebarGroupLabel,
-	SidebarMenu,
-} from "@/components/ui/sidebar";
 import useGetConversations from "@/hooks/get-conversations";
 import type { Conversation } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -97,6 +94,56 @@ function buildConversationGroups(
 	return [...groups.values()];
 }
 
+function highlightMatch(text: string, query: string): React.ReactNode {
+	const trimmedQuery = query.trim();
+	if (!trimmedQuery) {
+		return text;
+	}
+
+	const lowerText = text.toLowerCase();
+	const lowerQuery = trimmedQuery.toLowerCase();
+	const index = lowerText.indexOf(lowerQuery);
+
+	if (index === -1) {
+		return text;
+	}
+
+	const before = text.slice(0, index);
+	const match = text.slice(index, index + trimmedQuery.length);
+	const after = text.slice(index + trimmedQuery.length);
+
+	return (
+		<>
+			{before}
+			<span className="bg-yellow-300/25 rounded-[3px] px-[1px]">{match}</span>
+			{highlightMatch(after, trimmedQuery)}
+		</>
+	);
+}
+
+function filterConversationGroups(
+	groups: ConversationGroup[],
+	searchQuery: string,
+): ConversationGroup[] {
+	const trimmedQuery = searchQuery.trim().toLowerCase();
+	if (trimmedQuery.length < 2) {
+		return groups;
+	}
+
+	return groups
+		.map((group) => ({
+			...group,
+			items: group.items.filter((conversation) =>
+				conversation.title.toLowerCase().includes(trimmedQuery),
+			),
+		}))
+		.filter((group) => group.items.length > 0);
+}
+
+function countGroupItems(groups: ConversationGroup[]) {
+	return groups.reduce((total, group) => total + group.items.length, 0);
+}
+
 function CollapsibleGroupHeader({
 	label,
 	isCollapsed,
@@ -146,13 +193,57 @@ function SectionHeader({ label }: { label: string }) {
 	);
 }
 
-// TODO: This needs to take in conversations/chats.
+function ConversationsEmptyState({
+	icon,
+	title,
+	description,
+	buttonLabel,
+	onAction,
+}: {
+	icon: ReactNode;
+	title: string;
+	description: string;
+	buttonLabel?: string;
+	onAction?: () => void;
+}) {
+	return (
+		<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+			<div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-foreground/[0.03] text-muted-foreground/70 shadow-minimal">
+				{icon}
+			</div>
+			<h3 className="mt-4 text-sm font-medium text-foreground">{title}</h3>
+			<p className="mt-1.5 max-w-[220px] text-xs leading-5 text-muted-foreground">
+				{description}
+			</p>
+			{buttonLabel && onAction ? (
+				<button
+					type="button"
+					onClick={onAction}
+					className="mt-4 inline-flex items-center h-7 px-3 text-xs font-medium rounded-[8px] bg-background shadow-minimal hover:bg-foreground/[0.03] transition-colors"
+				>
+					{buttonLabel}
+				</button>
+			) : null}
+		</div>
+	);
+}
+
 export function NavChats() {
-	// Get the conversations for the current user.
-	const { data: conversations } = useGetConversations();
+	const router = useRouter();
+	const { data: conversations, isLoading } = useGetConversations();
+	const [searchQuery, setSearchQuery] = useState("");
 	const groups = useMemo(
 		() => buildConversationGroups(conversations ?? []),
 		[conversations],
+	);
+	const filteredGroups = useMemo(
+		() => filterConversationGroups(groups, searchQuery),
+		[groups, searchQuery],
+	);
+	const isSearchActive = searchQuery.trim().length >= 2;
+	const resultCount = useMemo(
+		() => countGroupItems(filteredGroups),
+		[filteredGroups],
 	);
 	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
 		if (typeof window === "undefined") {
@@ -185,9 +276,6 @@ export function NavChats() {
 		);
 	}, [collapsedGroups]);
 
-	// If there are no conversations, return null.
-	if (!conversations || conversations.length === 0) return null;
-
 	const toggleGroupCollapse = (groupKey: string) => {
 		setCollapsedGroups((currentGroups) => {
 			const nextGroups = new Set(currentGroups);
@@ -200,42 +288,69 @@ export function NavChats() {
 		});
 	};
 
-	// If there are conversations, render the sidebar group and menu.
 	return (
-		<SidebarGroup className="pt-1">
-			<SidebarGroupLabel>Your Chats</SidebarGroupLabel>
-			<SidebarMenu className="gap-0">
-				{groups.map((group) => {
-					const isCollapsible = groups.length > 1;
-					const isCollapsed = collapsedGroups.has(group.key);
+		<div className="flex min-h-0 flex-1 flex-col">
+			<ConversationSearchHeader
+				searchQuery={searchQuery}
+				onSearchChange={setSearchQuery}
+				onSearchClose={() => setSearchQuery("")}
+				resultCount={resultCount}
+			/>
+			{isLoading ? null : !conversations || conversations.length === 0 ? (
+				<ConversationsEmptyState
+					icon={<Inbox className="h-4 w-4" />}
+					title="No sessions yet"
+					description="Sessions with your agent appear here. Start one to get going."
+					buttonLabel="New Session"
+					onAction={() => router.push("/")}
+				/>
+			) : isSearchActive && resultCount === 0 ? (
+				<ConversationsEmptyState
+					icon={<Search className="h-4 w-4" />}
+					title="No matching sessions"
+					description="Try a different title fragment. Search lights up once you have at least two characters."
+				/>
+			) : (
+				<div className="pt-1">
+					<ul className="flex w-full min-w-0 flex-col gap-0">
+						{filteredGroups.map((group) => {
+							const isCollapsible = !isSearchActive && filteredGroups.length > 1;
+							const isCollapsed = !isSearchActive && collapsedGroups.has(group.key);
 
-					return (
-						<Fragment key={group.key}>
-							{isCollapsible ? (
-								<CollapsibleGroupHeader
-									label={group.label}
-									isCollapsed={isCollapsed}
-									itemCount={group.items.length}
-									onToggle={() => toggleGroupCollapse(group.key)}
-								/>
-							) : (
-								<SectionHeader label={group.label} />
-							)}
-							{isCollapsible && isCollapsed
-								? null
-								: group.items.map((conversation, index) => (
-										<ConversationSidebarItem
-											key={conversation.id}
-											id={conversation.id}
-											title={conversation.title}
-											updatedAt={conversation.updated_at}
-											showSeparator={index > 0}
+							return (
+								<Fragment key={group.key}>
+									{isCollapsible ? (
+										<CollapsibleGroupHeader
+											label={group.label}
+											isCollapsed={isCollapsed}
+											itemCount={group.items.length}
+											onToggle={() => toggleGroupCollapse(group.key)}
 										/>
-									))}
-						</Fragment>
-					);
-				})}
-			</SidebarMenu>
-		</SidebarGroup>
+									) : (
+										<SectionHeader label={group.label} />
+									)}
+									{isCollapsed
+										? null
+										: group.items.map((conversation, index) => (
+												<ConversationSidebarItem
+													key={conversation.id}
+													id={conversation.id}
+													title={
+														isSearchActive
+															? highlightMatch(conversation.title, searchQuery)
+															: conversation.title
+													}
+													ariaLabel={conversation.title}
+													updatedAt={conversation.updated_at}
+													showSeparator={index > 0}
+												/>
+											))}
+								</Fragment>
+							);
+						})}
+					</ul>
+				</div>
+			)}
+		</div>
 	);
 }

@@ -17,6 +17,7 @@ export interface EntityRowProps {
 	className?: string;
 	separatorClassName?: string;
 	asChild?: boolean;
+	onClick?: () => void;
 }
 
 export function EntityRow({
@@ -32,6 +33,7 @@ export function EntityRow({
 	className,
 	separatorClassName = "pl-[38px] pr-4",
 	asChild = false,
+	onClick,
 }: EntityRowProps) {
 	const Comp = asChild ? ("div" as const) : ("button" as const);
 
@@ -47,6 +49,8 @@ export function EntityRow({
 					<div className="absolute left-0 inset-y-0 w-[2px] bg-accent" />
 				)}
 				<Comp
+					type={asChild ? undefined : "button"}
+					onClick={onClick}
 					className={cn(
 						"flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]",
 						"transition-[background-color] duration-75",

@@ -34,26 +34,26 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 	return (
 		<SidebarProvider>
 			<Sidebar variant="inset">
+				<SidebarHeader className="px-2 pb-2 shrink-0">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<div>
+								<Button
+									variant="ghost"
+									type="button"
+									onClick={handleNewConversation}
+									className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+									aria-label="New Session"
+								>
+									<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+									New Session
+								</Button>
+							</div>
+						</TooltipTrigger>
+						<TooltipContent side="right">⌘N</TooltipContent>
+					</Tooltip>
+				</SidebarHeader>
 				<SidebarContent>
-					<SidebarHeader className="px-2 pb-2 shrink-0">
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<div>
-									<Button
-										variant="ghost"
-										type="button"
-										onClick={handleNewConversation}
-										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background border-0 transition-colors hover:bg-foreground/3 focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-transparent focus-visible:outline-none cursor-pointer"
-										aria-label="New Session"
-									>
-										<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
-										New Session
-									</Button>
-								</div>
-							</TooltipTrigger>
-							<TooltipContent side="right">⌘N</TooltipContent>
-						</Tooltip>
-					</SidebarHeader>
 					<NavChats />
 				</SidebarContent>
 			</Sidebar>
