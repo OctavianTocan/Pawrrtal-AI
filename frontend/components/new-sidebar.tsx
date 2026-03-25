@@ -1,10 +1,12 @@
 "use client";
+import { IconPencilPlus } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { NavChats } from "./nav-chats";
 import { Separator } from "./ui/separator";
 import {
 	Sidebar,
 	SidebarContent,
+	SidebarHeader,
 	SidebarInset,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -32,14 +34,18 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 		<SidebarProvider>
 			<Sidebar variant="inset">
 				<SidebarContent>
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							className="cursor-pointer"
-							onClick={handleNewConversation}
-						>
-							<span>New Conversation</span>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
+					<SidebarHeader className="pb-1">
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								className="h-auto cursor-pointer justify-start rounded-[6px] bg-background px-2 py-[7px] text-[13px] shadow-minimal hover:bg-background active:bg-background"
+								onClick={handleNewConversation}
+								type="button"
+							>
+								<IconPencilPlus />
+								<span>New Conversation</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					</SidebarHeader>
 					<NavChats />
 				</SidebarContent>
 			</Sidebar>
