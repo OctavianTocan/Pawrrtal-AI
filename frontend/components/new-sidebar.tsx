@@ -1,7 +1,7 @@
 "use client";
 
-import { SquarePenRounded } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { SquarePenRounded } from "./icons/SquarePenRounded";
 import { NavChats } from "./nav-chats";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
