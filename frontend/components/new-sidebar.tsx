@@ -41,7 +41,7 @@ export function NewSidebar({ children }: { children: React.ReactNode }) {
 									<button
 										type="button"
 										onClick={handleNewConversation}
-										className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+										className="inline-flex items-center w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
 										aria-label="New Session"
 									>
 										<IconPencilPlus className="h-3.5 w-3.5 shrink-0" />
