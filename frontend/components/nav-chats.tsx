@@ -1,11 +1,11 @@
 "use client";
 
+import { ConversationSidebarItem } from "@/components/conversation-sidebar-item";
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
 } from "@/components/ui/sidebar";
-import { ConversationSidebarItem } from "@/components/conversation-sidebar-item";
 import useGetConversations from "@/hooks/get-conversations";
 
 // TODO: This needs to take in conversations/chats.
@@ -17,9 +17,9 @@ export function NavChats() {
 
 	// If there are conversations, render the sidebar group and menu.
 	return (
-		<SidebarGroup>
+		<SidebarGroup className="pt-1">
 			<SidebarGroupLabel>Your Chats</SidebarGroupLabel>
-			<SidebarMenu>
+			<SidebarMenu className="gap-0">
 				{conversations.map((conversation, index) => (
 					<ConversationSidebarItem
 						key={conversation.id}
