@@ -25,7 +25,7 @@ export function ConversationSearchHeader({
 					type="text"
 					value={searchQuery}
 					onChange={(event) => onSearchChange(event.target.value)}
-					placeholder="Search session titles..."
+					placeholder="Search titles and content..."
 					className="w-full h-8 pl-8 pr-8 text-sm bg-transparent border-0 rounded-[8px] outline-none focus-visible:ring-0 focus-visible:outline-none placeholder:text-muted-foreground/50"
 				/>
 				{searchQuery ? (

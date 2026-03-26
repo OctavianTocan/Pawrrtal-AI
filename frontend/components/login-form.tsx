@@ -54,14 +54,17 @@ export function LoginForm({
 		try {
 			// TODO: This inline fetch needs to be moved to a custom hook.
 			// TODO: Especially now that we also use this in the signup form.
-			const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.login}`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
+			const response = await fetch(
+				`${API_BASE_URL}${API_ENDPOINTS.auth.login}`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+					body: new URLSearchParams({ username: email, password }),
+					credentials: "include",
 				},
-				body: new URLSearchParams({ username: email, password }),
-				credentials: "include",
-			});
+			);
 
 			// Handle errors.
 			// TODO: This same code is used on both the login and signup forms, which means it should be moved to a shared function.

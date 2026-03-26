@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox, Search, ChevronRight } from "lucide-react";
+import { ChevronRight, Inbox, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
 import { ConversationSearchHeader } from "@/components/conversation-search-header";
@@ -314,8 +314,10 @@ export function NavChats() {
 				<div className="pt-1">
 					<ul className="flex w-full min-w-0 flex-col gap-0">
 						{filteredGroups.map((group) => {
-							const isCollapsible = !isSearchActive && filteredGroups.length > 1;
-							const isCollapsed = !isSearchActive && collapsedGroups.has(group.key);
+							const isCollapsible =
+								!isSearchActive && filteredGroups.length > 1;
+							const isCollapsed =
+								!isSearchActive && collapsedGroups.has(group.key);
 
 							return (
 								<Fragment key={group.key}>
