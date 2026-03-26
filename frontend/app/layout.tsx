@@ -15,8 +15,14 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
+				{/* System theme detection — blocking script before hydration to prevent FOUC */}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `(function(){try{var d=document.documentElement;if(window.matchMedia('(prefers-color-scheme:dark)').matches){d.classList.add('dark')}window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(e){e.matches?d.classList.add('dark'):d.classList.remove('dark')})}catch(e){}})()`,
+					}}
+				/>
 				{/* React Grab */}
 				{process.env.NODE_ENV === "development" && (
 					<Script
