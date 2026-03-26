@@ -4,15 +4,26 @@ import { createContext, useContext, type ReactNode } from "react";
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubTrigger,
+	DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
 	ContextMenuItem,
 	ContextMenuSeparator,
+	ContextMenuSub,
+	ContextMenuSubTrigger,
+	ContextMenuSubContent,
 } from "@/components/ui/context-menu";
 
 type MenuComponents = {
 	MenuItem: typeof DropdownMenuItem | typeof ContextMenuItem;
 	MenuSeparator: typeof DropdownMenuSeparator | typeof ContextMenuSeparator;
+	MenuSub: typeof DropdownMenuSub | typeof ContextMenuSub;
+	MenuSubTrigger: typeof DropdownMenuSubTrigger | typeof ContextMenuSubTrigger;
+	MenuSubContent:
+		| typeof DropdownMenuSubContent
+		| typeof ContextMenuSubContent;
 };
 
 const MenuComponentsContext = createContext<MenuComponents | null>(null);
@@ -31,6 +42,9 @@ export function DropdownMenuProvider({ children }: { children: ReactNode }) {
 			value={{
 				MenuItem: DropdownMenuItem,
 				MenuSeparator: DropdownMenuSeparator,
+				MenuSub: DropdownMenuSub,
+				MenuSubTrigger: DropdownMenuSubTrigger,
+				MenuSubContent: DropdownMenuSubContent,
 			}}
 		>
 			{children}
@@ -44,6 +58,9 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
 			value={{
 				MenuItem: ContextMenuItem,
 				MenuSeparator: ContextMenuSeparator,
+				MenuSub: ContextMenuSub,
+				MenuSubTrigger: ContextMenuSubTrigger,
+				MenuSubContent: ContextMenuSubContent,
 			}}
 		>
 			{children}

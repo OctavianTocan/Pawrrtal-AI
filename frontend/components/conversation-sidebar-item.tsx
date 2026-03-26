@@ -1,6 +1,20 @@
 "use client";
 
-import { Circle, ExternalLink, FolderOpen, Link2 } from "lucide-react";
+import {
+	AppWindow,
+	Archive,
+	Circle,
+	CloudUpload,
+	Columns2,
+	Copy,
+	Flag,
+	FolderOpen,
+	MailOpen,
+	Pencil,
+	RefreshCw,
+	Tag,
+	Trash2,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useMemo } from "react";
 import { EntityRow } from "@/components/ui/entity-row";
@@ -67,6 +81,12 @@ function ConversationStatusIcon() {
 	);
 }
 
+function stubAction(label: string) {
+	return () => {
+		console.log(`[stub] ${label}`);
+	};
+}
+
 function ConversationMenuContent({
 	href,
 	label: _label,
@@ -75,7 +95,8 @@ function ConversationMenuContent({
 	label: string;
 }) {
 	const router = useRouter();
-	const { MenuItem, MenuSeparator } = useMenuComponents();
+	const { MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuSubContent } =
+		useMenuComponents();
 	const absoluteHref = useMemo(() => {
 		if (typeof window === "undefined") {
 			return href;
@@ -86,10 +107,95 @@ function ConversationMenuContent({
 
 	return (
 		<>
-			<MenuItem onClick={() => router.push(href)}>
-				<FolderOpen className="h-4 w-4" />
-				Open
+			{/* Share */}
+			<MenuItem onClick={stubAction("Share")}>
+				<CloudUpload className="h-3.5 w-3.5" />
+				<span className="flex-1">Share</span>
 			</MenuItem>
+
+			<MenuSeparator />
+
+			{/* Status submenu */}
+			<MenuSub>
+				<MenuSubTrigger>
+					<Circle
+						className="h-3.5 w-3.5 text-muted-foreground"
+						strokeWidth={2.5}
+					/>
+					<span className="flex-1">Status</span>
+				</MenuSubTrigger>
+				<MenuSubContent>
+					<MenuItem onClick={stubAction("Status: Todo")}>
+						<Circle className="h-3.5 w-3.5 text-blue-500" strokeWidth={2.5} />
+						<span className="flex-1">Todo</span>
+					</MenuItem>
+					<MenuItem onClick={stubAction("Status: In Progress")}>
+						<Circle className="h-3.5 w-3.5 text-yellow-500" strokeWidth={2.5} />
+						<span className="flex-1">In Progress</span>
+					</MenuItem>
+					<MenuItem onClick={stubAction("Status: Done")}>
+						<Circle className="h-3.5 w-3.5 text-green-500" strokeWidth={2.5} />
+						<span className="flex-1">Done</span>
+					</MenuItem>
+				</MenuSubContent>
+			</MenuSub>
+
+			{/* Labels submenu */}
+			<MenuSub>
+				<MenuSubTrigger>
+					<Tag className="h-3.5 w-3.5" />
+					<span className="flex-1">Labels</span>
+				</MenuSubTrigger>
+				<MenuSubContent>
+					<MenuItem disabled onClick={stubAction("Labels")}>
+						<span className="text-muted-foreground text-xs">
+							No labels configured
+						</span>
+					</MenuItem>
+				</MenuSubContent>
+			</MenuSub>
+
+			{/* Flag */}
+			<MenuItem onClick={stubAction("Flag")}>
+				<Flag className="h-3.5 w-3.5 text-info" />
+				<span className="flex-1">Flag</span>
+			</MenuItem>
+
+			{/* Archive */}
+			<MenuItem onClick={stubAction("Archive")}>
+				<Archive className="h-3.5 w-3.5" />
+				<span className="flex-1">Archive</span>
+			</MenuItem>
+
+			{/* Mark as Unread */}
+			<MenuItem onClick={stubAction("Mark as Unread")}>
+				<MailOpen className="h-3.5 w-3.5" />
+				<span className="flex-1">Mark as Unread</span>
+			</MenuItem>
+
+			<MenuSeparator />
+
+			{/* Rename */}
+			<MenuItem onClick={stubAction("Rename")}>
+				<Pencil className="h-3.5 w-3.5" />
+				<span className="flex-1">Rename</span>
+			</MenuItem>
+
+			{/* Regenerate Title */}
+			<MenuItem onClick={stubAction("Regenerate Title")}>
+				<RefreshCw className="h-3.5 w-3.5" />
+				<span className="flex-1">Regenerate Title</span>
+			</MenuItem>
+
+			<MenuSeparator />
+
+			{/* Open in New Panel */}
+			<MenuItem onClick={stubAction("Open in New Panel")}>
+				<Columns2 className="h-3.5 w-3.5" />
+				<span className="flex-1">Open in New Panel</span>
+			</MenuItem>
+
+			{/* Open in New Window */}
 			<MenuItem
 				onClick={() => {
 					if (typeof window !== "undefined") {
@@ -97,10 +203,17 @@ function ConversationMenuContent({
 					}
 				}}
 			>
-				<ExternalLink className="h-4 w-4" />
-				Open in New Tab
+				<AppWindow className="h-3.5 w-3.5" />
+				<span className="flex-1">Open in New Window</span>
 			</MenuItem>
-			<MenuSeparator />
+
+			{/* Open */}
+			<MenuItem onClick={() => router.push(href)}>
+				<FolderOpen className="h-3.5 w-3.5" />
+				<span className="flex-1">Open</span>
+			</MenuItem>
+
+			{/* Copy Link */}
 			<MenuItem
 				onClick={() => {
 					if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -108,8 +221,16 @@ function ConversationMenuContent({
 					}
 				}}
 			>
-				<Link2 className="h-4 w-4" />
-				Copy Link
+				<Copy className="h-3.5 w-3.5" />
+				<span className="flex-1">Copy Link</span>
+			</MenuItem>
+
+			<MenuSeparator />
+
+			{/* Delete */}
+			<MenuItem variant="destructive" onClick={stubAction("Delete")}>
+				<Trash2 className="h-3.5 w-3.5" />
+				<span className="flex-1">Delete</span>
 			</MenuItem>
 		</>
 	);
