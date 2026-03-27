@@ -1,6 +1,6 @@
 'use client';
 
-import { NavChats } from './nav-chats';
+import { NavChats } from '@/features/nav-chats/NavChats';
 import { NewSessionButton } from './new-session-button';
 import { Separator } from './ui/separator';
 import {

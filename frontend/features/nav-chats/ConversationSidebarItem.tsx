@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useMemo } from 'react';
-import { ConversationSidebarItemView } from '@/components/conversation-sidebar-item-view';
+import { ConversationSidebarItemView } from './ConversationSidebarItemView';
 
 interface ConversationSidebarItemProps {
   id: string;

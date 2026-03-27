@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useId, useState } from 'react';
-import { LoginFormView } from '@/components/login-form-view';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { LoginFormView } from './LoginFormView';
 
 interface LoginFormProps extends React.ComponentProps<'div'> {
   testUserEmail?: string;

@@ -1,4 +1,4 @@
-import { LoginForm } from '@/components/login-form';
+import { LoginForm } from '@/features/auth/LoginForm';
 
 /**
  * Returns test-user credentials when running in local development.

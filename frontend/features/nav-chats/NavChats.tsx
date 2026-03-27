@@ -2,13 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { NavChatsView } from '@/components/nav-chats-view';
 import useGetConversations from '@/hooks/get-conversations';
 import {
   buildConversationGroups,
   countGroupItems,
   filterConversationGroups,
 } from '@/lib/conversation-groups';
+import { NavChatsView } from './NavChatsView';
 
 /** localStorage key used to persist which date groups the user has collapsed. */
 const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';

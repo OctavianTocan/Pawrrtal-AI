@@ -1,13 +1,13 @@
 import { Calligraph } from 'calligraph';
 import { Inbox, Search } from 'lucide-react';
 import { Fragment } from 'react';
-import { CollapsibleGroupHeader } from '@/components/collapsible-group-header';
-import { ConversationSearchHeader } from '@/components/conversation-search-header';
-import { ConversationSidebarItem } from '@/components/conversation-sidebar-item';
-import { ConversationsEmptyState } from '@/components/conversations-empty-state';
-import { SectionHeader } from '@/components/section-header';
 import type { ConversationGroup } from '@/lib/conversation-groups';
 import { highlightMatch } from '@/lib/highlight-match';
+import { CollapsibleGroupHeader } from './CollapsibleGroupHeader';
+import { ConversationSearchHeader } from './ConversationSearchHeader';
+import { ConversationSidebarItem } from './ConversationSidebarItem';
+import { ConversationsEmptyState } from './ConversationsEmptyState';
+import { SectionHeader } from './SectionHeader';
 
 export interface NavChatsViewProps {
   /** Current search input value. */
