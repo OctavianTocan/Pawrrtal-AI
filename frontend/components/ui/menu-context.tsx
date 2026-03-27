@@ -28,7 +28,16 @@ type MenuComponents = {
 
 const MenuComponentsContext = createContext<MenuComponents | null>(null);
 
-export function useMenuComponents() {
+/**
+ * Returns the polymorphic menu primitives (MenuItem, MenuSeparator, etc.)
+ * provided by the nearest `DropdownMenuProvider` or `ContextMenuProvider`.
+ *
+ * This lets shared menu content render identically inside both a dropdown
+ * and a context menu without duplicating the item tree.
+ *
+ * @throws If called outside a `MenuProvider`.
+ */
+export function useMenuComponents(): MenuComponents {
 	const ctx = useContext(MenuComponentsContext);
 	if (!ctx) {
 		throw new Error("useMenuComponents must be used within a MenuProvider");
@@ -36,7 +45,8 @@ export function useMenuComponents() {
 	return ctx;
 }
 
-export function DropdownMenuProvider({ children }: { children: ReactNode }) {
+/** Provides dropdown-flavoured menu components to child menu content. */
+export function DropdownMenuProvider({ children }: { children: ReactNode }): React.JSX.Element {
 	return (
 		<MenuComponentsContext.Provider
 			value={{
@@ -52,7 +62,8 @@ export function DropdownMenuProvider({ children }: { children: ReactNode }) {
 	);
 }
 
-export function ContextMenuProvider({ children }: { children: ReactNode }) {
+/** Provides context-menu-flavoured menu components to child menu content. */
+export function ContextMenuProvider({ children }: { children: ReactNode }): React.JSX.Element {
 	return (
 		<MenuComponentsContext.Provider
 			value={{
