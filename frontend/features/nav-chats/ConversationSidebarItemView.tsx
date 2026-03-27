@@ -80,7 +80,7 @@ function ConversationMenuContent({
   return (
     <>
       {/* Share */}
-      <MenuItem onClick={stubAction('Share')}>
+      <MenuItem onSelect={stubAction('Share')}>
         <CloudUpload className="h-3.5 w-3.5" />
         <span className="flex-1">Share</span>
       </MenuItem>
@@ -94,15 +94,15 @@ function ConversationMenuContent({
           <span className="flex-1">Status</span>
         </MenuSubTrigger>
         <MenuSubContent>
-          <MenuItem onClick={stubAction('Status: Todo')}>
+          <MenuItem onSelect={stubAction('Status: Todo')}>
             <Circle className="h-3.5 w-3.5 text-blue-500" strokeWidth={2.5} />
             <span className="flex-1">Todo</span>
           </MenuItem>
-          <MenuItem onClick={stubAction('Status: In Progress')}>
+          <MenuItem onSelect={stubAction('Status: In Progress')}>
             <Circle className="h-3.5 w-3.5 text-yellow-500" strokeWidth={2.5} />
             <span className="flex-1">In Progress</span>
           </MenuItem>
-          <MenuItem onClick={stubAction('Status: Done')}>
+          <MenuItem onSelect={stubAction('Status: Done')}>
             <Circle className="h-3.5 w-3.5 text-green-500" strokeWidth={2.5} />
             <span className="flex-1">Done</span>
           </MenuItem>
@@ -116,26 +116,26 @@ function ConversationMenuContent({
           <span className="flex-1">Labels</span>
         </MenuSubTrigger>
         <MenuSubContent>
-          <MenuItem disabled onClick={stubAction('Labels')}>
+          <MenuItem disabled onSelect={stubAction('Labels')}>
             <span className="text-muted-foreground text-xs">No labels configured</span>
           </MenuItem>
         </MenuSubContent>
       </MenuSub>
 
       {/* Flag */}
-      <MenuItem onClick={stubAction('Flag')}>
+      <MenuItem onSelect={stubAction('Flag')}>
         <Flag className="h-3.5 w-3.5 text-info" />
         <span className="flex-1">Flag</span>
       </MenuItem>
 
       {/* Archive */}
-      <MenuItem onClick={stubAction('Archive')}>
+      <MenuItem onSelect={stubAction('Archive')}>
         <Archive className="h-3.5 w-3.5" />
         <span className="flex-1">Archive</span>
       </MenuItem>
 
       {/* Mark as Unread */}
-      <MenuItem onClick={stubAction('Mark as Unread')}>
+      <MenuItem onSelect={stubAction('Mark as Unread')}>
         <MailOpen className="h-3.5 w-3.5" />
         <span className="flex-1">Mark as Unread</span>
       </MenuItem>
@@ -143,13 +143,13 @@ function ConversationMenuContent({
       <MenuSeparator />
 
       {/* Rename */}
-      <MenuItem onClick={stubAction('Rename')}>
+      <MenuItem onSelect={stubAction('Rename')}>
         <Pencil className="h-3.5 w-3.5" />
         <span className="flex-1">Rename</span>
       </MenuItem>
 
       {/* Regenerate Title */}
-      <MenuItem onClick={stubAction('Regenerate Title')}>
+      <MenuItem onSelect={stubAction('Regenerate Title')}>
         <RefreshCw className="h-3.5 w-3.5" />
         <span className="flex-1">Regenerate Title</span>
       </MenuItem>
@@ -157,14 +157,14 @@ function ConversationMenuContent({
       <MenuSeparator />
 
       {/* Open in New Panel */}
-      <MenuItem onClick={stubAction('Open in New Panel')}>
+      <MenuItem onSelect={stubAction('Open in New Panel')}>
         <Columns2 className="h-3.5 w-3.5" />
         <span className="flex-1">Open in New Panel</span>
       </MenuItem>
 
       {/* Open in New Window */}
       <MenuItem
-        onClick={() => {
+        onSelect={() => {
           if (typeof window !== 'undefined') {
             window.open(href, '_blank', 'noopener,noreferrer');
           }
@@ -175,14 +175,14 @@ function ConversationMenuContent({
       </MenuItem>
 
       {/* Open */}
-      <MenuItem onClick={() => onNavigate(href)}>
+      <MenuItem onSelect={() => onNavigate(href)}>
         <FolderOpen className="h-3.5 w-3.5" />
         <span className="flex-1">Open</span>
       </MenuItem>
 
       {/* Copy Link */}
       <MenuItem
-        onClick={() => {
+        onSelect={() => {
           if (typeof navigator !== 'undefined' && navigator.clipboard) {
             void navigator.clipboard.writeText(absoluteHref);
           }
@@ -195,7 +195,7 @@ function ConversationMenuContent({
       <MenuSeparator />
 
       {/* Delete */}
-      <MenuItem variant="destructive" onClick={stubAction('Delete')}>
+      <MenuItem variant="destructive" onSelect={stubAction('Delete')}>
         <Trash2 className="h-3.5 w-3.5" />
         <span className="flex-1">Delete</span>
       </MenuItem>

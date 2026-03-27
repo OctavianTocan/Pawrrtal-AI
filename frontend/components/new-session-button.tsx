@@ -32,36 +32,34 @@ export function NewSessionButton(): React.JSX.Element {
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <div>
-          <ContextMenu modal={true}>
-            <ContextMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                type="button"
-                onClick={handleNewConversation}
-                className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
-                aria-label="New Session"
-              >
-                <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
-                New Session
-              </Button>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.open('/', '_blank', 'noopener,noreferrer');
-                  }
-                }}
-              >
-                <AppWindow className="h-3.5 w-3.5" />
-                <span className="flex-1">Open in New Window</span>
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        </div>
-      </TooltipTrigger>
+      <ContextMenu modal={true}>
+        <TooltipTrigger asChild>
+          <ContextMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={handleNewConversation}
+              className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+              aria-label="New Session"
+            >
+              <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+              New Session
+            </Button>
+          </ContextMenuTrigger>
+        </TooltipTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onSelect={() => {
+              if (typeof window !== 'undefined') {
+                window.open('/', '_blank', 'noopener,noreferrer');
+              }
+            }}
+          >
+            <AppWindow className="h-3.5 w-3.5" />
+            <span className="flex-1">Open in New Window</span>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       <TooltipContent side="right">⌘N</TooltipContent>
     </Tooltip>
   );

@@ -81,6 +81,26 @@ export function EntityRow({
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [contextMenuOpen, setContextMenuOpen] = useState(false);
 	const resolvedContextMenu = contextMenuContent ?? menuContent;
+	const showMenuButton = Boolean(menuContent && !hideMoreButton);
+
+	const renderMoreButton = (className: string, iconClassName: string) => (
+		<DropdownMenu modal={true} onOpenChange={setMenuOpen}>
+			<DropdownMenuTrigger asChild>
+				<button
+					type="button"
+					className={className}
+					onPointerDown={(e) => e.stopPropagation()}
+					onClick={(e) => e.stopPropagation()}
+					aria-label="More actions"
+				>
+					<MoreHorizontal className={iconClassName} />
+				</button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				<DropdownMenuProvider>{menuContent}</DropdownMenuProvider>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
 
 	const innerContent = (
 		<div className="relative group select-none pl-2 mr-2">
@@ -93,8 +113,9 @@ export function EntityRow({
 				onClick={!onMouseDown ? onClick : undefined}
 				onMouseDown={onMouseDown}
 				className={cn(
-					"flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]",
+					"flex w-full items-start gap-2 pl-2 py-3 text-left text-sm outline-none rounded-[8px]",
 					"transition-[background-color] duration-75",
+					showMenuButton ? "pr-10" : "pr-4",
 					isSelected || isInMultiSelect
 						? "bg-foreground/3"
 						: "hover:bg-foreground/2",
@@ -113,54 +134,22 @@ export function EntityRow({
 							)}
 							<div
 								className={cn(
-									"font-sans truncate min-w-0",
+									"font-sans truncate min-w-0 flex-1",
 									titleClassName,
 								)}
 							>
 								{title}
 							</div>
-							<div className="shrink-0 ml-auto relative -mr-1">
-								<span
-									className={cn(
-										menuOpen || contextMenuOpen
-											? "invisible"
-											: "group-hover:invisible",
-									)}
-								>
-									{titleTrailing}
-								</span>
-								{menuContent && !hideMoreButton && (
-									<div
-										className={cn(
-											"absolute inset-0 flex items-center justify-end overflow-visible",
-											menuOpen || contextMenuOpen
-												? "opacity-100"
-												: "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
-										)}
-									>
-										<DropdownMenu
-											modal={true}
-											onOpenChange={setMenuOpen}
-										>
-											<DropdownMenuTrigger asChild>
-												<button
-													type="button"
-													className="p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
-													onPointerDown={(e) => e.stopPropagation()}
-													onClick={(e) => e.stopPropagation()}
-													aria-label="More actions"
-												>
-													<MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-												</button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuProvider>
-													{menuContent}
-												</DropdownMenuProvider>
-											</DropdownMenuContent>
-										</DropdownMenu>
-									</div>
+							<div
+								className={cn(
+									"shrink-0 whitespace-nowrap transition-opacity",
+									showMenuButton &&
+										(menuOpen || contextMenuOpen
+											? "opacity-0"
+											: "group-hover:opacity-0"),
 								)}
+							>
+								{titleTrailing}
 							</div>
 						</div>
 					) : (
@@ -218,7 +207,22 @@ export function EntityRow({
 				</div>
 			</button>
 			{children}
-			{menuContent && !hideMoreButton && !titleTrailing && (
+			{showMenuButton && titleTrailing && (
+				<div
+					className={cn(
+						"absolute right-3 top-1/2 -translate-y-1/2 transition-opacity z-10",
+						menuOpen || contextMenuOpen
+							? "opacity-100"
+							: "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",
+					)}
+				>
+					{renderMoreButton(
+						"p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer",
+						"h-3.5 w-3.5 text-muted-foreground",
+					)}
+				</div>
+			)}
+			{showMenuButton && !titleTrailing && (
 				<div
 					className={cn(
 						"absolute right-2 top-2 transition-opacity z-10",
@@ -228,27 +232,10 @@ export function EntityRow({
 					)}
 				>
 					<div className="flex items-center rounded-[8px] overflow-hidden border border-transparent hover:border-border/50">
-						<DropdownMenu
-							modal={true}
-							onOpenChange={setMenuOpen}
-						>
-							<DropdownMenuTrigger asChild>
-								<button
-									type="button"
-									className="p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
-									onPointerDown={(e) => e.stopPropagation()}
-									onClick={(e) => e.stopPropagation()}
-									aria-label="More actions"
-								>
-									<MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-								</button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuProvider>
-									{menuContent}
-								</DropdownMenuProvider>
-							</DropdownMenuContent>
-						</DropdownMenu>
+						{renderMoreButton(
+							"p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer",
+							"h-4 w-4 text-muted-foreground",
+						)}
 					</div>
 				</div>
 			)}
@@ -267,17 +254,10 @@ export function EntityRow({
 				</div>
 			)}
 			{resolvedContextMenu ? (
-				<ContextMenu
-					modal={true}
-					onOpenChange={setContextMenuOpen}
-				>
-					<ContextMenuTrigger asChild>
-						{innerContent}
-					</ContextMenuTrigger>
+				<ContextMenu modal={true} onOpenChange={setContextMenuOpen}>
+					<ContextMenuTrigger asChild>{innerContent}</ContextMenuTrigger>
 					<ContextMenuContent>
-						<ContextMenuProvider>
-							{resolvedContextMenu}
-						</ContextMenuProvider>
+						<ContextMenuProvider>{resolvedContextMenu}</ContextMenuProvider>
 					</ContextMenuContent>
 				</ContextMenu>
 			) : (

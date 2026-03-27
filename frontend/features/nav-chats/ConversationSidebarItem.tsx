@@ -53,10 +53,10 @@ function formatConversationAge(updatedAt: string): string | null {
 
   const diffMonths = Math.floor(diffDays / 30);
   if (diffMonths < 12) {
-    return `${diffMonths}mo`;
+    return `${Math.max(1, diffMonths)}mo`;
   }
 
-  return `${Math.floor(diffDays / 365)}y`;
+  return `${Math.max(1, Math.floor(diffDays / 365))}y`;
 }
 
 /**
