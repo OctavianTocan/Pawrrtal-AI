@@ -3,13 +3,8 @@
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useId, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { LoginFormView } from '@/components/login-form-view';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
-import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface LoginFormProps extends React.ComponentProps<'div'> {
   testUserEmail?: string;
@@ -22,8 +17,10 @@ type LoginCredentials = {
 };
 
 /**
- * Login form with email/password fields, error handling, and optional
- * test-user shortcut for local development.
+ * Container for the login form.
+ *
+ * Owns form state, validation, API calls, and navigation on success.
+ * Delegates all rendering to `LoginFormView`.
  *
  * @param testUserEmail    - Pre-filled email for the dev-only "Test User" button.
  * @param testUserPassword - Pre-filled password for the dev-only "Test User" button.
@@ -34,20 +31,20 @@ export function LoginForm({
   testUserPassword,
   ...props
 }: LoginFormProps): React.JSX.Element {
+  // Destructure onSubmit from rest to avoid conflict with our custom onSubmit prop.
+  const { onSubmit: _nativeOnSubmit, ...divProps } = props;
   const formId = useId();
   const emailId = `${formId}-email`;
   const passwordId = `${formId}-password`;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Error message.
   const [errorMessage, setErrorMessage] = useState('');
-  // To disable buttons while submitting.
   const [isLoading, setIsLoading] = useState(false);
-  // Get the router.
   const router = useRouter();
   const canUseTestUser = Boolean(testUserEmail && testUserPassword);
 
-  const submitLogin = async ({ email, password }: LoginCredentials) => {
+  /** Sends credentials to the login API and redirects on success. */
+  const submitLogin = async ({ email, password }: LoginCredentials): Promise<void> => {
     setIsLoading(true);
 
     try {
@@ -93,13 +90,14 @@ export function LoginForm({
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    // Stops the page from refreshing.
+  /** Form submit handler — prevents default page refresh. */
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     await submitLogin({ email, password });
   };
 
-  const handleTestUserLogin = async () => {
+  /** Dev-only shortcut to log in as the test user. */
+  const handleTestUserLogin = async (): Promise<void> => {
     if (!testUserEmail || !testUserPassword) {
       return;
     }
@@ -112,89 +110,20 @@ export function LoginForm({
   };
 
   return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              {/* -- Alert -- */}
-              {errorMessage && (
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{errorMessage}</AlertDescription>
-                </Alert>
-              )}
-              {/* -- Field -- */}
-              <Field>
-                <FieldLabel htmlFor={emailId}>Email</FieldLabel>
-                <Input
-                  id={emailId}
-                  type="email"
-                  placeholder="m@example.com"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </Field>
-              <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
-                  <a
-                    href="/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-                <Input
-                  id={passwordId}
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                  }}
-                />
-              </Field>
-              <Field>
-                {/* Login */}
-                <Button type="submit" disabled={isLoading}>
-                  Login
-                </Button>
-                {canUseTestUser && (
-                  <>
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={handleTestUserLogin}
-                      disabled={isLoading}
-                    >
-                      Test User
-                    </Button>
-                    <FieldDescription className="text-center text-xs">
-                      Dev-only shortcut for the shared test account.
-                    </FieldDescription>
-                  </>
-                )}
-                {/* TODO: Link to login with Google. */}
-                <Button variant="outline" type="button" disabled={isLoading}>
-                  Login with Google
-                </Button>
-                {/* Signup */}
-                <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="/signup">Sign up</a>
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <LoginFormView
+      className={className}
+      emailId={emailId}
+      passwordId={passwordId}
+      email={email}
+      onEmailChange={setEmail}
+      password={password}
+      onPasswordChange={setPassword}
+      errorMessage={errorMessage}
+      isLoading={isLoading}
+      canUseTestUser={canUseTestUser}
+      onSubmit={handleSubmit}
+      onTestUserLogin={handleTestUserLogin}
+      {...divProps}
+    />
   );
 }
