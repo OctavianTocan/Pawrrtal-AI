@@ -1,10 +1,9 @@
 import { LoginForm } from "@/components/login-form";
 
 function getTestUserCredentials() {
-	const isLocalDev = process.env.NODE_ENV === "development";
-	const isNonProductionVercel =
-		Boolean(process.env.VERCEL_ENV) && process.env.VERCEL_ENV !== "production";
-	const shouldExposeTestUser = isLocalDev || isNonProductionVercel;
+	// Only expose test credentials in local development — never on deployed
+	// previews, where the password would be serialized into client HTML/JS.
+	const shouldExposeTestUser = process.env.NODE_ENV === "development";
 
 	if (!shouldExposeTestUser) {
 		return {

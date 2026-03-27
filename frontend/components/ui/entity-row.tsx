@@ -135,7 +135,11 @@ export function EntityRow({
 											onOpenChange={setMenuOpen}
 										>
 											<DropdownMenuTrigger asChild>
-												<div className="p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer">
+												<div
+													className="p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
+													onPointerDown={(e) => e.stopPropagation()}
+													onClick={(e) => e.stopPropagation()}
+												>
 													<MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
 												</div>
 											</DropdownMenuTrigger>
@@ -219,7 +223,11 @@ export function EntityRow({
 							onOpenChange={setMenuOpen}
 						>
 							<DropdownMenuTrigger asChild>
-								<div className="p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer">
+								<div
+									className="p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
+									onPointerDown={(e) => e.stopPropagation()}
+									onClick={(e) => e.stopPropagation()}
+								>
 									<MoreHorizontal className="h-4 w-4 text-muted-foreground" />
 								</div>
 							</DropdownMenuTrigger>

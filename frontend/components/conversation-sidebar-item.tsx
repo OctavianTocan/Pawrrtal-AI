@@ -81,10 +81,9 @@ function ConversationStatusIcon() {
 	);
 }
 
-function stubAction(label: string) {
-	return () => {
-		console.log(`[stub] ${label}`);
-	};
+function stubAction(_label: string) {
+	// Intentionally a no-op — these menu items are UI stubs awaiting implementation.
+	return () => {};
 }
 
 function ConversationMenuContent({

@@ -1311,22 +1311,5 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	border: none !important;
 }
 
-/* =============================================================================
-   Popover Styling (matches Craft menu containers)
-============================================================================= */
-
-.popover-styled {
-	background: var(--background);
-	color: var(--foreground);
-	border-radius: 8px;
-	border: none;
-	box-shadow:
-		rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-		rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-		rgba(0, 0, 0, 0.06) 0px 0px 0px 1px,
-		rgba(0, 0, 0, 0.04) 0px 1px 1px -0.5px,
-		rgba(0, 0, 0, 0.04) 0px 3px 3px 0px,
-		rgba(0, 0, 0, 0.02) 0px 6px 6px 0px,
-		rgba(0, 0, 0, 0.02) 0px 12px 12px 0px,
-		rgba(0, 0, 0, 0.02) 0px 24px 24px 0px;
-}
+/* NOTE: .popover-styled is defined in @layer utilities above.
+   This duplicate was removed to avoid overriding the utility-layer styles. */
