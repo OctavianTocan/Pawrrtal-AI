@@ -21,9 +21,10 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    // Some stricter flags (disabled by default)
+    // Stricter flags
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": false
   }
 }
