@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { type AccessRequest, AccessRequestBanner } from '@/features/access-request-banner';
 
 /** Dev-only logger — isolates console usage to satisfy lint in the test page. */
-// biome-ignore lint/suspicious/noConsole: dev-only test page
-const devLog = (...args: unknown[]): void => devLog(...args);
+// biome-ignore lint/suspicious/noConsole: dev-only test page — actions are logged for visual verification
+const devLog = (...args: unknown[]): void => console.log(...args);
 
 /** Mock data for testing the banner with various name lengths and counts. */
 const MOCK_REQUESTS: AccessRequest[] = [
