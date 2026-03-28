@@ -13,7 +13,7 @@ function getTestUserCredentials(): {
 } {
   // Only expose test credentials in local development — never on deployed
   // previews, where the password would be serialized into client HTML/JS.
-  const shouldExposeTestUser = process.env.NODE_ENV === 'development';
+  const shouldExposeTestUser = process.env.VERCEL_ENV === 'development';
 
   if (!shouldExposeTestUser) {
     return {

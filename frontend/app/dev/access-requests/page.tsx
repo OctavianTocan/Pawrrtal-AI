@@ -1,3 +1,14 @@
+/**
+ * Dev-only test page for the AccessRequestBanner component.
+ *
+ * Renders multiple banner variants across different widths and user counts to
+ * verify text logic branches, avatar overflow, and layout edge cases. Useful for
+ * testing the banner's responsive design and text formatting without needing real
+ * access request data.
+ *
+ * @fileoverview Test page for AccessRequestBanner component with multiple variants
+ */
+
 'use client';
 
 import { useState } from 'react';

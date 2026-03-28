@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { ConversationSidebarItemView } from './ConversationSidebarItemView';
 
 interface ConversationSidebarItemProps {
@@ -77,13 +77,13 @@ export function ConversationSidebarItem({
   const href = `/c/${id}`;
   const isSelected = pathname === href;
   const age = formatConversationAge(updatedAt);
-  const absoluteHref = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return href;
-    }
 
-    return new URL(href, window.location.origin).toString();
-  }, [href]);
+  // Compute absolute URL for clipboard operations. No memoization needed —
+  // the computation is trivial and href is already stable (derived from id).
+  const absoluteHref =
+    typeof window === 'undefined'
+      ? href
+      : new URL(href, window.location.origin).toString();
 
   return (
     <ConversationSidebarItemView
