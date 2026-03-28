@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { API_ENDPOINTS } from "@/lib/api";
-import { useAuthedFetch } from "../../../hooks/use-authed-fetch";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { API_ENDPOINTS } from '@/lib/api';
+import { useAuthedFetch } from '../../../hooks/use-authed-fetch';
 
 /**
  * useCreateConversation is a hook that creates a new conversation.
@@ -9,26 +9,30 @@ import { useAuthedFetch } from "../../../hooks/use-authed-fetch";
  * @returns The conversation ID.
  */
 export function useCreateConversation(conversationId: string) {
-	const fetcher = useAuthedFetch();
-	const queryClient = useQueryClient();
+  const fetcher = useAuthedFetch();
+  const queryClient = useQueryClient();
 
-	return useMutation({
-		mutationKey: ["conversations"],
-		mutationFn: async () => {
-			const response = await fetcher(
-				API_ENDPOINTS.conversations.create(conversationId),
-				{
-					method: "POST",
-					body: JSON.stringify({}),
-					headers: {
-						"content-type": "application/json",
-					},
-				},
-			);
-			return response.json();
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["conversations"] });
-		},
-	});
+  return useMutation({
+    // TODO: This mutation key should be user-specific to prevent cache pollution
+    // when users log out/in. Currently, conversations are cached globally, so a
+    // new user logging in might briefly see the previous user's conversations
+    // from the React Query cache. Need to either:
+    // 1. Clear the query cache on logout/401, OR
+    // 2. Make query keys user-specific (requires exposing user ID)
+    // See: use-create-conversation.ts:16
+    mutationKey: ['conversations'],
+    mutationFn: async () => {
+      const response = await fetcher(API_ENDPOINTS.conversations.create(conversationId), {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
 }

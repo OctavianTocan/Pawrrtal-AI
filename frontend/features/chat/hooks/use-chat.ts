@@ -1,84 +1,84 @@
-import { useAuthedFetch } from "@/hooks/use-authed-fetch";
+import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 
-/*
-    Custom hook to interact with the chat API.
-*/
+/** Sentinel returned by {@link parseSseMessage} when the stream signals completion. */
+const STREAM_DONE = Symbol('STREAM_DONE');
+
+/**
+ * Parses a single SSE message and returns the delta content, a done
+ * sentinel, or `null` for non-data / unparseable frames.
+ */
+function parseSseMessage(raw: string): string | typeof STREAM_DONE | null {
+  if (!raw.startsWith('data: ')) return null;
+
+  const data = raw.slice(6);
+
+  if (data.includes('[DONE]')) return STREAM_DONE;
+
+  try {
+    const json = JSON.parse(data);
+    return json.type === 'delta' ? json.content : null;
+  } catch {
+    // Ignore parse errors from incomplete SSE frames.
+    return null;
+  }
+}
+
+/**
+ * Hook that exposes a streaming chat API via an async generator.
+ *
+ * @returns An object with `streamMessage` — call it to send a user
+ *   message and yield assistant response chunks as they arrive.
+ */
 export function useChat() {
-	const fetcher = useAuthedFetch();
+  const fetcher = useAuthedFetch();
 
-	async function* streamMessage(
-		message: string,
-		conversationId: string,
-	): AsyncGenerator<string> {
-		// Send the message to the chat API, and get the response.
-		const response = await fetcher("/api/chat", {
-			method: "POST",
-			body: JSON.stringify({
-				question: message,
-				conversation_id: conversationId,
-			}),
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "text/event-stream",
-			},
-		});
+  async function* streamMessage(message: string, conversationId: string): AsyncGenerator<string> {
+    const response = await fetcher('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        question: message,
+        conversation_id: conversationId,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+    });
 
-		// Handle errors.
-		if (!response.body) throw new Error("Failed to get body");
+    if (!response.body) throw new Error('Failed to get response body from chat API');
 
-		// Transform the stream.
-		// .pipeThrough() takes the raw bytes and runs them through the decoder.
-		// .getReader() gives us a way to read the resulting text.
-		const reader = response.body
-			.pipeThrough(new TextDecoderStream())
-			.getReader();
+    // Pipe raw bytes through a text decoder so we can read string chunks.
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
 
-		// Buffer to store the streamed text.
-		let buffer = "";
+    // SSE frames can arrive split across chunks — buffer partial frames here.
+    let buffer = '';
 
-		// While the stream is not done, read the next chunk.
-		while (true) {
-			// Read the next chunk.
-			const { done, value } = await reader.read();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-			// If the stream is done, break the loop.
-			if (done) break;
+      buffer += value;
 
-			// Add the new text to our buffer.
-			buffer += value;
+      // SSE events are delimited by double newlines.
+      const frames = buffer.split('\n\n');
 
-			// Split buffer by newlines to find individual messages. (SSE events are delimited by newlines).
-			const messages = buffer.split("\n\n");
+      // The last element is either empty or a partial frame — keep it buffered.
+      buffer = frames.pop() || '';
 
-			// Save the last piece. The last item in the array is usually incomplete, so we save it to the buffer. We pop it off and add it back to the buffer.
-			buffer = messages.pop() || "";
+      for (const frame of frames) {
+        const parsed = parseSseMessage(frame);
 
-			// Process each message.
-			for (const message of messages) {
-				// Check for the SSE delimiter.
-				if (message.startsWith("data: ")) {
-					// Remove the 'data: ' prefix.
-					const data = message.slice(6);
+        if (parsed === STREAM_DONE) {
+          yield buffer;
+          return;
+        }
 
-					// Handle the stream end event.
-					if (data.includes("[DONE]")) {
-						yield buffer;
-						// Need this or we get an error when parsing the JSON below.
-						break;
-					}
+        if (parsed !== null) {
+          yield parsed;
+        }
+      }
+    }
+  }
 
-					try {
-						// Parse the message as JSON.
-						const json = JSON.parse(data);
-
-						// Yield the delta content.
-						yield json.type === "delta" ? json.content : null;
-					} catch (error) {
-						// Ignore errors for incomplete messages.
-					}
-				}
-			}
-		}
-	}
-	return { streamMessage };
+  return { streamMessage };
 }

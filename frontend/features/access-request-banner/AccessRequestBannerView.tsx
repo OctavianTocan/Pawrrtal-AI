@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { LayoutGroup } from "motion/react";
-import { BannerHeader } from "./banner-header";
-import { ExpandedRequestList } from "./expanded-request-list";
-import type { AccessRequestBannerViewProps } from "./types";
+import { LayoutGroup } from 'motion/react';
+import { BannerHeader } from './BannerHeader';
+import { ExpandedRequestList } from './ExpandedRequestList';
+import type { AccessRequestBannerViewProps } from './types';
 
 /**
  * Pure presentation layer for the access-request banner.
@@ -34,38 +34,38 @@ import type { AccessRequestBannerViewProps } from "./types";
  * @see {@link ExpandedRequestList} for the sliding user-row panel.
  */
 export function AccessRequestBannerView({
-	requests,
-	bannerState,
-	decisions,
-	collapsedAvatars,
-	remainingCount,
-	onToggleExpand,
-	onDismiss,
-	onApproveRequest,
-	onRejectRequest,
-	onResetRequest,
+  requests,
+  bannerState,
+  decisions,
+  collapsedAvatars,
+  remainingCount,
+  onToggleExpand,
+  onDismiss,
+  onApproveRequest,
+  onRejectRequest,
+  onResetRequest,
 }: AccessRequestBannerViewProps) {
-	return (
-		<LayoutGroup>
-			<div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-				<BannerHeader
-					bannerState={bannerState}
-					requests={requests}
-					collapsedAvatars={collapsedAvatars}
-					remainingCount={remainingCount}
-					onToggleExpand={onToggleExpand}
-					onDismiss={onDismiss}
-				/>
+  return (
+    <LayoutGroup>
+      <div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <BannerHeader
+          bannerState={bannerState}
+          requests={requests}
+          collapsedAvatars={collapsedAvatars}
+          remainingCount={remainingCount}
+          onToggleExpand={onToggleExpand}
+          onDismiss={onDismiss}
+        />
 
-				<ExpandedRequestList
-					bannerState={bannerState}
-					requests={requests}
-					decisions={decisions}
-					onApproveRequest={onApproveRequest}
-					onRejectRequest={onRejectRequest}
-					onResetRequest={onResetRequest}
-				/>
-			</div>
-		</LayoutGroup>
-	);
+        <ExpandedRequestList
+          bannerState={bannerState}
+          requests={requests}
+          decisions={decisions}
+          onApproveRequest={onApproveRequest}
+          onRejectRequest={onRejectRequest}
+          onResetRequest={onResetRequest}
+        />
+      </div>
+    </LayoutGroup>
+  );
 }

@@ -14,8 +14,12 @@ commit:
 push:
     bash scripts/push.sh
 
-# Lint and auto-fix with Biome
+# Lint check (read-only) with Biome + custom policies
 lint:
+    bunx --bun @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true . && bun run lint:policies
+
+# Lint and auto-fix with Biome
+lint-fix:
     bunx --bun @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true .
 
 # Format with Biome
