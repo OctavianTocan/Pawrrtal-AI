@@ -1,13 +1,26 @@
-name: Auto-rebase labeled PRs on development push
+name: Auto-rebase PRs
 
 on:
   push:
     branches:
       - development
+  # pull_request_target is used deliberately: this workflow never executes
+  # code from the PR branch, so the elevated base-branch token is safe.
+  pull_request_target:
+    types: [labeled]
+    branches:
+      - development
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
   pull-requests: write
+
+# Prevent race conditions if multiple triggers fire for the same PR simultaneously
+concurrency:
+  group: rebase-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   get-prs:
@@ -15,9 +28,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       prs: ${{ steps.set-prs.outputs.prs }}
+    # Guard: Only run if the base branch is exactly 'development' (for PR events), and check the specific trigger conditions.
+    if: >-
+      (github.event_name == 'push') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'development' && github.event.label.name == 'auto-rebase') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/rebase') && contains(fromJson('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association))
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -25,11 +43,26 @@ jobs:
         id: set-prs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          # Note: PRs MUST have the "auto-rebase" label applied to be included here.
-          # This prevents the bot from force-pushing over active work.
-          PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
-          echo "prs=$PRS" >> $GITHUB_OUTPUT
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              echo "No issue number found, skipping." && exit 1
+            fi
+            echo "prs=[$ISSUE_NUMBER]" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            if [[ -z "$PR_NUMBER" ]]; then
+              echo "No PR number found, skipping." && exit 1
+            fi
+            echo "prs=[$PR_NUMBER]" >> $GITHUB_OUTPUT
+          else
+            # Note: PRs MUST have the "auto-rebase" label applied to be included here.
+            # This prevents the bot from force-pushing over active work.
+            PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
+            echo "prs=$PRS" >> $GITHUB_OUTPUT
+          fi
 
   rebase:
     name: Rebase PR #${{ matrix.pr }}
@@ -42,7 +75,7 @@ jobs:
         pr: ${{ fromJson(needs.get-prs.outputs.prs) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
