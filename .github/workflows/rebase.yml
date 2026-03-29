@@ -1,4 +1,4 @@
-name: Automatic Rebase on Push
+name: Auto-rebase labeled PRs on development push
 
 on:
   push:
@@ -26,6 +26,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Note: PRs MUST have the "auto-rebase" label applied to be included here.
+          # This prevents the bot from force-pushing over active work.
           PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
           echo "prs=$PRS" >> $GITHUB_OUTPUT
 
