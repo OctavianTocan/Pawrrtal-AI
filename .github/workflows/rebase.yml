@@ -80,8 +80,51 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Run cirrus-actions/rebase
-        uses: cirrus-actions/rebase@b87d48154a87a85666003575337e27b8cd65f691 # v1.8
+      - name: Set up Node.js for Claude Code
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Rebase (with Claude Code fallback)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PR_NUMBER: ${{ matrix.pr }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          if [[ -z "$BRANCH_NAME" ]]; then
+            echo "Failed to fetch branch name for PR $PR_NUMBER"
+            exit 1
+          fi
+          
+          git fetch origin "$BRANCH_NAME"
+          git checkout "$BRANCH_NAME"
+          
+          if git rebase origin/development; then
+            echo "Clean rebase successful. Force pushing..."
+            git push origin "$BRANCH_NAME" --force-with-lease
+          else
+            echo "Merge conflict detected! Engaging Claude Code autonomous resolution..."
+            
+            # Install Claude Code globally
+            npm install -g @anthropic-ai/claude-code
+            
+            # Instruct Claude Code to fix the conflicts and continue the rebase
+            # WARNING: --accept-all allows Claude to run arbitrary shell commands to investigate and fix the code.
+            claude -p "This repository is currently in the middle of a git rebase with merge conflicts. Find all files with conflict markers (<<<<<<<). Intelligently resolve the conflicts to preserve the intent of both branches. Once resolved, run 'git add .' and 'git rebase --continue'. Ensure the rebase completes successfully." --accept-all
+            
+            # After Claude finishes, check if we are still rebasing
+            if test -d ".git/rebase-merge" || test -d ".git/rebase-apply"; then
+              echo "Claude failed to complete the rebase. Aborting."
+              git rebase --abort
+              gh pr comment $PR_NUMBER --body "⚠️ **Automated Rebase Failed:** Claude Code attempted to resolve the merge conflicts but failed to complete the rebase. Manual intervention required."
+              exit 1
+            fi
+            
+            echo "Claude successfully resolved the conflicts and completed the rebase. Force pushing..."
+            git push origin "$BRANCH_NAME" --force-with-lease
+            gh pr comment $PR_NUMBER --body "🤖 **AI Resolved Conflicts:** Claude Code autonomously resolved the merge conflicts and completed the rebase."
+          fi
