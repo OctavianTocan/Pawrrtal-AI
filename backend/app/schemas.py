@@ -81,6 +81,12 @@ class ConversationResponse(BaseModel):
     updated_at: datetime
 
 
+class ConversationUpdate(BaseModel):
+    """Request schema for updating mutable conversation fields."""
+
+    title: str
+
+
 # --- Chat schemas -------------------------------------------------------------
 
 

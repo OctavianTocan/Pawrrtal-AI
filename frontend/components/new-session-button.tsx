@@ -10,6 +10,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 /**
@@ -24,9 +25,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
  */
 export function NewSessionButton(): React.JSX.Element {
   const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   /** Navigates to the root page, which generates a fresh conversation UUID. */
   const handleNewConversation = (): void => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
     router.push('/');
   };
 
