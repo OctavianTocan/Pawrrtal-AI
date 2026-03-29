@@ -26,10 +26,39 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "18.75rem";
+const SIDEBAR_DEFAULT_WIDTH = 300;
+const SIDEBAR_MIN_WIDTH = 240;
+const SIDEBAR_MAX_WIDTH = 420;
+const SIDEBAR_WIDTH_STORAGE_KEY = "sidebar_width";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+
+function clampSidebarWidth(width: number): number {
+	return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
+}
+
+function loadDesktopSidebarWidth(): number {
+	if (typeof window === "undefined") {
+		return SIDEBAR_DEFAULT_WIDTH;
+	}
+
+	try {
+		const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+		if (!storedWidth) {
+			return SIDEBAR_DEFAULT_WIDTH;
+		}
+
+		const parsedWidth = Number.parseInt(storedWidth, 10);
+		if (!Number.isFinite(parsedWidth)) {
+			return SIDEBAR_DEFAULT_WIDTH;
+		}
+
+		return clampSidebarWidth(parsedWidth);
+	} catch {
+		return SIDEBAR_DEFAULT_WIDTH;
+	}
+}
 
 type SidebarContextProps = {
 	state: "expanded" | "collapsed";
@@ -39,6 +68,9 @@ type SidebarContextProps = {
 	setOpenMobile: (open: boolean) => void;
 	isMobile: boolean;
 	toggleSidebar: () => void;
+	desktopWidth: number;
+	setDesktopWidth: (width: number) => void;
+	resetDesktopWidth: () => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -67,6 +99,7 @@ function SidebarProvider({
 }) {
 	const isMobile = useIsMobile();
 	const [openMobile, setOpenMobile] = React.useState(false);
+	const [desktopWidth, setDesktopWidthState] = React.useState(loadDesktopSidebarWidth);
 
 	// This is the internal state of the sidebar.
 	// We use openProp and setOpenProp for control from outside the component.
@@ -91,6 +124,29 @@ function SidebarProvider({
 	const toggleSidebar = React.useCallback(() => {
 		return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
 	}, [isMobile, setOpen]);
+
+	const setDesktopWidth = React.useCallback((width: number) => {
+		setDesktopWidthState(clampSidebarWidth(width));
+	}, []);
+
+	const resetDesktopWidth = React.useCallback(() => {
+		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
+	}, []);
+
+	React.useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		try {
+			window.localStorage.setItem(
+				SIDEBAR_WIDTH_STORAGE_KEY,
+				String(desktopWidth),
+			);
+		} catch {
+			// Storage writes are best-effort only for this UI preference.
+		}
+	}, [desktopWidth]);
 
 	// Adds a keyboard shortcut to toggle the sidebar.
 	React.useEffect(() => {
@@ -121,8 +177,21 @@ function SidebarProvider({
 			openMobile,
 			setOpenMobile,
 			toggleSidebar,
+			desktopWidth,
+			setDesktopWidth,
+			resetDesktopWidth,
 		}),
-		[state, open, setOpen, isMobile, openMobile, toggleSidebar],
+		[
+			state,
+			open,
+			setOpen,
+			isMobile,
+			openMobile,
+			toggleSidebar,
+			desktopWidth,
+			setDesktopWidth,
+			resetDesktopWidth,
+		],
 	);
 
 	return (
@@ -131,7 +200,7 @@ function SidebarProvider({
 				data-slot="sidebar-wrapper"
 				style={
 					{
-						"--sidebar-width": SIDEBAR_WIDTH,
+						"--sidebar-width": `${desktopWidth}px`,
 						"--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
 						...style,
 					} as React.CSSProperties
@@ -275,30 +344,6 @@ function SidebarTrigger({
 	);
 }
 
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-	const { toggleSidebar } = useSidebar();
-
-	return (
-		<button
-			data-sidebar="rail"
-			data-slot="sidebar-rail"
-			aria-label="Toggle Sidebar"
-			tabIndex={-1}
-			onClick={toggleSidebar}
-			title="Toggle Sidebar"
-			className={cn(
-				"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
-				"in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-				"[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-				"hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-				"[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-				"[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
 
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
 	return (
@@ -697,7 +742,6 @@ export {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 	SidebarProvider,
-	SidebarRail,
 	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
