@@ -123,19 +123,22 @@ jobs:
             Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
           claude_args: '--allowed-tools "Bash(git add *),Bash(git rebase --continue),Bash(cat *),Bash(grep *),Bash(ls *)"'
 
-      - name: Install dependencies (Frontend)
+      - name: Install dependencies (just, bun, uv)
         if: steps.rebase.outputs.conflict == 'true'
         run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
           npm install -g bun
-          cd frontend
-          bun install
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          just install
 
-      - name: Run Build and Lint Gates
+      - name: Run Build and Lint Gates (just check)
         if: steps.rebase.outputs.conflict == 'true'
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          just check
           cd frontend
           bun run typecheck
-          bunx --bun @biomejs/biome check .
 
       - name: Verify and Push Rebased Branch
         if: steps.rebase.outputs.conflict == 'true'
