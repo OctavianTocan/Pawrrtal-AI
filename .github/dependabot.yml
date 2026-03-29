@@ -1,0 +1,51 @@
+# Dependabot configuration
+# Adapted from OpenClaw for AI Nexus
+
+version: 2
+
+updates:
+  # npm dependencies (root & workspaces like frontend)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 10
+
+  # Python backend (pyproject.toml)
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: daily
+    groups:
+      python-deps:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 10
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    open-pull-requests-limit: 5
