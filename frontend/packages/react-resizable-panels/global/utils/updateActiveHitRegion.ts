@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, RegisteredGroup } from "../../components/group/types";
 import {
   CURSOR_FLAG_HORIZONTAL_MAX,

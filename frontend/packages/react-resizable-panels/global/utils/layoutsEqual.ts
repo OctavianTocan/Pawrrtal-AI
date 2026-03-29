@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout } from "../../components/group/types";
 import { compareLayoutNumbers } from "./compareLayoutNumbers";
 

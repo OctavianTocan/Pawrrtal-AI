@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useId as useIdReact } from "react";
 
 export function useId(stableId: number | string | undefined) {

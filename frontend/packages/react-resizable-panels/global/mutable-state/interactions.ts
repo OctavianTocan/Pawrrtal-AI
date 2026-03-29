@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { EventEmitter } from "../../utils/EventEmitter";
 import type { InteractionState } from "./types";
 

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
 
 export type PanelSize = {

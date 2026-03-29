@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { formatLayoutNumber } from "./formatLayoutNumber";
 
 export function layoutNumbersEqual(

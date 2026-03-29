@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function assert(
   expectedCondition: unknown,
   message: string = "Assertion error"

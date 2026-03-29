@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { layoutNumbersEqual } from "./layoutNumbersEqual";
 
 export function compareLayoutNumbers(actual: number, expected: number) {

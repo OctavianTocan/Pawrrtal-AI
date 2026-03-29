@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { PanelImperativeHandle } from "../../components/panel/types";
 import { calculateAvailableGroupSize } from "../dom/calculateAvailableGroupSize";
 import { getMountedGroups, updateMountedGroup } from "../mutable-state/groups";

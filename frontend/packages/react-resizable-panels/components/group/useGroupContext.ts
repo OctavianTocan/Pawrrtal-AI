@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useContext } from "react";
 import { assert } from "../../utils/assert";
 import { GroupContext } from "./GroupContext";

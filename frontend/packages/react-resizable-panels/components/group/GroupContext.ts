@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createContext } from "react";
 import type { GroupContextType } from "./types";
 

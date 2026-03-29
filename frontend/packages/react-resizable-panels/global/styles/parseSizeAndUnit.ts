@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { SizeUnit } from "../../components/panel/types";
 
 export function parseSizeAndUnit(

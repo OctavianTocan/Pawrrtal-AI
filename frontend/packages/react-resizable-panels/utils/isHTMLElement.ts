@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Detects HTMLElement without requiring instanceof and browser globals
 export function isHTMLElement(value: unknown): value is HTMLElement {
   return (

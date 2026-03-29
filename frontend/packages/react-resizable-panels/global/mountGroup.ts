@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, RegisteredGroup } from "../components/group/types";
 import { assert } from "../utils/assert";
 import { calculateAvailableGroupSize } from "./dom/calculateAvailableGroupSize";

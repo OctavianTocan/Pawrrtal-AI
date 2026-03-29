@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { CSSProperties, HTMLAttributes, ReactNode, Ref } from "react";
 import type { RegisteredPanel } from "../panel/types";
 import type { RegisteredSeparator } from "../separator/types";

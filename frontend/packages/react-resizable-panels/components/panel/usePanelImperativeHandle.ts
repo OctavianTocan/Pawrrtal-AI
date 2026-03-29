@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useImperativeHandle, useRef, type Ref } from "react";
 import { NOOP_FUNCTION } from "../../constants";
 import { getImperativePanelMethods } from "../../global/utils/getImperativePanelMethods";

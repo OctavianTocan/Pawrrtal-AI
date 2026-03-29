@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { convertEmToPixels } from "./convertEmToPixels";
 import { convertRemToPixels } from "./convertRemToPixels";
 import { convertVhToPixels } from "./convertVhToPixels";

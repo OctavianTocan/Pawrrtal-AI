@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function objectsEqual(a: object, b: object) {
   const keys = Object.keys(a);
   if (keys.length !== Object.keys(b).length) {

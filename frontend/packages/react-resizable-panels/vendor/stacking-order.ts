@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Forked from NPM stacking-order@2.0.0
 // - github.com/Rich-Harris/stacking-order/issues/3
 // - github.com/Rich-Harris/stacking-order/issues/6

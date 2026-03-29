@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Point } from "../../types";
 
 export function getDistanceBetweenPointAndRect(

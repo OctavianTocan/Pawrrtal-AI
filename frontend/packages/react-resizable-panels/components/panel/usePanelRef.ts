@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useRef } from "react";
 import type { PanelImperativeHandle } from "./types";
 

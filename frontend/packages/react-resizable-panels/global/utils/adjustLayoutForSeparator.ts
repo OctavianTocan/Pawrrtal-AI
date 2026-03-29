@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { assert } from "../../utils/assert";
 import {
   getMountedGroupState,

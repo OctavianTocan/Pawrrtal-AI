@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { isHTMLElement } from "../../utils/isHTMLElement";
 import { compare } from "../../vendor/stacking-order";
 import { doRectsIntersect } from "./doRectsIntersect";

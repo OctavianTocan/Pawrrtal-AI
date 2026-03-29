@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, LayoutStorage } from "./types";
 import { getStorageKey } from "./auto-save/getStorageKey";
 

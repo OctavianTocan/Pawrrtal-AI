@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useImperativeHandle, useRef, type Ref } from "react";
 import { IDENTITY_FUNCTION } from "../../constants";
 import { getImperativeGroupMethods } from "../../global/utils/getImperativeGroupMethods";

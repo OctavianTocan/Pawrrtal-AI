@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { sortByElementOffset } from "../../components/group/sortByElementOffset";
 import type { RegisteredGroup } from "../../components/group/types";
 import type { RegisteredPanel } from "../../components/panel/types";

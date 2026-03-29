@@ -1,4 +1,3 @@
-// @ts-nocheck
 export function isArrayEqual(a: number[], b: number[]) {
   if (a.length !== b.length) {
     return false;

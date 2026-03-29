@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Properties } from "csstype";
 import type { RegisteredGroup } from "../../components/group/types";
 import {

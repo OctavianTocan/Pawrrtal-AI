@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Orientation } from "../../components/group/types";
 import { assert } from "../../utils/assert";
 import { getDistanceBetweenPointAndRect } from "./getDistanceBetweenPointAndRect";

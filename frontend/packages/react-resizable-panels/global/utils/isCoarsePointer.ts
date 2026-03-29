@@ -1,4 +1,3 @@
-// @ts-nocheck
 let cached: boolean | undefined = undefined;
 
 /**

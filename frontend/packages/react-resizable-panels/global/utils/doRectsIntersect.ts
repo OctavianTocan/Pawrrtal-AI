@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Rect } from "../../types";
 
 export function doRectsIntersect(a: Rect, b: Rect): boolean {

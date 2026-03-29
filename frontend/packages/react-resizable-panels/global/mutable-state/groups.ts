@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, RegisteredGroup } from "../../components/group/types";
 import type { PanelConstraints } from "../../components/panel/types";
 import { EventEmitter } from "../../utils/EventEmitter";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { PanelConstraints } from "../../components/panel/types";
 import { compareLayoutNumbers } from "./compareLayoutNumbers";
 import { formatLayoutNumber } from "./formatLayoutNumber";

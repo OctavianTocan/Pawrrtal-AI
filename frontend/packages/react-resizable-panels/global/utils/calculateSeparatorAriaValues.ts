@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout } from "../../components/group/types";
 import type { PanelConstraints } from "../../components/panel/types";
 import { adjustLayoutByDelta } from "./adjustLayoutByDelta";

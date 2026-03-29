@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { assert } from "../../utils/assert";
 import { getMountedGroupState } from "../mutable-state/groups";
 import { adjustLayoutForSeparator } from "../utils/adjustLayoutForSeparator";

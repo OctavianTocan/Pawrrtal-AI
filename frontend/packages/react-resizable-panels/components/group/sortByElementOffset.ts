@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Orientation } from "./types";
 
 export function sortByElementOffset<

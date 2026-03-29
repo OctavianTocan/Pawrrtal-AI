@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Detects ShadowRoot without requiring instanceof and browser globals
 export function isShadowRoot(value: unknown): value is ShadowRoot {
   return (

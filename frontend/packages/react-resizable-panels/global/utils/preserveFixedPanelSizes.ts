@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, RegisteredGroup } from "../../components/group/types";
 import { formatLayoutNumber } from "./formatLayoutNumber";
 

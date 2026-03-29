@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { RegisteredGroup } from "../../components/group/types";
 
 export function calculateAvailableGroupSize({

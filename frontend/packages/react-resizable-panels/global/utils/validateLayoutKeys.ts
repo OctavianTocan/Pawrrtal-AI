@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout } from "../../components/group/types";
 import type { RegisteredPanel } from "../../components/panel/types";
 

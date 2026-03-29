@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Orientation } from "../../components/group/types";
 import type { Point } from "../../types";
 import type { HitRegion } from "../dom/calculateHitRegions";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getMountedGroups } from "../mutable-state/groups";
 
 export function findSeparatorGroup(separatorElement: HTMLElement) {

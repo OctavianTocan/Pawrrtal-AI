@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { RegisteredGroup } from "../../components/group/types";
 import type { PanelConstraints } from "../../components/panel/types";
 import { sizeStyleToPixels } from "../styles/sizeStyleToPixels";

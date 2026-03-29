@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Constants used for memoization
 export const EMPTY_ARRAY: unknown[] = [];
 export const EMPTY_DOM_RECT: DOMRectReadOnly = {

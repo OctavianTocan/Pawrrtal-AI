@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { Layout, RegisteredGroup } from "../../components/group/types";
 import { getMountedGroups } from "../mutable-state/groups";
 import { updateInteractionState } from "../mutable-state/interactions";

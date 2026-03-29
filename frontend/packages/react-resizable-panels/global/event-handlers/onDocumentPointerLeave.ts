@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getMountedGroups } from "../mutable-state/groups";
 import { getInteractionState } from "../mutable-state/interactions";
 import { updateActiveHitRegions } from "../utils/updateActiveHitRegion";

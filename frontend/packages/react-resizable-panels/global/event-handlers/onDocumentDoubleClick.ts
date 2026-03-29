@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getMountedGroups } from "../mutable-state/groups";
 import { findMatchingHitRegions } from "../utils/findMatchingHitRegions";
 import { getImperativePanelMethods } from "../utils/getImperativePanelMethods";

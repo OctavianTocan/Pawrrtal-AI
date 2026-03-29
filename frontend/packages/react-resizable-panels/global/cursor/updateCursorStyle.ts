@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getInteractionState } from "../mutable-state/interactions";
 import { getCursorStyle } from "./getCursorStyle";
 

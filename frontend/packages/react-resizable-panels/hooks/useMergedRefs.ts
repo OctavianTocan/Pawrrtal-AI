@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { type Ref } from "react";
 import { useStableCallback } from "./useStableCallback";
 

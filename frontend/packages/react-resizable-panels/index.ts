@@ -1,4 +1,3 @@
-// @ts-nocheck
 export { Group } from "./components/group/Group";
 export { useDefaultLayout } from "./components/group/useDefaultLayout";
 export { useGroupCallbackRef } from "./components/group/useGroupCallbackRef";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { updateCursorStyle } from "../cursor/updateCursorStyle";
 import {
   getMountedGroups,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useRef } from "react";
 import { useIsomorphicLayoutEffect } from "./useIsomorphicLayoutEffect";
 
