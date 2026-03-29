@@ -301,9 +301,6 @@ export function adjustLayoutByDelta({
   // If we were unable to resize any of the panels panels, return the previous state.
   // This will essentially bailout and ignore e.g. drags past a panel's boundaries
   if (isArrayEqual(prevLayout, nextLayout)) {
-    // DEBUG.push(`bailout to previous layout: ${prevLayout.join(", ")}`);
-    // console.log(DEBUG.join("\n"));
-
     return prevLayoutProp;
   }
 
@@ -391,15 +388,11 @@ export function adjustLayoutByDelta({
   // In that case, fall back to our most recent valid layout
   // Allow for a small rounding difference, else e.g. 3 panel layouts may never be considered valid
   if (!layoutNumbersEqual(totalSize, 100, 0.1)) {
-    // DEBUG.push(`bailout to previous layout: ${prevLayout.join(", ")}`);
-    // console.log(DEBUG.join("\n"));
-
     return prevLayoutProp;
   }
 
   const prevLayoutKeys = Object.keys(prevLayoutProp);
 
-  // console.log(DEBUG.join("\n"));
   return nextLayout.reduce<Layout>((accumulated, current, index) => {
     const key = prevLayoutKeys[index];
     assert(key !== undefined, `Previous layout key not found for index ${index}`);

@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 import { useIsomorphicLayoutEffect } from "./useIsomorphicLayoutEffect";
 
 // Forked from useEventCallback (usehooks-ts)
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+// biome-ignore lint/complexity/noBannedTypes: stable callback pattern requires Function type
 export function useStableCallback<Callback extends Function>(
   fn: Callback
 ): Callback {
