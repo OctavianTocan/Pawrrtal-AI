@@ -9,7 +9,6 @@ on:
 permissions:
   contents: read
   pull-requests: write
-  issues: read
 
 concurrency:
   group: claude-pr-refresh-${{ github.event.pull_request.number || github.run_id }}
@@ -25,7 +24,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Refresh PR title and description
         uses: anthropics/claude-code-action@88c168b39e7e64da0286d812b6e9fbebb6708185 # v1.0.82
@@ -34,8 +33,6 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
-            BASE BRANCH: ${{ github.event.pull_request.base.ref }}
-            HEAD BRANCH: ${{ github.event.pull_request.head.ref }}
 
             Update this pull request's title and description so they match the current diff against the base branch.
 
@@ -60,4 +57,4 @@ jobs:
             First try `gh pr edit`.
             If `gh pr edit` fails, use `gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }} --method PATCH` instead.
 
-          claude_args: '--allowed-tools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr edit:*),Bash(gh api:*),Bash(cat:*),Bash(ls:*)"'
+          claude_args: '--allowed-tools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr edit:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}:*),Bash(cat:*),Bash(ls:*)"'
