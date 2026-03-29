@@ -17,7 +17,6 @@ permissions:
   contents: write
   pull-requests: write
   issues: read
-  id-token: write
 
 # Prevent race conditions if multiple triggers fire for the same PR simultaneously
 concurrency:
@@ -122,7 +121,21 @@ jobs:
             Intelligently resolve the conflicts to preserve the intent of both branches.
             Once resolved, use the Bash tool to run `git add .` and `git rebase --continue`.
             Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
-          claude_args: '--accept-all'
+          claude_args: '--allowed-tools "Bash(git add *),Bash(git rebase --continue),Bash(cat *),Bash(grep *),Bash(ls *)"'
+
+      - name: Install dependencies (Frontend)
+        if: steps.rebase.outputs.conflict == 'true'
+        run: |
+          npm install -g bun
+          cd frontend
+          bun install
+
+      - name: Run Build and Lint Gates
+        if: steps.rebase.outputs.conflict == 'true'
+        run: |
+          cd frontend
+          bun run typecheck
+          bunx --bun @biomejs/biome check .
 
       - name: Verify and Push Rebased Branch
         if: steps.rebase.outputs.conflict == 'true'
@@ -141,4 +154,4 @@ jobs:
           
           echo "Claude successfully resolved the conflicts and completed the rebase. Force pushing..."
           git push origin "$BRANCH_NAME" --force-with-lease
-          gh pr comment $PR_NUMBER --body "🤖 **AI Resolved Conflicts:** Claude Code autonomously resolved the merge conflicts and completed the rebase."
+          gh pr comment $PR_NUMBER --body "🤖 **AI Resolved Conflicts:** Claude Code autonomously resolved the merge conflicts, verified typechecks/linting, and completed the rebase."
