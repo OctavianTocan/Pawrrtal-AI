@@ -110,6 +110,15 @@ jobs:
             echo "conflict=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Install dependencies (just, bun, uv)
+        if: steps.rebase.outputs.conflict == 'true'
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
+          npm install -g bun
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          just install
+
       - name: Resolve conflicts with Claude Code
         if: steps.rebase.outputs.conflict == 'true'
         uses: anthropics/claude-code-action@v1
@@ -119,18 +128,9 @@ jobs:
             This repository is currently in the middle of a git rebase with merge conflicts.
             Find all files with conflict markers (<<<<<<<).
             Intelligently resolve the conflicts to preserve the intent of both branches.
-            Once resolved, use the Bash tool to run `git add .` and `git rebase --continue`.
+            Once resolved, use the Bash tool to run `git add -u` and `git rebase --continue`.
             Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
-          claude_args: '--accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add *),Bash(git rebase --continue)"'
-
-      - name: Install dependencies (just, bun, uv)
-        if: steps.rebase.outputs.conflict == 'true'
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
-          npm install -g bun
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
-          just install
+          claude_args: '--accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add -u),Bash(git rebase --continue)"'
 
       - name: Run Build and Lint Gates (just check)
         if: steps.rebase.outputs.conflict == 'true'
