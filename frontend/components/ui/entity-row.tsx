@@ -41,7 +41,7 @@ export interface EntityRowProps {
 	isInMultiSelect?: boolean;
 	/** Mouse down handler for modifier key detection */
 	onMouseDown?: (e: React.MouseEvent) => void;
-	/** Props spread onto the button element */
+	/** Props spread onto the row's clickable div (role="button") element */
 	buttonProps?: Record<string, unknown>;
 	/** Data attributes on outer wrapper */
 	dataAttributes?: Record<string, string | undefined>;
@@ -87,14 +87,24 @@ export function EntityRow({
 			{(isSelected || isInMultiSelect) && (
 				<div className="absolute left-0 inset-y-0 w-[2px] bg-accent" />
 			)}
-			<button
-				type="button"
-				{...(buttonProps as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+			{/* Uses div+role instead of <button> to avoid nested-button HTML violation
+			    when DropdownMenuTrigger renders its own <button> inside. */}
+			<div
+				role="button"
+				tabIndex={0}
+				{...(buttonProps as React.HTMLAttributes<HTMLDivElement>)}
 				onClick={!onMouseDown ? onClick : undefined}
 				onMouseDown={onMouseDown}
+				onKeyDown={(e) => {
+					// Activate on Enter/Space like a native button
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						onClick?.();
+					}
+				}}
 				className={cn(
 					"flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]",
-					"transition-[background-color] duration-75",
+					"transition-[background-color] duration-75 cursor-pointer",
 					isSelected || isInMultiSelect
 						? "bg-foreground/3"
 						: "hover:bg-foreground/2",
@@ -216,7 +226,7 @@ export function EntityRow({
 						</div>
 					)}
 				</div>
-			</button>
+			</div>
 			{children}
 			{menuContent && !hideMoreButton && !titleTrailing && (
 				<div
