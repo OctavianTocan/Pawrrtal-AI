@@ -1,9 +1,11 @@
-name: Auto-rebase labeled PRs on development push
+name: Auto-rebase labeled PRs
 
 on:
   push:
     branches:
       - development
+  pull_request_target:
+    types: [labeled]
 
 permissions:
   contents: write
@@ -15,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       prs: ${{ steps.set-prs.outputs.prs }}
+    # If triggered by a label, only run if the label added was exactly "auto-rebase".
+    # If triggered by a push, run unconditionally.
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'auto-rebase')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
