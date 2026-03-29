@@ -8,7 +8,7 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     groups:
       production:
         dependency-type: production
@@ -26,7 +26,7 @@ updates:
   - package-ecosystem: pip
     directory: /backend
     schedule:
-      interval: daily
+      interval: weekly
     groups:
       python-deps:
         patterns:
@@ -40,7 +40,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
     groups:
       actions:
         patterns:
