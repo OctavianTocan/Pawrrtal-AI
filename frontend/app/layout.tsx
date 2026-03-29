@@ -16,6 +16,12 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning>
+			{/*
+				suppressHydrationWarning is required because the blocking theme script
+				below may add the 'dark' class to <html> before React hydration, causing
+				a mismatch between server and client. This is intentional and safe — the
+				script only modifies the class list, not the DOM structure.
+			*/}
 			<head>
 				{/* System theme detection — blocking script before hydration to prevent FOUC */}
 				<script

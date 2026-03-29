@@ -1,3 +1,13 @@
+/**
+ * Right-click context menu primitives based on Radix UI.
+ *
+ * Provides styled wrappers around @radix-ui/react-context-menu with Craft-matching
+ * design tokens (frosted glass, subtle hover states, destructive variants). Supports
+ * submenus, separators, and keyboard navigation.
+ *
+ * @fileoverview Context menu component primitives for right-click interactions
+ */
+
 "use client";
 
 import { IconChevronRight } from "@tabler/icons-react";

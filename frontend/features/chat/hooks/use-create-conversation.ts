@@ -13,6 +13,13 @@ export function useCreateConversation(conversationId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // TODO: This mutation key should be user-specific to prevent cache pollution
+    // when users log out/in. Currently, conversations are cached globally, so a
+    // new user logging in might briefly see the previous user's conversations
+    // from the React Query cache. Need to either:
+    // 1. Clear the query cache on logout/401, OR
+    // 2. Make query keys user-specific (requires exposing user ID)
+    // See: use-create-conversation.ts:16
     mutationKey: ['conversations'],
     mutationFn: async () => {
       const response = await fetcher(API_ENDPOINTS.conversations.create(conversationId), {
