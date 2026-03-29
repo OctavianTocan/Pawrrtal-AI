@@ -121,7 +121,7 @@ jobs:
             Intelligently resolve the conflicts to preserve the intent of both branches.
             Once resolved, use the Bash tool to run `git add .` and `git rebase --continue`.
             Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
-          claude_args: '--allowed-tools "Bash(git add *),Bash(git rebase --continue),Bash(cat *),Bash(grep *),Bash(ls *)"'
+          claude_args: '--accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add *),Bash(git rebase --continue)"'
 
       - name: Install dependencies (just, bun, uv)
         if: steps.rebase.outputs.conflict == 'true'
