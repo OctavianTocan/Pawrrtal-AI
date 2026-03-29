@@ -9,6 +9,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from './ui/sidebar';
 
@@ -30,6 +31,7 @@ export function NewSidebar({ children }: { children: React.ReactNode }): React.J
         <SidebarContent>
           <NavChats />
         </SidebarContent>
+        <SidebarRail />
       </Sidebar>
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">

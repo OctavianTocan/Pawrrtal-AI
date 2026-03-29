@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { useSidebar } from '@/components/ui/sidebar';
 import useGetConversations from '@/hooks/get-conversations';
 import {
   buildConversationGroups,
@@ -46,6 +47,7 @@ function loadCollapsedGroups(): Set<string> {
  */
 export function NavChats(): React.JSX.Element {
   const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
   const { data: conversations, isLoading } = useGetConversations();
 
   // --- search ---
@@ -114,7 +116,12 @@ export function NavChats(): React.JSX.Element {
       filteredGroups={filteredGroups}
       collapsedGroups={collapsedGroups}
       onToggleGroup={toggleGroupCollapse}
-      onNewSession={() => router.push('/')}
+      onNewSession={() => {
+        if (isMobile) {
+          setOpenMobile(false);
+        }
+        router.push('/');
+      }}
     />
   );
 }
