@@ -108,5 +108,5 @@ jobs:
           else
             echo "Merge conflict detected! Aborting git rebase and delegating to Claude..."
             git rebase --abort
-            gh pr comment $PR_NUMBER --body "@claude The automated rebase for this PR failed due to merge conflicts. Please run \`git fetch origin development\`, \`git checkout $BRANCH_NAME\`, \`git rebase origin/development\`, find all files with conflict markers (\`<<<<<<<\`), resolve them intelligently to preserve the intent of both branches, and then run \`git add -u\`, \`git rebase --continue\`, and finally \`git push origin $BRANCH_NAME --force-with-lease\`."
+            gh pr comment $PR_NUMBER --body "@claude[agent] The automated rebase for this PR failed due to merge conflicts. Please run \`git fetch origin development\`, \`git checkout $BRANCH_NAME\`, \`git rebase origin/development\`, find all files with conflict markers (\`<<<<<<<\`), resolve them intelligently to preserve the intent of both branches, and then run \`git add -u\`, \`git rebase --continue\`, and finally \`git push origin $BRANCH_NAME --force-with-lease\`."
           fi
