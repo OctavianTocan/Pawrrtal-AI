@@ -20,13 +20,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Get PR list
         id: set-prs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PRS=$(gh pr list --base development --state open --json number -q '[.[] | .number]')
+          PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
           echo "prs=$PRS" >> $GITHUB_OUTPUT
 
   rebase:
@@ -44,9 +44,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          
+
       - name: Run cirrus-actions/rebase
-        uses: cirrus-actions/rebase@1.8
+        uses: cirrus-actions/rebase@b87d48154a87a85666003575337e27b8cd65f691 # v1.8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ matrix.pr }}
