@@ -12,24 +12,25 @@
 - **Backend (`backend/`)**: Python FastAPI application. API routes in `backend/app/api/`, database models in `backend/app/models/`, CRUD operations in `backend/app/crud/`.
 - **Docs (`docs/`)**: Project documentation, migration plans, and design specs.
 - **Tasks (`.beans/`)**: Markdown-based task tracking. Update the status of `.beans` files as work is completed.
+- **AI Rules (`.claude/rules/`)**: Strict context and design patterns to follow. Always read and abide by the rules inside `.claude/rules/react/` and `.claude/rules/typescript/` when modifying or creating new code.
 - **Rule**: Frontend code must only communicate with the backend via the established API endpoints (using `useAuthedFetch` or TanStack Query mutations). Do not mix frontend and backend responsibilities.
 - **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching).
 - **Rule**: Ensure PascalCase is used for components inside `frontend/features/`.
 
 ## Build, Test, and Development Commands
 
-- **Start all dev servers**: `bun run dev.ts` (starts both frontend and backend concurrently).
-- **Frontend Dev**: `bun --cwd frontend dev` (runs Vite on port 3001).
-- **Backend Dev**: `uv run --project backend fastapi dev backend/main.py` (runs FastAPI on port 8000).
-- **Type-check Frontend**: `bun run --cwd frontend typecheck`
-- **Lint/Format Frontend**: `bunx --bun @biomejs/biome check frontend` (use `--write` to fix).
-- **Python Formatting**: Rely on standard PEP8 adherence for Python code.
-- **Install Frontend Deps**: `bun install --cwd frontend`
-- **Install Backend Deps**: `uv pip install -r pyproject.toml` (or via `uv sync`).
+We rely on `just` as our primary task runner for the repository.
+
+- **Start all dev servers**: `just dev` (starts both frontend and backend concurrently).
+- **Check (Lint/Format read-only)**: `just check` (runs Biome).
+- **Lint & Auto-fix**: `just lint-fix` (runs Biome check with writes).
+- **Format**: `just format` (runs Biome format).
+- **Install All Dependencies**: `just install` (runs `bun install` for frontend and `uv sync` for backend).
+- **Auto-commit**: `just commit` (auto-generates conventional commit).
+- **Push**: `just push` (runs push with auth switching).
 - **Terminology**:
   - "gate" means a verification command or command set that must be green for the decision you are making.
-  - A local dev gate is the fast default loop, usually `bun run typecheck` and `biome check` plus any scoped test you actually need.
-- If you need a fast commit loop, `FAST_COMMIT=1 git commit ...` skips the hook's repo-wide format and check; use that only when you are deliberately covering the touched surface some other way.
+  - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
 
 ## Coding Style & Naming Conventions
 
