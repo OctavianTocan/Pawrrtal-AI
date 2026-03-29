@@ -105,6 +105,7 @@ jobs:
             echo "Clean rebase successful. Force pushing..."
             git push origin "$BRANCH_NAME" --force-with-lease
             echo "conflict=false" >> $GITHUB_OUTPUT
+            gh pr comment $PR_NUMBER --body "✅ **Automated Rebase Successful:** Branch was cleanly rebased onto \`development\`."
           else
             echo "Merge conflict detected! Preparing for Claude Code autonomous resolution..."
             echo "conflict=true" >> $GITHUB_OUTPUT
@@ -119,18 +120,21 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           just install
 
-      - name: Resolve conflicts with Claude Code
+      - name: Resolve conflicts with Claude Code (CLI)
         if: steps.rebase.outputs.conflict == 'true'
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            This repository is currently in the middle of a git rebase with merge conflicts.
-            Find all files with conflict markers (<<<<<<<).
-            Intelligently resolve the conflicts to preserve the intent of both branches.
-            Once resolved, use the Bash tool to run `git add -u` and `git rebase --continue`.
-            Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
-          claude_args: '--accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add -u),Bash(git rebase --continue)"'
+        env:
+          # We CANNOT use the anthropics/claude-code-action@v1 here because it hard-fails 
+          # on 'push' events ("Unsupported event type: push"). Instead, we run the CLI directly.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [[ -z "$ANTHROPIC_API_KEY" ]]; then
+            echo "Error: ANTHROPIC_API_KEY is not set. Claude Code cannot run."
+            exit 1
+          fi
+          
+          npm install -g @anthropic-ai/claude-code
+          
+          claude -p "This repository is currently in the middle of a git rebase with merge conflicts. Find all files with conflict markers (<<<<<<<). Intelligently resolve the conflicts to preserve the intent of both branches. Once resolved, use the Bash tool to run 'git add -u' and 'git rebase --continue'. Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase." --accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add -u),Bash(git rebase --continue)"
 
       - name: Run Build and Lint Gates (just check)
         if: steps.rebase.outputs.conflict == 'true'
