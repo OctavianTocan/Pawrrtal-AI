@@ -53,10 +53,10 @@ function formatConversationAge(updatedAt: string): string | null {
 
   const diffMonths = Math.floor(diffDays / 30);
   if (diffMonths < 12) {
-    return `${diffMonths}mo`;
+    return `${Math.max(1, diffMonths)}mo`;
   }
 
-  return `${Math.floor(diffDays / 365)}y`;
+  return `${Math.max(1, Math.floor(diffDays / 365))}y`;
 }
 
 /**
@@ -81,9 +81,7 @@ export function ConversationSidebarItem({
   // Compute absolute URL for clipboard operations. No memoization needed —
   // the computation is trivial and href is already stable (derived from id).
   const absoluteHref =
-    typeof window === 'undefined'
-      ? href
-      : new URL(href, window.location.origin).toString();
+    typeof window === 'undefined' ? href : new URL(href, window.location.origin).toString();
 
   return (
     <ConversationSidebarItemView

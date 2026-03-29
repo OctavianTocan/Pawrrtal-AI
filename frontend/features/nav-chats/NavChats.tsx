@@ -53,27 +53,17 @@ export function NavChats(): React.JSX.Element {
   const isSearchActive = searchQuery.trim().length >= 2;
 
   // --- grouping & filtering ---
-  // useMemo justified: buildConversationGroups sorts and groups conversations,
-  // which is O(n log n). We memoize to avoid recomputing on every render.
   const groups = useMemo(() => buildConversationGroups(conversations ?? []), [conversations]);
-
-  // useMemo justified: filterConversationGroups iterates all groups/items and
-  // performs string matching. Memoizing avoids redundant filtering.
   const filteredGroups = useMemo(
     () => filterConversationGroups(groups, searchQuery),
     [groups, searchQuery]
   );
-
-  // useMemo justified: countGroupItems is cheap, but filteredGroups is already
-  // memoized, so we memoize this too for consistency and to avoid recounting.
   const resultCount = useMemo(() => countGroupItems(filteredGroups), [filteredGroups]);
 
   // --- collapsed state (persisted in localStorage) ---
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups);
 
-  // useEffect justified: We need to synchronize collapsedGroups state with
-  // localStorage whenever it changes. This is a side effect that can't be
-  // done during render.
+  // Persist collapsed groups whenever they change.
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
