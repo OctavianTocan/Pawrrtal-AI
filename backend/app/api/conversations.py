@@ -284,6 +284,48 @@ def get_conversations_router() -> APIRouter:
         if not deleted:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
+    @router.patch("/{conversation_id}", response_model=ConversationResponse)
+    async def update_conversation(
+        conversation_id: uuid.UUID,
+        payload: ConversationUpdate,
+        user: User = Depends(current_active_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> ConversationResponse:
+        """Update mutable conversation metadata for the authenticated user."""
+
+        normalized_title = payload.title.strip()
+        if not normalized_title:
+            raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
+
+        conversation = await update_conversation_title_service(
+            title=normalized_title,
+            user_id=user.id,
+            conversation_id=conversation_id,
+            session=session,
+        )
+        if conversation is None:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
+        return ConversationResponse(
+            title=conversation.title,
+            id=conversation.id,
+            user_id=conversation.user_id,
+            created_at=conversation.created_at,
+            updated_at=conversation.updated_at,
+        )
+
+    @router.delete("/{conversation_id}", status_code=204)
+    async def delete_conversation(
+        conversation_id: uuid.UUID,
+        user: User = Depends(current_active_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> None:
+        """Delete a conversation owned by the authenticated user."""
+
+        deleted = await delete_conversation_service(user.id, session, conversation_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+
     @router.get("")
     async def list_conversations(
         user: User = Depends(current_active_user),
