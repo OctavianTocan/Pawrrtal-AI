@@ -344,85 +344,6 @@ function SidebarTrigger({
 	);
 }
 
-function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-	const { setDesktopWidth, resetDesktopWidth } = useSidebar();
-	const dragStateRef = React.useRef<{ startX: number; startWidth: number } | null>(
-		null,
-	);
-
-	React.useEffect(() => {
-		return () => {
-			document.body.style.removeProperty("cursor");
-			document.body.style.removeProperty("user-select");
-		};
-	}, []);
-
-	const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-		if (event.button !== 0) {
-			return;
-		}
-
-		event.preventDefault();
-		const sidebarWrapper = event.currentTarget.closest("[data-slot='sidebar-wrapper']");
-		const currentWidth = sidebarWrapper
-			? Number.parseFloat(
-					getComputedStyle(sidebarWrapper).getPropertyValue("--sidebar-width"),
-				)
-			: SIDEBAR_DEFAULT_WIDTH;
-
-		dragStateRef.current = {
-			startX: event.clientX,
-			startWidth: Number.isFinite(currentWidth)
-				? currentWidth
-				: SIDEBAR_DEFAULT_WIDTH,
-		};
-
-		document.body.style.cursor = "col-resize";
-		document.body.style.userSelect = "none";
-
-		const handlePointerMove = (moveEvent: PointerEvent) => {
-			const dragState = dragStateRef.current;
-			if (!dragState) {
-				return;
-			}
-
-			setDesktopWidth(dragState.startWidth + (moveEvent.clientX - dragState.startX));
-		};
-
-		const handlePointerUp = () => {
-			dragStateRef.current = null;
-			document.body.style.removeProperty("cursor");
-			document.body.style.removeProperty("user-select");
-			window.removeEventListener("pointermove", handlePointerMove);
-			window.removeEventListener("pointerup", handlePointerUp);
-		};
-
-		window.addEventListener("pointermove", handlePointerMove);
-		window.addEventListener("pointerup", handlePointerUp, { once: true });
-	};
-
-	return (
-		<button
-			data-sidebar="rail"
-			data-slot="sidebar-rail"
-			aria-label="Resize Sidebar"
-			tabIndex={-1}
-			onPointerDown={handlePointerDown}
-			onDoubleClick={resetDesktopWidth}
-			title="Resize Sidebar"
-			className={cn(
-				"hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
-				"in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-				"[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-				"hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-				"[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-				"[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
-				className,
-			)}
-			{...props}
-		/>
-	);
-}
 
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
 	return (
@@ -821,7 +742,6 @@ export {
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
 	SidebarProvider,
-	SidebarRail,
 	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
