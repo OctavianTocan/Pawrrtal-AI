@@ -1,0 +1,54 @@
+name: Auto-rebase labeled PRs on development push
+
+on:
+  push:
+    branches:
+      - development
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  get-prs:
+    name: Find Open PRs
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.set-prs.outputs.prs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR list
+        id: set-prs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Note: PRs MUST have the "auto-rebase" label applied to be included here.
+          # This prevents the bot from force-pushing over active work.
+          PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
+          echo "prs=$PRS" >> $GITHUB_OUTPUT
+
+  rebase:
+    name: Rebase PR #${{ matrix.pr }}
+    needs: get-prs
+    if: ${{ needs.get-prs.outputs.prs != '[]' && needs.get-prs.outputs.prs != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJson(needs.get-prs.outputs.prs) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Run cirrus-actions/rebase
+        uses: cirrus-actions/rebase@b87d48154a87a85666003575337e27b8cd65f691 # v1.8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ matrix.pr }}
