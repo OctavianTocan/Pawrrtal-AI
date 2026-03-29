@@ -104,57 +104,9 @@ jobs:
           if git rebase origin/development; then
             echo "Clean rebase successful. Force pushing..."
             git push origin "$BRANCH_NAME" --force-with-lease
-            echo "conflict=false" >> $GITHUB_OUTPUT
+            gh pr comment $PR_NUMBER --body "✅ **Automated Rebase Successful:** Branch was cleanly rebased onto \`development\`."
           else
-            echo "Merge conflict detected! Preparing for Claude Code autonomous resolution..."
-            echo "conflict=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install dependencies (just, bun, uv)
-        if: steps.rebase.outputs.conflict == 'true'
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
-          npm install -g bun
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          export PATH="$HOME/.local/bin:$PATH"
-          just install
-
-      - name: Resolve conflicts with Claude Code
-        if: steps.rebase.outputs.conflict == 'true'
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            This repository is currently in the middle of a git rebase with merge conflicts.
-            Find all files with conflict markers (<<<<<<<).
-            Intelligently resolve the conflicts to preserve the intent of both branches.
-            Once resolved, use the Bash tool to run `git add -u` and `git rebase --continue`.
-            Ensure the rebase completes successfully. Do NOT push the branch yourself, just finish the rebase.
-          claude_args: '--accept-all --allowed-tools "Edit,Read,Write,Glob,Grep,Bash(git status),Bash(git add -u),Bash(git rebase --continue)"'
-
-      - name: Run Build and Lint Gates (just check)
-        if: steps.rebase.outputs.conflict == 'true'
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          just check
-          cd frontend
-          bun run typecheck
-
-      - name: Verify and Push Rebased Branch
-        if: steps.rebase.outputs.conflict == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ matrix.pr }}
-          BRANCH_NAME: ${{ steps.rebase.outputs.branch }}
-        run: |
-          # After Claude finishes, check if we are still rebasing
-          if test -d ".git/rebase-merge" || test -d ".git/rebase-apply"; then
-            echo "Claude failed to complete the rebase. Aborting."
+            echo "Merge conflict detected! Aborting git rebase and delegating to Claude..."
             git rebase --abort
-            gh pr comment $PR_NUMBER --body "⚠️ **Automated Rebase Failed:** Claude Code attempted to resolve the merge conflicts but failed to complete the rebase. Manual intervention required."
-            exit 1
+            gh pr comment $PR_NUMBER --body "@claude The automated rebase for this PR failed due to merge conflicts. Please run \`git fetch origin development\`, \`git checkout $BRANCH_NAME\`, \`git rebase origin/development\`, find all files with conflict markers (\`<<<<<<<\`), resolve them intelligently to preserve the intent of both branches, and then run \`git add -u\`, \`git rebase --continue\`, and finally \`git push origin $BRANCH_NAME --force-with-lease\`."
           fi
-          
-          echo "Claude successfully resolved the conflicts and completed the rebase. Force pushing..."
-          git push origin "$BRANCH_NAME" --force-with-lease
-          gh pr comment $PR_NUMBER --body "🤖 **AI Resolved Conflicts:** Claude Code autonomously resolved the merge conflicts, verified typechecks/linting, and completed the rebase."
