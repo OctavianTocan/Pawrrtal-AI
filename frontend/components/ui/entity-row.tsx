@@ -82,7 +82,7 @@ export function EntityRow({
 	const [contextMenuOpen, setContextMenuOpen] = useState(false);
 	const resolvedContextMenu = contextMenuContent ?? menuContent;
 
-	const innerContent = (
+	const InnerContent = (
 		<div className="relative group select-none pl-2 mr-2">
 			{(isSelected || isInMultiSelect) && (
 				<div className="absolute left-0 inset-y-0 w-[2px] bg-accent" />
@@ -272,7 +272,7 @@ export function EntityRow({
 					onOpenChange={setContextMenuOpen}
 				>
 					<ContextMenuTrigger asChild>
-						{innerContent}
+						{InnerContent}
 					</ContextMenuTrigger>
 					<ContextMenuContent>
 						<ContextMenuProvider>
@@ -281,7 +281,7 @@ export function EntityRow({
 					</ContextMenuContent>
 				</ContextMenu>
 			) : (
-				innerContent
+				InnerContent
 			)}
 		</div>
 	);

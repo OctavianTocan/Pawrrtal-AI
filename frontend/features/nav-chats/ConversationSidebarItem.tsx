@@ -81,9 +81,7 @@ export function ConversationSidebarItem({
   // Compute absolute URL for clipboard operations. No memoization needed —
   // the computation is trivial and href is already stable (derived from id).
   const absoluteHref =
-    typeof window === 'undefined'
-      ? href
-      : new URL(href, window.location.origin).toString();
+    typeof window === 'undefined' ? href : new URL(href, window.location.origin).toString();
 
   return (
     <ConversationSidebarItemView
