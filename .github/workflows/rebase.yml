@@ -1,4 +1,4 @@
-name: Auto-rebase labeled PRs
+name: Auto-rebase PRs
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
       - development
   pull_request_target:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -18,10 +20,12 @@ jobs:
     outputs:
       prs: ${{ steps.set-prs.outputs.prs }}
     # If triggered by a label, only run if the label added was exactly "auto-rebase".
-    # If triggered by a push, run unconditionally.
+    # If triggered by a comment, only run if it's "/rebase" from an OWNER/COLLABORATOR/MEMBER.
+    # If triggered by a push, run unconditionally (it will sweep for labeled PRs).
     if: >-
       github.event_name == 'push' ||
-      (github.event_name == 'pull_request_target' && github.event.label.name == 'auto-rebase')
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'auto-rebase') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/rebase') && contains(fromJson('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association))
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,11 +36,20 @@ jobs:
         id: set-prs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          # Note: PRs MUST have the "auto-rebase" label applied to be included here.
-          # This prevents the bot from force-pushing over active work.
-          PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
-          echo "prs=$PRS" >> $GITHUB_OUTPUT
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            echo "prs=[$ISSUE_NUMBER]" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            echo "prs=[$PR_NUMBER]" >> $GITHUB_OUTPUT
+          else
+            # Note: PRs MUST have the "auto-rebase" label applied to be included here.
+            # This prevents the bot from force-pushing over active work.
+            PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
+            echo "prs=$PRS" >> $GITHUB_OUTPUT
+          fi
 
   rebase:
     name: Rebase PR #${{ matrix.pr }}
