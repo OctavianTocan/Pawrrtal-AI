@@ -13,7 +13,7 @@
 import React from 'react';
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { NewSessionButton } from './new-session-button';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './ui/resizable';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';
 import {
   Sidebar,
@@ -30,8 +30,23 @@ import {
  * Renders resizable panels on desktop, plain content on mobile.
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { isMobile, state, desktopWidth, setDesktopWidth } = useSidebar();
+  const { isMobile, state, setState, desktopWidth, setDesktopWidth } = useSidebar();
   const panelGroupId = React.useId();
+  const sidebarPanelRef = usePanelRef();
+
+  // Drive the panel's collapse/expand from the sidebar context state
+  // so that the toggle button, keyboard shortcut, etc. all work through
+  // the library's layout engine (smooth flex transitions) instead of CSS display:none.
+  React.useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (!panel) return;
+
+    if (state === 'collapsed' && !panel.isCollapsed()) {
+      panel.collapse();
+    } else if (state === 'expanded' && panel.isCollapsed()) {
+      panel.expand();
+    }
+  }, [state, sidebarPanelRef]);
 
   // Mobile: Sidebar renders as a Sheet overlay alongside main content
   if (isMobile) {
@@ -50,24 +65,31 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     );
   }
 
-  const isCollapsed = state === 'collapsed';
-
   return (
     <ResizablePanelGroup direction="horizontal" id={panelGroupId} className="flex-1">
       <ResizablePanel
+        panelRef={sidebarPanelRef}
         defaultSize={desktopWidth}
         minSize={240}
         maxSize={420}
         collapsible={true}
         collapsedSize={0}
         onResize={(size) => {
-          setDesktopWidth(size.inPixels);
+          // Sync context state when panel collapses/expands via drag
+          if (size.inPixels === 0 && state !== 'collapsed') {
+            setState('collapsed');
+          } else if (size.inPixels > 0 && state !== 'expanded') {
+            setState('expanded');
+          }
+          // Only persist non-zero widths
+          if (size.inPixels > 0) {
+            setDesktopWidth(size.inPixels);
+          }
         }}
-        className={`transition-all duration-200 ease-linear ${isCollapsed ? '!hidden' : ''}`}
       >
         {/* Render content directly — ResizablePanel handles sizing via flex,
             Sidebar's gap div + fixed positioning would conflict */}
-        <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
+        <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col overflow-hidden">
           <SidebarHeader className="px-2 pb-2 shrink-0">
             <NewSessionButton />
           </SidebarHeader>
@@ -77,7 +99,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         </div>
       </ResizablePanel>
 
-      {!isCollapsed && <ResizableHandle />}
+      <ResizableHandle />
 
       <ResizablePanel className="h-full">{children}</ResizablePanel>
     </ResizablePanelGroup>

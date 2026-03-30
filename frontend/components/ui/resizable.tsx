@@ -11,6 +11,9 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/** Hook that returns a ref for the Panel imperative handle (collapse/expand/resize). */
+const usePanelRef = ResizablePrimitive.usePanelRef;
+
 /**
  * Container component for resizable panels.
  * @param props - Component props including className, direction, and all Group props
@@ -78,4 +81,4 @@ const ResizableHandle = ({
 	</ResizablePrimitive.Separator>
 );
 
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
+export { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef };
