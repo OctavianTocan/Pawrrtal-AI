@@ -117,14 +117,25 @@ function SidebarProvider({
 	const [desktopWidth, setDesktopWidthState] = React.useState(loadDesktopSidebarWidth);
 
 	// Internal state management using "expanded" | "collapsed"
+
 	const [_state, _setState] = React.useState<"expanded" | "collapsed">(
-		defaultOpen ? "expanded" : "collapsed"
+		() => {
+			if (typeof window === "undefined") {
+				return defaultOpen ? "expanded" : "collapsed";
+			}
+			const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
+			if (stored === "expanded" || stored === "collapsed") {
+				return stored;
+			}
+			return defaultOpen ? "expanded" : "collapsed";
+		}
 	);
 
 	// Convert external boolean prop to internal state type
 	const state = openProp !== undefined
 		? (openProp ? "expanded" : "collapsed")
 		: _state;
+
 
 	const setState = React.useCallback(
 		(newState: "expanded" | "collapsed") => {
@@ -171,14 +182,16 @@ function SidebarProvider({
 	}, [isMobile, setOpenProp]);
 
 	// Set the desktop sidebar width and clamp it to valid range.
-	const setDesktopWidth = (width: number): void => {
+
+	const setDesktopWidth = React.useCallback((width: number): void => {
 		setDesktopWidthState(clampSidebarWidth(width));
-	};
+	}, []);
 
 	// Reset the desktop sidebar width to default value.
-	const resetDesktopWidth = (): void => {
+	const resetDesktopWidth = React.useCallback((): void => {
 		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
-	};
+	}, []);
+
 
 	React.useEffect(() => {
 		if (typeof window === "undefined") {
