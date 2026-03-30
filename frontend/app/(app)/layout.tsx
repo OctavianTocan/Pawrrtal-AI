@@ -1,13 +1,13 @@
-import { NewSidebar } from "@/components/new-sidebar";
+import { NewSidebar } from '@/components/new-sidebar';
 
 export default function AppLayout({
-	children,
+  children,
 }: Readonly<{
-	children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-	return (
-		<>
-			<NewSidebar>{children}</NewSidebar>
-		</>
-	);
+  return (
+    <>
+      <NewSidebar>{children}</NewSidebar>
+    </>
+  );
 }

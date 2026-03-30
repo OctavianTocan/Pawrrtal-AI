@@ -7,16 +7,16 @@
     @param updated_at - The date and time the conversation was last updated.
 */
 export interface Conversation {
-	// The ID of the conversation.
-	id: string;
-	// The ID of the user who owns the conversation.
-	user_id: string;
-	// The title of the conversation.
-	title: string;
-	// The date and time the conversation was created.
-	created_at: string;
-	// The date and time the conversation was last updated.
-	updated_at: string;
+  // The ID of the conversation.
+  id: string;
+  // The ID of the user who owns the conversation.
+  user_id: string;
+  // The title of the conversation.
+  title: string;
+  // The date and time the conversation was created.
+  created_at: string;
+  // The date and time the conversation was last updated.
+  updated_at: string;
 }
 
 /**
@@ -25,6 +25,6 @@ export interface Conversation {
  * @property content - Plain-text message body.
  */
 export interface AgnoMessage {
-	role: "user" | "assistant";
-	content: string;
+  role: 'user' | 'assistant';
+  content: string;
 }
