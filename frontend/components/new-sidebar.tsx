@@ -10,6 +10,7 @@
 
 'use client';
 
+import React from 'react';
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { NewSessionButton } from './new-session-button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './ui/resizable';
@@ -30,6 +31,7 @@ import {
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { isMobile, state, setDesktopWidth } = useSidebar();
+  const panelGroupId = React.useId();
 
   if (isMobile) {
     return <>{children}</>;
@@ -38,8 +40,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
   const isCollapsed = state === 'collapsed';
 
   return (
-    // biome-ignore lint/correctness/useUniqueElementIds: auto-save storage key
-    <ResizablePanelGroup direction="horizontal" id="sidebar_width" className="flex-1">
+    <ResizablePanelGroup direction="horizontal" id={panelGroupId} className="flex-1">
       <ResizablePanel
         defaultSize={300}
         minSize={240}

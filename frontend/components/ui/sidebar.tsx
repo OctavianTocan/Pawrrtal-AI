@@ -57,34 +57,22 @@ function clampSidebarWidth(width: number): number {
  * Returns SIDEBAR_DEFAULT_WIDTH if no valid stored value is found.
  */
 function loadDesktopSidebarWidth(): number {
-	if (typeof window === "undefined") {
-		return SIDEBAR_DEFAULT_WIDTH;
-	}
+	if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH;
 
-	try {
-		const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
-		if (!storedWidth) {
-			return SIDEBAR_DEFAULT_WIDTH;
-		}
+	const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+	if (!storedWidth) return SIDEBAR_DEFAULT_WIDTH;
 
-		const parsedWidth = Number.parseInt(storedWidth, 10);
-		if (!Number.isFinite(parsedWidth)) {
-			return SIDEBAR_DEFAULT_WIDTH;
-		}
+	const parsedWidth = Number.parseInt(storedWidth, 10);
+	if (!Number.isFinite(parsedWidth)) return SIDEBAR_DEFAULT_WIDTH;
 
-		return clampSidebarWidth(parsedWidth);
-	} catch {
-		return SIDEBAR_DEFAULT_WIDTH;
-	}
+	return clampSidebarWidth(parsedWidth);
 }
 
 type SidebarContextProps = {
 	/** Current sidebar state ("expanded" or "collapsed"). */
 	state: "expanded" | "collapsed";
-	/** Whether the sidebar is open (desktop). */
-	open: boolean;
-	/** Set the sidebar open state (desktop). */
-	setOpen: (open: boolean) => void;
+	/** Set the sidebar state (desktop). */
+	setState: (state: "expanded" | "collapsed") => void;
 	/** Whether the mobile sidebar sheet is open. */
 	openMobile: boolean;
 	/** Set the mobile sidebar sheet open state. */
@@ -129,39 +117,49 @@ function SidebarProvider({
 	const [openMobile, setOpenMobile] = React.useState(false);
 	const [desktopWidth, setDesktopWidthState] = React.useState(loadDesktopSidebarWidth);
 
-	// This is the internal state of the sidebar.
-	// We use openProp and setOpenProp for control from outside the component.
-	const [_open, _setOpen] = React.useState(defaultOpen);
-	const open = openProp ?? _open;
-	const setOpen = React.useCallback(
-		(value: boolean | ((value: boolean) => boolean)) => {
-			const openState = typeof value === "function" ? value(open) : value;
+	// Internal state management using "expanded" | "collapsed"
+	const [_state, _setState] = React.useState<"expanded" | "collapsed">(
+		defaultOpen ? "expanded" : "collapsed"
+	);
+
+	// Convert external boolean prop to internal state type
+	const state = openProp !== undefined
+		? (openProp ? "expanded" : "collapsed")
+		: _state;
+
+	const setState = React.useCallback(
+		(newState: "expanded" | "collapsed") => {
+			const isOpen = newState === "expanded";
 			if (setOpenProp) {
-				setOpenProp(openState);
+				setOpenProp(isOpen);
 			} else {
-				_setOpen(openState);
+				_setState(newState);
 			}
 
 			// biome-ignore lint/suspicious/noDocumentCookie: sidebar state is a simple non-sensitive preference
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			document.cookie = `${SIDEBAR_COOKIE_NAME}=${isOpen}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 		},
-		[setOpenProp, open],
+		[setOpenProp],
 	);
 
 	// Helper to toggle the sidebar.
 	const toggleSidebar = React.useCallback((): void => {
-		return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-	}, [isMobile, setOpen]);
+		if (isMobile) {
+			setOpenMobile((open) => !open);
+		} else {
+			setState(state === "expanded" ? "collapsed" : "expanded");
+		}
+	}, [isMobile, state, setState]);
 
-	/** Set the desktop sidebar width and clamp it to valid range. */
-	const setDesktopWidth = React.useCallback((width: number): void => {
+	// Set the desktop sidebar width and clamp it to valid range.
+	const setDesktopWidth = (width: number): void => {
 		setDesktopWidthState(clampSidebarWidth(width));
-	}, []);
+	};
 
-	/** Reset the desktop sidebar width to default value. */
-	const resetDesktopWidth = React.useCallback((): void => {
+	// Reset the desktop sidebar width to default value.
+	const resetDesktopWidth = (): void => {
 		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
-	}, []);
+	};
 
 	React.useEffect(() => {
 		if (typeof window === "undefined") {
@@ -194,15 +192,10 @@ function SidebarProvider({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [toggleSidebar]);
 
-	// We add a state so that we can do data-state="expanded" or "collapsed".
-	// This makes it easier to style the sidebar with Tailwind classes.
-	const state = open ? "expanded" : "collapsed";
-
 	const contextValue = React.useMemo<SidebarContextProps>(
 		() => ({
 			state,
-			open,
-			setOpen,
+			setState,
 			isMobile,
 			openMobile,
 			setOpenMobile,
@@ -213,8 +206,7 @@ function SidebarProvider({
 		}),
 		[
 			state,
-			open,
-			setOpen,
+			setState,
 			isMobile,
 			openMobile,
 			toggleSidebar,
