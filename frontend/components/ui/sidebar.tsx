@@ -129,15 +129,14 @@ function SidebarProvider({
 
 	const setState = React.useCallback(
 		(newState: "expanded" | "collapsed") => {
-			const isOpen = newState === "expanded";
 			if (setOpenProp) {
-				setOpenProp(isOpen);
+				setOpenProp(newState === "expanded");
 			} else {
 				_setState(newState);
 			}
 
 			// biome-ignore lint/suspicious/noDocumentCookie: sidebar state is a simple non-sensitive preference
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${isOpen}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			document.cookie = `${SIDEBAR_COOKIE_NAME}=${newState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
 		},
 		[setOpenProp],
 	);
@@ -147,9 +146,18 @@ function SidebarProvider({
 		if (isMobile) {
 			setOpenMobile((open) => !open);
 		} else {
-			setState(state === "expanded" ? "collapsed" : "expanded");
+			_setState((currentState) => {
+				const newState = currentState === "expanded" ? "collapsed" : "expanded";
+				// Sync with external prop handler if provided
+				if (setOpenProp) {
+					setOpenProp(newState === "expanded");
+				}
+				// Update cookie
+				document.cookie = `${SIDEBAR_COOKIE_NAME}=${newState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+				return newState;
+			});
 		}
-	}, [isMobile, state, setState]);
+	}, [isMobile, setOpenProp]);
 
 	// Set the desktop sidebar width and clamp it to valid range.
 	const setDesktopWidth = (width: number): void => {
