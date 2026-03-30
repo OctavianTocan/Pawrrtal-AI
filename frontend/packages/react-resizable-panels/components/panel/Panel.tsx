@@ -1,20 +1,15 @@
-"use client";
+'use client';
 
-import {
-  useEffect,
-  useRef,
-  useSyncExternalStore,
-  type CSSProperties
-} from "react";
-import { subscribeToMountedGroup } from "../../global/mutable-state/groups";
-import { useId } from "../../hooks/useId";
-import { useIsomorphicLayoutEffect } from "../../hooks/useIsomorphicLayoutEffect";
-import { useMergedRefs } from "../../hooks/useMergedRefs";
-import { useStableCallback } from "../../hooks/useStableCallback";
-import { useStableObject } from "../../hooks/useStableObject";
-import { useGroupContext } from "../group/useGroupContext";
-import type { PanelProps, PanelSize, RegisteredPanel } from "./types";
-import { usePanelImperativeHandle } from "./usePanelImperativeHandle";
+import { type CSSProperties, useEffect, useRef, useSyncExternalStore } from 'react';
+import { subscribeToMountedGroup } from '../../global/mutable-state/groups';
+import { useId } from '../../hooks/useId';
+import { useIsomorphicLayoutEffect } from '../../hooks/useIsomorphicLayoutEffect';
+import { useMergedRefs } from '../../hooks/useMergedRefs';
+import { useStableCallback } from '../../hooks/useStableCallback';
+import { useStableObject } from '../../hooks/useStableObject';
+import { useGroupContext } from '../group/useGroupContext';
+import type { PanelProps, PanelSize, RegisteredPanel } from './types';
+import { usePanelImperativeHandle } from './usePanelImperativeHandle';
 
 /**
  * A Panel wraps resizable content and can be configured with min/max size constraints and collapsible behavior.
@@ -44,16 +39,17 @@ import { usePanelImperativeHandle } from "./usePanelImperativeHandle";
 export function Panel({
   children,
   className,
-  collapsedSize = "0%",
+  collapsedSize = '0%',
   collapsible = false,
   defaultSize,
   disabled,
   elementRef: elementRefProp,
-  groupResizeBehavior = "preserve-relative-size",
+  groupResizeBehavior = 'preserve-relative-size',
   id: idProp,
-  maxSize = "100%",
-  minSize = "0%",
+  maxSize = '100%',
+  minSize = '0%',
   onResize: onResizeUnstable,
+  outerStyle,
   panelRef,
   style,
   ...rest
@@ -63,7 +59,7 @@ export function Panel({
   const id = useId(idProp);
 
   const stableProps = useStableObject({
-    disabled
+    disabled,
   });
 
   const elementRef = useRef<HTMLDivElement | null>(null);
@@ -75,7 +71,7 @@ export function Panel({
     id: groupId,
     orientation,
     registerPanel,
-    togglePanelDisabled
+    togglePanelDisabled,
   } = useGroupContext();
 
   const hasOnResize = onResizeUnstable !== null;
@@ -99,7 +95,7 @@ export function Panel({
         idIsStable,
         mutableValues: {
           expandToSize: undefined,
-          prevSize: undefined
+          prevSize: undefined,
         },
         onResize: hasOnResize ? onResizeStable : undefined,
         panelConstraints: {
@@ -109,8 +105,8 @@ export function Panel({
           defaultSize,
           disabled: stableProps.disabled,
           maxSize,
-          minSize
-        }
+          minSize,
+        },
       };
 
       return registerPanel(registeredPanel);
@@ -127,7 +123,7 @@ export function Panel({
     minSize,
     onResizeStable,
     registerPanel,
-    stableProps
+    stableProps,
   ]);
 
   // Not all props require re-registering the panel;
@@ -159,7 +155,7 @@ export function Panel({
     panelStyles = {
       flexGrow: undefined,
       flexShrink: undefined,
-      flexBasis: defaultSize
+      flexBasis: defaultSize,
     };
   } else {
     panelStyles = { flexGrow: 1 };
@@ -176,21 +172,30 @@ export function Panel({
       style={{
         ...PROHIBITED_CSS_PROPERTIES,
 
-        display: "flex",
+        display: 'flex',
         flexBasis: 0,
         flexShrink: 1,
-        overflow: "visible",
+        overflow: 'visible',
 
-        ...panelStyles
+        ...panelStyles,
+
+        // outerStyle is spread last so consumers can set transition, etc.
+        // Disable transitions during drag so the handle tracks instantly.
+        ...(outerStyle && {
+          ...outerStyle,
+          ...(panelStyles.pointerEvents === 'none' && {
+            transition: undefined,
+          }),
+        }),
       }}
     >
       <div
         className={className}
         style={{
-          maxHeight: "100%",
-          maxWidth: "100%",
+          maxHeight: '100%',
+          maxWidth: '100%',
           flexGrow: 1,
-          overflow: "auto",
+          overflow: 'auto',
 
           ...style,
 
@@ -198,7 +203,7 @@ export function Panel({
           // but still allow users to scroll content within panels in the non-resizing direction
           // NOTE This is not an inherited style
           // See github.com/bvaughn/react-resizable-panels/issues/662
-          touchAction: orientation === "horizontal" ? "pan-y" : "pan-x"
+          touchAction: orientation === 'horizontal' ? 'pan-y' : 'pan-x',
         }}
       >
         {children}
@@ -208,19 +213,19 @@ export function Panel({
 }
 
 // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/displayName
-Panel.displayName = "Panel";
+Panel.displayName = 'Panel';
 
 const PROHIBITED_CSS_PROPERTIES: CSSProperties = {
   minHeight: 0,
-  maxHeight: "100%",
-  height: "auto",
+  maxHeight: '100%',
+  height: 'auto',
 
   minWidth: 0,
-  maxWidth: "100%",
-  width: "auto",
+  maxWidth: '100%',
+  width: 'auto',
 
-  border: "none",
+  border: 'none',
   borderWidth: 0,
   padding: 0,
-  margin: 0
+  margin: 0,
 };

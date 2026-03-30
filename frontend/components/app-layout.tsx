@@ -34,6 +34,12 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
   const panelGroupId = React.useId();
   const sidebarPanelRef = usePanelRef();
 
+  // Guards onResize from syncing state while a programmatic collapse/expand
+  // animation is in-flight — without this, ResizeObserver fires intermediate
+  // sizes during the CSS flex-grow transition, causing a feedback loop that
+  // fights the collapse/expand.
+  const isAnimatingRef = React.useRef(false);
+
   // Drive the panel's collapse/expand from the sidebar context state
   // so that the toggle button, keyboard shortcut, etc. all work through
   // the library's layout engine (smooth flex transitions) instead of CSS display:none.
@@ -42,9 +48,18 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     if (!panel) return;
 
     if (state === 'collapsed' && !panel.isCollapsed()) {
+      isAnimatingRef.current = true;
       panel.collapse();
+      // Clear after CSS transition completes (200ms + buffer)
+      setTimeout(() => {
+        isAnimatingRef.current = false;
+      }, 250);
     } else if (state === 'expanded' && panel.isCollapsed()) {
+      isAnimatingRef.current = true;
       panel.expand();
+      setTimeout(() => {
+        isAnimatingRef.current = false;
+      }, 250);
     }
   }, [state, sidebarPanelRef]);
 
@@ -70,18 +85,22 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
       <ResizablePanel
         panelRef={sidebarPanelRef}
         defaultSize={desktopWidth}
+        outerStyle={{ transition: 'flex-grow 200ms ease-out' }}
         minSize={240}
         maxSize={420}
         collapsible={true}
         collapsedSize={0}
         onResize={(size) => {
-          // Sync context state when panel collapses/expands via drag
-          if (size.inPixels === 0 && state !== 'collapsed') {
-            setState('collapsed');
-          } else if (size.inPixels > 0 && state !== 'expanded') {
-            setState('expanded');
+          // Skip state sync during programmatic collapse/expand animation
+          // to prevent ResizeObserver intermediate values from fighting the transition
+          if (!isAnimatingRef.current) {
+            if (size.inPixels === 0 && state !== 'collapsed') {
+              setState('collapsed');
+            } else if (size.inPixels > 0 && state !== 'expanded') {
+              setState('expanded');
+            }
           }
-          // Only persist non-zero widths
+          // Always persist non-zero widths
           if (size.inPixels > 0) {
             setDesktopWidth(size.inPixels);
           }
