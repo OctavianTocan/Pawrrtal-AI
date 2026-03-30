@@ -86,6 +86,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         panelRef={sidebarPanelRef}
         defaultSize={desktopWidth}
         outerStyle={{ transition: 'flex-grow 200ms ease-out' }}
+        style={{ overflow: 'hidden' }}
         minSize={240}
         maxSize={420}
         collapsible={true}
@@ -106,9 +107,15 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           }
         }}
       >
-        {/* Render content directly — ResizablePanel handles sizing via flex,
-            Sidebar's gap div + fixed positioning would conflict */}
-        <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col overflow-hidden">
+        {/* Content keeps min-width so layout never reflows during collapse —
+            the panel clips via overflow:hidden and the content fades out. */}
+        <div
+          className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden"
+          style={{
+            opacity: state === 'collapsed' ? 0 : 1,
+            transition: 'opacity 150ms ease-out',
+          }}
+        >
           <SidebarHeader className="px-2 pb-2 shrink-0">
             <NewSessionButton />
           </SidebarHeader>
