@@ -1,3 +1,13 @@
+/**
+ * Application sidebar with resizable desktop layout.
+ *
+ * Wraps the main sidebar component with a ResizablePanel on desktop for user-controlled
+ * width adjustment. On mobile, renders as a standard sheet overlay. Includes navigation
+ * chats and new session button in the sidebar content.
+ *
+ * @fileoverview Main app sidebar with desktop resize support
+ */
+
 'use client';
 
 import { NavChats } from '@/features/nav-chats/NavChats';
@@ -14,7 +24,11 @@ import {
   useSidebar,
 } from './ui/sidebar';
 
-function ResizableSidebarContent({ children }: { children: React.ReactNode }) {
+/**
+ * Sidebar content wrapper with conditional resizable layout.
+ * Renders resizable panels on desktop, plain content on mobile.
+ */
+function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { isMobile, state, setDesktopWidth } = useSidebar();
 
   if (isMobile) {
@@ -56,6 +70,10 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Main application sidebar with resizable desktop layout and mobile sheet.
+ * Provides navigation, session management, and user-controlled width on desktop.
+ */
 export function NewSidebar({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <SidebarProvider>

@@ -1,3 +1,13 @@
+/**
+ * Sidebar component with resizable desktop layout and collapsible mobile sheet.
+ *
+ * Provides a flexible sidebar container with support for desktop resizing via drag handle,
+ * persistent width storage, mobile sheet overlay, and keyboard shortcuts. Includes nested
+ * header/content/footer sections and integrates with ResizablePanel for desktop layouts.
+ *
+ * @fileoverview Collapsible sidebar with desktop resize and mobile sheet support
+ */
+
 "use client";
 
 import { IconLayoutSidebar } from "@tabler/icons-react";
@@ -34,10 +44,18 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+/**
+ * Clamp sidebar width to valid range.
+ * Ensures the width stays between SIDEBAR_MIN_WIDTH and SIDEBAR_MAX_WIDTH.
+ */
 function clampSidebarWidth(width: number): number {
 	return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
 }
 
+/**
+ * Load the persisted desktop sidebar width from localStorage.
+ * Returns SIDEBAR_DEFAULT_WIDTH if no valid stored value is found.
+ */
 function loadDesktopSidebarWidth(): number {
 	if (typeof window === "undefined") {
 		return SIDEBAR_DEFAULT_WIDTH;
@@ -61,15 +79,25 @@ function loadDesktopSidebarWidth(): number {
 }
 
 type SidebarContextProps = {
+	/** Current sidebar state ("expanded" or "collapsed"). */
 	state: "expanded" | "collapsed";
+	/** Whether the sidebar is open (desktop). */
 	open: boolean;
+	/** Set the sidebar open state (desktop). */
 	setOpen: (open: boolean) => void;
+	/** Whether the mobile sidebar sheet is open. */
 	openMobile: boolean;
+	/** Set the mobile sidebar sheet open state. */
 	setOpenMobile: (open: boolean) => void;
+	/** Whether the current viewport is mobile. */
 	isMobile: boolean;
+	/** Toggle the sidebar (mobile or desktop depending on viewport). */
 	toggleSidebar: () => void;
+	/** Current desktop sidebar width in pixels. */
 	desktopWidth: number;
+	/** Set the desktop sidebar width in pixels (clamped to valid range). */
 	setDesktopWidth: (width: number) => void;
+	/** Reset the desktop sidebar width to default. */
 	resetDesktopWidth: () => void;
 };
 
@@ -121,15 +149,17 @@ function SidebarProvider({
 	);
 
 	// Helper to toggle the sidebar.
-	const toggleSidebar = React.useCallback(() => {
+	const toggleSidebar = React.useCallback((): void => {
 		return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
 	}, [isMobile, setOpen]);
 
-	const setDesktopWidth = React.useCallback((width: number) => {
+	/** Set the desktop sidebar width and clamp it to valid range. */
+	const setDesktopWidth = React.useCallback((width: number): void => {
 		setDesktopWidthState(clampSidebarWidth(width));
 	}, []);
 
-	const resetDesktopWidth = React.useCallback(() => {
+	/** Reset the desktop sidebar width to default value. */
+	const resetDesktopWidth = React.useCallback((): void => {
 		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
 	}, []);
 
