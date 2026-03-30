@@ -30,11 +30,24 @@ import {
  * Renders resizable panels on desktop, plain content on mobile.
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { isMobile, state, setDesktopWidth } = useSidebar();
+  const { isMobile, state, desktopWidth, setDesktopWidth } = useSidebar();
   const panelGroupId = React.useId();
 
+  // Mobile: Sidebar renders as a Sheet overlay alongside main content
   if (isMobile) {
-    return <>{children}</>;
+    return (
+      <>
+        <Sidebar>
+          <SidebarHeader className="px-2 pb-2 shrink-0">
+            <NewSessionButton />
+          </SidebarHeader>
+          <SidebarContent>
+            <NavChats />
+          </SidebarContent>
+        </Sidebar>
+        {children}
+      </>
+    );
   }
 
   const isCollapsed = state === 'collapsed';
@@ -42,7 +55,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
   return (
     <ResizablePanelGroup direction="horizontal" id={panelGroupId} className="flex-1">
       <ResizablePanel
-        defaultSize={300}
+        defaultSize={desktopWidth}
         minSize={240}
         maxSize={420}
         collapsible={true}
@@ -52,14 +65,16 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         }}
         className={`transition-all duration-200 ease-linear ${isCollapsed ? '!hidden' : ''}`}
       >
-        <Sidebar variant="inset" className="!w-full h-full border-r-0">
+        {/* Render content directly — ResizablePanel handles sizing via flex,
+            Sidebar's gap div + fixed positioning would conflict */}
+        <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
           <SidebarHeader className="px-2 pb-2 shrink-0">
             <NewSessionButton />
           </SidebarHeader>
           <SidebarContent>
             <NavChats />
           </SidebarContent>
-        </Sidebar>
+        </div>
       </ResizablePanel>
 
       {!isCollapsed && (
@@ -79,7 +94,7 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
   return (
     <SidebarProvider>
       <ResizableSidebarContent>
-        <SidebarInset className="peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm border border-transparent shadow-none !m-0 !rounded-none">
+        <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1 cursor-pointer" />
