@@ -34,8 +34,7 @@ import { TopBarButton } from "@/components/ui/top-bar-button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+const SIDEBAR_STATE_STORAGE_KEY = "sidebar_state";
 const SIDEBAR_DEFAULT_WIDTH = 300;
 const SIDEBAR_MIN_WIDTH = 240;
 const SIDEBAR_MAX_WIDTH = 420;
@@ -135,8 +134,14 @@ function SidebarProvider({
 				_setState(newState);
 			}
 
-			// biome-ignore lint/suspicious/noDocumentCookie: sidebar state is a simple non-sensitive preference
-			document.cookie = `${SIDEBAR_COOKIE_NAME}=${newState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+			// Persist state to localStorage
+			if (typeof window !== "undefined") {
+				try {
+					window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, newState);
+				} catch {
+					// Storage writes are best-effort only for this UI preference.
+				}
+			}
 		},
 		[setOpenProp],
 	);
@@ -152,8 +157,14 @@ function SidebarProvider({
 				if (setOpenProp) {
 					setOpenProp(newState === "expanded");
 				}
-				// Update cookie
-				document.cookie = `${SIDEBAR_COOKIE_NAME}=${newState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+				// Persist state to localStorage
+				if (typeof window !== "undefined") {
+					try {
+						window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, newState);
+					} catch {
+						// Storage writes are best-effort only for this UI preference.
+					}
+				}
 				return newState;
 			});
 		}

@@ -1,11 +1,11 @@
 /**
- * Application sidebar with resizable desktop layout.
+ * Application layout with resizable sidebar.
  *
- * Wraps the main sidebar component with a ResizablePanel on desktop for user-controlled
- * width adjustment. On mobile, renders as a standard sheet overlay. Includes navigation
- * chats and new session button in the sidebar content.
+ * Provides the main app layout structure with a resizable sidebar on desktop and
+ * a mobile-friendly sheet overlay. Integrates SidebarProvider, navigation, and
+ * content area with proper responsive behavior.
  *
- * @fileoverview Main app sidebar with desktop resize support
+ * @fileoverview Main app layout with resizable sidebar support
  */
 
 'use client';
@@ -72,10 +72,10 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 }
 
 /**
- * Main application sidebar with resizable desktop layout and mobile sheet.
- * Provides navigation, session management, and user-controlled width on desktop.
+ * Main application layout with resizable sidebar and content area.
+ * Provides full-page structure with sidebar navigation and responsive behavior.
  */
-export function NewSidebar({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function AppLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <SidebarProvider>
       <ResizableSidebarContent>

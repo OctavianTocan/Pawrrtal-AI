@@ -1,13 +1,13 @@
-import { NewSidebar } from "@/components/new-sidebar";
+import { AppLayout } from "@/components/app-layout";
 
-export default function AppLayout({
+export default function AppLayoutWrapper({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
 	return (
 		<>
-			<NewSidebar>{children}</NewSidebar>
+			<AppLayout>{children}</AppLayout>
 		</>
 	);
 }
