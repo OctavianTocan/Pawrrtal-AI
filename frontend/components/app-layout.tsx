@@ -77,9 +77,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         </div>
       </ResizablePanel>
 
-      {!isCollapsed && (
-        <ResizableHandle className="w-1 hover:w-2 transition-all hover:bg-sidebar-border bg-transparent" />
-      )}
+      {!isCollapsed && <ResizableHandle />}
 
       <ResizablePanel className="h-full">{children}</ResizablePanel>
     </ResizablePanelGroup>
