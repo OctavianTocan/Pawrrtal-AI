@@ -1,15 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useSidebar } from '@/components/ui/sidebar';
 import useGetConversations from '@/hooks/get-conversations';
 import {
   buildConversationGroups,
   countGroupItems,
   filterConversationGroups,
 } from '@/lib/conversation-groups';
+import { ConversationDeleteDialog } from './ConversationDeleteDialog';
+import { ConversationRenameDialog } from './ConversationRenameDialog';
 import { NavChatsView } from './NavChatsView';
+import { useConversationActions } from './UseConversationActions';
+import { useDeleteConversation, useRenameConversation } from './UseConversationMutations';
 
 /** localStorage key used to persist which date groups the user has collapsed. */
 const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';
@@ -42,12 +44,10 @@ function loadCollapsedGroups(): Set<string> {
  * Container for the sidebar conversation list.
  *
  * Owns data fetching (conversations), search state, group computation,
- * collapsed-group persistence, and navigation. Delegates all rendering
- * to `NavChatsView`.
+ * collapsed-group persistence, navigation, and conversation rename/delete operations.
+ * Delegates all rendering to `NavChatsView`.
  */
 export function NavChats(): React.JSX.Element {
-  const router = useRouter();
-  const { isMobile, setOpenMobile } = useSidebar();
   const { data: conversations, isLoading } = useGetConversations();
 
   // --- search ---
@@ -65,7 +65,6 @@ export function NavChats(): React.JSX.Element {
   // --- collapsed state (persisted in localStorage) ---
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups);
 
-  // Persist collapsed groups whenever they change.
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -81,7 +80,6 @@ export function NavChats(): React.JSX.Element {
     }
   }, [collapsedGroups]);
 
-  /** Toggles the collapsed state for a single date-group key. */
   const toggleGroupCollapse = (groupKey: string): void => {
     setCollapsedGroups((currentGroups) => {
       const nextGroups = new Set(currentGroups);
@@ -94,24 +92,56 @@ export function NavChats(): React.JSX.Element {
     });
   };
 
+  // --- conversation actions ---
+  const {
+    renameDialogConversationId,
+    deleteDialogConversationId,
+    draftTitle,
+    setDraftTitle,
+    navigateTo,
+    handleRenameClick,
+    handleDeleteClick,
+    handleRenameSubmit,
+    handleDeleteConfirm,
+    handleRenameDialogOpenChange,
+    handleDeleteDialogOpenChange,
+  } = useConversationActions(conversations);
+
+  const renameConversationMutation = useRenameConversation();
+  const deleteConversationMutation = useDeleteConversation();
+
   return (
-    <NavChatsView
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      onSearchClose={() => setSearchQuery('')}
-      resultCount={resultCount}
-      isLoading={isLoading}
-      isEmpty={!conversations?.length}
-      isSearchActive={isSearchActive}
-      filteredGroups={filteredGroups}
-      collapsedGroups={collapsedGroups}
-      onToggleGroup={toggleGroupCollapse}
-      onNewSession={() => {
-        if (isMobile) {
-          setOpenMobile(false);
-        }
-        router.push('/');
-      }}
-    />
+    <>
+      <NavChatsView
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchClose={() => setSearchQuery('')}
+        resultCount={resultCount}
+        isLoading={isLoading}
+        isEmpty={!conversations?.length}
+        isSearchActive={isSearchActive}
+        filteredGroups={filteredGroups}
+        collapsedGroups={collapsedGroups}
+        onToggleGroup={toggleGroupCollapse}
+        onNewSession={() => navigateTo('/')}
+        onNavigate={navigateTo}
+        onRename={handleRenameClick}
+        onDelete={handleDeleteClick}
+      />
+      <ConversationRenameDialog
+        isOpen={!!renameDialogConversationId}
+        isPending={renameConversationMutation.isPending}
+        draftTitle={draftTitle}
+        onDraftTitleChange={setDraftTitle}
+        onOpenChange={handleRenameDialogOpenChange}
+        onSubmit={() => void handleRenameSubmit()}
+      />
+      <ConversationDeleteDialog
+        isOpen={!!deleteDialogConversationId}
+        isPending={deleteConversationMutation.isPending}
+        onOpenChange={handleDeleteDialogOpenChange}
+        onConfirm={() => void handleDeleteConfirm()}
+      />
+    </>
   );
 }
