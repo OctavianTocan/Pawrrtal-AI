@@ -7,17 +7,29 @@ import type { Conversation } from '@/lib/types';
 import { useDeleteConversation, useRenameConversation } from './UseConversationMutations';
 
 interface UseConversationActionsResult {
+  /** The ID of the conversation being renamed, or null if no dialog is open. */
   renameDialogConversationId: string | null;
+  /** The ID of the conversation being deleted, or null if no dialog is open. */
   deleteDialogConversationId: string | null;
+  /** The current draft title in the rename dialog. */
   draftTitle: string;
+  /** Whether any mutation (rename or delete) is currently pending. */
   isMutating: boolean;
+  /** Updates the draft title in the rename dialog. */
   setDraftTitle: (title: string) => void;
+  /** Navigates to a URL and closes the mobile sidebar. */
   navigateTo: (target: string) => void;
+  /** Opens the rename dialog for a conversation (guarded by isMutating). */
   handleRenameClick: (conversationId: string) => void;
+  /** Opens the delete confirmation for a conversation (guarded by isMutating). */
   handleDeleteClick: (conversationId: string) => void;
+  /** Submits the rename form, validating and calling the mutation. */
   handleRenameSubmit: () => Promise<void>;
+  /** Confirms and executes the delete operation, navigating if needed. */
   handleDeleteConfirm: () => Promise<void>;
+  /** Handles rename dialog open/close state changes. */
   handleRenameDialogOpenChange: (open: boolean) => void;
+  /** Handles delete dialog open/close state changes. */
   handleDeleteDialogOpenChange: (open: boolean) => void;
 }
 

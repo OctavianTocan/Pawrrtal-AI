@@ -12,11 +12,17 @@ import {
 import { Input } from '@/components/ui/input';
 
 interface ConversationRenameDialogProps {
+  /** Whether the dialog is open. */
   isOpen: boolean;
+  /** Whether the rename mutation is currently pending. */
   isPending: boolean;
+  /** The current draft title being edited. */
   draftTitle: string;
+  /** Called when the draft title changes. */
   onDraftTitleChange: (title: string) => void;
+  /** Called when the dialog open state changes. */
   onOpenChange: (open: boolean) => void;
+  /** Called when the form is submitted. */
   onSubmit: () => void;
 }
 

@@ -12,9 +12,13 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface ConversationDeleteDialogProps {
+  /** Whether the dialog is open. */
   isOpen: boolean;
+  /** Whether the delete mutation is currently pending. */
   isPending: boolean;
+  /** Called when the dialog open state changes. */
   onOpenChange: (open: boolean) => void;
+  /** Called when the user confirms deletion. */
   onConfirm: () => void;
 }
 
