@@ -35,9 +35,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_STATE_STORAGE_KEY = "sidebar_state";
-const SIDEBAR_DEFAULT_WIDTH = 300;
-const SIDEBAR_MIN_WIDTH = 240;
-const SIDEBAR_MAX_WIDTH = 420;
+export const SIDEBAR_DEFAULT_WIDTH = 300;
+export const SIDEBAR_MIN_WIDTH = 240;
+export const SIDEBAR_MAX_WIDTH = 420;
 const SIDEBAR_WIDTH_STORAGE_KEY = "sidebar_width";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -58,13 +58,18 @@ function clampSidebarWidth(width: number): number {
 function loadDesktopSidebarWidth(): number {
 	if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH;
 
-	const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
-	if (!storedWidth) return SIDEBAR_DEFAULT_WIDTH;
+	try {
+		const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+		if (!storedWidth) return SIDEBAR_DEFAULT_WIDTH;
 
-	const parsedWidth = Number.parseInt(storedWidth, 10);
-	if (!Number.isFinite(parsedWidth)) return SIDEBAR_DEFAULT_WIDTH;
+		const parsedWidth = Number.parseInt(storedWidth, 10);
+		if (!Number.isFinite(parsedWidth)) return SIDEBAR_DEFAULT_WIDTH;
 
-	return clampSidebarWidth(parsedWidth);
+		return clampSidebarWidth(parsedWidth);
+	} catch {
+		// Storage reads can throw in private browsing or blocked storage.
+		return SIDEBAR_DEFAULT_WIDTH;
+	}
 }
 
 type SidebarContextProps = {
@@ -117,15 +122,18 @@ function SidebarProvider({
 	const [desktopWidth, setDesktopWidthState] = React.useState(loadDesktopSidebarWidth);
 
 	// Internal state management using "expanded" | "collapsed"
-
 	const [_state, _setState] = React.useState<"expanded" | "collapsed">(
 		() => {
 			if (typeof window === "undefined") {
 				return defaultOpen ? "expanded" : "collapsed";
 			}
-			const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
-			if (stored === "expanded" || stored === "collapsed") {
-				return stored;
+			try {
+				const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
+				if (stored === "expanded" || stored === "collapsed") {
+					return stored;
+				}
+			} catch {
+				// Storage reads can throw in private browsing or blocked storage.
 			}
 			return defaultOpen ? "expanded" : "collapsed";
 		}
@@ -135,7 +143,6 @@ function SidebarProvider({
 	const state = openProp !== undefined
 		? (openProp ? "expanded" : "collapsed")
 		: _state;
-
 
 	const setState = React.useCallback(
 		(newState: "expanded" | "collapsed") => {
@@ -162,27 +169,11 @@ function SidebarProvider({
 		if (isMobile) {
 			setOpenMobile((open) => !open);
 		} else {
-			_setState((currentState) => {
-				const newState = currentState === "expanded" ? "collapsed" : "expanded";
-				// Sync with external prop handler if provided
-				if (setOpenProp) {
-					setOpenProp(newState === "expanded");
-				}
-				// Persist state to localStorage
-				if (typeof window !== "undefined") {
-					try {
-						window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, newState);
-					} catch {
-						// Storage writes are best-effort only for this UI preference.
-					}
-				}
-				return newState;
-			});
+			setState(state === "expanded" ? "collapsed" : "expanded");
 		}
-	}, [isMobile, setOpenProp]);
+	}, [isMobile, state, setState]);
 
 	// Set the desktop sidebar width and clamp it to valid range.
-
 	const setDesktopWidth = React.useCallback((width: number): void => {
 		setDesktopWidthState(clampSidebarWidth(width));
 	}, []);
@@ -192,12 +183,9 @@ function SidebarProvider({
 		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
 	}, []);
 
-
+	// useEffect justified: persisting desktopWidth to localStorage is a side effect
+	// that must happen after render, and effects don't run on SSR.
 	React.useEffect(() => {
-		if (typeof window === "undefined") {
-			return;
-		}
-
 		try {
 			window.localStorage.setItem(
 				SIDEBAR_WIDTH_STORAGE_KEY,

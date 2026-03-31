@@ -16,6 +16,8 @@ import { NewSessionButton } from './new-session-button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';
 import {
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
   Sidebar,
   SidebarContent,
   SidebarHeader,
@@ -24,6 +26,9 @@ import {
   SidebarTrigger,
   useSidebar,
 } from './ui/sidebar';
+
+/** Duration of the sidebar collapse/expand CSS transition in ms. */
+const COLLAPSE_ANIMATION_DURATION_MS = 250;
 
 /**
  * Sidebar content wrapper with conditional resizable layout.
@@ -50,16 +55,16 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     if (state === 'collapsed' && !panel.isCollapsed()) {
       isAnimatingRef.current = true;
       panel.collapse();
-      // Clear after CSS transition completes (200ms + buffer)
+      // Clear after CSS transition completes
       setTimeout(() => {
         isAnimatingRef.current = false;
-      }, 250);
+      }, COLLAPSE_ANIMATION_DURATION_MS);
     } else if (state === 'expanded' && panel.isCollapsed()) {
       isAnimatingRef.current = true;
       panel.expand();
       setTimeout(() => {
         isAnimatingRef.current = false;
-      }, 250);
+      }, COLLAPSE_ANIMATION_DURATION_MS);
     }
   }, [state, sidebarPanelRef]);
 
@@ -87,8 +92,8 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         defaultSize={desktopWidth}
         outerStyle={{ transition: 'flex-grow 200ms ease-out' }}
         style={{ overflow: 'hidden' }}
-        minSize={240}
-        maxSize={420}
+        minSize={SIDEBAR_MIN_WIDTH}
+        maxSize={SIDEBAR_MAX_WIDTH}
         collapsible={true}
         collapsedSize={0}
         onResize={(size) => {
@@ -113,6 +118,9 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden"
           style={{
             opacity: state === 'collapsed' ? 0 : 1,
+            // Disable pointer events when invisible to prevent click-dead-zones
+            // per the hidden-overlay-pointer-events rule.
+            pointerEvents: state === 'collapsed' ? 'none' : 'auto',
             transition: 'opacity 150ms ease-out',
           }}
         >
