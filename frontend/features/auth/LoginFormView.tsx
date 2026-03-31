@@ -23,19 +23,19 @@ export interface LoginFormViewProps extends Omit<React.ComponentProps<'div'>, 'o
   errorMessage: string;
   /** Whether a login request is in-flight (disables buttons). */
   isLoading: boolean;
-  /** Whether the dev-only "Test User" shortcut is available. */
-  canUseTestUser: boolean;
+  /** Whether the dev-only admin shortcut is available. */
+  canUseDevAdminLogin: boolean;
   /** Called when the form is submitted. */
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-  /** Called when the "Test User" button is clicked. */
-  onTestUserLogin: () => void;
+  /** Called when the "Dev Admin" button is clicked. */
+  onDevAdminLogin: () => void;
 }
 
 /**
  * Pure presentation layer for the login form.
  *
  * Renders the card with email/password fields, error alert, submit button,
- * optional test-user shortcut, and signup link. All state and async logic
+ * optional dev-admin shortcut, and signup link. All state and async logic
  * live in the container (`LoginForm`).
  */
 export function LoginFormView({
@@ -48,9 +48,9 @@ export function LoginFormView({
   onPasswordChange,
   errorMessage,
   isLoading,
-  canUseTestUser,
+  canUseDevAdminLogin,
   onSubmit,
-  onTestUserLogin,
+  onDevAdminLogin,
   ...props
 }: LoginFormViewProps): React.JSX.Element {
   return (
@@ -108,18 +108,18 @@ export function LoginFormView({
                 <Button type="submit" disabled={isLoading}>
                   Login
                 </Button>
-                {canUseTestUser && (
+                {canUseDevAdminLogin && (
                   <>
                     <Button
                       variant="outline"
                       type="button"
-                      onClick={onTestUserLogin}
+                      onClick={onDevAdminLogin}
                       disabled={isLoading}
                     >
-                      Test User
+                      Dev Admin
                     </Button>
                     <FieldDescription className="text-center text-xs">
-                      Dev-only shortcut for the shared test account.
+                      Dev-only shortcut for the seeded admin account.
                     </FieldDescription>
                   </>
                 )}

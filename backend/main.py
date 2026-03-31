@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
@@ -64,6 +65,9 @@ def create_app() -> FastAPI:
 
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+    )
+    fastapi_app.include_router(
+        get_auth_router(),
     )
     fastapi_app.include_router(
         fastapi_users.get_register_router(UserRead, UserCreate),
