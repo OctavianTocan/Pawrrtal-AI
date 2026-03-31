@@ -1,13 +1,11 @@
-import type { CSSProperties, HTMLAttributes, Ref } from "react";
+import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 
 export type PanelSize = {
   asPercentage: number;
   inPixels: number;
 };
 
-export type GroupResizeBehavior =
-  | "preserve-relative-size"
-  | "preserve-pixel-size";
+export type GroupResizeBehavior = 'preserve-relative-size' | 'preserve-pixel-size';
 
 /**
  * Numeric Panel constraints are represented as numeric percentages (0..100)
@@ -24,7 +22,7 @@ export type PanelConstraints = {
   panelId: string;
 };
 
-export type SizeUnit = "px" | "%" | "em" | "rem" | "vh" | "vw";
+export type SizeUnit = 'px' | '%' | 'em' | 'rem' | 'vh' | 'vw';
 
 export type RegisteredPanel = {
   id: string;
@@ -94,7 +92,7 @@ export interface PanelImperativeHandle {
   resize: (size: number | string) => void;
 }
 
-type BasePanelAttributes = Omit<HTMLAttributes<HTMLDivElement>, "onResize">;
+type BasePanelAttributes = Omit<HTMLAttributes<HTMLDivElement>, 'onResize'>;
 
 export type PanelProps = BasePanelAttributes & {
   /**
@@ -145,10 +143,7 @@ export type PanelProps = BasePanelAttributes & {
    *
    * ⚠️ A Group must contain at least one Panel with `preserve-relative-size` resize behavior.
    */
-  groupResizeBehavior?:
-    | "preserve-relative-size"
-    | "preserve-pixel-size"
-    | undefined;
+  groupResizeBehavior?: 'preserve-relative-size' | 'preserve-pixel-size' | undefined;
 
   /**
    * Uniquely identifies this panel within the parent group.
@@ -198,6 +193,16 @@ export type PanelProps = BasePanelAttributes & {
   panelRef?: Ref<PanelImperativeHandle | null> | undefined;
 
   /**
+   * CSS properties applied to the outer layout `HTMLDivElement`.
+   *
+   * Use this for properties that must live alongside the flex sizing styles
+   * (e.g. `transition` on `flex-grow` for animated collapse/expand).
+   *
+   * ⚠️ Properties that conflict with flex layout (`display`, `flexBasis`, etc.) will be overridden.
+   */
+  outerStyle?: CSSProperties | undefined;
+
+  /**
    * CSS properties.
    *
    * ⚠️ Style is applied to nested `HTMLDivElement` to avoid styles that interfere with Flex layout.
@@ -205,7 +210,7 @@ export type PanelProps = BasePanelAttributes & {
   style?: CSSProperties | undefined;
 };
 
-export type OnPanelResize = PanelProps["onResize"];
+export type OnPanelResize = PanelProps['onResize'];
 
 /**
  * Size constraints may be specified in a variety of ways:
@@ -224,11 +229,11 @@ export type OnPanelResize = PanelProps["onResize"];
  */
 export type PanelConstraintProps = Pick<
   PanelProps,
-  | "collapsedSize"
-  | "collapsible"
-  | "defaultSize"
-  | "disabled"
-  | "groupResizeBehavior"
-  | "maxSize"
-  | "minSize"
+  | 'collapsedSize'
+  | 'collapsible'
+  | 'defaultSize'
+  | 'disabled'
+  | 'groupResizeBehavior'
+  | 'maxSize'
+  | 'minSize'
 >;
