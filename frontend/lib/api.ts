@@ -39,6 +39,18 @@ export const API_ENDPOINTS = {
 		 * @returns `/api/v1/conversations`
 		 */
 		create: (id: string) => `/api/v1/conversations/${id}`,
+		/**
+		 * Update conversation metadata.
+		 * @param id - Conversation ID
+		 * @returns `/api/v1/conversations/${id}`
+		 */
+		update: (id: string) => `/api/v1/conversations/${id}`,
+		/**
+		 * Delete a conversation.
+		 * @param id - Conversation ID
+		 * @returns `/api/v1/conversations/${id}`
+		 */
+		delete: (id: string) => `/api/v1/conversations/${id}`,
 		list: "/api/v1/conversations",
 		/**
 		 * Generate a conversation title.

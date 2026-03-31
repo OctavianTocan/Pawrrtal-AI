@@ -119,3 +119,27 @@ async def update_conversation_title_service(
     await session.commit()
     await session.refresh(conversation)
     return conversation
+
+
+async def delete_conversation_service(
+    user_id: uuid.UUID, session: AsyncSession, conversation_id: uuid.UUID
+) -> bool:
+    """Delete an existing conversation owned by the given user.
+
+    Returns:
+        ``True`` when a conversation was deleted, otherwise ``False``.
+    """
+    stmt = (
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .where(Conversation.user_id == user_id)
+    )
+    result = await session.execute(stmt)
+    conversation = result.scalar_one_or_none()
+
+    if conversation is None:
+        return False
+
+    await session.delete(conversation)
+    await session.commit()
+    return True
