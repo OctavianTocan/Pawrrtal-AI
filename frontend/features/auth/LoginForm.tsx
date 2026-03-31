@@ -3,17 +3,12 @@
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useId, useState } from 'react';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 import { LoginFormView } from './LoginFormView';
+import { useLoginMutation, useDevAdminLoginMutation } from './hooks/use-login-mutations';
 
 interface LoginFormProps extends React.ComponentProps<'div'> {
   canUseDevAdminLogin?: boolean;
 }
-
-type LoginCredentials = {
-  email: string;
-  password: string;
-};
 
 /**
  * Container for the login form.
@@ -33,97 +28,53 @@ export function LoginForm({
   const formId = useId();
   const emailId = `${formId}-email`;
   const passwordId = `${formId}-password`;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [localErrorMessage, setLocalErrorMessage] = useState('');
+
   const router = useRouter();
-  /** Sends credentials to the login API and redirects on success. */
-  const submitLogin = async ({ email, password }: LoginCredentials): Promise<void> => {
-    setIsLoading(true);
 
-    try {
-      // TODO: This inline fetch needs to be moved to a custom hook.
-      // TODO: Especially now that we also use this in the signup form.
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.login}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({ username: email, password }),
-        credentials: 'include',
-      });
+  const loginMutation = useLoginMutation();
+  const devLoginMutation = useDevAdminLoginMutation();
 
-      // Handle errors.
-      // TODO: This same code is used on both the login and signup forms, which means it should be moved to a shared function.
-      if (!response.ok) {
-        let nextErrorMessage = 'Unable to log in with those credentials.';
+  const isLoading = loginMutation.isPending || devLoginMutation.isPending;
 
-        try {
-          const error = await response.json();
-          if (typeof error?.detail === 'string') {
-            nextErrorMessage = error.detail;
-          }
-        } catch {
-          // Ignore JSON parse failures and keep the generic message.
-        }
-
-        setErrorMessage(nextErrorMessage);
-        return;
-      }
-
-      // Reset the error message.
-      // We do it here, so the Alert component doesn't jump unnecessarily every time we press the submit button.
-      setErrorMessage('');
-
-      // Redirect to the homepage.
-      router.push('/');
-    } catch {
-      setErrorMessage('Unable to reach the login service.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /** Calls a backend-only shortcut that logs in with the seeded admin account. */
-  const submitDevAdminLogin = async (): Promise<void> => {
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.devLogin}`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        let nextErrorMessage = 'Unable to use the dev admin login shortcut.';
-
-        try {
-          const error = await response.json();
-          if (typeof error?.detail === 'string') {
-            nextErrorMessage = error.detail;
-          }
-        } catch {
-          // Ignore JSON parse failures and keep the generic message.
-        }
-
-        setErrorMessage(nextErrorMessage);
-        return;
-      }
-
-      setErrorMessage('');
-      router.push('/');
-    } catch {
-      setErrorMessage('Unable to reach the login service.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Prefer the local (network) error if the service failed to be reached entirely,
+  // otherwise show the specific API error from React Query.
+  const currentError =
+    localErrorMessage || loginMutation.error?.message || devLoginMutation.error?.message || '';
 
   /** Form submit handler — prevents default page refresh. */
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    await submitLogin({ email, password });
+    setLocalErrorMessage('');
+    loginMutation.reset();
+    devLoginMutation.reset();
+
+    try {
+      await loginMutation.mutateAsync({ email, password });
+      router.push('/');
+    } catch {
+      // Avoid raw fetch boilerplate: the hook handles standard detail extraction.
+      // If an error is thrown here that wasn't an API error (e.g. network down),
+      // it gets captured as mutation error anyway, but we keep the catch block
+      // just in case fetch itself throws synchronously.
+    }
+  };
+
+  /** Calls a backend-only shortcut that logs in with the seeded admin account. */
+  const handleDevAdminLogin = async (): Promise<void> => {
+    setLocalErrorMessage('');
+    loginMutation.reset();
+    devLoginMutation.reset();
+
+    try {
+      await devLoginMutation.mutateAsync();
+      router.push('/');
+    } catch {
+      // Hook parses detail. Handled above.
+    }
   };
 
   return (
@@ -135,11 +86,11 @@ export function LoginForm({
       onEmailChange={setEmail}
       password={password}
       onPasswordChange={setPassword}
-      errorMessage={errorMessage}
+      errorMessage={currentError}
       isLoading={isLoading}
       canUseDevAdminLogin={canUseDevAdminLogin}
       onSubmit={handleSubmit}
-      onDevAdminLogin={submitDevAdminLogin}
+      onDevAdminLogin={handleDevAdminLogin}
       {...divProps}
     />
   );
