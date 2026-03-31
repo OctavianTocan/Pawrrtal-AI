@@ -56,6 +56,11 @@ export const API_ENDPOINTS = {
 		 */
 		login: "/auth/jwt/login",
 		/**
+		 * Dev-only admin login shortcut.
+		 * @returns `/auth/dev-login`
+		 */
+		devLogin: "/auth/dev-login",
+		/**
 		 * Register endpoint.
 		 * @returns `/auth/register`
 		 */

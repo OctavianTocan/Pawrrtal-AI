@@ -7,8 +7,7 @@ import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 import { LoginFormView } from './LoginFormView';
 
 interface LoginFormProps extends React.ComponentProps<'div'> {
-  testUserEmail?: string;
-  testUserPassword?: string;
+  canUseDevAdminLogin?: boolean;
 }
 
 type LoginCredentials = {
@@ -22,13 +21,11 @@ type LoginCredentials = {
  * Owns form state, validation, API calls, and navigation on success.
  * Delegates all rendering to `LoginFormView`.
  *
- * @param testUserEmail    - Pre-filled email for the dev-only "Test User" button.
- * @param testUserPassword - Pre-filled password for the dev-only "Test User" button.
+ * @param canUseDevAdminLogin - Whether to show the dev-only admin shortcut button.
  */
 export function LoginForm({
   className,
-  testUserEmail,
-  testUserPassword,
+  canUseDevAdminLogin = false,
   ...props
 }: LoginFormProps): React.JSX.Element {
   // Destructure onSubmit from rest to avoid conflict with our custom onSubmit prop.
@@ -41,8 +38,6 @@ export function LoginForm({
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const canUseTestUser = Boolean(testUserEmail && testUserPassword);
-
   /** Sends credentials to the login API and redirects on success. */
   const submitLogin = async ({ email, password }: LoginCredentials): Promise<void> => {
     setIsLoading(true);
@@ -90,23 +85,45 @@ export function LoginForm({
     }
   };
 
+  /** Calls a backend-only shortcut that logs in with the seeded admin account. */
+  const submitDevAdminLogin = async (): Promise<void> => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.devLogin}`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let nextErrorMessage = 'Unable to use the dev admin login shortcut.';
+
+        try {
+          const error = await response.json();
+          if (typeof error?.detail === 'string') {
+            nextErrorMessage = error.detail;
+          }
+        } catch {
+          // Ignore JSON parse failures and keep the generic message.
+        }
+
+        setErrorMessage(nextErrorMessage);
+        return;
+      }
+
+      setErrorMessage('');
+      router.push('/');
+    } catch {
+      setErrorMessage('Unable to reach the login service.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   /** Form submit handler — prevents default page refresh. */
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     await submitLogin({ email, password });
-  };
-
-  /** Dev-only shortcut to log in as the test user. */
-  const handleTestUserLogin = async (): Promise<void> => {
-    if (!testUserEmail || !testUserPassword) {
-      return;
-    }
-
-    setEmail(testUserEmail);
-    await submitLogin({
-      email: testUserEmail,
-      password: testUserPassword,
-    });
   };
 
   return (
@@ -120,9 +137,9 @@ export function LoginForm({
       onPasswordChange={setPassword}
       errorMessage={errorMessage}
       isLoading={isLoading}
-      canUseTestUser={canUseTestUser}
+      canUseDevAdminLogin={canUseDevAdminLogin}
       onSubmit={handleSubmit}
-      onTestUserLogin={handleTestUserLogin}
+      onDevAdminLogin={submitDevAdminLogin}
       {...divProps}
     />
   );
