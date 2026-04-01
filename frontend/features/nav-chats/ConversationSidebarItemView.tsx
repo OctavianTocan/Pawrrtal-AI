@@ -15,7 +15,7 @@ import {
   Tag,
   Trash2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { EntityRow } from '@/components/ui/entity-row';
 import { useMenuComponents } from '@/components/ui/menu-context';
 import { SidebarMenuItem } from '@/components/ui/sidebar';
@@ -25,16 +25,28 @@ export interface ConversationSidebarItemViewProps {
   title: ReactNode;
   /** Whether this row is the active route. */
   isSelected: boolean;
+  /** Whether this row is part of the current multi-selection range. */
+  isInMultiSelect?: boolean;
   /** Whether to render a separator above this item. */
   showSeparator: boolean;
   /** Compact relative-time string (e.g. "3h"), or null. */
   age: string | null;
+  /** Icon cluster rendered at the leading edge of the row. */
+  icon?: ReactNode;
+  /** Optional badges rendered on the second line. */
+  badges?: ReactNode;
+  /** Replaces the default age pill when provided. */
+  titleTrailing?: ReactNode;
   /** The full URL path for this conversation. */
   href: string;
   /** Absolute URL for clipboard copy. */
   absoluteHref: string;
   /** Called when the row is clicked. */
   onClick: () => void;
+  /** Modifier-aware mouse selection hook. */
+  onMouseDown?: (event: MouseEvent) => void;
+  /** Extra props forwarded to the row's button surface. */
+  buttonProps?: Record<string, unknown>;
   /** Called to navigate in a menu item. */
   onNavigate: (href: string) => void;
   /** Opens the rename flow for this conversation. */
@@ -221,11 +233,17 @@ function ConversationMenuContent({
 export function ConversationSidebarItemView({
   title,
   isSelected,
+  isInMultiSelect = false,
   showSeparator,
   age,
+  icon,
+  badges,
+  titleTrailing,
   href,
   absoluteHref,
   onClick,
+  onMouseDown,
+  buttonProps,
   onNavigate,
   onRename,
   onDelete,
@@ -233,16 +251,21 @@ export function ConversationSidebarItemView({
   return (
     <SidebarMenuItem>
       <EntityRow
-        icon={<ConversationStatusIcon />}
+        icon={icon ?? <ConversationStatusIcon />}
         showSeparator={showSeparator}
         isSelected={isSelected}
+        isInMultiSelect={isInMultiSelect}
         onClick={onClick}
+        onMouseDown={onMouseDown}
+        buttonProps={buttonProps}
         title={title}
+        badges={badges}
         titleClassName="text-[13px]"
         titleTrailing={
-          age ? (
+          titleTrailing ??
+          (age ? (
             <span className="text-[11px] text-foreground/40 whitespace-nowrap">{age}</span>
-          ) : undefined
+          ) : undefined)
         }
         menuContent={
           <ConversationMenuContent
