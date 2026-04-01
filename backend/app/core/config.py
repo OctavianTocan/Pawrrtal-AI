@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     fernet_key: str
     # CORS
     cors_origins: list[str]
-    cors_origin_regex: str | None = None
+    cors_origin_regex: str | None = r"^https:\/\/.*\.vercel\.app$"
     # The domain to set for cookies (e.g., "example.com"). This is important for authentication cookies to work correctly across subdomains.
     cookie_domain: str
     # Optional secret required to register a new account. When set, anyone
