@@ -1,7 +1,7 @@
 """
 Database configuration and session management.
 
-Uses SQLAlchemy async engine with postgresql. The User model is defined here
+Uses SQLAlchemy async engine with PostgreSQL or local SQLite. The User model is defined here
 (rather than in models.py) because fastapi-users requires it at import time
 for its dependency chain.
 """
