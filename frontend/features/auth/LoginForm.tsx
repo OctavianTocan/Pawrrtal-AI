@@ -40,10 +40,23 @@ export function LoginForm({
 
   const isLoading = loginMutation.isPending || devLoginMutation.isPending;
 
+  /**
+   * Maps browser-specific fetch failures to a clearer backend-unreachable message,
+   * while preserving any other surfaced error text.
+   */
   const setFriendlyNetworkError = (error: unknown): void => {
-    const message = error instanceof Error ? error.message : '';
-    if (message === 'Failed to fetch') {
+    if (!(error instanceof Error)) {
+      return;
+    }
+
+    const normalizedMessage = error.message.toLowerCase();
+    if (error instanceof TypeError && normalizedMessage.includes('fetch')) {
       setLocalErrorMessage('Unable to connect to the backend. Is the server running?');
+      return;
+    }
+
+    if (error.message) {
+      setLocalErrorMessage(error.message);
     }
   };
 

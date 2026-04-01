@@ -4,8 +4,8 @@ Application settings.
 
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
-from typing import Any, Literal
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -65,8 +65,6 @@ class Settings(BaseSettings):
     @property
     def _normalized_database_url(self) -> str:
         """Return the configured database URL in a normalized form."""
-        from urllib.parse import urlparse
-        
         url = self.database_url.strip()
         if not url:
             return "sqlite:///./nexus.db"
@@ -75,7 +73,8 @@ class Settings(BaseSettings):
         if parsed.scheme.startswith(("postgresql", "sqlite")):
             return url
 
-        if url.endswith(".db") or "/" in url or url.startswith("."):
+        # Treat bare filesystem paths as SQLite database files.
+        if not parsed.scheme:
             return f"sqlite:///{url}"
 
         return url
@@ -83,20 +82,18 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         """Whether the configured database uses SQLite."""
-        from urllib.parse import urlparse
         return urlparse(self._normalized_database_url).scheme.startswith("sqlite")
 
     @property
     def db_url_sync(self) -> str:
         """
-        Returns the database URL formatted for synchronous connections. If the original database URL starts with "postgresql+psycopg://", it replaces it with "postgresql://" to ensure compatibility with sync database drivers.
+        Returns the database URL formatted for synchronous connections. PostgreSQL URLs are
+        normalized to the installed psycopg driver, while SQLite async URLs are converted
+        back to the sync sqlite dialect.
         """
-        if not self.database_url.strip():
-            return "sqlite:///./nexus.db"
-
         url = self._normalized_database_url
-        if url.startswith("postgresql+psycopg://"):
-            return url.replace("postgresql+psycopg://", "postgresql://", 1)
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
         if url.startswith("sqlite+aiosqlite://"):
             return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
         return url
@@ -104,11 +101,10 @@ class Settings(BaseSettings):
     @property
     def db_url_async(self) -> str:
         """
-        Returns the database URL formatted for asynchronous connections. If the original database URL starts with "postgresql://", it replaces it with "postgresql+psycopg://" to ensure compatibility with async database drivers.
+        Returns the database URL formatted for asynchronous connections. PostgreSQL URLs are
+        normalized to the psycopg async dialect and SQLite sync URLs are converted to the
+        aiosqlite dialect.
         """
-        if not self.database_url.strip():
-            return "sqlite+aiosqlite:///./nexus.db"
-
         url = self._normalized_database_url
         if url.startswith("postgresql://"):
             return url.replace("postgresql://", "postgresql+psycopg://", 1)
