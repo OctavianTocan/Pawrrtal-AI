@@ -19,19 +19,33 @@ import { SectionHeader } from './SectionHeader';
 import type { ContentSearchResult } from './use-conversation-search';
 
 export interface NavChatsViewProps {
+  /** Current search input value. */
   searchQuery: string;
+  /** Called on every search keystroke. */
   onSearchChange: (query: string) => void;
+  /** Called when the user clears the search. */
   onSearchClose: () => void;
+  /** Total number of matching conversations. */
   resultCount: number;
+  /** Whether conversations are still being fetched. */
   isLoading: boolean;
+  /** Whether the data source returned zero conversations. */
   isEmpty: boolean;
+  /** Whether the search query is long enough to filter (>= 2 chars). */
   isSearchActive: boolean;
+  /** Date-grouped and search-filtered conversation buckets. */
   filteredGroups: ConversationGroup[];
+  /** Set of group keys the user has collapsed. */
   collapsedGroups: Set<string>;
+  /** Toggles a single group's collapsed state. */
   onToggleGroup: (groupKey: string) => void;
+  /** Navigates to the root page to start a new session. */
   onNewSession: () => void;
+  /** Navigates to a conversation and closes mobile sidebar. */
   onNavigate: (href: string) => void;
+  /** Opens the rename dialog for a conversation. */
   onRename: (conversationId: string) => void;
+  /** Opens the delete confirmation for a conversation. */
   onDelete: (conversationId: string) => void;
   navigatorRef: RefObject<HTMLDivElement | null>;
   contentSearchResults: Map<string, ContentSearchResult>;
@@ -127,6 +141,12 @@ function SearchCountBadge({ count, isSelected }: { count: number; isSelected: bo
   );
 }
 
+/**
+ * Pure presentation layer for the sidebar conversation list.
+ *
+ * Renders the search header, empty states, and grouped conversation items.
+ * All data and callbacks are received via props — no hooks.
+ */
 export function NavChatsView({
   searchQuery,
   onSearchChange,
@@ -153,6 +173,8 @@ export function NavChatsView({
   registerConversationElement,
   onNavigatorMouseDown,
 }: NavChatsViewProps): React.JSX.Element {
+  // --- content resolution ---
+  // Computed outside JSX to avoid hard-to-read nested ternaries.
   let content: React.JSX.Element | null = null;
 
   if (isLoading) {
@@ -188,7 +210,12 @@ export function NavChatsView({
       >
         <ul className="flex w-full min-w-0 flex-col gap-0">
           {filteredGroups.map((group) => {
+            // Only allow collapsing when there are multiple groups and
+            // the user is not searching (search always shows all matches).
             const isCollapsible = !isSearchActive && filteredGroups.length > 1;
+
+            // Gate on isCollapsible so a persisted key can't hide items
+            // when only one group remains.
             const isCollapsed = isCollapsible && collapsedGroups.has(group.key);
 
             return (

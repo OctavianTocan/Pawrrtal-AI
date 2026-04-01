@@ -22,8 +22,15 @@ import { useFocusZone, useSidebarFocusContext } from './sidebar-focus';
 import { useConversationActions } from './UseConversationActions';
 import { rankConversationsForSearch, useConversationSearch } from './use-conversation-search';
 
+/** localStorage key used to persist which date groups the user has collapsed. */
 const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';
 
+/**
+ * Reads persisted collapsed group keys from localStorage.
+ *
+ * Wrapped in try/catch because storage reads can throw in private browsing
+ * or when storage access is blocked by browser policy.
+ */
 function loadCollapsedGroups(): Set<string> {
   if (typeof window === 'undefined') {
     return new Set();
@@ -47,6 +54,14 @@ function extractConversationIdFromPath(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
+/**
+ * Container for the sidebar conversation list.
+ *
+ * Owns data fetching (conversations), search state, group computation,
+ * collapsed-group persistence, navigation, conversation rename/delete operations,
+ * multi-select functionality, and keyboard focus management.
+ * Delegates all rendering to `NavChatsView`.
+ */
 export function NavChats(): React.JSX.Element {
   const { data: conversations, isLoading } = useGetConversations();
   const pathname = usePathname();
@@ -59,8 +74,13 @@ export function NavChats(): React.JSX.Element {
   const { focusZone } = useSidebarFocusContext();
   const conversationElementRefs = useRef(new Map<string, HTMLDivElement>());
 
+  // --- search ---
   const [searchQuery, setSearchQuery] = useState('');
+
+  // --- selection state ---
   const [selectionState, setSelectionState] = useState(createInitialSelectionState);
+
+  // --- collapsed state (persisted in localStorage) ---
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups);
 
   const conversationsWithActivity = useMemo(
@@ -80,6 +100,7 @@ export function NavChats(): React.JSX.Element {
     activeChatHistory,
   });
 
+  // --- grouping & filtering ---
   const baseGroups = useMemo(
     () => buildConversationGroups(conversationsWithActivity ?? []),
     [conversationsWithActivity]
@@ -149,7 +170,7 @@ export function NavChats(): React.JSX.Element {
         JSON.stringify([...collapsedGroups])
       );
     } catch {
-      // ignore storage write errors
+      // Storage write failed (quota exceeded, private browsing, etc.) — ignore.
     }
   }, [collapsedGroups]);
 
@@ -191,6 +212,7 @@ export function NavChats(): React.JSX.Element {
     });
   }, []);
 
+  // --- conversation actions ---
   const {
     renameDialogConversationId,
     deleteDialogConversationId,
