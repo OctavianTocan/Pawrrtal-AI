@@ -3,7 +3,10 @@ Application settings.
 """
 
 from pathlib import Path
+from typing import Literal
 
+from typing import Any, Literal
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,7 +38,7 @@ class Settings(BaseSettings):
     # The domain to set for cookies (e.g., "example.com"). This is important for authentication cookies to work correctly across subdomains.
     cookie_domain: str | None = None
     # Controls cross-site cookie behavior ("lax", "strict", "none"). Set to "none" (with secure=True) to allow auth across completely different domains (like Vercel previews).
-    cookie_samesite: str = "lax"
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     # Optional secret required to register a new account. When set, anyone
     # attempting to register must supply this value as ``invite_code`` in the
     # request body. Leave unset (or empty) to allow open registration.
@@ -45,6 +48,12 @@ class Settings(BaseSettings):
     # Admin user credentials (for testing).
     admin_email: str | None = None
     admin_password: str | None = None
+
+    @model_validator(mode="after")
+    def validate_secure_cookie(self) -> "Settings":
+        if self.cookie_samesite == "none" and not self.is_production:
+            raise ValueError("cookie_samesite='none' requires HTTPS (which is tied to is_production in this template).")
+        return self
 
     @property
     def is_production(self) -> bool:
