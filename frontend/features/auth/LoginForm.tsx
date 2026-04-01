@@ -40,6 +40,13 @@ export function LoginForm({
 
   const isLoading = loginMutation.isPending || devLoginMutation.isPending;
 
+  const setFriendlyNetworkError = (error: unknown): void => {
+    const message = error instanceof Error ? error.message : '';
+    if (message === 'Failed to fetch') {
+      setLocalErrorMessage('Unable to connect to the backend. Is the server running?');
+    }
+  };
+
   // Prefer the local (network) error if the service failed to be reached entirely,
   // otherwise show the specific API error from React Query.
   const currentError =
@@ -55,11 +62,8 @@ export function LoginForm({
     try {
       await loginMutation.mutateAsync({ email, password });
       router.push('/');
-    } catch {
-      // Avoid raw fetch boilerplate: the hook handles standard detail extraction.
-      // If an error is thrown here that wasn't an API error (e.g. network down),
-      // it gets captured as mutation error anyway, but we keep the catch block
-      // just in case fetch itself throws synchronously.
+    } catch (error) {
+      setFriendlyNetworkError(error);
     }
   };
 
@@ -72,8 +76,8 @@ export function LoginForm({
     try {
       await devLoginMutation.mutateAsync();
       router.push('/');
-    } catch {
-      // Hook parses detail. Handled above.
+    } catch (error) {
+      setFriendlyNetworkError(error);
     }
   };
 
