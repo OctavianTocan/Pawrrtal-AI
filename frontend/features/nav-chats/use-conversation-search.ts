@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
 import type { AgnoMessage, Conversation } from '@/lib/types';
-import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 
 export type ContentSearchResult = {
   matchCount: number;
@@ -66,7 +66,7 @@ export function rankConversationsForSearch(
   conversations: Conversation[],
   query: string,
   contentSearchResults: Map<string, ContentSearchResult>,
-  activeChatMatchInfo?: { sessionId: string; count: number } | null
+  _activeChatMatchInfo?: { sessionId: string; count: number } | null
 ): Conversation[] {
   return [...conversations].sort((left, right) => {
     const leftScore = fuzzyScore(left.title, query);
@@ -84,14 +84,8 @@ export function rankConversationsForSearch(
       return rightScore - leftScore;
     }
 
-    const leftCount =
-      activeChatMatchInfo?.sessionId === left.id
-        ? activeChatMatchInfo.count
-        : contentSearchResults.get(left.id)?.matchCount ?? 0;
-    const rightCount =
-      activeChatMatchInfo?.sessionId === right.id
-        ? activeChatMatchInfo.count
-        : contentSearchResults.get(right.id)?.matchCount ?? 0;
+    const leftCount = contentSearchResults.get(left.id)?.matchCount ?? 0;
+    const rightCount = contentSearchResults.get(right.id)?.matchCount ?? 0;
 
     if (leftCount !== rightCount) {
       return rightCount - leftCount;
@@ -114,9 +108,9 @@ export function useConversationSearch({
 }) {
   const fetcher = useAuthedFetch();
   const cacheRef = useRef(new Map<string, AgnoMessage[]>());
-  const [contentSearchResults, setContentSearchResults] = useState<Map<string, ContentSearchResult>>(
-    new Map()
-  );
+  const [contentSearchResults, setContentSearchResults] = useState<
+    Map<string, ContentSearchResult>
+  >(new Map());
   const trimmedQuery = searchQuery.trim();
   const isSearchActive = trimmedQuery.length >= 2;
 
@@ -137,7 +131,9 @@ export function useConversationSearch({
         await Promise.all(
           missingConversationIds.map(async (conversationId) => {
             try {
-              const response = await fetcher(API_ENDPOINTS.conversations.getMessages(conversationId));
+              const response = await fetcher(
+                API_ENDPOINTS.conversations.getMessages(conversationId)
+              );
               const payload = (await response.json()) as AgnoMessage[];
               cacheRef.current.set(conversationId, payload);
             } catch {
@@ -159,7 +155,10 @@ export function useConversationSearch({
         const contentCount = countOccurrences(searchableText, trimmedQuery);
         const matchCount = titleCount + contentCount;
 
-        if (matchCount > 0 || conversation.title.toLowerCase().includes(trimmedQuery.toLowerCase())) {
+        if (
+          matchCount > 0 ||
+          conversation.title.toLowerCase().includes(trimmedQuery.toLowerCase())
+        ) {
           nextResults.set(conversation.id, {
             matchCount,
             snippet: buildSnippet(searchableText || conversation.title, trimmedQuery),

@@ -1,13 +1,14 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useGetConversations from '@/hooks/get-conversations';
 import { buildConversationGroups, countGroupItems } from '@/lib/conversation-groups';
 import type { Conversation } from '@/lib/types';
 import { ConversationDeleteDialog } from './ConversationDeleteDialog';
 import { ConversationRenameDialog } from './ConversationRenameDialog';
+import { useChatActivity } from './chat-activity-context';
 import {
   clearMultiSelect,
   createInitialSelectionState,
@@ -16,7 +17,6 @@ import {
   singleSelect,
   toggleSelect,
 } from './conversation-selection';
-import { useChatActivity } from './chat-activity-context';
 import { NavChatsView } from './NavChatsView';
 import { useFocusZone, useSidebarFocusContext } from './sidebar-focus';
 import { useConversationActions } from './UseConversationActions';
@@ -51,8 +51,11 @@ export function NavChats(): React.JSX.Element {
   const { data: conversations, isLoading } = useGetConversations();
   const pathname = usePathname();
   const routeConversationId = extractConversationIdFromPath(pathname);
-  const { conversationId: activeConversationId, chatHistory: activeChatHistory, isLoading: isChatLoading } =
-    useChatActivity();
+  const {
+    conversationId: activeConversationId,
+    chatHistory: activeChatHistory,
+    isLoading: isChatLoading,
+  } = useChatActivity();
   const { focusZone } = useSidebarFocusContext();
   const conversationElementRefs = useRef(new Map<string, HTMLDivElement>());
 
@@ -101,19 +104,30 @@ export function NavChats(): React.JSX.Element {
         items: matches,
       },
     ];
-  }, [activeChatMatchInfo, baseGroups, contentSearchResults, conversationsWithActivity, isSearchActive, searchQuery]);
+  }, [
+    activeChatMatchInfo,
+    baseGroups,
+    contentSearchResults,
+    conversationsWithActivity,
+    isSearchActive,
+    searchQuery,
+  ]);
 
   const visibleConversationIds = useMemo(
-    () => displayedGroups.flatMap((group) => group.items.map((conversation) => conversation.id)),
-    [displayedGroups]
+    () =>
+      displayedGroups.flatMap((group) => {
+        const isCollapsible = !isSearchActive && displayedGroups.length > 1;
+        if (isCollapsible && collapsedGroups.has(group.key)) {
+          return [];
+        }
+
+        return group.items.map((conversation) => conversation.id);
+      }),
+    [collapsedGroups, displayedGroups, isSearchActive]
   );
 
   const focusedConversationId =
     selectionState.selected ?? routeConversationId ?? visibleConversationIds[0] ?? null;
-  const focusedConversationIndex = focusedConversationId
-    ? visibleConversationIds.indexOf(focusedConversationId)
-    : -1;
-
   const { zoneRef, shouldMoveDOMFocus } = useFocusZone({
     zoneId: 'navigator',
     focusFirst: () => {
@@ -130,7 +144,10 @@ export function NavChats(): React.JSX.Element {
     }
 
     try {
-      window.localStorage.setItem(COLLAPSED_GROUPS_STORAGE_KEY, JSON.stringify([...collapsedGroups]));
+      window.localStorage.setItem(
+        COLLAPSED_GROUPS_STORAGE_KEY,
+        JSON.stringify([...collapsedGroups])
+      );
     } catch {
       // ignore storage write errors
     }
@@ -221,7 +238,10 @@ export function NavChats(): React.JSX.Element {
       focusZone('navigator', { intent: 'click', moveFocus: false });
 
       if (event.button === 2) {
-        if (isMultiSelectActive(selectionState) && !selectionState.selectedIds.has(conversationId)) {
+        if (
+          isMultiSelectActive(selectionState) &&
+          !selectionState.selectedIds.has(conversationId)
+        ) {
           setSelectionState((current) => toggleSelect(current, conversationId, index));
         }
         return;
@@ -315,17 +335,27 @@ export function NavChats(): React.JSX.Element {
 
       focusConversationAtIndex(nextIndex);
     },
-    [focusConversationAtIndex, focusZone, handleConversationClick, selectionState, updateSingleSelection, visibleConversationIds]
+    [
+      focusConversationAtIndex,
+      focusZone,
+      handleConversationClick,
+      selectionState,
+      updateSingleSelection,
+      visibleConversationIds,
+    ]
   );
 
-  const registerConversationElement = useCallback((conversationId: string, element: HTMLDivElement | null) => {
-    if (element) {
-      conversationElementRefs.current.set(conversationId, element);
-      return;
-    }
+  const registerConversationElement = useCallback(
+    (conversationId: string, element: HTMLDivElement | null) => {
+      if (element) {
+        conversationElementRefs.current.set(conversationId, element);
+        return;
+      }
 
-    conversationElementRefs.current.delete(conversationId);
-  }, []);
+      conversationElementRefs.current.delete(conversationId);
+    },
+    []
+  );
 
   return (
     <>

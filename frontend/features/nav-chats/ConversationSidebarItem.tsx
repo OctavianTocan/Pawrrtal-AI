@@ -1,6 +1,5 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
 import type { MouseEvent, ReactNode } from 'react';
 import { formatConversationAge } from '@/lib/format-conversation-age';
 import { ConversationSidebarItemView } from './ConversationSidebarItemView';
@@ -8,6 +7,8 @@ import { ConversationSidebarItemView } from './ConversationSidebarItemView';
 interface ConversationSidebarItemProps {
   /** The conversation ID. */
   id: string;
+  /** Whether this row is the active/focused row. */
+  isSelected: boolean;
   /** The conversation title (may include Calligraph or highlight wrapping). */
   title: ReactNode;
   /** ISO 8601 timestamp of the conversation's last update. */
@@ -45,6 +46,7 @@ interface ConversationSidebarItemProps {
  */
 export function ConversationSidebarItem({
   id,
+  isSelected,
   title,
   updatedAt,
   icon,
@@ -59,9 +61,7 @@ export function ConversationSidebarItem({
   onRename,
   onDelete,
 }: ConversationSidebarItemProps): React.JSX.Element {
-  const pathname = usePathname();
   const href = `/c/${id}`;
-  const isSelected = pathname === href;
   const age = formatConversationAge(updatedAt);
 
   // Compute absolute URL for clipboard operations. No memoization needed —
