@@ -78,8 +78,8 @@ async def get_user_manager(
 # --- Transport & Strategy ---------------------------------------------------
 
 should_secure_cookie = (
-    settings.is_production
-)  # Use secure cookies in production, but allow non-secure in development
+    settings.cookie_secure if settings.cookie_secure is not None else settings.is_production
+)  # Use secure cookies if requested, otherwise fallback to is_production
 
 cookie_transport = CookieTransport(
     cookie_name="session_token",

@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     cookie_domain: str | None = None
     # Controls cross-site cookie behavior ("lax", "strict", "none"). Set to "none" (with secure=True) to allow auth across completely different domains (like Vercel previews).
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    # If True, forces the Secure flag on cookies. If False, forces HTTP allowed. If None, auto-detects based on is_production.
+    cookie_secure: bool | None = None
     # Optional secret required to register a new account. When set, anyone
     # attempting to register must supply this value as ``invite_code`` in the
     # request body. Leave unset (or empty) to allow open registration.
@@ -51,8 +53,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
-        if self.cookie_samesite == "none" and not self.is_production:
-            raise ValueError("cookie_samesite='none' requires HTTPS (which is tied to is_production in this template).")
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
+        if self.cookie_samesite == "none" and not secure:
+            raise ValueError("cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod).")
         return self
 
     @property
