@@ -4,6 +4,7 @@ from typing import List
 from agno.agent import Message
 from agno.agent.agent import Agent
 from agno.db.postgres.postgres import PostgresDb
+from agno.db.sqlite.sqlite import SqliteDb
 from agno.models.google.gemini import Gemini
 from agno.run.agent import RunOutput
 from agno.tools.local_file_system import LocalFileSystemTools
@@ -12,8 +13,12 @@ from agno.tools.mcp.mcp import MCPTools
 from app.core.config import settings
 from app.core.workspace import get_user_workspace
 
+
 # Initialize the Agno database.
-agno_db = PostgresDb(settings.db_url_sync)
+if settings.is_sqlite:
+    agno_db = SqliteDb(db_url=settings.db_url_sync)
+else:
+    agno_db = PostgresDb(db_url=settings.db_url_sync)
 
 
 def create_agent(

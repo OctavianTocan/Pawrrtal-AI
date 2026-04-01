@@ -66,20 +66,57 @@ class Settings(BaseSettings):
         return self.env == "prod"
 
     @property
+    def _normalized_database_url(self) -> str:
+        """Return the configured database URL in a normalized form."""
+        from urllib.parse import urlparse
+        
+        url = self.database_url.strip()
+        if not url:
+            return "sqlite:///./nexus.db"
+
+        parsed = urlparse(url)
+        if parsed.scheme.startswith(("postgresql", "sqlite")):
+            return url
+
+        if url.endswith(".db") or "/" in url or url.startswith("."):
+            return f"sqlite:///{url}"
+
+        return url
+
+    @property
+    def is_sqlite(self) -> bool:
+        """Whether the configured database uses SQLite."""
+        from urllib.parse import urlparse
+        return urlparse(self._normalized_database_url).scheme.startswith("sqlite")
+
+    @property
     def db_url_sync(self) -> str:
         """
         Returns the database URL formatted for synchronous connections. If the original database URL starts with "postgresql+psycopg://", it replaces it with "postgresql://" to ensure compatibility with sync database drivers.
         """
-        return self.db_url_async
+        if not self.database_url.strip():
+            return "sqlite:///./nexus.db"
+
+        url = self._normalized_database_url
+        if url.startswith("postgresql+psycopg://"):
+            return url.replace("postgresql+psycopg://", "postgresql://", 1)
+        if url.startswith("sqlite+aiosqlite://"):
+            return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+        return url
 
     @property
     def db_url_async(self) -> str:
         """
         Returns the database URL formatted for asynchronous connections. If the original database URL starts with "postgresql://", it replaces it with "postgresql+psycopg://" to ensure compatibility with async database drivers.
         """
-        url = self.database_url
+        if not self.database_url.strip():
+            return "sqlite+aiosqlite:///./nexus.db"
+
+        url = self._normalized_database_url
         if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+psycopg://")
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        if url.startswith("sqlite://") and not url.startswith("sqlite+aiosqlite://"):
+            return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
         return url
 
 
