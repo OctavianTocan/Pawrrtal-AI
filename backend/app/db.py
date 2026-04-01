@@ -16,6 +16,9 @@ from sqlalchemy.orm import DeclarativeBase
 from app.core.config import settings
 
 
+engine_kwargs = {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
+
+
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy ORM models."""
 
@@ -28,7 +31,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     pass
 
 
-engine = create_async_engine(settings.db_url_async)
+engine = create_async_engine(settings.db_url_async, **engine_kwargs)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
