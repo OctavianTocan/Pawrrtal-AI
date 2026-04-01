@@ -7,10 +7,10 @@ through the API layer.
 
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi_users import schemas
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -79,6 +79,18 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+
+
+ConversationTitle = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
+]
+
+
+class ConversationUpdate(BaseModel):
+    """Request schema for updating mutable conversation fields."""
+
+    title: ConversationTitle
 
 
 # --- Chat schemas -------------------------------------------------------------

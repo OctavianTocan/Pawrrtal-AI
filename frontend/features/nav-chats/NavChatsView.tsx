@@ -32,6 +32,12 @@ export interface NavChatsViewProps {
   onToggleGroup: (groupKey: string) => void;
   /** Navigates to the root page to start a new session. */
   onNewSession: () => void;
+  /** Navigates to a conversation and closes mobile sidebar. */
+  onNavigate: (href: string) => void;
+  /** Opens the rename dialog for a conversation. */
+  onRename: (conversationId: string) => void;
+  /** Opens the delete confirmation for a conversation. */
+  onDelete: (conversationId: string) => void;
 }
 
 /**
@@ -52,6 +58,9 @@ export function NavChatsView({
   collapsedGroups,
   onToggleGroup,
   onNewSession,
+  onNavigate,
+  onRename,
+  onDelete,
 }: NavChatsViewProps): React.JSX.Element {
   // --- content resolution ---
   // Computed outside JSX to avoid hard-to-read nested ternaries.
@@ -117,6 +126,9 @@ export function NavChatsView({
                         }
                         updatedAt={conversation.updated_at}
                         showSeparator={index > 0}
+                        onNavigate={onNavigate}
+                        onRename={onRename}
+                        onDelete={onDelete}
                       />
                     ))}
               </Fragment>

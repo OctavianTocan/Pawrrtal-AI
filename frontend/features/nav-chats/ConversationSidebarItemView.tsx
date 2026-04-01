@@ -37,6 +37,10 @@ export interface ConversationSidebarItemViewProps {
   onClick: () => void;
   /** Called to navigate in a menu item. */
   onNavigate: (href: string) => void;
+  /** Opens the rename flow for this conversation. */
+  onRename: () => void;
+  /** Opens the delete confirmation for this conversation. */
+  onDelete: () => void;
 }
 
 /** Placeholder status icon for a conversation row (empty circle). */
@@ -70,10 +74,14 @@ function ConversationMenuContent({
   href,
   absoluteHref,
   onNavigate,
+  onRename,
+  onDelete,
 }: {
   href: string;
   absoluteHref: string;
   onNavigate: (href: string) => void;
+  onRename: () => void;
+  onDelete: () => void;
 }): React.JSX.Element {
   const { MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuSubContent } = useMenuComponents();
 
@@ -143,7 +151,7 @@ function ConversationMenuContent({
       <MenuSeparator />
 
       {/* Rename */}
-      <MenuItem onSelect={stubAction('Rename')}>
+      <MenuItem onSelect={onRename}>
         <Pencil className="h-3.5 w-3.5" />
         <span className="flex-1">Rename</span>
       </MenuItem>
@@ -195,7 +203,7 @@ function ConversationMenuContent({
       <MenuSeparator />
 
       {/* Delete */}
-      <MenuItem variant="destructive" onSelect={stubAction('Delete')}>
+      <MenuItem variant="destructive" onSelect={onDelete}>
         <Trash2 className="h-3.5 w-3.5" />
         <span className="flex-1">Delete</span>
       </MenuItem>
@@ -219,6 +227,8 @@ export function ConversationSidebarItemView({
   absoluteHref,
   onClick,
   onNavigate,
+  onRename,
+  onDelete,
 }: ConversationSidebarItemViewProps): React.JSX.Element {
   return (
     <SidebarMenuItem>
@@ -239,6 +249,8 @@ export function ConversationSidebarItemView({
             href={href}
             absoluteHref={absoluteHref}
             onNavigate={onNavigate}
+            onRename={onRename}
+            onDelete={onDelete}
           />
         }
       />
