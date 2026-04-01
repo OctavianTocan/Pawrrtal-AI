@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     cors_origins: list[str]
     cors_origin_regex: str | None = None
     # The domain to set for cookies (e.g., "example.com"). This is important for authentication cookies to work correctly across subdomains.
-    cookie_domain: str
+    cookie_domain: str | None = None
+    # Controls cross-site cookie behavior ("lax", "strict", "none"). Set to "none" (with secure=True) to allow auth across completely different domains (like Vercel previews).
+    cookie_samesite: str = "lax"
     # Optional secret required to register a new account. When set, anyone
     # attempting to register must supply this value as ``invite_code`` in the
     # request body. Leave unset (or empty) to allow open registration.

@@ -4,7 +4,7 @@ User management and authentication using FastAPI-Users. This module defines the 
 
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Optional
+from typing import Optional, Any
 
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi_users import (
@@ -85,7 +85,7 @@ cookie_transport = CookieTransport(
     cookie_name="session_token",
     cookie_httponly=True,
     cookie_secure=should_secure_cookie,
-    cookie_samesite="lax",
+    cookie_samesite=cast(Any, settings.cookie_samesite),
     cookie_max_age=3600,
     cookie_domain=settings.cookie_domain,
 )
