@@ -1,8 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import type { AgnoMessage } from '@/lib/types';
+import { useChatActivity } from '@/features/nav-chats/chat-activity-context';
 import ChatView from './ChatView';
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
@@ -34,6 +35,7 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
   const createConversationMutation = useCreateConversation(conversationId);
   const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
   const router = useRouter();
+  const { setActiveConversation, clearActiveConversation } = useChatActivity();
 
   /**
    * Tracks whether we've already updated the URL to `/c/:id`.
@@ -106,6 +108,16 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       router.replace(`/c/${conversationId}`);
     }
   };
+
+  useEffect(() => {
+    setActiveConversation({
+      conversationId,
+      chatHistory,
+      isLoading,
+    });
+  }, [chatHistory, conversationId, isLoading, setActiveConversation]);
+
+  useEffect(() => () => clearActiveConversation(conversationId), [clearActiveConversation, conversationId]);
 
   /** Updates the controlled message state as the user types. */
   const onUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
