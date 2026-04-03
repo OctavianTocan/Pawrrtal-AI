@@ -6,6 +6,14 @@
     @param created_at - The date and time the conversation was created.
     @param updated_at - The date and time the conversation was last updated.
 */
+export type ConversationLabel = {
+	id?: string;
+	name: string;
+	color?: string;
+	value?: string;
+	valueType?: string;
+};
+
 export interface Conversation {
 	// The ID of the conversation.
 	id: string;
@@ -17,6 +25,12 @@ export interface Conversation {
 	created_at: string;
 	// The date and time the conversation was last updated.
 	updated_at: string;
+	// Optional sidebar metadata ported from Craft-style session rows.
+	is_processing?: boolean;
+	has_unread_meta?: boolean;
+	last_message_role?: string | null;
+	pending_prompt_count?: number;
+	labels?: Array<ConversationLabel | string>;
 }
 
 /**
