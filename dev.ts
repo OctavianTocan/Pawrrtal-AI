@@ -13,11 +13,13 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 
 // --Here, "--project backend" ensures we use the correct uv.lock file.--
-// This starts both dev servers at the same time and combines the output.
-await Promise.all([
-  $`bun --cwd frontend dev`,
-  $`portless api.app.nexus-ai --app-port 8000 --force uv run --project backend fastapi dev backend/main.py`,
-]);
+// Start both dev servers in the background (don't wait for them to complete).
+// They run indefinitely, so we fire them off and let them output to stdout/stderr.
+const frontendPromise = $`bun --cwd frontend dev`.quiet(false);
+const backendPromise =
+  $`portless api.app.nexus-ai --app-port 8000 --force uv run --project backend fastapi dev backend/main.py`.quiet(
+    false
+  );
 
 // Auto-open browser after servers have had time to initialize
 // Wait 2-3 seconds to ensure Next.js is fully ready before opening
@@ -32,3 +34,6 @@ setTimeout(() => {
     console.log(`🌐 Browser opened at ${frontendUrl}`);
   }
 }, 2500);
+
+// Let the servers run indefinitely
+await Promise.all([frontendPromise, backendPromise]);
