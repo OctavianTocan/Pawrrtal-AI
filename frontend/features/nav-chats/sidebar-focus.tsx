@@ -67,7 +67,12 @@ export function SidebarFocusProvider({ children }: { children: React.ReactNode }
       if (zone.focusFirst) {
         zone.focusFirst();
       } else {
-        zone.ref.current?.focus();
+        // Ensure the zone root is focusable before attempting focus.
+        const el = zone.ref.current;
+        if (el && !el.hasAttribute('tabindex')) {
+          el.setAttribute('tabindex', '-1');
+        }
+        el?.focus();
       }
 
       queueMicrotask(() => {
@@ -78,14 +83,26 @@ export function SidebarFocusProvider({ children }: { children: React.ReactNode }
 
   const focusNextZone = useCallback(() => {
     const currentIndex = focusState.zone ? ZONE_ORDER.indexOf(focusState.zone) : -1;
-    const nextZone = ZONE_ORDER[(currentIndex + 1 + ZONE_ORDER.length) % ZONE_ORDER.length] as FocusZoneId;
-    focusZone(nextZone, { intent: 'keyboard', moveFocus: true });
+    // Skip unregistered zones so navigation doesn't get stuck.
+    for (let i = 1; i <= ZONE_ORDER.length; i++) {
+      const candidate = ZONE_ORDER[(currentIndex + i) % ZONE_ORDER.length] as FocusZoneId;
+      if (zonesRef.current.has(candidate)) {
+        focusZone(candidate, { intent: 'keyboard', moveFocus: true });
+        return;
+      }
+    }
   }, [focusState.zone, focusZone]);
 
   const focusPreviousZone = useCallback(() => {
     const currentIndex = focusState.zone ? ZONE_ORDER.indexOf(focusState.zone) : 0;
-    const prevZone = ZONE_ORDER[(currentIndex - 1 + ZONE_ORDER.length) % ZONE_ORDER.length] as FocusZoneId;
-    focusZone(prevZone, { intent: 'keyboard', moveFocus: true });
+    // Skip unregistered zones so navigation doesn't get stuck.
+    for (let i = 1; i <= ZONE_ORDER.length; i++) {
+      const candidate = ZONE_ORDER[(currentIndex - i + ZONE_ORDER.length) % ZONE_ORDER.length] as FocusZoneId;
+      if (zonesRef.current.has(candidate)) {
+        focusZone(candidate, { intent: 'keyboard', moveFocus: true });
+        return;
+      }
+    }
   }, [focusState.zone, focusZone]);
 
   const value = useMemo<FocusContextValue>(

@@ -5,6 +5,9 @@ import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
 import type { AgnoMessage, Conversation } from '@/lib/types';
 
+/** Maximum number of conversation message caches to retain. Oldest entries are evicted first. */
+const MAX_CACHE_SIZE = 100;
+
 export type ContentSearchResult = {
   matchCount: number;
   snippet: string;
@@ -62,11 +65,11 @@ function fuzzyScore(title: string, query: string): number {
   return 0;
 }
 
+// TODO: Wire activeChatMatchInfo into ranking logic (boost active chat when it has content matches).
 export function rankConversationsForSearch(
   conversations: Conversation[],
   query: string,
   contentSearchResults: Map<string, ContentSearchResult>,
-  _activeChatMatchInfo?: { sessionId: string; count: number } | null
 ): Conversation[] {
   return [...conversations].sort((left, right) => {
     const leftScore = fuzzyScore(left.title, query);
@@ -114,6 +117,10 @@ export function useConversationSearch({
   const trimmedQuery = searchQuery.trim();
   const isSearchActive = trimmedQuery.length >= 2;
 
+  // TODO: Cache keys by conversation.id only. If message content can change under
+  // the same ID (edits, deletions), stale results will be returned. Consider keying
+  // by id+updated_at or invalidating on mutation if this becomes an issue.
+
   useEffect(() => {
     if (!isSearchActive) {
       setContentSearchResults(new Map());
@@ -127,6 +134,9 @@ export function useConversationSearch({
         .map((conversation) => conversation.id)
         .filter((conversationId) => !cacheRef.current.has(conversationId));
 
+      // TODO: Promise.all fetches all uncached conversations concurrently. If the
+      // conversation list grows large (hundreds+), consider adding a concurrency
+      // limiter to avoid overwhelming the backend.
       if (missingConversationIds.length > 0) {
         await Promise.all(
           missingConversationIds.map(async (conversationId) => {
@@ -136,8 +146,16 @@ export function useConversationSearch({
               );
               const payload = (await response.json()) as AgnoMessage[];
               cacheRef.current.set(conversationId, payload);
+
+              // Evict oldest entries if cache exceeds the cap.
+              if (cacheRef.current.size > MAX_CACHE_SIZE) {
+                const firstKey = cacheRef.current.keys().next().value;
+                if (firstKey !== undefined) {
+                  cacheRef.current.delete(firstKey);
+                }
+              }
             } catch {
-              cacheRef.current.set(conversationId, []);
+              // Don't cache failed fetches so the next search retries.
             }
           })
         );

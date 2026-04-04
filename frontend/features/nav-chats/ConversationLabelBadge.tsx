@@ -21,7 +21,18 @@ export function normalizeConversationLabel(label: ConversationLabel | string): C
     return label;
   }
 
-  const [namePart = label, valuePart] = label.split(':');
+  const separatorIndex = label.indexOf(':');
+
+  let namePart: string;
+  let valuePart: string | undefined;
+
+  if (separatorIndex === -1) {
+    namePart = label;
+  } else {
+    namePart = label.slice(0, separatorIndex);
+    valuePart = label.slice(separatorIndex + 1);
+  }
+
   return {
     id: namePart.trim().toLowerCase().replace(/\s+/g, '-'),
     name: namePart.trim(),
@@ -41,9 +52,15 @@ export function ConversationLabelBadge({
     <div
       role="presentation"
       className="shrink-0 h-[18px] max-w-[120px] px-1.5 text-[10px] font-medium rounded flex items-center whitespace-nowrap gap-0.5"
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
       onMouseDown={(event) => {
         event.stopPropagation();
         event.preventDefault();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
       }}
       style={style}
     >
