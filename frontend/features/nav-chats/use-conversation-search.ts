@@ -1,3 +1,17 @@
+/**
+ * @file use-conversation-search.ts
+ *
+ * Full-text search across conversation titles and message content.
+ *
+ * Title matching uses fuzzy scoring so partial/misspelled queries still surface
+ * relevant conversations. Content matching fetches each conversation's message
+ * history on-demand and caches it locally so repeated searches don't re-fetch.
+ *
+ * The cache is capped at MAX_CACHE_SIZE to prevent unbounded memory growth
+ * in long-running sessions. Failed fetches are intentionally not cached so
+ * transient network errors don't permanently block a conversation from being
+ * searchable.
+ */
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -5,7 +19,11 @@ import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
 import type { AgnoMessage, Conversation } from '@/lib/types';
 
-/** Maximum number of conversation message caches to retain. Oldest entries are evicted first. */
+/**
+ * Maximum cached conversation histories. When exceeded, the oldest entry
+ * (first inserted) is evicted. Keeps memory bounded in sessions where the
+ * user searches many different conversations over time.
+ */
 const MAX_CACHE_SIZE = 100;
 
 export type ContentSearchResult = {
@@ -65,7 +83,14 @@ function fuzzyScore(title: string, query: string): number {
   return 0;
 }
 
-// TODO: Wire activeChatMatchInfo into ranking logic (boost active chat when it has content matches).
+/**
+ * Sort conversations by search relevance: title fuzzy score first, then
+ * content match count, then recency as a tiebreaker.
+ *
+ * TODO: Wire activeChatMatchInfo into ranking to boost the active chat
+ * when it has content matches (avoids it dropping below closed conversations
+ * that happen to mention the query more often).
+ */
 export function rankConversationsForSearch(
   conversations: Conversation[],
   query: string,
@@ -98,6 +123,17 @@ export function rankConversationsForSearch(
   });
 }
 
+/**
+ * Hook that powers the sidebar search bar. Manages the fetch/cache lifecycle
+ * for conversation message histories and computes per-conversation match
+ * counts and snippets.
+ *
+ * @param conversations - The full list of conversations visible in the sidebar.
+ * @param searchQuery - Raw text from the search input (trimmed internally).
+ * @param activeConversationId - The conversation open in the chat panel (if any).
+ * @param activeChatHistory - Messages already loaded for the active chat
+ *   (avoids a redundant fetch since the chat panel already has them).
+ */
 export function useConversationSearch({
   conversations,
   searchQuery,

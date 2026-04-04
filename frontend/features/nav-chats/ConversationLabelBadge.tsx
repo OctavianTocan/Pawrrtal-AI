@@ -1,3 +1,16 @@
+/**
+ * @file ConversationLabelBadge.tsx
+ *
+ * Renders a small colored pill for a conversation label in the sidebar.
+ *
+ * Labels can arrive as either structured objects (from the API) or plain
+ * strings (legacy format, e.g. "status:active"). The normalizer handles
+ * both so the rendering path doesn't need to branch.
+ *
+ * The pill intercepts all pointer/click events to prevent accidentally
+ * selecting or navigating the parent conversation row when the user
+ * interacts with the label itself.
+ */
 'use client';
 
 import type { ConversationLabel } from '@/lib/types';
@@ -16,6 +29,11 @@ function resolveBadgeColor(label: ConversationLabel): { backgroundColor: string;
   };
 }
 
+/**
+ * Convert a string label like "status:active" into a structured ConversationLabel.
+ * Splits on the FIRST colon only so values containing colons are preserved intact.
+ * If the label is already an object, returns it unchanged.
+ */
 export function normalizeConversationLabel(label: ConversationLabel | string): ConversationLabel {
   if (typeof label !== 'string') {
     return label;
@@ -40,6 +58,11 @@ export function normalizeConversationLabel(label: ConversationLabel | string): C
   };
 }
 
+/**
+ * Renders a single label as a colored pill. Accepts both structured and
+ * string labels. Stops event propagation so clicking the pill doesn't
+ * trigger the parent row's selection/navigation handler.
+ */
 export function ConversationLabelBadge({
   label,
 }: {

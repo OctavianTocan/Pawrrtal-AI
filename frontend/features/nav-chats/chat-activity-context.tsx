@@ -1,21 +1,46 @@
+/**
+ * @file chat-activity-context.tsx
+ *
+ * Provides a shared context for tracking which conversation is currently active
+ * in the chat panel. The sidebar needs to know this so it can show activity
+ * indicators (loading spinners, unread badges) on the correct row without
+ * prop-drilling through the entire component tree.
+ *
+ * Without this context, the sidebar and the chat panel would need a common
+ * parent to hoist the "active conversation" state into, which doesn't exist
+ * cleanly in the current layout (sidebar and chat are siblings under different
+ * layout regions).
+ */
 'use client';
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import type { AgnoMessage } from '@/lib/types';
 
+/** Snapshot of the conversation currently open in the chat panel. */
 type ActiveConversationState = {
   conversationId: string | null;
   chatHistory: AgnoMessage[];
   isLoading: boolean;
 };
 
+/** Context value exposed to consumers: current state + mutation helpers. */
 type ChatActivityContextValue = ActiveConversationState & {
+  /** Replace the active conversation state entirely (used when opening a chat). */
   setActiveConversation: (state: ActiveConversationState) => void;
+  /**
+   * Clear the active conversation, but only if the given ID matches.
+   * Guards against race conditions where a slow close callback fires
+   * after a new conversation was already opened.
+   */
   clearActiveConversation: (conversationId: string) => void;
 };
 
 const ChatActivityContext = createContext<ChatActivityContextValue | null>(null);
 
+/**
+ * Provides chat activity state to the sidebar and any other component
+ * that needs to know which conversation is currently open.
+ */
 export function ChatActivityProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const [state, setState] = useState<ActiveConversationState>({
     conversationId: null,
@@ -41,6 +66,10 @@ export function ChatActivityProvider({ children }: { children: React.ReactNode }
   return <ChatActivityContext.Provider value={value}>{children}</ChatActivityContext.Provider>;
 }
 
+/**
+ * Access the chat activity context. Must be called inside a ChatActivityProvider.
+ * @throws If called outside the provider tree.
+ */
 export function useChatActivity(): ChatActivityContextValue {
   const context = useContext(ChatActivityContext);
   if (!context) {
