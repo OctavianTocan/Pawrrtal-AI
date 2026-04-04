@@ -1,22 +1,43 @@
-/*
-    Conversation type for the frontend.
-    @param id - The ID of the conversation.
-    @param user_id - The ID of the user who owns the conversation.
-    @param title - The title of the conversation.
-    @param created_at - The date and time the conversation was created.
-    @param updated_at - The date and time the conversation was last updated.
-*/
+/**
+ * Conversation type for the frontend.
+ *
+ * @property id - Unique conversation identifier.
+ * @property user_id - ID of the user who owns the conversation.
+ * @property title - Display title of the conversation.
+ * @property created_at - ISO timestamp of creation.
+ * @property updated_at - ISO timestamp of last update.
+ * @property is_processing - Whether the conversation is currently generating a response.
+ * @property has_unread_meta - Whether the sidebar should show an unread indicator.
+ * @property last_message_role - Role of the most recent message in the conversation.
+ * @property pending_prompt_count - Number of queued prompts awaiting processing.
+ * @property labels - Tags or categories assigned to the conversation.
+ */
+
+export type MessageRole = "user" | "assistant" | "plan";
+
+export type ConversationLabel = {
+	id?: string;
+	name: string;
+	color?: string;
+	value?: string;
+	valueType?: string;
+};
+
+/** A label that is either a structured object or a legacy plain string. */
+export type ConversationLabelLike = ConversationLabel | string;
+
 export interface Conversation {
-	// The ID of the conversation.
 	id: string;
-	// The ID of the user who owns the conversation.
 	user_id: string;
-	// The title of the conversation.
 	title: string;
-	// The date and time the conversation was created.
 	created_at: string;
-	// The date and time the conversation was last updated.
 	updated_at: string;
+	// Optional sidebar metadata ported from Craft-style session rows.
+	is_processing?: boolean;
+	has_unread_meta?: boolean;
+	last_message_role?: MessageRole | null;
+	pending_prompt_count?: number;
+	labels?: ConversationLabelLike[];
 }
 
 /**

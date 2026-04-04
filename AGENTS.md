@@ -38,8 +38,9 @@ We rely on `just` as our primary task runner for the repository.
 - **Formatting/linting**: Managed by Biome. Never add `@ts-nocheck` and do not add inline lint suppressions by default. Fix root causes first; only keep a suppression when the code is intentionally correct, the rule cannot express that safely, and the comment explains why.
 - Do not disable `no-explicit-any`; prefer real types, `unknown`, or a narrow adapter/helper instead.
 - Prefer explicit inheritance/composition or helper composition so TypeScript can typecheck.
-- Keep files concise; extract helpers instead of “V2” copies. Aim to keep files under ~700 LOC. Split/refactor when it improves clarity or testability.
+- Keep files concise; extract helpers instead of "V2" copies. Aim to keep files under ~700 LOC. Split/refactor when it improves clarity or testability.
 - **Written English**: Use American spelling and grammar in code, comments, docs, and UI strings (e.g. "color" not "colour", "behavior" not "behaviour", "analyze" not "analyse").
+- **Preserve Documentation**: NEVER remove existing docstrings, JSDoc comments, or explanatory comments when modifying code. Only remove documentation if the code it documents is being deleted, or update it if your changes make it inaccurate. See `.claude/rules/clean-code/preserve-documentation.md` for detailed rules.
 
 ## Commit & Pull Request Guidelines
 
