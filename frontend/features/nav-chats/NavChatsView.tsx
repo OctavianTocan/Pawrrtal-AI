@@ -206,6 +206,7 @@ export function NavChatsView({
         className="pt-1 outline-none"
         role="listbox"
         aria-label="Sessions"
+        aria-multiselectable="true"
         onMouseDown={onNavigatorMouseDown}
       >
         <ul className="flex w-full min-w-0 flex-col gap-0">
@@ -236,7 +237,7 @@ export function NavChatsView({
                       flatIndex += 1;
                       const visibleIndex = flatIndex;
                       const href = `/c/${conversation.id}`;
-                      const isSelected = focusedConversationId === conversation.id;
+                      const isSelected = multiSelectedIds.has(conversation.id);
                       const searchCount =
                         activeChatMatchInfo?.sessionId === conversation.id
                           ? activeChatMatchInfo.count

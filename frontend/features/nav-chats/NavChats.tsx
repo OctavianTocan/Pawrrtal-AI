@@ -260,12 +260,15 @@ export function NavChats(): React.JSX.Element {
       focusZone('navigator', { intent: 'click', moveFocus: false });
 
       if (event.button === 2) {
-        if (
-          isMultiSelectActive(selectionState) &&
-          !selectionState.selectedIds.has(conversationId)
-        ) {
-          setSelectionState((current) => toggleSelect(current, conversationId, index));
-        }
+        setSelectionState((current) => {
+          if (
+            isMultiSelectActive(current) &&
+            !current.selectedIds.has(conversationId)
+          ) {
+            return toggleSelect(current, conversationId, index);
+          }
+          return current;
+        });
         return;
       }
 
@@ -283,7 +286,7 @@ export function NavChats(): React.JSX.Element {
 
       updateSingleSelection(conversationId, index);
     },
-    [focusZone, selectionState, updateSingleSelection, visibleConversationIds]
+    [focusZone, updateSingleSelection, visibleConversationIds]
   );
 
   const handleConversationKeyDown = useCallback(
