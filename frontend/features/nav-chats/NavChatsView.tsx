@@ -249,7 +249,6 @@ export function NavChatsView({
                         <ConversationSidebarItem
                           key={conversation.id}
                           id={conversation.id}
-                          isSelected={isSelected}
                           title={
                             isSearchActive ? (
                               highlightMatch(conversation.title, searchQuery)

@@ -114,8 +114,7 @@ export function NavChats(): React.JSX.Element {
     const matches = rankConversationsForSearch(
       conversationsWithActivity.filter((conversation) => contentSearchResults.has(conversation.id)),
       searchQuery,
-      contentSearchResults,
-      activeChatMatchInfo
+      contentSearchResults
     );
 
     return [
