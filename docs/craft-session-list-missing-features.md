@@ -1,8 +1,8 @@
 # Craft Session List: missing features extracted from source
 
-Source repo inspected: `~/.openclaw/workspace/_local/ai-nexus-craft-source`
+Source: Craft upstream repository (internal). Consult the upstream repo for authoritative implementations.
 
-This doc pulls together the **exact rendering code** and the **state / hook logic** used by Craft for the 5 Session List features currently missing in `ai-nexus`.
+This doc summarizes the relevant rendering behavior and state / hook logic used by Craft for the 5 Session List features currently missing in `ai-nexus`, with upstream file paths noted for reference.
 
 ---
 
@@ -715,7 +715,7 @@ const getRowProps = useCallback((item: T, index: number) => {
 
 - Multi-select is considered active only when `selectedIds.size > 1`.
 - `shift+click` / `shift+arrow` creates a **contiguous range** from the anchor to the target.
-- The anchor is resilient to reorder because `rangeSelect` re-finds it by `anchorId` if the cached `anchorIndex` goes stale.
+- The anchor is resilient to reordering because `rangeSelect` re-finds it by `anchorId` if the cached `anchorIndex` goes stale.
 - Right-click on an unselected item during multi-select first adds it to the selection, then opens the batch context menu.
 - The visual state is split into:
   - `isSelected` = active/focused row
