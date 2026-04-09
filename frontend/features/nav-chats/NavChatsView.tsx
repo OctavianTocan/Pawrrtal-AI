@@ -47,22 +47,37 @@ export interface NavChatsViewProps {
   onRename: (conversationId: string) => void;
   /** Opens the delete confirmation for a conversation. */
   onDelete: (conversationId: string) => void;
+  /** Ref attached to the navigator (listbox) root for focus-zone registration. */
   navigatorRef: RefObject<HTMLDivElement | null>;
+  /** Per-conversation search results from content matching. */
   contentSearchResults: Map<string, ContentSearchResult>;
+  /** Match info for the currently open chat (searched against loaded messages). */
   activeChatMatchInfo?: { sessionId: string; count: number } | null;
+  /** Set of conversation IDs in the current multi-selection. */
   multiSelectedIds: Set<string>;
+  /** The conversation ID that should appear keyboard-focused. */
   focusedConversationId: string | null;
+  /** Called when a conversation row is clicked (select + navigate). */
   onConversationClick: (conversationId: string, index: number, href: string) => void;
+  /** Called on mouseDown for modifier-key multi-select handling. */
   onConversationMouseDown: (event: ReactMouseEvent, conversationId: string, index: number) => void;
+  /** Keyboard handler for arrow navigation, range-select, and zone switching. */
   onConversationKeyDown: (
     event: ReactKeyboardEvent,
     conversation: Conversation,
     index: number
   ) => void;
+  /** Ref callback to register conversation row elements for programmatic focus. */
   registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
+  /** Claims navigator focus zone on mouseDown (before click fires). */
   onNavigatorMouseDown: () => void;
 }
 
+/**
+ * Renders status indicators for a conversation row: a base circle icon plus
+ * contextual badges for loading, unread messages, pending plans, and queued prompts.
+ * Secondary indicators animate in/out via width + opacity transitions.
+ */
 function ConversationIndicators({
   conversation,
   isProcessing,
@@ -122,6 +137,7 @@ function ConversationIndicators({
   );
 }
 
+/** Small pill showing the number of search matches found in a conversation's history. */
 function SearchCountBadge({ count, isSelected }: { count: number; isSelected: boolean }) {
   return (
     <span

@@ -49,6 +49,7 @@ function loadCollapsedGroups(): Set<string> {
   }
 }
 
+/** Extract the conversation UUID from a `/c/:id` pathname, or null if not on a conversation route. */
 function extractConversationIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/c\/([^/]+)/);
   return match?.[1] ?? null;
@@ -72,6 +73,7 @@ export function NavChats(): React.JSX.Element {
     isLoading: isChatLoading,
   } = useChatActivity();
   const { focusZone } = useSidebarFocusContext();
+  /** Maps conversation IDs to their DOM elements for programmatic focus management. */
   const conversationElementRefs = useRef(new Map<string, HTMLDivElement>());
 
   // --- search ---
@@ -83,6 +85,8 @@ export function NavChats(): React.JSX.Element {
   // --- collapsed state (persisted in localStorage) ---
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups);
 
+  // Merge real-time chat loading state into the conversation list so the sidebar
+  // can show a spinner on the active conversation row without waiting for a refetch.
   const conversationsWithActivity = useMemo(
     () =>
       (conversations ?? []).map((conversation) =>
@@ -106,6 +110,8 @@ export function NavChats(): React.JSX.Element {
     [conversationsWithActivity]
   );
 
+  // When searching, flatten results into a single "Matches" group sorted by relevance.
+  // Otherwise use the default date-based grouping.
   const displayedGroups = useMemo(() => {
     if (!isSearchActive) {
       return baseGroups;
@@ -133,6 +139,8 @@ export function NavChats(): React.JSX.Element {
     searchQuery,
   ]);
 
+  // Flat list of conversation IDs currently visible in the DOM (respects collapsed groups).
+  // Used for keyboard navigation index calculations and range-select boundaries.
   const visibleConversationIds = useMemo(
     () =>
       displayedGroups.flatMap((group) => {
@@ -146,6 +154,7 @@ export function NavChats(): React.JSX.Element {
     [collapsedGroups, displayedGroups, isSearchActive]
   );
 
+  // Resolve which conversation should appear focused: explicit selection > route > first visible.
   const focusedConversationId =
     selectionState.selected ?? routeConversationId ?? visibleConversationIds[0] ?? null;
   const { zoneRef, shouldMoveDOMFocus } = useFocusZone({
@@ -173,6 +182,9 @@ export function NavChats(): React.JSX.Element {
     }
   }, [collapsedGroups]);
 
+  // Sync selection state when the route changes (e.g. user clicks a link or
+  // navigates via browser back/forward). Skips when multi-select is active so
+  // route changes from clicking a selected item don't collapse the selection.
   useEffect(() => {
     if (!routeConversationId) {
       return;
@@ -188,6 +200,8 @@ export function NavChats(): React.JSX.Element {
     }
   }, [routeConversationId, selectionState, visibleConversationIds]);
 
+  // Move DOM focus to the focused conversation when the focus-zone system
+  // signals that a keyboard-initiated focus change occurred.
   useEffect(() => {
     if (!shouldMoveDOMFocus) {
       return;
@@ -228,6 +242,7 @@ export function NavChats(): React.JSX.Element {
     handleDeleteDialogOpenChange,
   } = useConversationActions(conversations);
 
+  /** Move DOM focus to the conversation at a given index in the visible list. */
   const focusConversationAtIndex = useCallback(
     (index: number) => {
       const clampedIndex = Math.max(0, Math.min(index, visibleConversationIds.length - 1));
@@ -241,10 +256,12 @@ export function NavChats(): React.JSX.Element {
     [visibleConversationIds]
   );
 
+  /** Select exactly one conversation and update the selection anchor. */
   const updateSingleSelection = useCallback((conversationId: string, index: number) => {
     setSelectionState(singleSelect(conversationId, index));
   }, []);
 
+  /** Handle a normal click on a conversation row: select it, navigate to it. */
   const handleConversationClick = useCallback(
     (conversationId: string, index: number, href: string) => {
       focusZone('navigator', { intent: 'click', moveFocus: false });
@@ -254,16 +271,20 @@ export function NavChats(): React.JSX.Element {
     [focusZone, navigateTo, updateSingleSelection]
   );
 
+  /**
+   * Handle mouseDown with modifier detection for multi-select.
+   * - Right-click (button 2): add to selection if multi-select is active.
+   * - Cmd/Ctrl+Click: toggle individual item.
+   * - Shift+Click: range-select from anchor to target.
+   * - Plain click: single-select (handled on click, not mouseDown).
+   */
   const handleConversationMouseDown = useCallback(
     (event: ReactMouseEvent, conversationId: string, index: number) => {
       focusZone('navigator', { intent: 'click', moveFocus: false });
 
       if (event.button === 2) {
         setSelectionState((current) => {
-          if (
-            isMultiSelectActive(current) &&
-            !current.selectedIds.has(conversationId)
-          ) {
+          if (isMultiSelectActive(current) && !current.selectedIds.has(conversationId)) {
             return toggleSelect(current, conversationId, index);
           }
           return current;
@@ -288,6 +309,12 @@ export function NavChats(): React.JSX.Element {
     [focusZone, updateSingleSelection, visibleConversationIds]
   );
 
+  /**
+   * Keyboard navigation handler for the conversation list.
+   * Arrow Up/Down: move focus. Shift+Arrow: extend range selection.
+   * Arrow Left/Right: jump to sidebar/chat focus zones.
+   * Cmd+A: select all. Escape: clear multi-select. Enter/Space: navigate.
+   */
   const handleConversationKeyDown = useCallback(
     (event: ReactKeyboardEvent, conversation: Conversation, index: number) => {
       if (event.key === 'ArrowLeft') {
@@ -369,6 +396,7 @@ export function NavChats(): React.JSX.Element {
     ]
   );
 
+  /** Ref callback to register/unregister a conversation row's DOM element for focus management. */
   const registerConversationElement = useCallback(
     (conversationId: string, element: HTMLDivElement | null) => {
       if (element) {

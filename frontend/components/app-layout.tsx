@@ -11,8 +11,8 @@
 'use client';
 
 import React from 'react';
-import { NavChats } from '@/features/nav-chats/NavChats';
 import { ChatActivityProvider } from '@/features/nav-chats/chat-activity-context';
+import { NavChats } from '@/features/nav-chats/NavChats';
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/sidebar-focus';
 import { NewSessionButton } from './new-session-button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
@@ -29,14 +29,28 @@ import {
   useSidebar,
 } from './ui/sidebar';
 
+/** Duration of the sidebar collapse/expand CSS transition in ms. */
 const COLLAPSE_ANIMATION_DURATION_MS = 250;
 
-function SidebarFocusShell({ children, className }: { children: React.ReactNode; className?: string }) {
+/**
+ * Wraps sidebar content in a focus zone so keyboard navigation (Tab/Shift+Tab)
+ * can jump directly to the sidebar region instead of walking every focusable element.
+ * Focuses the first interactive child (input or button) when the zone receives focus.
+ */
+function SidebarFocusShell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   const { zoneRef } = useFocusZone({
     zoneId: 'sidebar',
     focusFirst: () => {
       const root = zoneRef.current;
-      const target = root?.querySelector<HTMLElement>('input, button, [tabindex]:not([tabindex="-1"])');
+      const target = root?.querySelector<HTMLElement>(
+        'input, button, [tabindex]:not([tabindex="-1"])'
+      );
       target?.focus();
     },
   });
@@ -48,12 +62,19 @@ function SidebarFocusShell({ children, className }: { children: React.ReactNode;
   );
 }
 
+/**
+ * Wraps the chat panel in a focus zone so keyboard navigation can jump
+ * directly into the chat area. Targets the textarea or textbox first,
+ * falling back to any focusable element.
+ */
 function ChatFocusShell({ children }: { children: React.ReactNode }) {
   const { zoneRef } = useFocusZone({
     zoneId: 'chat',
     focusFirst: () => {
       const root = zoneRef.current;
-      const target = root?.querySelector<HTMLElement>('textarea, [role="textbox"], button, [tabindex]:not([tabindex="-1"])');
+      const target = root?.querySelector<HTMLElement>(
+        'textarea, [role="textbox"], button, [tabindex]:not([tabindex="-1"])'
+      );
       target?.focus();
     },
   });
@@ -65,12 +86,24 @@ function ChatFocusShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Sidebar content wrapper with conditional resizable layout.
+ * Renders resizable panels on desktop, plain content on mobile.
+ */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { isMobile, state, setState, desktopWidth, setDesktopWidth } = useSidebar();
   const panelGroupId = React.useId();
   const sidebarPanelRef = usePanelRef();
+
+  // Guards onResize from syncing state while a programmatic collapse/expand
+  // animation is in-flight — without this, ResizeObserver fires intermediate
+  // sizes during the CSS flex-grow transition, causing a feedback loop that
+  // fights the collapse/expand.
   const isAnimatingRef = React.useRef(false);
 
+  // Drive the panel's collapse/expand from the sidebar context state
+  // so that the toggle button, keyboard shortcut, etc. all work through
+  // the library's layout engine (smooth flex transitions) instead of CSS display:none.
   React.useEffect(() => {
     const panel = sidebarPanelRef.current;
     if (!panel) return;
@@ -78,6 +111,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     if (state === 'collapsed' && !panel.isCollapsed()) {
       isAnimatingRef.current = true;
       panel.collapse();
+      // Clear after CSS transition completes
       setTimeout(() => {
         isAnimatingRef.current = false;
       }, COLLAPSE_ANIMATION_DURATION_MS);
@@ -90,6 +124,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     }
   }, [state, sidebarPanelRef]);
 
+  // Mobile: Sidebar renders as a Sheet overlay alongside main content
   if (isMobile) {
     return (
       <>
@@ -120,6 +155,8 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
         collapsible={true}
         collapsedSize={0}
         onResize={(size) => {
+          // Skip state sync during programmatic collapse/expand animation
+          // to prevent ResizeObserver intermediate values from fighting the transition
           if (!isAnimatingRef.current) {
             if (size.inPixels === 0 && state !== 'collapsed') {
               setState('collapsed');
@@ -127,17 +164,20 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
               setState('expanded');
             }
           }
+          // Always persist non-zero widths
           if (size.inPixels > 0) {
             setDesktopWidth(size.inPixels);
           }
         }}
       >
-        <SidebarFocusShell
-          className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden"
-        >
+        {/* Content keeps min-width so layout never reflows during collapse —
+          the panel clips via overflow:hidden and the content fades out. */}
+        <SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden">
           <div
             style={{
               opacity: state === 'collapsed' ? 0 : 1,
+              // Disable pointer events when invisible to prevent click-dead-zones
+              // per the hidden-overlay-pointer-events rule.
               pointerEvents: state === 'collapsed' ? 'none' : 'auto',
               transition: 'opacity 150ms ease-out',
             }}
@@ -162,6 +202,11 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
   );
 }
 
+/**
+ * Main application layout with resizable sidebar and content area.
+ * Provides full-page structure with sidebar navigation and responsive behavior.
+ * Wraps everything in focus-zone and chat-activity providers.
+ */
 export function AppLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <SidebarProvider>

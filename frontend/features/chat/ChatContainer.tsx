@@ -2,8 +2,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
-import type { AgnoMessage } from '@/lib/types';
 import { useChatActivity } from '@/features/nav-chats/chat-activity-context';
+import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
@@ -109,6 +109,9 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
     }
   };
 
+  // Keep the sidebar's chat-activity context in sync with this chat's state.
+  // Fires on every history/loading change so the sidebar can show spinners,
+  // unread badges, and content-search matches for the active conversation.
   useEffect(() => {
     setActiveConversation({
       conversationId,
@@ -117,7 +120,12 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
     });
   }, [chatHistory, conversationId, isLoading, setActiveConversation]);
 
-  useEffect(() => () => clearActiveConversation(conversationId), [clearActiveConversation, conversationId]);
+  // Clear activity state on unmount, guarded by conversationId so a stale
+  // cleanup doesn't clobber a newly opened conversation.
+  useEffect(
+    () => () => clearActiveConversation(conversationId),
+    [clearActiveConversation, conversationId]
+  );
 
   /** Updates the controlled message state as the user types. */
   const onUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
