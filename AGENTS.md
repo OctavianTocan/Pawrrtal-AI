@@ -30,8 +30,8 @@ We rely on `just` as our primary task runner for the repository.
 - **Auto-commit**: `just commit` (auto-generates conventional commit).
 - **Push**: `just push` (runs push with auth switching).
 - **Terminology**:
-  - "gate" means a verification command or command set that must be green for the decision you are making.
-  - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
+    - "gate" means a verification command or command set that must be green for the decision you are making.
+    - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
 
 ## Coding Style & Naming Conventions
 
@@ -66,9 +66,9 @@ We rely on `just` as our primary task runner for the repository.
 - **Multi-agent safety:** running multiple agents is OK as long as each agent has its own session.
 - **Multi-agent safety:** when you see unrecognized files, keep going; focus on your changes and commit only those.
 - Lint/format churn:
-  - If staged+unstaged diffs are formatting-only, auto-resolve without asking.
-  - If commit/push already requested, auto-stage and include formatting-only follow-ups in the same commit.
-  - Only ask when changes are semantic (logic/data/behavior).
+    - If staged+unstaged diffs are formatting-only, auto-resolve without asking.
+    - If commit/push already requested, auto-stage and include formatting-only follow-ups in the same commit.
+    - Only ask when changes are semantic (logic/data/behavior).
 - **Multi-agent safety:** focus reports on your edits; avoid guard-rail disclaimers unless truly blocked; when multiple agents touch the same file, continue if safe; end with a brief “other files present” note only if relevant.
 - Bug investigations: read source code of relevant dependencies and all related local code before concluding; aim for high-confidence root cause.
 - Code style: add brief comments for tricky logic.
