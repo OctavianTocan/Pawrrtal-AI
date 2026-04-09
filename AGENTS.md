@@ -12,6 +12,7 @@
 - **Backend (`backend/`)**: Python FastAPI application. API routes in `backend/app/api/`, database models in `backend/app/models/`, CRUD operations in `backend/app/crud/`.
 - **Docs (`docs/`)**: Project documentation, migration plans, and design specs.
 - **Tasks (`.beans/`)**: Markdown-based task tracking. Update the status of `.beans` files as work is completed.
+- **Rule**: Always use the `beans` CLI (e.g. `beans create`, `beans update`) to manage `.beans` files. Never create or edit them manually.
 - **AI Rules (`.claude/rules/`)**: Strict context and design patterns to follow. Always read and abide by the rules inside `.claude/rules/react/`, `.claude/rules/typescript/`, and `.claude/rules/github-actions/, and .claude/rules/clean-code/` when modifying or creating new code.
 - **Rule**: Frontend code must only communicate with the backend via the established API endpoints (using `useAuthedFetch` or TanStack Query mutations). Do not mix frontend and backend responsibilities.
 - **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching).
