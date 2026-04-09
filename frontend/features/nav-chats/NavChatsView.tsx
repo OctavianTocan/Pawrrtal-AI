@@ -137,6 +137,98 @@ function ConversationIndicators({
   );
 }
 
+/** Renders a single conversation row within a group, computing derived state from search results. */
+function ConversationRow({
+  conversation,
+  index,
+  visibleIndex,
+  isSearchActive,
+  searchQuery,
+  multiSelectedIds,
+  contentSearchResults,
+  activeChatMatchInfo,
+  onConversationClick,
+  onConversationMouseDown,
+  onConversationKeyDown,
+  registerConversationElement,
+  onNavigate,
+  onRename,
+  onDelete,
+}: {
+  conversation: Conversation;
+  index: number;
+  visibleIndex: number;
+  isSearchActive: boolean;
+  searchQuery: string;
+  multiSelectedIds: Set<string>;
+  contentSearchResults: Map<string, ContentSearchResult>;
+  activeChatMatchInfo?: { sessionId: string; count: number } | null;
+  onConversationClick: (conversationId: string, index: number, href: string) => void;
+  onConversationMouseDown: (event: ReactMouseEvent, conversationId: string, index: number) => void;
+  onConversationKeyDown: (
+    event: ReactKeyboardEvent,
+    conversation: Conversation,
+    index: number
+  ) => void;
+  registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
+  onNavigate: (href: string) => void;
+  onRename: (conversationId: string) => void;
+  onDelete: (conversationId: string) => void;
+}) {
+  const href = `/c/${conversation.id}`;
+  const isSelected = multiSelectedIds.has(conversation.id);
+  const searchCount =
+    activeChatMatchInfo?.sessionId === conversation.id
+      ? activeChatMatchInfo.count
+      : contentSearchResults.get(conversation.id)?.matchCount;
+  const labels = conversation.labels ?? [];
+  const isProcessing = Boolean(conversation.is_processing);
+
+  return (
+    <ConversationSidebarItem
+      key={conversation.id}
+      id={conversation.id}
+      title={
+        isSearchActive ? (
+          highlightMatch(conversation.title, searchQuery)
+        ) : (
+          <Calligraph>{conversation.title}</Calligraph>
+        )
+      }
+      updatedAt={conversation.updated_at}
+      icon={<ConversationIndicators conversation={conversation} isProcessing={isProcessing} />}
+      badges={
+        labels.length > 0
+          ? labels.map((label, labelIndex) => (
+              <ConversationLabelBadge key={`${conversation.id}-${labelIndex}`} label={label} />
+            ))
+          : undefined
+      }
+      titleTrailing={
+        searchCount && searchCount > 0 ? (
+          <SearchCountBadge count={searchCount} isSelected={isSelected} />
+        ) : undefined
+      }
+      isInMultiSelect={multiSelectedIds.size > 1 && multiSelectedIds.has(conversation.id)}
+      showSeparator={index > 0}
+      onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
+      onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
+      buttonProps={{
+        ref: (element: HTMLDivElement | null) =>
+          registerConversationElement(conversation.id, element),
+        tabIndex: isSelected ? 0 : -1,
+        role: 'option',
+        'aria-selected': isSelected,
+        onKeyDown: (event: ReactKeyboardEvent) =>
+          onConversationKeyDown(event, conversation, visibleIndex),
+      }}
+      onNavigate={onNavigate}
+      onRename={onRename}
+      onDelete={onDelete}
+    />
+  );
+}
+
 /** Small pill showing the number of search matches found in a conversation's history. */
 function SearchCountBadge({ count, isSelected }: { count: number; isSelected: boolean }) {
   return (
@@ -154,6 +246,155 @@ function SearchCountBadge({ count, isSelected }: { count: number; isSelected: bo
     >
       {count}
     </span>
+  );
+}
+
+/**
+ * Pure presentation layer for the sidebar conversation list.
+ *
+ * Renders the search header, empty states, and grouped conversation items.
+ * All data and callbacks are received via props — no hooks.
+ */
+/**
+ * Builds the inner content of the conversation list: loading placeholder,
+ * empty states, or the grouped conversation rows. Extracted from NavChatsView
+ * to keep the main component under the Biome line-count threshold.
+ */
+function NavChatsContent({
+  isLoading,
+  isEmpty,
+  isSearchActive,
+  resultCount,
+  filteredGroups,
+  collapsedGroups,
+  navigatorRef,
+  searchQuery,
+  multiSelectedIds,
+  contentSearchResults,
+  activeChatMatchInfo,
+  onToggleGroup,
+  onNewSession,
+  onNavigate,
+  onRename,
+  onDelete,
+  onConversationClick,
+  onConversationMouseDown,
+  onConversationKeyDown,
+  registerConversationElement,
+  onNavigatorMouseDown,
+}: Pick<
+  NavChatsViewProps,
+  | 'isLoading'
+  | 'isEmpty'
+  | 'isSearchActive'
+  | 'resultCount'
+  | 'filteredGroups'
+  | 'collapsedGroups'
+  | 'navigatorRef'
+  | 'searchQuery'
+  | 'multiSelectedIds'
+  | 'contentSearchResults'
+  | 'activeChatMatchInfo'
+  | 'onToggleGroup'
+  | 'onNewSession'
+  | 'onNavigate'
+  | 'onRename'
+  | 'onDelete'
+  | 'onConversationClick'
+  | 'onConversationMouseDown'
+  | 'onConversationKeyDown'
+  | 'registerConversationElement'
+  | 'onNavigatorMouseDown'
+>): React.JSX.Element | null {
+  if (isLoading) {
+    return null;
+  }
+
+  if (isEmpty) {
+    return (
+      <ConversationsEmptyState
+        icon={<Inbox className="h-4 w-4" />}
+        title="No sessions yet"
+        description="Sessions with your agent appear here. Start one to get going."
+        buttonLabel="New Session"
+        onAction={onNewSession}
+      />
+    );
+  }
+
+  if (isSearchActive && resultCount === 0) {
+    return (
+      <ConversationsEmptyState
+        icon={<Search className="h-4 w-4" />}
+        title="No matching sessions"
+        description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
+      />
+    );
+  }
+
+  let flatIndex = -1;
+
+  return (
+    <div
+      ref={navigatorRef}
+      className="pt-1 outline-none"
+      role="listbox"
+      aria-label="Sessions"
+      aria-multiselectable="true"
+      onMouseDown={onNavigatorMouseDown}
+    >
+      <ul className="flex w-full min-w-0 flex-col gap-0">
+        {filteredGroups.map((group) => {
+          // Only allow collapsing when there are multiple groups and
+          // the user is not searching (search always shows all matches).
+          const isCollapsible = !isSearchActive && filteredGroups.length > 1;
+
+          // Gate on isCollapsible so a persisted key can't hide items
+          // when only one group remains.
+          const isCollapsed = isCollapsible && collapsedGroups.has(group.key);
+
+          return (
+            <Fragment key={group.key}>
+              {isCollapsible ? (
+                <CollapsibleGroupHeader
+                  label={group.label}
+                  isCollapsed={isCollapsed}
+                  itemCount={group.items.length}
+                  onToggle={() => onToggleGroup(group.key)}
+                />
+              ) : (
+                <SectionHeader label={group.label} />
+              )}
+              {isCollapsed
+                ? null
+                : group.items.map((conversation, index) => {
+                    flatIndex += 1;
+                    return (
+                      <ConversationRow
+                        key={conversation.id}
+                        conversation={conversation}
+                        index={index}
+                        visibleIndex={flatIndex}
+                        isSearchActive={isSearchActive}
+                        searchQuery={searchQuery}
+                        multiSelectedIds={multiSelectedIds}
+                        contentSearchResults={contentSearchResults}
+                        activeChatMatchInfo={activeChatMatchInfo}
+                        onConversationClick={onConversationClick}
+                        onConversationMouseDown={onConversationMouseDown}
+                        onConversationKeyDown={onConversationKeyDown}
+                        registerConversationElement={registerConversationElement}
+                        onNavigate={onNavigate}
+                        onRename={onRename}
+                        onDelete={onDelete}
+                      />
+                    );
+                  })}
+            </Fragment>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -182,149 +423,15 @@ export function NavChatsView({
   contentSearchResults,
   activeChatMatchInfo,
   multiSelectedIds,
-  focusedConversationId,
+  // focusedConversationId is part of the public interface for consumers but
+  // not used directly by this view component — rendering delegates handle it.
+  focusedConversationId: _focusedConversationId,
   onConversationClick,
   onConversationMouseDown,
   onConversationKeyDown,
   registerConversationElement,
   onNavigatorMouseDown,
 }: NavChatsViewProps): React.JSX.Element {
-  // --- content resolution ---
-  // Computed outside JSX to avoid hard-to-read nested ternaries.
-  let content: React.JSX.Element | null = null;
-
-  if (isLoading) {
-    content = null;
-  } else if (isEmpty) {
-    content = (
-      <ConversationsEmptyState
-        icon={<Inbox className="h-4 w-4" />}
-        title="No sessions yet"
-        description="Sessions with your agent appear here. Start one to get going."
-        buttonLabel="New Session"
-        onAction={onNewSession}
-      />
-    );
-  } else if (isSearchActive && resultCount === 0) {
-    content = (
-      <ConversationsEmptyState
-        icon={<Search className="h-4 w-4" />}
-        title="No matching sessions"
-        description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
-      />
-    );
-  } else {
-    let flatIndex = -1;
-
-    content = (
-      <div
-        ref={navigatorRef}
-        className="pt-1 outline-none"
-        role="listbox"
-        aria-label="Sessions"
-        aria-multiselectable="true"
-        onMouseDown={onNavigatorMouseDown}
-      >
-        <ul className="flex w-full min-w-0 flex-col gap-0">
-          {filteredGroups.map((group) => {
-            // Only allow collapsing when there are multiple groups and
-            // the user is not searching (search always shows all matches).
-            const isCollapsible = !isSearchActive && filteredGroups.length > 1;
-
-            // Gate on isCollapsible so a persisted key can't hide items
-            // when only one group remains.
-            const isCollapsed = isCollapsible && collapsedGroups.has(group.key);
-
-            return (
-              <Fragment key={group.key}>
-                {isCollapsible ? (
-                  <CollapsibleGroupHeader
-                    label={group.label}
-                    isCollapsed={isCollapsed}
-                    itemCount={group.items.length}
-                    onToggle={() => onToggleGroup(group.key)}
-                  />
-                ) : (
-                  <SectionHeader label={group.label} />
-                )}
-                {isCollapsed
-                  ? null
-                  : group.items.map((conversation, index) => {
-                      flatIndex += 1;
-                      const visibleIndex = flatIndex;
-                      const href = `/c/${conversation.id}`;
-                      const isSelected = multiSelectedIds.has(conversation.id);
-                      const searchCount =
-                        activeChatMatchInfo?.sessionId === conversation.id
-                          ? activeChatMatchInfo.count
-                          : contentSearchResults.get(conversation.id)?.matchCount;
-                      const labels = conversation.labels ?? [];
-                      const isProcessing = Boolean(conversation.is_processing);
-
-                      return (
-                        <ConversationSidebarItem
-                          key={conversation.id}
-                          id={conversation.id}
-                          title={
-                            isSearchActive ? (
-                              highlightMatch(conversation.title, searchQuery)
-                            ) : (
-                              <Calligraph>{conversation.title}</Calligraph>
-                            )
-                          }
-                          updatedAt={conversation.updated_at}
-                          icon={
-                            <ConversationIndicators
-                              conversation={conversation}
-                              isProcessing={isProcessing}
-                            />
-                          }
-                          badges={
-                            labels.length > 0
-                              ? labels.map((label, labelIndex) => (
-                                  <ConversationLabelBadge
-                                    key={`${conversation.id}-${labelIndex}`}
-                                    label={label}
-                                  />
-                                ))
-                              : undefined
-                          }
-                          titleTrailing={
-                            searchCount && searchCount > 0 ? (
-                              <SearchCountBadge count={searchCount} isSelected={isSelected} />
-                            ) : undefined
-                          }
-                          isInMultiSelect={
-                            multiSelectedIds.size > 1 && multiSelectedIds.has(conversation.id)
-                          }
-                          showSeparator={index > 0}
-                          onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
-                          onMouseDown={(event) =>
-                            onConversationMouseDown(event, conversation.id, visibleIndex)
-                          }
-                          buttonProps={{
-                            ref: (element: HTMLDivElement | null) =>
-                              registerConversationElement(conversation.id, element),
-                            tabIndex: isSelected ? 0 : -1,
-                            role: 'option',
-                            'aria-selected': isSelected,
-                            onKeyDown: (event: ReactKeyboardEvent) =>
-                              onConversationKeyDown(event, conversation, visibleIndex),
-                          }}
-                          onNavigate={onNavigate}
-                          onRename={onRename}
-                          onDelete={onDelete}
-                        />
-                      );
-                    })}
-              </Fragment>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ConversationSearchHeader
@@ -333,7 +440,29 @@ export function NavChatsView({
         onSearchClose={onSearchClose}
         resultCount={resultCount}
       />
-      {content}
+      <NavChatsContent
+        isLoading={isLoading}
+        isEmpty={isEmpty}
+        isSearchActive={isSearchActive}
+        resultCount={resultCount}
+        filteredGroups={filteredGroups}
+        collapsedGroups={collapsedGroups}
+        navigatorRef={navigatorRef}
+        searchQuery={searchQuery}
+        multiSelectedIds={multiSelectedIds}
+        contentSearchResults={contentSearchResults}
+        activeChatMatchInfo={activeChatMatchInfo}
+        onToggleGroup={onToggleGroup}
+        onNewSession={onNewSession}
+        onNavigate={onNavigate}
+        onRename={onRename}
+        onDelete={onDelete}
+        onConversationClick={onConversationClick}
+        onConversationMouseDown={onConversationMouseDown}
+        onConversationKeyDown={onConversationKeyDown}
+        registerConversationElement={registerConversationElement}
+        onNavigatorMouseDown={onNavigatorMouseDown}
+      />
     </div>
   );
 }

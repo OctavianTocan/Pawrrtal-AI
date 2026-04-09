@@ -4,11 +4,13 @@ import { usePathname } from 'next/navigation';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useGetConversations from '@/hooks/get-conversations';
+import type { ConversationGroup } from '@/lib/conversation-groups';
 import { buildConversationGroups, countGroupItems } from '@/lib/conversation-groups';
 import type { Conversation } from '@/lib/types';
 import { ConversationDeleteDialog } from './ConversationDeleteDialog';
 import { ConversationRenameDialog } from './ConversationRenameDialog';
 import { useChatActivity } from './chat-activity-context';
+import type { MultiSelectState } from './conversation-selection';
 import {
   clearMultiSelect,
   createInitialSelectionState,
@@ -20,6 +22,7 @@ import {
 import { NavChatsView } from './NavChatsView';
 import { useFocusZone, useSidebarFocusContext } from './sidebar-focus';
 import { useConversationActions } from './UseConversationActions';
+import type { ContentSearchResult } from './use-conversation-search';
 import { rankConversationsForSearch, useConversationSearch } from './use-conversation-search';
 
 /** localStorage key used to persist which date groups the user has collapsed. */
@@ -55,56 +58,61 @@ function extractConversationIdFromPath(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Extracted hooks — keep NavChats itself under the 120-line Biome limit.
+// ---------------------------------------------------------------------------
+
 /**
- * Container for the sidebar conversation list.
- *
- * Owns data fetching (conversations), search state, group computation,
- * collapsed-group persistence, navigation, conversation rename/delete operations,
- * multi-select functionality, and keyboard focus management.
- * Delegates all rendering to `NavChatsView`.
+ * Manages collapsed group state with localStorage persistence.
+ * Returns the current collapsed set and a toggle callback.
  */
-export function NavChats(): React.JSX.Element {
-  const { data: conversations, isLoading } = useGetConversations();
-  const pathname = usePathname();
-  const routeConversationId = extractConversationIdFromPath(pathname);
-  const {
-    conversationId: activeConversationId,
-    chatHistory: activeChatHistory,
-    isLoading: isChatLoading,
-  } = useChatActivity();
-  const { focusZone } = useSidebarFocusContext();
-  /** Maps conversation IDs to their DOM elements for programmatic focus management. */
-  const conversationElementRefs = useRef(new Map<string, HTMLDivElement>());
-
-  // --- search ---
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // --- selection state ---
-  const [selectionState, setSelectionState] = useState(createInitialSelectionState);
-
-  // --- collapsed state (persisted in localStorage) ---
+function useCollapsedGroups() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(loadCollapsedGroups);
 
-  // Merge real-time chat loading state into the conversation list so the sidebar
-  // can show a spinner on the active conversation row without waiting for a refetch.
-  const conversationsWithActivity = useMemo(
-    () =>
-      (conversations ?? []).map((conversation) =>
-        conversation.id === activeConversationId
-          ? { ...conversation, is_processing: conversation.is_processing || isChatLoading }
-          : conversation
-      ),
-    [activeConversationId, conversations, isChatLoading]
-  );
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-  const { contentSearchResults, activeChatMatchInfo, isSearchActive } = useConversationSearch({
-    conversations: conversationsWithActivity,
-    searchQuery,
-    activeConversationId,
-    activeChatHistory,
-  });
+    try {
+      window.localStorage.setItem(
+        COLLAPSED_GROUPS_STORAGE_KEY,
+        JSON.stringify([...collapsedGroups])
+      );
+    } catch {
+      // Storage write failed (quota exceeded, private browsing, etc.) — ignore.
+    }
+  }, [collapsedGroups]);
 
-  // --- grouping & filtering ---
+  const toggleGroupCollapse = useCallback((groupKey: string): void => {
+    setCollapsedGroups((currentGroups) => {
+      const nextGroups = new Set(currentGroups);
+      if (nextGroups.has(groupKey)) {
+        nextGroups.delete(groupKey);
+      } else {
+        nextGroups.add(groupKey);
+      }
+      return nextGroups;
+    });
+  }, []);
+
+  return { collapsedGroups, toggleGroupCollapse };
+}
+
+/**
+ * Derives grouped and filtered conversation lists from raw conversations.
+ *
+ * When a search is active the conversations are flattened into a single
+ * "Matches" group sorted by relevance. Otherwise date-based grouping is used.
+ * Also computes the flat list of visible conversation IDs (respecting collapsed groups).
+ */
+function useConversationGrouping(
+  conversationsWithActivity: Conversation[],
+  isSearchActive: boolean,
+  searchQuery: string,
+  contentSearchResults: Map<string, ContentSearchResult>,
+  collapsedGroups: Set<string>
+) {
   const baseGroups = useMemo(
     () => buildConversationGroups(conversationsWithActivity ?? []),
     [conversationsWithActivity]
@@ -112,7 +120,7 @@ export function NavChats(): React.JSX.Element {
 
   // When searching, flatten results into a single "Matches" group sorted by relevance.
   // Otherwise use the default date-based grouping.
-  const displayedGroups = useMemo(() => {
+  const displayedGroups: ConversationGroup[] = useMemo(() => {
     if (!isSearchActive) {
       return baseGroups;
     }
@@ -130,14 +138,7 @@ export function NavChats(): React.JSX.Element {
         items: matches,
       },
     ];
-  }, [
-    activeChatMatchInfo,
-    baseGroups,
-    contentSearchResults,
-    conversationsWithActivity,
-    isSearchActive,
-    searchQuery,
-  ]);
+  }, [baseGroups, contentSearchResults, conversationsWithActivity, isSearchActive, searchQuery]);
 
   // Flat list of conversation IDs currently visible in the DOM (respects collapsed groups).
   // Used for keyboard navigation index calculations and range-select boundaries.
@@ -154,37 +155,20 @@ export function NavChats(): React.JSX.Element {
     [collapsedGroups, displayedGroups, isSearchActive]
   );
 
-  // Resolve which conversation should appear focused: explicit selection > route > first visible.
-  const focusedConversationId =
-    selectionState.selected ?? routeConversationId ?? visibleConversationIds[0] ?? null;
-  const { zoneRef, shouldMoveDOMFocus } = useFocusZone({
-    zoneId: 'navigator',
-    focusFirst: () => {
-      const focusTargetId = focusedConversationId ?? visibleConversationIds[0];
-      if (focusTargetId) {
-        conversationElementRefs.current.get(focusTargetId)?.focus();
-      }
-    },
-  });
+  return { displayedGroups, visibleConversationIds };
+}
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        COLLAPSED_GROUPS_STORAGE_KEY,
-        JSON.stringify([...collapsedGroups])
-      );
-    } catch {
-      // Storage write failed (quota exceeded, private browsing, etc.) — ignore.
-    }
-  }, [collapsedGroups]);
-
-  // Sync selection state when the route changes (e.g. user clicks a link or
-  // navigates via browser back/forward). Skips when multi-select is active so
-  // route changes from clicking a selected item don't collapse the selection.
+/**
+ * Syncs selection state when the route changes (e.g. user clicks a link or
+ * navigates via browser back/forward). Skips when multi-select is active so
+ * route changes from clicking a selected item don't collapse the selection.
+ */
+function useRouteSelectionSync(
+  routeConversationId: string | null,
+  visibleConversationIds: string[],
+  selectionState: MultiSelectState,
+  setSelectionState: React.Dispatch<React.SetStateAction<MultiSelectState>>
+) {
   useEffect(() => {
     if (!routeConversationId) {
       return;
@@ -198,7 +182,35 @@ export function NavChats(): React.JSX.Element {
           : singleSelect(routeConversationId, routeIndex)
       );
     }
-  }, [routeConversationId, selectionState, visibleConversationIds]);
+  }, [routeConversationId, selectionState, visibleConversationIds, setSelectionState]);
+}
+
+/**
+ * Manages the focus-zone registration and DOM focus synchronisation for the
+ * conversation navigator. Returns the zone ref, focused ID, and element
+ * registration callback.
+ */
+function useFocusManagement(
+  selectionState: MultiSelectState,
+  routeConversationId: string | null,
+  visibleConversationIds: string[]
+) {
+  /** Maps conversation IDs to their DOM elements for programmatic focus management. */
+  const conversationElementRefs = useRef(new Map<string, HTMLDivElement>());
+
+  // Resolve which conversation should appear focused: explicit selection > route > first visible.
+  const focusedConversationId =
+    selectionState.selected ?? routeConversationId ?? visibleConversationIds[0] ?? null;
+
+  const { zoneRef, shouldMoveDOMFocus } = useFocusZone({
+    zoneId: 'navigator',
+    focusFirst: () => {
+      const focusTargetId = focusedConversationId ?? visibleConversationIds[0];
+      if (focusTargetId) {
+        conversationElementRefs.current.get(focusTargetId)?.focus();
+      }
+    },
+  });
 
   // Move DOM focus to the focused conversation when the focus-zone system
   // signals that a keyboard-initiated focus change occurred.
@@ -212,35 +224,6 @@ export function NavChats(): React.JSX.Element {
       conversationElementRefs.current.get(targetId)?.focus();
     }
   }, [focusedConversationId, shouldMoveDOMFocus, visibleConversationIds]);
-
-  const toggleGroupCollapse = useCallback((groupKey: string): void => {
-    setCollapsedGroups((currentGroups) => {
-      const nextGroups = new Set(currentGroups);
-      if (nextGroups.has(groupKey)) {
-        nextGroups.delete(groupKey);
-      } else {
-        nextGroups.add(groupKey);
-      }
-      return nextGroups;
-    });
-  }, []);
-
-  // --- conversation actions ---
-  const {
-    renameDialogConversationId,
-    deleteDialogConversationId,
-    draftTitle,
-    isRenamePending,
-    isDeletePending,
-    setDraftTitle,
-    navigateTo,
-    handleRenameClick,
-    handleDeleteClick,
-    handleRenameSubmit,
-    handleDeleteConfirm,
-    handleRenameDialogOpenChange,
-    handleDeleteDialogOpenChange,
-  } = useConversationActions(conversations);
 
   /** Move DOM focus to the conversation at a given index in the visible list. */
   const focusConversationAtIndex = useCallback(
@@ -256,10 +239,132 @@ export function NavChats(): React.JSX.Element {
     [visibleConversationIds]
   );
 
+  /** Ref callback to register/unregister a conversation row's DOM element for focus management. */
+  const registerConversationElement = useCallback(
+    (conversationId: string, element: HTMLDivElement | null) => {
+      if (element) {
+        conversationElementRefs.current.set(conversationId, element);
+        return;
+      }
+
+      conversationElementRefs.current.delete(conversationId);
+    },
+    []
+  );
+
+  return {
+    zoneRef,
+    focusedConversationId,
+    focusConversationAtIndex,
+    registerConversationElement,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Keyboard handler helpers — extracted to reduce cognitive complexity of
+// handleConversationKeyDown below the Biome threshold (max 20).
+// ---------------------------------------------------------------------------
+
+/** Handle ArrowLeft: move focus to the sidebar zone. */
+function handleArrowLeft(
+  event: ReactKeyboardEvent,
+  focusZone: ReturnType<typeof useSidebarFocusContext>['focusZone']
+) {
+  event.preventDefault();
+  focusZone('sidebar', { intent: 'keyboard', moveFocus: true });
+}
+
+/** Handle ArrowRight: move focus to the chat zone. */
+function handleArrowRight(
+  event: ReactKeyboardEvent,
+  focusZone: ReturnType<typeof useSidebarFocusContext>['focusZone']
+) {
+  event.preventDefault();
+  focusZone('chat', { intent: 'keyboard', moveFocus: true });
+}
+
+/** Handle Cmd/Ctrl+A: select all visible conversations. */
+function handleSelectAll(
+  event: ReactKeyboardEvent,
+  visibleConversationIds: string[],
+  setSelectionState: React.Dispatch<React.SetStateAction<MultiSelectState>>
+) {
+  event.preventDefault();
+  const firstConversationId = visibleConversationIds[0];
+  const lastConversationId = visibleConversationIds[visibleConversationIds.length - 1];
+  if (firstConversationId && lastConversationId) {
+    setSelectionState({
+      selected: lastConversationId,
+      selectedIds: new Set(visibleConversationIds),
+      anchorId: firstConversationId,
+      anchorIndex: 0,
+    });
+  }
+}
+
+/** Handle Escape: clear multi-select when active. Returns true if handled. */
+function handleEscape(
+  event: ReactKeyboardEvent,
+  selectionState: MultiSelectState,
+  setSelectionState: React.Dispatch<React.SetStateAction<MultiSelectState>>
+): boolean {
+  if (!isMultiSelectActive(selectionState)) {
+    return false;
+  }
+  event.preventDefault();
+  setSelectionState((current) => clearMultiSelect(current));
+  return true;
+}
+
+/** Handle Enter/Space: navigate to the conversation. */
+function handleActivate(
+  event: ReactKeyboardEvent,
+  conversation: Conversation,
+  index: number,
+  onClick: (id: string, idx: number, href: string) => void
+) {
+  event.preventDefault();
+  onClick(conversation.id, index, `/c/${conversation.id}`);
+}
+
+/**
+ * Resolves a movement key to the target index, or null if the key isn't a movement key.
+ * Covers ArrowUp, ArrowDown, Home, and End.
+ */
+function resolveMovementIndex(key: string, currentIndex: number, maxIndex: number): number | null {
+  switch (key) {
+    case 'ArrowUp':
+      return currentIndex - 1;
+    case 'ArrowDown':
+      return currentIndex + 1;
+    case 'Home':
+      return 0;
+    case 'End':
+      return maxIndex;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Encapsulates selection state and all conversation interaction handlers
+ * (click, mouseDown, keyDown). Keeps NavChats under the line-count limit.
+ */
+function useConversationInteraction(
+  focusZone: ReturnType<typeof useSidebarFocusContext>['focusZone'],
+  navigateTo: (href: string) => void,
+  visibleConversationIds: string[],
+  focusConversationAtIndex: (index: number) => void,
+  selectionState: MultiSelectState,
+  setSelectionState: React.Dispatch<React.SetStateAction<MultiSelectState>>
+) {
   /** Select exactly one conversation and update the selection anchor. */
-  const updateSingleSelection = useCallback((conversationId: string, index: number) => {
-    setSelectionState(singleSelect(conversationId, index));
-  }, []);
+  const updateSingleSelection = useCallback(
+    (conversationId: string, index: number) => {
+      setSelectionState(singleSelect(conversationId, index));
+    },
+    [setSelectionState]
+  );
 
   /** Handle a normal click on a conversation row: select it, navigate to it. */
   const handleConversationClick = useCallback(
@@ -306,67 +411,39 @@ export function NavChats(): React.JSX.Element {
 
       updateSingleSelection(conversationId, index);
     },
-    [focusZone, updateSingleSelection, visibleConversationIds]
+    [focusZone, setSelectionState, updateSingleSelection, visibleConversationIds]
   );
 
   /**
    * Keyboard navigation handler for the conversation list.
-   * Arrow Up/Down: move focus. Shift+Arrow: extend range selection.
-   * Arrow Left/Right: jump to sidebar/chat focus zones.
-   * Cmd+A: select all. Escape: clear multi-select. Enter/Space: navigate.
+   *
+   * Delegates to extracted helper functions per key to keep cognitive complexity
+   * under the Biome threshold. Arrow Up/Down move focus; Shift+Arrow extends
+   * range selection; Arrow Left/Right jump focus zones; Cmd+A selects all;
+   * Escape clears multi-select; Enter/Space navigates.
    */
   const handleConversationKeyDown = useCallback(
     (event: ReactKeyboardEvent, conversation: Conversation, index: number) => {
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        focusZone('sidebar', { intent: 'keyboard', moveFocus: true });
+      const { key } = event;
+
+      if (key === 'ArrowLeft') {
+        return handleArrowLeft(event, focusZone);
+      }
+      if (key === 'ArrowRight') {
+        return handleArrowRight(event, focusZone);
+      }
+      if ((event.metaKey || event.ctrlKey) && key.toLowerCase() === 'a') {
+        return handleSelectAll(event, visibleConversationIds, setSelectionState);
+      }
+      if (key === 'Escape') {
+        handleEscape(event, selectionState, setSelectionState);
         return;
       }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        focusZone('chat', { intent: 'keyboard', moveFocus: true });
-        return;
+      if (key === 'Enter' || key === ' ') {
+        return handleActivate(event, conversation, index, handleConversationClick);
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        const firstConversationId = visibleConversationIds[0];
-        const lastConversationId = visibleConversationIds[visibleConversationIds.length - 1];
-        if (firstConversationId && lastConversationId) {
-          setSelectionState({
-            selected: lastConversationId,
-            selectedIds: new Set(visibleConversationIds),
-            anchorId: firstConversationId,
-            anchorIndex: 0,
-          });
-        }
-        return;
-      }
-
-      if (event.key === 'Escape' && isMultiSelectActive(selectionState)) {
-        event.preventDefault();
-        setSelectionState((current) => clearMultiSelect(current));
-        return;
-      }
-
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        handleConversationClick(conversation.id, index, `/c/${conversation.id}`);
-        return;
-      }
-
-      const moveToIndex =
-        event.key === 'ArrowUp'
-          ? index - 1
-          : event.key === 'ArrowDown'
-            ? index + 1
-            : event.key === 'Home'
-              ? 0
-              : event.key === 'End'
-                ? visibleConversationIds.length - 1
-                : null;
-
+      const moveToIndex = resolveMovementIndex(key, index, visibleConversationIds.length - 1);
       if (moveToIndex == null) {
         return;
       }
@@ -391,22 +468,150 @@ export function NavChats(): React.JSX.Element {
       focusZone,
       handleConversationClick,
       selectionState,
+      setSelectionState,
       updateSingleSelection,
       visibleConversationIds,
     ]
   );
 
-  /** Ref callback to register/unregister a conversation row's DOM element for focus management. */
-  const registerConversationElement = useCallback(
-    (conversationId: string, element: HTMLDivElement | null) => {
-      if (element) {
-        conversationElementRefs.current.set(conversationId, element);
-        return;
-      }
+  return {
+    handleConversationClick,
+    handleConversationMouseDown,
+    handleConversationKeyDown,
+  };
+}
 
-      conversationElementRefs.current.delete(conversationId);
-    },
-    []
+/** Renders the rename + delete confirmation dialogs for conversation management. */
+function ConversationDialogs({
+  renameDialogConversationId,
+  deleteDialogConversationId,
+  draftTitle,
+  isRenamePending,
+  isDeletePending,
+  setDraftTitle,
+  handleRenameDialogOpenChange,
+  handleDeleteDialogOpenChange,
+  handleRenameSubmit,
+  handleDeleteConfirm,
+}: {
+  renameDialogConversationId: string | null;
+  deleteDialogConversationId: string | null;
+  draftTitle: string;
+  isRenamePending: boolean;
+  isDeletePending: boolean;
+  setDraftTitle: (title: string) => void;
+  handleRenameDialogOpenChange: (open: boolean) => void;
+  handleDeleteDialogOpenChange: (open: boolean) => void;
+  handleRenameSubmit: () => Promise<void>;
+  handleDeleteConfirm: () => Promise<void>;
+}) {
+  return (
+    <>
+      <ConversationRenameDialog
+        isOpen={!!renameDialogConversationId}
+        isPending={isRenamePending}
+        draftTitle={draftTitle}
+        onDraftTitleChange={setDraftTitle}
+        onOpenChange={handleRenameDialogOpenChange}
+        onSubmit={() => void handleRenameSubmit()}
+      />
+      <ConversationDeleteDialog
+        isOpen={!!deleteDialogConversationId}
+        isPending={isDeletePending}
+        onOpenChange={handleDeleteDialogOpenChange}
+        onConfirm={() => void handleDeleteConfirm()}
+      />
+    </>
+  );
+}
+
+/**
+ * Container for the sidebar conversation list.
+ *
+ * Owns data fetching (conversations), search state, group computation,
+ * collapsed-group persistence, navigation, conversation rename/delete operations,
+ * multi-select functionality, and keyboard focus management.
+ * Delegates all rendering to `NavChatsView`.
+ */
+export function NavChats(): React.JSX.Element {
+  const { data: conversations, isLoading } = useGetConversations();
+  const pathname = usePathname();
+  const routeConversationId = extractConversationIdFromPath(pathname);
+  const {
+    conversationId: activeConversationId,
+    chatHistory: activeChatHistory,
+    isLoading: isChatLoading,
+  } = useChatActivity();
+  const { focusZone } = useSidebarFocusContext();
+  const [searchQuery, setSearchQuery] = useState('');
+  const { collapsedGroups, toggleGroupCollapse } = useCollapsedGroups();
+
+  // Merge real-time chat loading state into the conversation list so the sidebar
+  // can show a spinner on the active conversation row without waiting for a refetch.
+  const conversationsWithActivity = useMemo(
+    () =>
+      (conversations ?? []).map((conversation) =>
+        conversation.id === activeConversationId
+          ? { ...conversation, is_processing: conversation.is_processing || isChatLoading }
+          : conversation
+      ),
+    [activeConversationId, conversations, isChatLoading]
+  );
+
+  const { contentSearchResults, activeChatMatchInfo, isSearchActive } = useConversationSearch({
+    conversations: conversationsWithActivity,
+    searchQuery,
+    activeConversationId,
+    activeChatHistory,
+  });
+
+  const { displayedGroups, visibleConversationIds } = useConversationGrouping(
+    conversationsWithActivity,
+    isSearchActive,
+    searchQuery,
+    contentSearchResults,
+    collapsedGroups
+  );
+
+  const {
+    renameDialogConversationId,
+    deleteDialogConversationId,
+    draftTitle,
+    isRenamePending,
+    isDeletePending,
+    setDraftTitle,
+    navigateTo,
+    handleRenameClick,
+    handleDeleteClick,
+    handleRenameSubmit,
+    handleDeleteConfirm,
+    handleRenameDialogOpenChange,
+    handleDeleteDialogOpenChange,
+  } = useConversationActions(conversations);
+
+  const [selectionState, setSelectionState] = useState(createInitialSelectionState);
+
+  // --- focus management ---
+  const { zoneRef, focusedConversationId, focusConversationAtIndex, registerConversationElement } =
+    useFocusManagement(selectionState, routeConversationId, visibleConversationIds);
+
+  // --- interaction handlers (click, mouseDown, keyDown) ---
+  const { handleConversationClick, handleConversationMouseDown, handleConversationKeyDown } =
+    useConversationInteraction(
+      focusZone,
+      navigateTo,
+      visibleConversationIds,
+      focusConversationAtIndex,
+      selectionState,
+      setSelectionState
+    );
+
+  // --- route sync ---
+  useRouteSelectionSync(
+    routeConversationId,
+    visibleConversationIds,
+    selectionState,
+    setSelectionState
   );
 
   return (
@@ -437,19 +642,17 @@ export function NavChats(): React.JSX.Element {
         registerConversationElement={registerConversationElement}
         onNavigatorMouseDown={() => focusZone('navigator', { intent: 'click', moveFocus: false })}
       />
-      <ConversationRenameDialog
-        isOpen={!!renameDialogConversationId}
-        isPending={isRenamePending}
+      <ConversationDialogs
+        renameDialogConversationId={renameDialogConversationId}
+        deleteDialogConversationId={deleteDialogConversationId}
         draftTitle={draftTitle}
-        onDraftTitleChange={setDraftTitle}
-        onOpenChange={handleRenameDialogOpenChange}
-        onSubmit={() => void handleRenameSubmit()}
-      />
-      <ConversationDeleteDialog
-        isOpen={!!deleteDialogConversationId}
-        isPending={isDeletePending}
-        onOpenChange={handleDeleteDialogOpenChange}
-        onConfirm={() => void handleDeleteConfirm()}
+        isRenamePending={isRenamePending}
+        isDeletePending={isDeletePending}
+        setDraftTitle={setDraftTitle}
+        handleRenameDialogOpenChange={handleRenameDialogOpenChange}
+        handleDeleteDialogOpenChange={handleDeleteDialogOpenChange}
+        handleRenameSubmit={handleRenameSubmit}
+        handleDeleteConfirm={handleDeleteConfirm}
       />
     </>
   );
