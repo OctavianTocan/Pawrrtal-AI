@@ -13,31 +13,41 @@
  * @property labels - Tags or categories assigned to the conversation.
  */
 
-export type MessageRole = "user" | "assistant" | "plan";
+/** The role of a message sender: human user, AI assistant, or a plan artifact. */
+export type MessageRole = 'user' | 'assistant' | 'plan';
 
+/**
+ * Structured label attached to a conversation (e.g. status tags, categories).
+ *
+ * @property id - Machine-readable slug derived from the label name.
+ * @property name - Human-readable label text.
+ * @property color - Optional hex color for badge rendering.
+ * @property value - Optional freeform value associated with the label.
+ * @property valueType - Optional type hint for the value (e.g. "string", "number").
+ */
 export type ConversationLabel = {
-	id?: string;
-	name: string;
-	color?: string;
-	value?: string;
-	valueType?: string;
+  id?: string;
+  name: string;
+  color?: string;
+  value?: string;
+  valueType?: string;
 };
 
 /** A label that is either a structured object or a legacy plain string. */
 export type ConversationLabelLike = ConversationLabel | string;
 
 export interface Conversation {
-	id: string;
-	user_id: string;
-	title: string;
-	created_at: string;
-	updated_at: string;
-	// Optional sidebar metadata ported from Craft-style session rows.
-	is_processing?: boolean;
-	has_unread_meta?: boolean;
-	last_message_role?: MessageRole | null;
-	pending_prompt_count?: number;
-	labels?: ConversationLabelLike[];
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  // Optional sidebar metadata ported from Craft-style session rows.
+  is_processing?: boolean;
+  has_unread_meta?: boolean;
+  last_message_role?: MessageRole | null;
+  pending_prompt_count?: number;
+  labels?: ConversationLabelLike[];
 }
 
 /**
@@ -46,6 +56,6 @@ export interface Conversation {
  * @property content - Plain-text message body.
  */
 export interface AgnoMessage {
-	role: "user" | "assistant";
-	content: string;
+  role: 'user' | 'assistant';
+  content: string;
 }

@@ -7,9 +7,11 @@ for its dependency chain.
 """
 
 from collections.abc import AsyncGenerator
+import asyncio
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -44,6 +46,20 @@ async def create_db_and_tables() -> None:
     from . import models  # noqa: F401 — side-effect import to register models
 
     async with engine.begin() as conn:
+
+        # We're running the backend serverless on Raiwaly, so it's possible that the database connection isn't immediately available when the app starts.
+        for i in range(5):
+            try:
+                await conn.execute(text("SELECT 1"))  # Test the connection
+                break  # If successful, exit the loop
+            except Exception as e:
+                if i < 4:  # If it's not the last attempt, wait and retry
+                    print(f"Database connection failed (attempt {i + 1}/5): {e}. Retrying in 5 seconds...")
+                    await asyncio.sleep(5)
+                else:
+                    print(f"Database connection failed after 5 attempts: {e}. Exiting.")
+                    raise
+
         await conn.run_sync(Base.metadata.create_all)
 
 

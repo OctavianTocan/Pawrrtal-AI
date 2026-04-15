@@ -67,7 +67,7 @@ export function toggleSelect(state: MultiSelectState, id: string, index: number)
 
     nextIds.delete(id);
     return {
-      selected: state.selected === id ? [...nextIds][0] ?? null : state.selected,
+      selected: state.selected === id ? ([...nextIds][0] ?? null) : state.selected,
       selectedIds: nextIds,
       anchorId: id,
       anchorIndex: index,
@@ -90,7 +90,11 @@ export function toggleSelect(state: MultiSelectState, id: string, index: number)
  * if the cached `anchorIndex` no longer matches. This prevents stale index
  * references from selecting the wrong range after the list is re-sorted.
  */
-export function rangeSelect(state: MultiSelectState, toIndex: number, items: string[]): MultiSelectState {
+export function rangeSelect(
+  state: MultiSelectState,
+  toIndex: number,
+  items: string[]
+): MultiSelectState {
   if (items.length === 0) {
     return state;
   }
@@ -99,7 +103,11 @@ export function rangeSelect(state: MultiSelectState, toIndex: number, items: str
 
   // Re-resolve the anchor by ID if the cached index is stale.
   let anchorIndex = clampedIndex;
-  if (state.anchorIndex >= 0 && state.anchorIndex < items.length && items[state.anchorIndex] === state.anchorId) {
+  if (
+    state.anchorIndex >= 0 &&
+    state.anchorIndex < items.length &&
+    items[state.anchorIndex] === state.anchorId
+  ) {
     anchorIndex = state.anchorIndex;
   } else if (state.anchorId) {
     const foundIndex = items.indexOf(state.anchorId);
