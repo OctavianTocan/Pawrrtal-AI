@@ -8,14 +8,21 @@ for its dependency chain.
 
 from collections.abc import AsyncGenerator
 import asyncio
+import logging
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 5
+RETRY_DELAY_SECONDS = 5
 
 
 engine_kwargs = {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
@@ -47,17 +54,17 @@ async def create_db_and_tables() -> None:
 
     async with engine.begin() as conn:
 
-        # We're running the backend serverless on Raiwaly, so it's possible that the database connection isn't immediately available when the app starts.
-        for i in range(5):
+        # We're running the backend serverless on Railway, so it's possible that the database connection isn't immediately available when the app starts.
+        for i in range(MAX_RETRIES):
             try:
                 await conn.execute(text("SELECT 1"))  # Test the connection
                 break  # If successful, exit the loop
-            except Exception as e:
-                if i < 4:  # If it's not the last attempt, wait and retry
-                    print(f"Database connection failed (attempt {i + 1}/5): {e}. Retrying in 5 seconds...")
-                    await asyncio.sleep(5)
+            except OperationalError as e:
+                if i < MAX_RETRIES - 1:  # If it's not the last attempt, wait and retry
+                    logger.warning("Database connection failed (attempt %d/%d): %s. Retrying in %d seconds...", i + 1, MAX_RETRIES, e, RETRY_DELAY_SECONDS)
+                    await asyncio.sleep(RETRY_DELAY_SECONDS)
                 else:
-                    print(f"Database connection failed after 5 attempts: {e}. Exiting.")
+                    logger.warning("Database connection failed after %d attempts: %s. Exiting.", MAX_RETRIES, e)
                     raise
 
         await conn.run_sync(Base.metadata.create_all)
