@@ -1,5 +1,5 @@
 ---
-description: Python specific clean code rules (Pydantic, typing)
+description: Python-specific clean code rules (Pydantic, typing)
 globs: **/*.py
 ---
 # Clean Code: Python
