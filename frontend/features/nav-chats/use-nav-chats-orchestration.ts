@@ -10,6 +10,7 @@ import type {
 } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ConversationGroup } from '@/lib/conversation-groups';
+import { extractConversationIdFromPath } from '@/lib/route-utils';
 import type { Conversation } from '@/lib/types';
 import {
   createInitialSelectionState,
@@ -32,8 +33,7 @@ function getConversationIdFromPathname(pathname: string | null): string | null {
   if (!pathname) {
     return null;
   }
-  const match = /^\/c\/([^/]+)/.exec(pathname);
-  return match?.[1] ?? null;
+  return extractConversationIdFromPath(pathname);
 }
 
 /**
