@@ -13,7 +13,8 @@
  */
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import type React from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import type { AgnoMessage } from '@/lib/types';
 
 /** Snapshot of the conversation currently open in the chat panel. */
@@ -41,7 +42,11 @@ const ChatActivityContext = createContext<ChatActivityContextValue | null>(null)
  * Provides chat activity state to the sidebar and any other component
  * that needs to know which conversation is currently open.
  */
-export function ChatActivityProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function ChatActivityProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
   const [state, setState] = useState<ActiveConversationState>({
     conversationId: null,
     chatHistory: [],
