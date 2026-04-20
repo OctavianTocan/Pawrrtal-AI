@@ -14,7 +14,7 @@ from fastapi import Depends
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
@@ -44,7 +44,7 @@ engine = create_async_engine(settings.db_url_async, **engine_kwargs)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
-async def _wait_for_db_connection(conn) -> None:
+async def _wait_for_db_connection(conn: AsyncConnection) -> None:
     """Probe the database with a ``SELECT 1`` up to ``MAX_RETRIES`` times.
 
     Railway cold-starts can leave the database unreachable for several seconds
