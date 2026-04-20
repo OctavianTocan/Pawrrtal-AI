@@ -14,7 +14,16 @@
  */
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 /** Identifies one of the three focusable regions. */
 export type FocusZoneId = 'sidebar' | 'navigator' | 'chat';
@@ -48,6 +57,7 @@ type FocusState = {
   shouldMoveDOMFocus: boolean;
 };
 
+/** Context value exposing focus-zone state and navigation methods to consumers. */
 type FocusContextValue = {
   focusState: FocusState;
   registerZone: (zone: FocusZoneRegistration) => void;
@@ -70,7 +80,11 @@ const FocusContext = createContext<FocusContextValue | null>(null);
  * Wraps the app layout and provides focus-zone coordination to all children.
  * Mount this once above the sidebar + chat layout.
  */
-export function SidebarFocusProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function SidebarFocusProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
   const zonesRef = useRef(new Map<FocusZoneId, FocusZoneRegistration>());
   const [focusState, setFocusState] = useState<FocusState>({
     zone: null,
@@ -98,7 +112,7 @@ export function SidebarFocusProvider({ children }: { children: React.ReactNode }
 
     const intent = options?.intent ?? 'programmatic';
     // Click-initiated changes don't need to move DOM focus (the click already did).
-    const shouldMoveDOMFocus = options?.moveFocus ?? (intent !== 'click');
+    const shouldMoveDOMFocus = options?.moveFocus ?? intent !== 'click';
 
     setFocusState({ zone: id, intent, shouldMoveDOMFocus });
 
@@ -141,7 +155,9 @@ export function SidebarFocusProvider({ children }: { children: React.ReactNode }
   const focusPreviousZone = useCallback(() => {
     const currentIndex = focusState.zone ? ZONE_ORDER.indexOf(focusState.zone) : 0;
     for (let i = 1; i <= ZONE_ORDER.length; i++) {
-      const candidate = ZONE_ORDER[(currentIndex - i + ZONE_ORDER.length) % ZONE_ORDER.length] as FocusZoneId;
+      const candidate = ZONE_ORDER[
+        (currentIndex - i + ZONE_ORDER.length) % ZONE_ORDER.length
+      ] as FocusZoneId;
       if (zonesRef.current.has(candidate)) {
         focusZone(candidate, { intent: 'keyboard', moveFocus: true });
         return;
@@ -199,7 +215,8 @@ export function useFocusZone({
   focusFirst?: () => void;
 }) {
   const zoneRef = useRef<HTMLDivElement>(null);
-  const { focusState, registerZone, unregisterZone, focusZone, isZoneFocused } = useSidebarFocusContext();
+  const { focusState, registerZone, unregisterZone, focusZone, isZoneFocused } =
+    useSidebarFocusContext();
   const isFocused = enabled && isZoneFocused(zoneId);
   const shouldMoveDOMFocus = enabled && focusState.zone === zoneId && focusState.shouldMoveDOMFocus;
   const intent = focusState.zone === zoneId ? focusState.intent : null;
@@ -245,6 +262,9 @@ export function useFocusZone({
     shouldMoveDOMFocus,
     intent,
     /** Manually request focus on this zone. */
-    focus: useCallback((options?: FocusZoneOptions) => focusZone(zoneId, options), [focusZone, zoneId]),
+    focus: useCallback(
+      (options?: FocusZoneOptions) => focusZone(zoneId, options),
+      [focusZone, zoneId]
+    ),
   };
 }

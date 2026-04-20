@@ -26,15 +26,18 @@ import type { AgnoMessage, Conversation } from '@/lib/types';
  */
 const MAX_CACHE_SIZE = 100;
 
+/** Per-conversation search result with match count and a context snippet. */
 export type ContentSearchResult = {
   matchCount: number;
   snippet: string;
 };
 
+/** Escape special regex characters so user input can be used in a RegExp safely. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Count case-insensitive occurrences of `query` within `content`. */
 function countOccurrences(content: string, query: string): number {
   if (!query) {
     return 0;
@@ -44,6 +47,7 @@ function countOccurrences(content: string, query: string): number {
   return matches?.length ?? 0;
 }
 
+/** Extract a ~80-char context window around the first match of `query` in `content`. */
 function buildSnippet(content: string, query: string): string {
   const matchIndex = content.toLowerCase().indexOf(query.toLowerCase());
   if (matchIndex < 0) {
@@ -55,10 +59,16 @@ function buildSnippet(content: string, query: string): string {
   return content.slice(start, end).trim();
 }
 
+/** Concatenate all message contents into a single searchable string. */
 function extractSearchableText(messages: AgnoMessage[]): string {
   return messages.map((message) => message.content).join('\n');
 }
 
+/**
+ * Compute a simple fuzzy match score between a title and query.
+ * Returns a higher score for exact substring matches, a lower score for
+ * subsequence matches, and 0 if the query can't be matched at all.
+ */
 function fuzzyScore(title: string, query: string): number {
   const lowerTitle = title.toLowerCase();
   const lowerQuery = query.toLowerCase();
@@ -94,7 +104,7 @@ function fuzzyScore(title: string, query: string): number {
 export function rankConversationsForSearch(
   conversations: Conversation[],
   query: string,
-  contentSearchResults: Map<string, ContentSearchResult>,
+  contentSearchResults: Map<string, ContentSearchResult>
 ): Conversation[] {
   return [...conversations].sort((left, right) => {
     const leftScore = fuzzyScore(left.title, query);
