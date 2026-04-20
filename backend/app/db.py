@@ -44,6 +44,35 @@ engine = create_async_engine(settings.db_url_async, **engine_kwargs)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
+async def _wait_for_db_connection(conn) -> None:
+    """Probe the database with a ``SELECT 1`` up to ``MAX_RETRIES`` times.
+
+    Railway cold-starts can leave the database unreachable for several seconds
+    after the application process launches. This helper retries with a fixed
+    delay so the startup sequence survives that window instead of crashing.
+    """
+    for attempt in range(MAX_RETRIES):
+        try:
+            await conn.execute(text("SELECT 1"))
+            return
+        except OperationalError as e:
+            if attempt == MAX_RETRIES - 1:
+                logger.warning(
+                    "Database connection failed after %d attempts: %s. Giving up.",
+                    MAX_RETRIES,
+                    e,
+                )
+                raise
+            logger.warning(
+                "Database connection failed (attempt %d/%d): %s. Retrying in %d seconds...",
+                attempt + 1,
+                MAX_RETRIES,
+                e,
+                RETRY_DELAY_SECONDS,
+            )
+            await asyncio.sleep(RETRY_DELAY_SECONDS)
+
+
 async def create_db_and_tables() -> None:
     """Create all tables on application startup.
 
@@ -53,20 +82,7 @@ async def create_db_and_tables() -> None:
     from . import models  # noqa: F401 — side-effect import to register models
 
     async with engine.begin() as conn:
-
-        # We're running the backend serverless on Railway, so it's possible that the database connection isn't immediately available when the app starts.
-        for i in range(MAX_RETRIES):
-            try:
-                await conn.execute(text("SELECT 1"))  # Test the connection
-                break  # If successful, exit the loop
-            except OperationalError as e:
-                if i < MAX_RETRIES - 1:  # If it's not the last attempt, wait and retry
-                    logger.warning("Database connection failed (attempt %d/%d): %s. Retrying in %d seconds...", i + 1, MAX_RETRIES, e, RETRY_DELAY_SECONDS)
-                    await asyncio.sleep(RETRY_DELAY_SECONDS)
-                else:
-                    logger.warning("Database connection failed after %d attempts: %s. Exiting.", MAX_RETRIES, e)
-                    raise
-
+        await _wait_for_db_connection(conn)
         await conn.run_sync(Base.metadata.create_all)
 
 
