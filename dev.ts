@@ -24,7 +24,7 @@ const backendPromise =
 // Auto-open browser after servers have had time to initialize
 // Wait 2-3 seconds to ensure Next.js is fully ready before opening
 setTimeout(() => {
-  const frontendUrl = 'http://app.nexus-ai.localhost:3001';
+  const frontendUrl = 'https://app.nexus-ai.localhost';
   const shouldAutoOpen = process.env.NO_AUTO_OPEN !== '1';
 
   if (shouldAutoOpen) {
