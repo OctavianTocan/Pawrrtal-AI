@@ -12,7 +12,8 @@
 - **Backend (`backend/`)**: Python FastAPI application. API routes in `backend/app/api/`, database models in `backend/app/models/`, CRUD operations in `backend/app/crud/`.
 - **Docs (`docs/`)**: Project documentation, migration plans, and design specs.
 - **Tasks (`.beans/`)**: Markdown-based task tracking. Update the status of `.beans` files as work is completed.
-- **AI Rules (`.claude/rules/`)**: Strict context and design patterns to follow. Always read and abide by the rules inside `.claude/rules/react/`, `.claude/rules/typescript/`, and `.claude/rules/github-actions/, and .claude/rules/clean-code/` when modifying or creating new code.
+- **Rule**: Always use the `beans` CLI (e.g. `beans create`, `beans update`) to manage `.beans` files. Never create or edit them manually.
+- **AI Rules (`.claude/rules/`)**: Strict context and design patterns to follow. Always read and abide by the rules inside `.claude/rules/react/`, `.claude/rules/typescript/`, `.claude/rules/github-actions/`, and `.claude/rules/clean-code/` when modifying or creating new code.
 - **Rule**: Frontend code must only communicate with the backend via the established API endpoints (using `useAuthedFetch` or TanStack Query mutations). Do not mix frontend and backend responsibilities.
 - **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching).
 - **Rule**: Ensure PascalCase is used for components inside `frontend/features/`.
@@ -29,8 +30,8 @@ We rely on `just` as our primary task runner for the repository.
 - **Auto-commit**: `just commit` (auto-generates conventional commit).
 - **Push**: `just push` (runs push with auth switching).
 - **Terminology**:
-  - "gate" means a verification command or command set that must be green for the decision you are making.
-  - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
+    - "gate" means a verification command or command set that must be green for the decision you are making.
+    - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
 
 ## Coding Style & Naming Conventions
 
@@ -65,11 +66,13 @@ We rely on `just` as our primary task runner for the repository.
 - **Multi-agent safety:** running multiple agents is OK as long as each agent has its own session.
 - **Multi-agent safety:** when you see unrecognized files, keep going; focus on your changes and commit only those.
 - Lint/format churn:
-  - If staged+unstaged diffs are formatting-only, auto-resolve without asking.
-  - If commit/push already requested, auto-stage and include formatting-only follow-ups in the same commit.
-  - Only ask when changes are semantic (logic/data/behavior).
+    - If staged+unstaged diffs are formatting-only, auto-resolve without asking.
+    - If commit/push already requested, auto-stage and include formatting-only follow-ups in the same commit.
+    - Only ask when changes are semantic (logic/data/behavior).
 - **Multi-agent safety:** focus reports on your edits; avoid guard-rail disclaimers unless truly blocked; when multiple agents touch the same file, continue if safe; end with a brief “other files present” note only if relevant.
 - Bug investigations: read source code of relevant dependencies and all related local code before concluding; aim for high-confidence root cause.
 - Code style: add brief comments for tricky logic.
-- **GitHub Actions Rules (`.claude/rules/github-actions/, and .claude/rules/clean-code/`)**: Strict context and design patterns to follow when creating or modifying CI/CD workflows and actions.
-- **Clean Code Rules (`.claude/rules/clean-code/`)**: Universal rules for function design, naming conventions, and code structure. Your generated code must adhere to these principles (KISS, DRY, single-responsibility, meaningful naming).
+- **GitHub Actions Rules (`.claude/rules/github-actions/`)**: Strict context and design patterns to follow when creating or modifying CI/CD workflows and actions.
+- **Clean Code Rules (`.claude/rules/clean-code/`)**: Universal rules for function design, naming conventions, named constants, Python logging/exception narrowing, and code structure. Your generated code must adhere to these principles (KISS, DRY, single-responsibility, meaningful naming).
+- **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
+- **TypeScript Rules (`.claude/rules/typescript/`)**: Explicit return types on every function, TSDoc on exports, JSDoc placement (directly above the declaration), parameter limits (max 3 positional, group into objects beyond that), literal union types for constrained string fields, and environment variable conventions.

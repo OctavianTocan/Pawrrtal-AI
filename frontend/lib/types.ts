@@ -1,51 +1,70 @@
 /**
- * Conversation type for the frontend.
+ * Shared TypeScript type definitions for conversations, messages, and sidebar items.
  *
- * @property id - Unique conversation identifier.
- * @property user_id - ID of the user who owns the conversation.
- * @property title - Display title of the conversation.
- * @property created_at - ISO timestamp of creation.
- * @property updated_at - ISO timestamp of last update.
- * @property is_processing - Whether the conversation is currently generating a response.
- * @property has_unread_meta - Whether the sidebar should show an unread indicator.
- * @property last_message_role - Role of the most recent message in the conversation.
- * @property pending_prompt_count - Number of queued prompts awaiting processing.
- * @property labels - Tags or categories assigned to the conversation.
+ * @fileoverview Types consumed by both the sidebar and the chat view.
  */
 
-export type MessageRole = "user" | "assistant" | "plan";
+/** The role of a message sender: human user, AI assistant, or a plan artifact. */
+export type MessageRole = 'user' | 'assistant' | 'plan';
 
+/** Structured label attached to a conversation (e.g. status tags, categories). */
 export type ConversationLabel = {
-	id?: string;
-	name: string;
-	color?: string;
-	value?: string;
-	valueType?: string;
+  /** Machine-readable slug derived from the label name. */
+  id?: string;
+  /** Human-readable label text. */
+  name: string;
+  /** Optional hex color for badge rendering. */
+  color?: string;
+  /** Optional string value associated with the label. */
+  value?: string;
+  /**
+   * Semantic type hint for the value.
+   * The value itself is always stored as a string regardless of this hint.
+   */
+  valueType?: 'string' | 'number' | 'date';
 };
 
-/** A label that is either a structured object or a legacy plain string. */
+/**
+ * A label that is either a structured object or a legacy plain string.
+ * TODO: Remove the plain-string branch once label migration is complete.
+ */
 export type ConversationLabelLike = ConversationLabel | string;
 
+/** A single conversation record as returned by the backend API. */
 export interface Conversation {
-	id: string;
-	user_id: string;
-	title: string;
-	created_at: string;
-	updated_at: string;
-	// Optional sidebar metadata ported from Craft-style session rows.
-	is_processing?: boolean;
-	has_unread_meta?: boolean;
-	last_message_role?: MessageRole | null;
-	pending_prompt_count?: number;
-	labels?: ConversationLabelLike[];
+  /** Unique conversation identifier. */
+  id: string;
+  /** ID of the user who owns the conversation. */
+  user_id: string;
+  /** Display title of the conversation. */
+  title: string;
+  /** ISO timestamp of creation. */
+  created_at: string;
+  /** ISO timestamp of last update. */
+  updated_at: string;
+  // Optional sidebar metadata ported from Craft-style session rows.
+  /** Whether the conversation is currently generating a response. */
+  is_processing?: boolean;
+  /** Whether the sidebar should show an unread indicator. */
+  has_unread_meta?: boolean;
+  /** Role of the most recent message in the conversation. */
+  last_message_role?: MessageRole | null;
+  /** Number of queued prompts awaiting processing. */
+  pending_prompt_count?: number;
+  /** Tags or categories assigned to the conversation. */
+  labels?: ConversationLabelLike[];
 }
 
 /**
  * Message shape used by the Agno agent / chat API.
- * @property role - Sender of the message: user or assistant.
+ *
+ * @property role - Sender of the message. Intentionally a subset of {@link MessageRole}
+ *   (excludes `'plan'`, which is not a valid Agno API role).
  * @property content - Plain-text message body.
  */
 export interface AgnoMessage {
-	role: "user" | "assistant";
-	content: string;
+  /** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
+  role: Exclude<MessageRole, 'plan'>;
+  /** Plain-text message body. */
+  content: string;
 }
