@@ -45,22 +45,21 @@ async def create_db_and_tables() -> None:
     """
     from . import models  # noqa: F401 — side-effect import to register models
 
-    async with engine.begin() as conn:
-
-        # We're running the backend serverless on Raiwaly, so it's possible that the database connection isn't immediately available when the app starts.
-        for i in range(5):
-            try:
+    # We're running the backend serverless on Railway, so it's possible that the database connection isn't immediately available when the app starts.
+    for i in range(5):
+        try:
+            async with engine.begin() as conn:
                 await conn.execute(text("SELECT 1"))  # Test the connection
-                break  # If successful, exit the loop
-            except Exception as e:
-                if i < 4:  # If it's not the last attempt, wait and retry
-                    print(f"Database connection failed (attempt {i + 1}/5): {e}. Retrying in 5 seconds...")
-                    await asyncio.sleep(5)
-                else:
-                    print(f"Database connection failed after 5 attempts: {e}. Exiting.")
-                    raise
 
-        await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(Base.metadata.create_all)
+            break  # If successful, exit the loop
+        except Exception as e:
+            if i < 4:  # If it's not the last attempt, wait and retry
+                print(f"Database connection failed (attempt {i + 1}/5): {e}. Retrying in 5 seconds...")
+                await asyncio.sleep(5)
+            else:
+                print(f"Database connection failed after 5 attempts: {e}. Exiting.")
+                raise
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
