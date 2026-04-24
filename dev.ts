@@ -12,6 +12,9 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // Remove the Next.js dev lock that causes the "Unable to acquire lock" error
 await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 
+// Start the portless proxy in the background to handle both frontend and backend routing.
+await $`portless proxy start`.nothrow();
+
 // --Here, "--project backend" ensures we use the correct uv.lock file.--
 // Start both dev servers in the background (don't wait for them to complete).
 // They run indefinitely, so we fire them off and let them output to stdout/stderr.
