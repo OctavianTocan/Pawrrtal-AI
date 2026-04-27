@@ -191,6 +191,15 @@ export function useSidebarFocusContext(): FocusContextValue {
 }
 
 /**
+ * Non-throwing variant of `useSidebarFocusContext`. Returns `null` when called
+ * outside `SidebarFocusProvider` instead of throwing. Use in components that
+ * may render in trees with or without the focus-zone provider mounted.
+ */
+export function useOptionalSidebarFocusContext(): FocusContextValue | null {
+  return useContext(FocusContext);
+}
+
+/**
  * Hook for a component to participate in the focus zone system.
  * Returns a ref to attach to the zone's root element, plus focus state
  * and a manual focus trigger.

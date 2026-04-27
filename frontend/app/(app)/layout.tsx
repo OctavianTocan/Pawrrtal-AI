@@ -1,13 +1,13 @@
-import { AppLayout } from "@/components/app-layout";
+import { AppLayout } from '@/components/app-layout';
 
 export default function AppLayoutWrapper({
-	children,
+  children,
 }: Readonly<{
-	children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-	return (
-		<>
-			<AppLayout>{children}</AppLayout>
-		</>
-	);
+  return (
+    <>
+      <AppLayout>{children}</AppLayout>
+    </>
+  );
 }
