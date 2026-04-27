@@ -88,7 +88,15 @@
   "customMetadata": {
     "repositoryUrl": "https://github.com/OctavianTocan/ai-nexus",
     "projectType": "full-stack",
-    "technologies": ["Next.js", "React", "TypeScript", "FastAPI", "Python", "SQLAlchemy", "TailwindCSS"],
+    "technologies": [
+      "Next.js",
+      "React",
+      "TypeScript",
+      "FastAPI",
+      "Python",
+      "SQLAlchemy",
+      "TailwindCSS"
+    ],
     "features": ["AI Chat", "User Authentication", "Conversation Management", "Multi-user Support"],
     "developmentStatus": "active"
   }
