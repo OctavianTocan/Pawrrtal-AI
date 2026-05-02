@@ -169,7 +169,14 @@ export function useConversationSearch({
 
   useEffect(() => {
     if (!isSearchActive) {
-      setContentSearchResults(new Map());
+      // Avoid setState when already cleared — a fresh `new Map()` every run triggers
+      // infinite re-renders when this effect re-executes (e.g. unstable deps).
+      setContentSearchResults((previous) => {
+        if (previous.size === 0) {
+          return previous;
+        }
+        return new Map();
+      });
       return;
     }
 

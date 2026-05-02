@@ -2,7 +2,7 @@
 
 import type * as React from 'react';
 import { useCallback, useId, useRef, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingCreateWorkspaceStep } from '@/features/onboarding/onboarding-create-workspace-step';
 import { OnboardingLocalWorkspaceStep } from '@/features/onboarding/onboarding-local-workspace-step';
 import { OnboardingWelcomeStep } from '@/features/onboarding/onboarding-welcome-step';
@@ -18,7 +18,6 @@ type OnboardingStep = 'welcome' | 'create' | 'local';
 export function OnboardingModal(): React.JSX.Element {
   const folderInputRef = useRef<HTMLInputElement>(null);
   const folderInputId = useId();
-  const titleId = useId();
   const [open, setOpen] = useState(true);
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [folderLabel, setFolderLabel] = useState<string | null>(null);
@@ -47,20 +46,32 @@ export function OnboardingModal(): React.JSX.Element {
   }, []);
 
   const dialogMaxClass =
-    step === 'welcome' ? 'max-h-[min(90vh,860px)] overflow-y-auto sm:max-w-4xl' : 'sm:max-w-lg';
+    step === 'welcome' ? 'max-h-[min(90vh,860px)] overflow-y-auto sm:max-w-4xl' : 'sm:max-w-xl';
+
+  const accessibleTitle =
+    step === 'welcome'
+      ? 'Welcome to AI Nexus'
+      : step === 'create'
+        ? 'Create workspace'
+        : 'Local workspace';
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={cn('gap-0 p-0 sm:p-0', dialogMaxClass)} aria-labelledby={titleId}>
-        {step === 'welcome' ? (
-          <OnboardingWelcomeStep titleId={titleId} onContinue={() => setStep('create')} />
-        ) : null}
+      <DialogContent
+        className={cn('gap-0 border-border/60 p-0 shadow-modal-small sm:p-0', dialogMaxClass)}
+      >
+        {/*
+          Radix requires DialogTitle inside DialogContent. Do not set aria-labelledby / id with
+          useId() — Radix dev TitleWarning uses document.getElementById and can false-positive when
+          ids are wired manually; DialogTitle wires aria-labelledby via context automatically.
+        */}
+        <DialogTitle className="sr-only">{accessibleTitle}</DialogTitle>
+        {step === 'welcome' ? <OnboardingWelcomeStep onContinue={() => setStep('create')} /> : null}
         {step === 'create' ? (
-          <OnboardingCreateWorkspaceStep titleId={titleId} onPickLocal={() => setStep('local')} />
+          <OnboardingCreateWorkspaceStep onPickLocal={() => setStep('local')} />
         ) : null}
         {step === 'local' ? (
           <OnboardingLocalWorkspaceStep
-            titleId={titleId}
             folderInputId={folderInputId}
             folderInputRef={folderInputRef}
             folderLabel={folderLabel}

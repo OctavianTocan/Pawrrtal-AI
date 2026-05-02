@@ -9,7 +9,7 @@ import {
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
 
 const FEATURE_ITEMS = [
   {
@@ -45,43 +45,53 @@ const FEATURE_ITEMS = [
 ] as const;
 
 export interface OnboardingWelcomeStepProps {
-  /** Stable id wiring for `aria-labelledby` on the dialog surface. */
-  titleId: string;
   /** Advances to the create-workspace step. */
   onContinue: () => void;
 }
 
 /** First onboarding screen: hero, feature grid, primary CTA. */
 export function OnboardingWelcomeStep({
-  titleId,
   onContinue,
 }: OnboardingWelcomeStepProps): React.JSX.Element {
   return (
-    <div className="flex flex-col gap-8 p-6 sm:p-8">
-      <div className="flex flex-col items-center gap-4 text-center">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 pt-8 pb-10 sm:gap-12 sm:px-10 sm:pt-10 sm:pb-12">
+      <div className="flex flex-col items-center gap-5 text-center">
         <div
-          className="flex size-14 items-center justify-center rounded-2xl bg-accent/15 text-accent ring-1 ring-accent/25"
+          className="flex size-16 items-center justify-center rounded-2xl bg-muted/90 text-accent ring-1 ring-foreground/15"
           aria-hidden
         >
-          <IconRobot className="size-8" stroke={1.5} />
+          <IconRobot className="size-9" stroke={1.5} />
         </div>
-        <DialogHeader className="gap-2 sm:text-center">
-          <DialogTitle id={titleId} className="text-balance text-xl font-semibold sm:text-2xl">
+        <DialogHeader className="gap-3 sm:text-center">
+          <div
+            className="text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]"
+            aria-hidden="true"
+          >
             Welcome to AI Nexus
-          </DialogTitle>
-          <DialogDescription className="text-base">
-            Your AI workspace for shipping faster—with clarity.
+          </div>
+          <DialogDescription className="text-base leading-relaxed italic text-muted-foreground">
+            Your computer, but it works for you.
           </DialogDescription>
         </DialogHeader>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-4">
         {FEATURE_ITEMS.map((item) => (
-          <Card key={item.title} size="sm" className="gap-0 py-4 shadow-none">
-            <CardHeader className="items-center space-y-3 px-4 pb-2 text-center">
-              <item.icon className="size-8 text-muted-foreground" stroke={1.5} aria-hidden />
-              <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
-              <CardDescription className="text-xs leading-snug">{item.description}</CardDescription>
+          <Card
+            key={item.title}
+            size="sm"
+            className="min-h-[128px] justify-center gap-0 border-0 py-5 shadow-none ring-1 ring-foreground/10 transition-colors sm:min-h-[136px]"
+          >
+            <CardHeader className="flex flex-1 flex-col items-center justify-center space-y-2.5 px-4 pb-2 text-center">
+              <item.icon
+                className="size-8 shrink-0 text-muted-foreground"
+                stroke={1.5}
+                aria-hidden
+              />
+              <CardTitle className="text-sm font-medium leading-snug">{item.title}</CardTitle>
+              <CardDescription className="text-xs leading-snug text-muted-foreground">
+                {item.description}
+              </CardDescription>
             </CardHeader>
           </Card>
         ))}
@@ -90,7 +100,7 @@ export function OnboardingWelcomeStep({
       <Button
         type="button"
         size="lg"
-        className="h-11 w-full rounded-full text-base font-medium"
+        className="h-12 w-full rounded-full px-8 text-base font-semibold shadow-sm"
         onClick={onContinue}
       >
         Get started
