@@ -80,6 +80,8 @@ We rely on `just` as our primary task runner for the repository.
 ## Learned User Preferences
 
 - When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
+- When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
+- The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
 
 ## Learned Workspace Facts
 
@@ -87,3 +89,4 @@ We rely on `just` as our primary task runner for the repository.
 - Root `portless.json` maps only Bun/npm workspace packages (e.g. `frontend`); FastAPI is not listed there—the API is started alongside (e.g. `dev.ts` with `bunx portless api.app.nexus-ai …`).
 - Accepted Portless + hybrid frontend/API setup is documented in `docs/decisions/portless-local-development.md`.
 - `dev.ts` may wait until HTTPS responds through Portless (e.g. curl probe) before auto-opening the browser, to avoid Portless’s “no app registered” stub during registration.
+- Safari over Portless HTTPS is stricter than Chrome about cross-site cookies: `fetch` from `app.nexus-ai.localhost` to `api.app.nexus-ai.localhost` can yield HTTP 204 on dev-login while the session cookie still does not stick for follow-up navigation; same-origin auth handoffs through the Next.js app origin avoid that failure mode.

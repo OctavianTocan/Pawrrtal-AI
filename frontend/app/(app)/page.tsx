@@ -1,4 +1,5 @@
 import ChatContainer from '@/features/chat/ChatContainer';
+import { OnboardingModal } from '@/features/onboarding/OnboardingModal';
 
 /**
  * Root conversation page (`/`).
@@ -12,6 +13,7 @@ export default async function ConversationPage() {
 
   return (
     <div>
+      <OnboardingModal />
       <ChatContainer key={uuid} conversationId={uuid} />
     </div>
   );
