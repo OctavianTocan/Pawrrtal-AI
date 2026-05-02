@@ -1,15 +1,37 @@
+/**
+ * Local dev orchestrator: Next.js (frontend) + FastAPI (backend), both behind Portless HTTPS.
+ *
+ * Why this file exists:
+ * - Portless listens on 443 and sends traffic to your real servers on random/high ports.
+ * - If two Portless processes fight over startup, or the browser opens too early, you get
+ *   Portless's own "404 / No app registered" page even when Next says "Ready".
+ * - So we: reset proxy once, start apps in a safe order, then poll until HTTPS works before opening the browser.
+ *
+ * See: https://github.com/vercel-labs/portless
+ */
 import { homedir } from 'node:os';
 import { $ } from 'bun';
 import open from 'open';
 
+/** Public URL the proxy serves for the Next app (must match frontend Portless `--name`). */
 const FRONTEND_URL = 'https://app.nexus-ai.localhost';
 
-/** Returns true once Portless is forwarding (no longer serving its own “no app registered” stub). */
+/**
+ * Hit the frontend URL over HTTPS and guess whether Portless is forwarding to Next yet.
+ *
+ * We use `curl` (not `fetch`) so we can pass Portless's CA file (`~/.portless/ca.pem`) when it exists.
+ * Without trusting that CA, HTTPS checks often fail on the first run or in scripts.
+ *
+ * Portless's "nothing registered" page contains the phrase `No app registered`. A real Next response
+ * might be 200, a redirect (3xx), or even a Next 404 — but not that stub — so we treat those as OK.
+ */
 async function tryFrontendReachable(caPath: string): Promise<boolean> {
+  // `-w '\\n%{http_code}'` appends the status line after the body so we can split them.
   const args = ['curl', '-sS', '--max-time', '3', '-w', '\n%{http_code}', FRONTEND_URL];
   if (await Bun.file(caPath).exists()) {
     args.splice(1, 0, '--cacert', caPath);
   } else {
+    // First run or missing CA file: skip verify so we can still detect routing vs stub page.
     args.splice(1, 0, '-k');
   }
 
@@ -28,6 +50,7 @@ async function tryFrontendReachable(caPath: string): Promise<boolean> {
   return false;
 }
 
+/** Poll until the frontend responds through Portless, then open the system browser (unless disabled). */
 async function waitThenOpenBrowser(): Promise<void> {
   const shouldAutoOpen = process.env.NO_AUTO_OPEN !== '1';
   if (!shouldAutoOpen) return;
@@ -73,15 +96,15 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // Remove the Next.js dev lock that causes the "Unable to acquire lock" error
 await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 
-// Reset proxy so the daemon matches this repo's portless version (`bunx` uses package.json).
-// A stale global proxy (older CLI) can leave routes empty while app processes log as healthy.
+// Portless: one HTTPS proxy on the machine should match the CLI version we run via `bunx`
+// (see root package.json `devDependencies`). Stop first so we never attach apps to an old daemon.
 await $`bunx portless proxy stop`.nothrow();
-// Ensure a single proxy is listening before any registering children. Two simultaneous
-// `portless run` auto-starts can race (Portless 404 “No apps running” while Next logs Ready).
+// Start proxy explicitly before any `portless run` children so two apps don't race auto-start.
 await $`bunx portless proxy start`.nothrow();
 
 // --Here, "--project backend" ensures we use the correct uv.lock file.--
-// Start the frontend first so its route wins deterministically; backend follows shortly after.
+// Frontend registers `app.nexus-ai.localhost` first; backend uses `api.app.nexus-ai` subdomain.
+// Short pause reduces simultaneous Portless registration races when both spin up.
 const frontendPromise = $`bun --cwd frontend dev`.quiet(false);
 
 await Bun.sleep(1500);
@@ -91,6 +114,7 @@ const backendPromise =
     false
   );
 
+// Runs in parallel with the long-running dev servers; does not block them from starting.
 void waitThenOpenBrowser();
 
 await Promise.all([frontendPromise, backendPromise]);
