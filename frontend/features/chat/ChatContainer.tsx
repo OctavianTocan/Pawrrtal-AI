@@ -1,7 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import { useChatActivity } from '@/features/nav-chats/chat-activity-context';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import { useChat } from './hooks/use-chat';
@@ -34,6 +35,7 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
   const createConversationMutation = useCreateConversation(conversationId);
   const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
   const router = useRouter();
+  const { setActiveConversation, clearActiveConversation } = useChatActivity();
 
   /**
    * Tracks whether we've already updated the URL to `/c/:id`.
@@ -106,6 +108,24 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       router.replace(`/c/${conversationId}`);
     }
   };
+
+  // Keep the sidebar's chat-activity context in sync with this chat's state.
+  // Fires on every history/loading change so the sidebar can show spinners,
+  // unread badges, and content-search matches for the active conversation.
+  useEffect(() => {
+    setActiveConversation({
+      conversationId,
+      chatHistory,
+      isLoading,
+    });
+  }, [chatHistory, conversationId, isLoading, setActiveConversation]);
+
+  // Clear activity state on unmount, guarded by conversationId so a stale
+  // cleanup doesn't clobber a newly opened conversation.
+  useEffect(
+    () => () => clearActiveConversation(conversationId),
+    [clearActiveConversation, conversationId]
+  );
 
   /** Updates the controlled message state as the user types. */
   const onUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
