@@ -53,9 +53,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
-        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
+        secure = (
+            self.cookie_secure if self.cookie_secure is not None else self.is_production
+        )
         if self.cookie_samesite == "none" and not secure:
-            raise ValueError("cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod).")
+            raise ValueError(
+                "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."
+            )
         return self
 
     @property
