@@ -5,8 +5,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "frontend:dev": "bunx portless",
-    "dev:backend": "bunx portless api.app.nexus-ai --app-port 8000 uv run --project backend fastapi dev backend/main.py",
     "dev": "bun run dev.ts",
     "commit": "bun run commit.ts",
     "lint:policies": "bun run check-policies.mjs"
@@ -14,9 +12,7 @@
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.100.8",
     "@types/bun": "latest",
-    "mcporter": "^0.7.3",
-    "open": "^10.2.0",
-    "portless": "^0.12.0"
+    "mcporter": "^0.7.3"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

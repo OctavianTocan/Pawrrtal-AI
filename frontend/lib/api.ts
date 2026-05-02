@@ -2,12 +2,10 @@
  * Base URL for all API requests.
  * Determined from NEXT_PUBLIC_API_URL environment variable.
  *
- * Default matches Portless routing (`dev.ts` / `just dev`): the UI is served over HTTPS at
- * app.nexus-ai.localhost, so the API must use HTTPS too — otherwise the browser blocks mixed
- * content. For plain `next dev` on http://localhost without Portless, set
- * NEXT_PUBLIC_API_URL=http://localhost:8000 in `.env.local`.
+ * Default targets the local FastAPI dev server on `http://localhost:8000`.
+ * In production (Vercel) the env var must be set to the deployed API origin.
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.app.nexus-ai.localhost';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 /**
  * API endpoint definitions for frontend requests.

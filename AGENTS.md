@@ -85,8 +85,5 @@ We rely on `just` as our primary task runner for the repository.
 
 ## Learned Workspace Facts
 
-- Local Portless dev serves the Next.js app at `https://app.nexus-ai.localhost` and the browser should call the API at `https://api.app.nexus-ai.localhost` (not `http://localhost:8000`) so an HTTPS page does not hit mixed-content blocking.
-- Root `portless.json` maps only Bun/npm workspace packages (e.g. `frontend`); FastAPI is not listed there—the API is started alongside (e.g. `dev.ts` with `bunx portless api.app.nexus-ai …`).
-- Accepted Portless + hybrid frontend/API setup is documented in `docs/decisions/portless-local-development.md`.
-- `dev.ts` may wait until HTTPS responds through Portless (e.g. curl probe) before auto-opening the browser, to avoid Portless’s “no app registered” stub during registration.
-- Safari over Portless HTTPS is stricter than Chrome about cross-site cookies: `fetch` from `app.nexus-ai.localhost` to `api.app.nexus-ai.localhost` can yield HTTP 204 on dev-login while the session cookie still does not stick for follow-up navigation; same-origin auth handoffs through the Next.js app origin avoid that failure mode.
+- Local dev runs on plain localhost: Next.js on `http://localhost:3001`, FastAPI on `http://localhost:8000`. `dev.ts` (run via `just dev` or `bun run dev`) starts both side-by-side. No HTTPS, no proxy, no special hostnames.
+- Frontend → backend cookie auth works because both run on the same host (`localhost`); cookies ignore ports, so `Set-Cookie` from `:8000` is visible to fetches from `:3001` with `credentials: 'include'`. Use `COOKIE_SAMESITE=lax` and `COOKIE_SECURE=false` in dev.

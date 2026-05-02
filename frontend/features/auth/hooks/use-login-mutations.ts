@@ -1,9 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 
-/** Same-origin proxy so Safari stores session cookies from dev-login (see `app/api/auth/dev-login`). */
-const DEV_LOGIN_PROXY_PATH = '/api/auth/dev-login';
-
 /** Arguments for a standard email/password login request. */
 export interface LoginArgs {
   email: string;
@@ -62,16 +59,16 @@ export function useLoginMutation() {
 /**
  * Dev admin login shortcut.
  *
- * Calls **`POST /api/auth/dev-login`** (same origin as the Next app), not the FastAPI URL directly.
- *
- * **Why:** The UI is on **`app.*`** and the API on **`api.*`**. Safari often ignores **`Set-Cookie`** from that cross-site **`fetch`**, so you get **204** but no usable session. The Next route proxies to FastAPI and **re-emits cookies on the app origin** so the browser keeps **`session_token`**. See **`docs/decisions/portless-local-development.md`** (Safari and session cookies).
+ * Calls `POST /auth/dev-login` on the FastAPI backend directly. On plain localhost
+ * the frontend (`localhost:3001`) and backend (`localhost:8000`) are same-site, so
+ * the session cookie set by the backend is available to the frontend without a proxy.
  */
 export function useDevAdminLoginMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, void>({
     mutationFn: async () => {
-      const response = await fetch(DEV_LOGIN_PROXY_PATH, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.devLogin}`, {
         method: 'POST',
         credentials: 'include',
       });
