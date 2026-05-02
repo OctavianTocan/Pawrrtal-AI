@@ -15,6 +15,7 @@
 
 import type { ConversationLabel } from '@/lib/types';
 
+/** Derive badge background/text colors from the label's color, falling back to theme defaults. */
 function resolveBadgeColor(label: ConversationLabel): { backgroundColor: string; color: string } {
   if (label.color) {
     return {

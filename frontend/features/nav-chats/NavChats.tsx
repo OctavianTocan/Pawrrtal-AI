@@ -11,6 +11,7 @@ import { ConversationDeleteDialog } from './ConversationDeleteDialog';
 import { ConversationRenameDialog } from './ConversationRenameDialog';
 import { NavChatsView } from './NavChatsView';
 import { useConversationActions } from './UseConversationActions';
+import { useNavChatsOrchestration } from './use-nav-chats-orchestration';
 
 /** localStorage key used to persist which date groups the user has collapsed. */
 const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';
@@ -51,7 +52,6 @@ export function NavChats(): React.JSX.Element {
 
   // --- search ---
   const [searchQuery, setSearchQuery] = useState('');
-  const isSearchActive = searchQuery.trim().length >= 2;
 
   // --- grouping & filtering ---
   const groups = useMemo(() => buildConversationGroups(conversations ?? []), [conversations]);
@@ -108,6 +108,15 @@ export function NavChats(): React.JSX.Element {
     handleDeleteDialogOpenChange,
   } = useConversationActions(conversations);
 
+  // --- list orchestration (search, multi-select, keyboard nav, focus refs) ---
+  const listOrchestration = useNavChatsOrchestration({
+    conversations,
+    searchQuery,
+    filteredGroups,
+    collapsedGroups,
+    navigateTo,
+  });
+
   return (
     <>
       <NavChatsView
@@ -117,7 +126,7 @@ export function NavChats(): React.JSX.Element {
         resultCount={resultCount}
         isLoading={isLoading}
         isEmpty={!conversations?.length}
-        isSearchActive={isSearchActive}
+        isSearchActive={listOrchestration.isSearchActive}
         filteredGroups={filteredGroups}
         collapsedGroups={collapsedGroups}
         onToggleGroup={toggleGroupCollapse}
@@ -125,6 +134,16 @@ export function NavChats(): React.JSX.Element {
         onNavigate={navigateTo}
         onRename={handleRenameClick}
         onDelete={handleDeleteClick}
+        navigatorRef={listOrchestration.navigatorRef}
+        contentSearchResults={listOrchestration.contentSearchResults}
+        activeChatMatchInfo={listOrchestration.activeChatMatchInfo}
+        multiSelectedIds={listOrchestration.multiSelectedIds}
+        focusedConversationId={listOrchestration.focusedConversationId}
+        onConversationClick={listOrchestration.onConversationClick}
+        onConversationMouseDown={listOrchestration.onConversationMouseDown}
+        onConversationKeyDown={listOrchestration.onConversationKeyDown}
+        registerConversationElement={listOrchestration.registerConversationElement}
+        onNavigatorMouseDown={listOrchestration.onNavigatorMouseDown}
       />
       <ConversationRenameDialog
         isOpen={!!renameDialogConversationId}

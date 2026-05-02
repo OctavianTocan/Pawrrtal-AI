@@ -42,7 +42,7 @@ export interface EntityRowProps {
 	/** Mouse down handler for modifier key detection */
 	onMouseDown?: (e: React.MouseEvent) => void;
 	/** Props spread onto the row's clickable div (role="button") element */
-	buttonProps?: Record<string, unknown>;
+	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 	/** Data attributes on outer wrapper */
 	dataAttributes?: Record<string, string | undefined>;
 	/** Hide the "..." more button */
@@ -92,7 +92,7 @@ export function EntityRow({
 			<div
 				role="button"
 				tabIndex={0}
-				{...(buttonProps as React.HTMLAttributes<HTMLDivElement>)}
+				{...buttonProps}
 				onClick={!onMouseDown ? onClick : undefined}
 				onMouseDown={onMouseDown}
 				onKeyDown={(e) => {
@@ -108,9 +108,7 @@ export function EntityRow({
 					isSelected || isInMultiSelect
 						? "bg-foreground/3"
 						: "hover:bg-foreground/2",
-					(buttonProps as Record<string, unknown>)?.className as
-						| string
-						| undefined,
+					buttonProps?.className,
 				)}
 			>
 				<div className="flex flex-col gap-1.5 min-w-0 flex-1">

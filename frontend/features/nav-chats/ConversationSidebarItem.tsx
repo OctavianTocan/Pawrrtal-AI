@@ -20,6 +20,20 @@ interface ConversationSidebarItemProps {
   onRename: (conversationId: string) => void;
   /** Called to open the delete confirmation for this conversation. */
   onDelete: (conversationId: string) => void;
+  /** Icon shown before the title (e.g. processing spinner, unread dot). */
+  icon?: ReactNode;
+  /** Label badges shown after the title. */
+  badges?: ReactNode;
+  /** Content shown after the title (e.g. search match count badge). */
+  titleTrailing?: ReactNode;
+  /** True when this item is part of an active multi-select. */
+  isInMultiSelect?: boolean;
+  /** Called when the row is clicked. */
+  onClick?: () => void;
+  /** Called on mouse down on the row. */
+  onMouseDown?: (e: React.MouseEvent) => void;
+  /** Extra button props for the row's interactive element. */
+  buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 }
 
 /**
@@ -37,6 +51,13 @@ export function ConversationSidebarItem({
   onNavigate,
   onRename,
   onDelete,
+  icon,
+  badges,
+  titleTrailing,
+  isInMultiSelect,
+  onClick,
+  onMouseDown,
+  buttonProps,
 }: ConversationSidebarItemProps): React.JSX.Element {
   const pathname = usePathname();
   const href = `/c/${id}`;
@@ -56,10 +77,17 @@ export function ConversationSidebarItem({
       age={age}
       href={href}
       absoluteHref={absoluteHref}
-      onClick={() => onNavigate(href)}
+      icon={icon}
+      badges={badges}
+      titleTrailing={titleTrailing}
+      isInMultiSelect={isInMultiSelect}
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onClickMenuItem={() => onNavigate(href)}
       onNavigate={onNavigate}
       onRename={() => onRename(id)}
       onDelete={() => onDelete(id)}
+      buttonProps={buttonProps}
     />
   );
 }

@@ -76,3 +76,14 @@ We rely on `just` as our primary task runner for the repository.
 - **Clean Code Rules (`.claude/rules/clean-code/`)**: Universal rules for function design, naming conventions, named constants, Python logging/exception narrowing, and code structure. Your generated code must adhere to these principles (KISS, DRY, single-responsibility, meaningful naming).
 - **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
 - **TypeScript Rules (`.claude/rules/typescript/`)**: Explicit return types on every function, TSDoc on exports, JSDoc placement (directly above the declaration), parameter limits (max 3 positional, group into objects beyond that), literal union types for constrained string fields, and environment variable conventions.
+
+## Learned User Preferences
+
+- When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
+
+## Learned Workspace Facts
+
+- Local Portless dev serves the Next.js app at `https://app.nexus-ai.localhost` and the browser should call the API at `https://api.app.nexus-ai.localhost` (not `http://localhost:8000`) so an HTTPS page does not hit mixed-content blocking.
+- Root `portless.json` maps only Bun/npm workspace packages (e.g. `frontend`); FastAPI is not listed there—the API is started alongside (e.g. `dev.ts` with `bunx portless api.app.nexus-ai …`).
+- Accepted Portless + hybrid frontend/API setup is documented in `docs/decisions/portless-local-development.md`.
+- `dev.ts` may wait until HTTPS responds through Portless (e.g. curl probe) before auto-opening the browser, to avoid Portless’s “no app registered” stub during registration.

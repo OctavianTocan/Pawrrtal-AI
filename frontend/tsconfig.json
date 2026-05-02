@@ -1,41 +1,41 @@
 {
-	"compilerOptions": {
-		"skipDefaultLibCheck": true,
-		"target": "es2022",
-		"verbatimModuleSyntax": true,
-		"allowJs": true,
-		"resolveJsonModule": true,
-		"moduleDetection": "force",
-		// Strictness.
-		"strict": true,
-		"noUncheckedIndexedAccess": true,
-		// Not transpiling with Typescript:
-		"moduleResolution": "bundler",
-		"module": "esnext",
-		"noEmit": true,
-		"lib": ["dom", "dom.iterable", "esnext"],
-		"forceConsistentCasingInFileNames": true,
-		"skipLibCheck": true,
-		"isolatedModules": true,
-		"jsx": "react-jsx",
-		"incremental": true,
-		"plugins": [
-			{
-				"name": "next"
-			}
-		],
-		"paths": {
-			"@/*": ["./*"]
-		},
-		"esModuleInterop": true
-	},
-	"include": [
-		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
-		".next/types/**/*.ts",
-		"**/*.mts",
-		".next/dev/types/**/*.ts"
-	],
-	"exclude": ["node_modules"]
+  "compilerOptions": {
+    "skipDefaultLibCheck": true,
+    "target": "es2022",
+    "verbatimModuleSyntax": true,
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    // Strictness.
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // Not transpiling with Typescript:
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "noEmit": true,
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "esModuleInterop": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
 }
