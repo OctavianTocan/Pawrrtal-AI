@@ -11,9 +11,9 @@
 'use client';
 
 import React from 'react';
-import { ChatActivityProvider } from '@/features/nav-chats/chat-activity-context';
+import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity-context';
+import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
-import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/sidebar-focus';
 import { NewSessionButton } from './new-session-button';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';

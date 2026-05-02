@@ -10,13 +10,13 @@ import type { ConversationGroup } from '@/lib/conversation-groups';
 import { highlightMatch } from '@/lib/highlight-match';
 import type { Conversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import type { ContentSearchResult } from '../hooks/use-conversation-search';
 import { CollapsibleGroupHeader } from './CollapsibleGroupHeader';
 import { ConversationLabelBadge } from './ConversationLabelBadge';
 import { ConversationSearchHeader } from './ConversationSearchHeader';
 import { ConversationSidebarItem } from './ConversationSidebarItem';
 import { ConversationsEmptyState } from './ConversationsEmptyState';
 import { SectionHeader } from './SectionHeader';
-import type { ContentSearchResult } from './use-conversation-search';
 
 export interface NavChatsViewProps {
   /** Current search input value. */

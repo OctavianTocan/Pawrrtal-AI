@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { startTransition, useState } from 'react';
 import { useSidebar } from '@/components/ui/sidebar';
 import type { Conversation } from '@/lib/types';
-import { useDeleteConversation, useRenameConversation } from './UseConversationMutations';
+import { useDeleteConversation, useRenameConversation } from './use-conversation-mutations';
 
 interface UseConversationActionsResult {
   /** The ID of the conversation being renamed, or null if no dialog is open. */

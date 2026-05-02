@@ -12,15 +12,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ConversationGroup } from '@/lib/conversation-groups';
 import { extractConversationIdFromPath } from '@/lib/route-utils';
 import type { Conversation } from '@/lib/types';
+import type { NavChatsViewProps } from '../components/NavChatsView';
+import { useOptionalSidebarFocusContext } from '../context/sidebar-focus';
 import {
   createInitialSelectionState,
   type MultiSelectState,
   rangeSelect,
   singleSelect,
   toggleSelect,
-} from './conversation-selection';
-import type { NavChatsViewProps } from './NavChatsView';
-import { useOptionalSidebarFocusContext } from './sidebar-focus';
+} from '../lib/conversation-selection';
 import { useConversationSearch } from './use-conversation-search';
 
 type OptionalSidebarFocus = ReturnType<typeof useOptionalSidebarFocusContext>;

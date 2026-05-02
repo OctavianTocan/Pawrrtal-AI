@@ -7,11 +7,11 @@ import {
   countGroupItems,
   filterConversationGroups,
 } from '@/lib/conversation-groups';
-import { ConversationDeleteDialog } from './ConversationDeleteDialog';
-import { ConversationRenameDialog } from './ConversationRenameDialog';
-import { NavChatsView } from './NavChatsView';
-import { useConversationActions } from './UseConversationActions';
-import { useNavChatsOrchestration } from './use-nav-chats-orchestration';
+import { NavChatsView } from './components/NavChatsView';
+import { ConversationDeleteDialog } from './dialogs/ConversationDeleteDialog';
+import { ConversationRenameDialog } from './dialogs/ConversationRenameDialog';
+import { useConversationActions } from './hooks/use-conversation-actions';
+import { useNavChatsOrchestration } from './hooks/use-nav-chats-orchestration';
 
 /** localStorage key used to persist which date groups the user has collapsed. */
 const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';

@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
-import { useChatActivity } from '@/features/nav-chats/chat-activity-context';
+import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import { useChat } from './hooks/use-chat';
