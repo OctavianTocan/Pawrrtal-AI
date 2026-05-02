@@ -22,6 +22,12 @@ date: 2026-05-02
 
 4. **Orchestration** — Keep `dev.ts` for starting workspace Portless plus the API subprocess, and for waiting until the HTTPS route responds before auto-opening the browser (avoids Portless’s stub 404 during registration).
 
+### Safari and session cookies (dev-login)
+
+The UI runs on **`app.*`** and the API on **`api.*`** — different sites in the browser. If the client **`fetch`**es **`POST https://api…/auth/dev-login`** directly, the response’s **`Set-Cookie`** is treated as **cross-site**. **Safari** (and strict third-party cookie behavior) often **does not store** that cookie for later requests from the app, so you can see **204** and headers in the Network tab but **stay on the login page**.
+
+**Mitigation:** **`POST /api/auth/dev-login`** on the Next app (same origin as the page). The route handler calls FastAPI and **replays upstream `Set-Cookie`** on its own response so the browser attributes the session cookie to **`app.*`**. **`useDevAdminLoginMutation`** uses that relative path instead of **`API_BASE_URL`**.
+
 ## Alternatives considered
 
 - **HTTP everywhere in dev** — No Portless on the frontend; UI and API on `localhost` HTTP. Rejected for now because we want stable named HTTPS URLs for local dev and parity with TLS-related behavior.
@@ -33,6 +39,7 @@ date: 2026-05-02
 - `dev.ts` — dual-process dev + HTTPS readiness check + browser open.
 - `frontend/package.json` — `dev` / `dev:app` / `portless` block aligned with upstream Turborepo-style docs.
 - `frontend/lib/api.ts` — default API base URL aligned with Portless API hostname when unset.
+- `frontend/app/api/auth/dev-login/route.ts` — same-origin proxy for dev-login **`Set-Cookie`** (Safari).
 
 ## Review
 
