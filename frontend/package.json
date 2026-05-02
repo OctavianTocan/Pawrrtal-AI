@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "portless run --name app.nexus-ai --app-port 3001 --force next dev",
+    "dev": "bunx portless run --name app.nexus-ai --app-port 3001 --force next dev",
     "build": "next build",
-    "start": "portless run --name app.nexus-ai next start",
+    "start": "bunx portless run --name app.nexus-ai next start",
     "typecheck": "tsc --noEmit",
     "lint": "bunx --bun @biomejs/biome lint --write",
     "format": "bunx --bun @biomejs/biome format --write",
