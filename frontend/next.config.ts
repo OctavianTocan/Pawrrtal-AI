@@ -2,7 +2,8 @@ import type { NextConfig } from 'next';
 import path from 'path';
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['app.nexus-ai.localhost'],
+  // Portless worktrees use `<branch>.app.nexus-ai.localhost`; wildcard keeps HMR/devtools allowed.
+  allowedDevOrigins: ['app.nexus-ai.localhost', '*.app.nexus-ai.localhost'],
   turbopack: {
     root: path.resolve(__dirname, '../'),
   },
