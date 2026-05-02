@@ -119,25 +119,29 @@ function SidebarProvider({
 }) {
 	const isMobile = useIsMobile();
 	const [openMobile, setOpenMobile] = React.useState(false);
-	const [desktopWidth, setDesktopWidthState] = React.useState(loadDesktopSidebarWidth);
+	// SSR and the client's first render must match — never read localStorage in useState
+	// initializers (server has no window; client would diverge). Hydrate width + collapsed
+	// state from storage in useLayoutEffect before paint.
+	const [desktopWidth, setDesktopWidthState] = React.useState(SIDEBAR_DEFAULT_WIDTH);
 
-	// Internal state management using "expanded" | "collapsed"
-	const [_state, _setState] = React.useState<"expanded" | "collapsed">(
-		() => {
-			if (typeof window === "undefined") {
-				return defaultOpen ? "expanded" : "collapsed";
-			}
-			try {
-				const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
-				if (stored === "expanded" || stored === "collapsed") {
-					return stored;
-				}
-			} catch {
-				// Storage reads can throw in private browsing or blocked storage.
-			}
-			return defaultOpen ? "expanded" : "collapsed";
-		}
+	const [_state, _setState] = React.useState<"expanded" | "collapsed">(() =>
+		defaultOpen ? "expanded" : "collapsed",
 	);
+
+	React.useLayoutEffect(() => {
+		setDesktopWidthState(loadDesktopSidebarWidth());
+		if (openProp !== undefined) {
+			return;
+		}
+		try {
+			const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
+			if (stored === "expanded" || stored === "collapsed") {
+				_setState(stored);
+			}
+		} catch {
+			// Storage reads can throw in private browsing or blocked storage.
+		}
+	}, [openProp]);
 
 	// Convert external boolean prop to internal state type
 	const state = openProp !== undefined
