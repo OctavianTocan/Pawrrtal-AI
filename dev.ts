@@ -1,19 +1,20 @@
 /**
- * Local dev orchestrator: Next.js (frontend) + FastAPI (backend), both behind Portless HTTPS.
+ * Hybrid stack orchestrator: this repo matches Portless's workspace model for the Next app,
+ * plus one extra subprocess for FastAPI (not an npm workspace package).
  *
- * Why this file exists:
- * - Portless listens on 443 and sends traffic to your real servers on random/high ports.
- * - If two Portless processes fight over startup, or the browser opens too early, you get
- *   Portless's own "404 / No app registered" page even when Next says "Ready".
- * - So we: reset proxy once, start apps in a safe order, then poll until HTTPS works before opening the browser.
+ * - Frontend (recommended upstream shape): root `portless.json` maps `frontend` → `dev:app` → `next dev`.
+ *   Running `bunx portless` from the repo root starts every workspace package that has that script
+ *   (see Portless README → Monorepo / Turborepo sections): https://github.com/vercel-labs/portless
+ * - Backend: Portless subdomain pattern `portless api.<name> …` for `api.app.nexus-ai.localhost`.
  *
- * See: https://github.com/vercel-labs/portless
+ * We keep curl polling before opening the browser so automation does not land on Portless's stub
+ * 404 while routes are still registering.
  */
 import { homedir } from 'node:os';
 import { $ } from 'bun';
 import open from 'open';
 
-/** Public URL the proxy serves for the Next app (must match frontend Portless `--name`). */
+/** Matches `apps.frontend.name` in `portless.json`. */
 const FRONTEND_URL = 'https://app.nexus-ai.localhost';
 
 /**
@@ -96,25 +97,19 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // Remove the Next.js dev lock that causes the "Unable to acquire lock" error
 await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 
-// Portless: one HTTPS proxy on the machine should match the CLI version we run via `bunx`
-// (see root package.json `devDependencies`). Stop first so we never attach apps to an old daemon.
-await $`bunx portless proxy stop`.nothrow();
-// Start proxy explicitly before any `portless run` children so two apps don't race auto-start.
-await $`bunx portless proxy start`.nothrow();
+// Same entry point as upstream: `portless` from monorepo root runs workspace `dev:app` scripts
+// (see `portless.json`). Proxy auto-starts per Portless defaults.
+const frontendPromise = $`bunx portless`.quiet(false);
 
-// --Here, "--project backend" ensures we use the correct uv.lock file.--
-// Frontend registers `app.nexus-ai.localhost` first; backend uses `api.app.nexus-ai` subdomain.
-// Short pause reduces simultaneous Portless registration races when both spin up.
-const frontendPromise = $`bun --cwd frontend dev`.quiet(false);
-
+// Second HTTPS app (Python): subdomain pattern from Portless README (`api.myapp`).
+// Short pause narrows simultaneous registration races against the workspace batch above.
 await Bun.sleep(1500);
 
 const backendPromise =
-  $`bunx portless api.app.nexus-ai --app-port 8000 --force uv run --project backend fastapi dev backend/main.py`.quiet(
+  $`bunx portless api.app.nexus-ai --app-port 8000 uv run --project backend fastapi dev backend/main.py`.quiet(
     false
   );
 
-// Runs in parallel with the long-running dev servers; does not block them from starting.
 void waitThenOpenBrowser();
 
 await Promise.all([frontendPromise, backendPromise]);
