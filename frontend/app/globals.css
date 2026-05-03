@@ -219,26 +219,30 @@
 	--z-splash: 600;
 }
 
-/* Dark Mode */
+/* Dark Mode — Codex/GitHub-adjacent neutrals + blue accent (#0D1117 canvas, #388BFD links) */
 .dark {
 	/* === 6 BASE COLORS === */
-	--background: oklch(0.15 0.012 245);
-	--background-elevated: color-mix(in srgb, var(--foreground) 3%, var(--background));
+	/* Page/workspace ~#0D1117 */
+	--background: oklch(0.205 0.012 264);
+	/* Sidebar / elevated surfaces ~#161B22 */
+	--background-elevated: oklch(0.239 0.012 264);
 	--background-image:
-		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.28), transparent 45%),
+		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.22), transparent 45%),
 		radial-gradient(
 			circle at bottom right,
-			oklch(from var(--info) l c h / 0.16),
+			oklch(from var(--info) l c h / 0.12),
 			transparent 40%
 		),
 		linear-gradient(180deg, var(--background), var(--foreground-5));
-	--foreground: oklch(0.925 0.006 90);
+	/* Primary text ~#E6EDF3 */
+	--foreground: oklch(0.939 0.012 252);
 	--foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
-	--foreground-rgb: 235, 232, 225;
-	--user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
-	--user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
-	--accent: oklch(0.68 0.13 293);
-	--accent-rgb: 118, 92, 147;
+	--foreground-rgb: 230, 237, 243;
+	--user-message-bubble: oklch(from var(--foreground) l c h / 0.06);
+	--user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.035);
+	/* Interactive accent ~#388BFD */
+	--accent: oklch(0.628 0.154 264);
+	--accent-rgb: 56, 139, 253;
 	--info: oklch(0.7 0.16 70);
 	--info-rgb: 200, 140, 60;
 	--success: oklch(0.6 0.17 145);
@@ -273,24 +277,28 @@
 
 	/* === SHADCN COMPATIBILITY (derived from 6 base colors) === */
 	--primary: var(--accent);
-	--primary-foreground: var(--background);
-	--secondary: oklch(from var(--foreground) l c h / 0.05);
+	/* Light text on blue primary surfaces */
+	--primary-foreground: oklch(0.99 0.004 252);
+	--secondary: oklch(0.268 0.01 264);
 	--secondary-foreground: var(--foreground);
-	--muted: oklch(from var(--foreground) l c h / 0.05);
-	--muted-foreground: var(--foreground-50);
-	--card: var(--background);
+	/* Muted panels ~#222222-adjacent */
+	--muted: oklch(0.268 0.01 264);
+	/* Secondary/muted copy ~#8B949E */
+	--muted-foreground: oklch(0.662 0.018 252);
+	--card: oklch(0.248 0.011 264);
 	--card-foreground: var(--foreground);
-	--popover: var(--background);
+	--popover: oklch(0.248 0.011 264);
 	--popover-foreground: var(--foreground);
-	--border: oklch(from var(--foreground) l c h / 0.05);
-	--input: oklch(from var(--foreground) l c h / 0.1);
-	--ring: oklch(from var(--foreground) l c h / 0.25);
+	/* Border ~#30363D */
+	--border: oklch(0.345 0.015 262);
+	--input: oklch(0.268 0.01 264);
+	--ring: oklch(from var(--accent) l c h / 0.45);
 
 	/* Sidebar tokens */
-	--sidebar: oklch(0.285 0.008 250);
+	--sidebar: var(--background-elevated);
 	--sidebar-foreground: var(--foreground);
 	--sidebar-primary: var(--accent);
-	--sidebar-primary-foreground: var(--background);
+	--sidebar-primary-foreground: var(--primary-foreground);
 	--sidebar-accent: var(--foreground-5);
 	--sidebar-accent-foreground: var(--foreground);
 	--sidebar-border: var(--border);
@@ -358,7 +366,7 @@ html[data-scenic][data-theme-override]::before {
 }
 
 html[data-scenic] {
-	--background: oklch(0.145 0.012 265 / 0.55);
+	--background: oklch(0.205 0.012 264 / 0.55);
 }
 
 /* Inter Font - Opt-in via data-font="inter" attribute */
