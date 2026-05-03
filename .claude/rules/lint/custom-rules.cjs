@@ -15,7 +15,7 @@
 
 const yamlLight = require('./yaml-light.cjs');
 const parseYaml = yamlLight.parse;
-const path = require('path');
+const path = require('node:path');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -143,7 +143,7 @@ module.exports = [
 				if (!headingTexts.some((t) => t === section)) {
 					onError({
 						lineNumber: 1,
-						detail: `Missing "## ${section}" section. Every rule must have ${required.map((s) => '## ' + s).join(' and ')}.`,
+						detail: `Missing "## ${section}" section. Every rule must have ${required.map((s) => `## ${s}`).join(' and ')}.`,
 					});
 				}
 			}
@@ -161,7 +161,7 @@ module.exports = [
 			if (!isRuleFile(params.name)) return;
 
 			const parsed = parseFrontMatterFromParams(params.frontMatterLines);
-			if (!parsed || !parsed.name) return;
+			if (!parsed?.name) return;
 
 			const lines = params.lines;
 			// Find H1 line (first line starting with #)

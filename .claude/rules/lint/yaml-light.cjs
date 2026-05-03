@@ -6,31 +6,83 @@
  * No external dependencies.
  */
 
+const KEY_VALUE_PATTERN = /^([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)/;
+const LIST_ITEM_PATTERN = /^\s*-\s/;
+
+function isQuoted(value) {
+	return (
+		(value.startsWith('"') && value.endsWith('"')) ||
+		(value.startsWith("'") && value.endsWith("'"))
+	);
+}
+
+function stripQuotes(value) {
+	return isQuoted(value) ? value.slice(1, -1) : value;
+}
+
+function parseBlockArray(lines, startIndex) {
+	const items = [];
+	let index = startIndex;
+
+	while (index < lines.length && LIST_ITEM_PATTERN.test(lines[index])) {
+		const item = lines[index].replace(/^\s*-\s*/, '').trim();
+		items.push(stripQuotes(item));
+		index++;
+	}
+
+	return { items, nextIndex: index };
+}
+
+function splitInlineArrayItems(inner) {
+	const items = [];
+	let current = '';
+	let quoteChar = '';
+
+	for (const ch of inner) {
+		if (quoteChar) {
+			quoteChar = ch === quoteChar ? '' : quoteChar;
+			current += ch;
+		} else if (ch === '"' || ch === "'") {
+			quoteChar = ch;
+			current += ch;
+		} else if (ch === ',') {
+			items.push(stripQuotes(current.trim()));
+			current = '';
+		} else {
+			current += ch;
+		}
+	}
+
+	if (current.trim()) {
+		items.push(stripQuotes(current.trim()));
+	}
+
+	return items.filter(Boolean);
+}
+
+function parseInlineValue(value) {
+	if (isQuoted(value)) return value.slice(1, -1);
+	if (value === 'true') return true;
+	if (value === 'false') return false;
+	if (value.startsWith('[') && value.endsWith(']')) {
+		return splitInlineArrayItems(value.slice(1, -1));
+	}
+	if (!Number.isNaN(Number(value))) return Number(value);
+	return value;
+}
+
 function parse(text) {
 	const result = {};
 	const lines = text.split('\n');
-	let i = 0;
+	let index = 0;
 
-	while (i < lines.length) {
-		const line = lines[i];
+	while (index < lines.length) {
+		const line = lines[index];
+		const match =
+			line.trim() && !LIST_ITEM_PATTERN.test(line) ? line.match(KEY_VALUE_PATTERN) : null;
 
-		// Skip blank lines
-		if (!line.trim()) {
-			i++;
-			continue;
-		}
-
-		// Array item: - "value" or - value
-		if (/^\s*-\s/.test(line)) {
-			// This belongs to the previous key — handled below
-			i++;
-			continue;
-		}
-
-		// Key: value
-		const match = line.match(/^([a-zA-Z_][a-zA-Z0-9_]*):\s*(.*)/);
 		if (!match) {
-			i++;
+			index++;
 			continue;
 		}
 
@@ -38,72 +90,13 @@ function parse(text) {
 		const value = match[2].trim();
 
 		if (value === '') {
-			// Could be array or null. Look ahead for array items.
-			const items = [];
-			let j = i + 1;
-			while (j < lines.length && /^\s*-\s/.test(lines[j])) {
-				let item = lines[j].replace(/^\s*-\s*/, '').trim();
-				// Remove surrounding quotes
-				if (
-					(item.startsWith('"') && item.endsWith('"')) ||
-					(item.startsWith("'") && item.endsWith("'"))
-				) {
-					item = item.slice(1, -1);
-				}
-				items.push(item);
-				j++;
-			}
-			if (items.length > 0) {
-				result[key] = items;
-				i = j;
-				continue;
-			}
-			result[key] = null;
-		} else if (
-			(value.startsWith('"') && value.endsWith('"')) ||
-			(value.startsWith("'") && value.endsWith("'"))
-		) {
-			result[key] = value.slice(1, -1);
-		} else if (value === 'true') {
-			result[key] = true;
-		} else if (value === 'false') {
-			result[key] = false;
-		} else if (value.startsWith('[') && value.endsWith(']')) {
-			// Inline array: ["a", "b"] — split respecting quoted strings
-			const inner = value.slice(1, -1);
-			const items = [];
-			let current = '';
-			let inQuote = false;
-			let quoteChar = '';
-			for (let c = 0; c < inner.length; c++) {
-				const ch = inner[c];
-				if (inQuote) {
-					if (ch === quoteChar) {
-						inQuote = false;
-					}
-					current += ch;
-				} else if (ch === '"' || ch === "'") {
-					inQuote = true;
-					quoteChar = ch;
-					current += ch;
-				} else if (ch === ',') {
-					items.push(current.trim().replace(/^["']|["']$/g, ''));
-					current = '';
-				} else {
-					current += ch;
-				}
-			}
-			if (current.trim()) {
-				items.push(current.trim().replace(/^["']|["']$/g, ''));
-			}
-			result[key] = items.filter(Boolean);
-		} else if (!isNaN(Number(value))) {
-			result[key] = Number(value);
+			const { items, nextIndex } = parseBlockArray(lines, index + 1);
+			result[key] = items.length > 0 ? items : null;
+			index = items.length > 0 ? nextIndex : index + 1;
 		} else {
-			result[key] = value;
+			result[key] = parseInlineValue(value);
+			index++;
 		}
-
-		i++;
 	}
 
 	return result;
