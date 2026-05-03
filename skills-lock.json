@@ -12,6 +12,18 @@
 			"skillPath": "skills/biome-js/SKILL.md",
 			"computedHash": "30c995e907775ce3a727cbe00288a4fedbb24b8138e1165a51be309ef04799b0"
 		},
+		"electron": {
+			"source": "teachingai/full-stack-skills",
+			"sourceType": "github",
+			"skillPath": "skills/electron-skills/electron/SKILL.md",
+			"computedHash": "9d82126e6c46dd626fc6b1d2e259687d1b64ad61900166b8fc5a3b661c243cf4"
+		},
+		"electron-best-practices": {
+			"source": "jwynia/agent-skills",
+			"sourceType": "github",
+			"skillPath": "skills/tech/development/tooling/electron-best-practices/SKILL.md",
+			"computedHash": "e692cde3f6d9c4695a5c3d12ecddd69f407def5fdc5611ea8ee7b14215f7ab5a"
+		},
 		"javascript-testing-patterns": {
 			"source": "wshobson/agents",
 			"sourceType": "github",
@@ -23,6 +35,12 @@
 			"sourceType": "github",
 			"skillPath": "skills/next-best-practices/SKILL.md",
 			"computedHash": "db85045827ebeb83ac8dbc992b69188755eeb74dcf01cbf5e694d58aa494a106"
+		},
+		"python-testing-patterns": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"skillPath": "plugins/python-development/skills/python-testing-patterns/SKILL.md",
+			"computedHash": "69915bb276b6aec61fe5b283a933f96584f66d14b616ce2060d95757629c6866"
 		},
 		"test-master": {
 			"source": "jeffallan/claude-skills",
