@@ -60,7 +60,7 @@ export const API_ENDPOINTS = {
      * @returns `/api/v1/conversations/${id}/title`
      */
     generateTitle: (id: string, firstMessage: string) =>
-      `/api/v1/conversations/${id}/title?first_message=${firstMessage}`,
+      `/api/v1/conversations/${id}/title?first_message=${encodeURIComponent(firstMessage)}`,
   },
   /** Endpoints for authentication actions */
   auth: {

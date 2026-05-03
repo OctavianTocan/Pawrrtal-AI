@@ -470,11 +470,11 @@ export function ChatComposer({
       <PromptInputAttachments className="px-3 pt-2 pb-0">
         {(attachment) => <PromptInputAttachment data={attachment} />}
       </PromptInputAttachments>
-      <div className="relative">
+      <div className="relative w-full self-stretch">
         <AnimatedComposerPlaceholder isVisible={!hasContent} text={placeholder} />
         <PromptInputTextarea
           aria-label={placeholder}
-          className="max-h-48 min-h-[4.5rem] overflow-y-auto px-3 pt-3 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
+          className="max-h-48 min-h-[4.5rem] w-full overflow-y-auto px-3 pt-3 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
           onChange={onUpdateMessage}
           placeholder=""
           value={message.content}

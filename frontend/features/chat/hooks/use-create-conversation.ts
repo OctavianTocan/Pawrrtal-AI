@@ -1,6 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/lib/api';
+import type { Conversation } from '@/lib/types';
 import { useAuthedFetch } from '../../../hooks/use-authed-fetch';
+
+type CreateConversationVariables = {
+  title: string;
+};
+
+function upsertConversation(
+  conversations: Array<Conversation> | undefined,
+  conversation: Conversation
+): Array<Conversation> {
+  const existingConversations = conversations ?? [];
+  const withoutConversation = existingConversations.filter((item) => item.id !== conversation.id);
+
+  return [conversation, ...withoutConversation];
+}
 
 /**
  * useCreateConversation is a hook that creates a new conversation.
@@ -21,17 +36,20 @@ export function useCreateConversation(conversationId: string) {
     // 2. Make query keys user-specific (requires exposing user ID)
     // See: use-create-conversation.ts:16
     mutationKey: ['conversations'],
-    mutationFn: async () => {
+    mutationFn: async ({ title }: CreateConversationVariables): Promise<Conversation> => {
       const response = await fetcher(API_ENDPOINTS.conversations.create(conversationId), {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({ title }),
         headers: {
           'content-type': 'application/json',
         },
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (conversation) => {
+      queryClient.setQueryData<Array<Conversation>>(['conversations'], (conversations) =>
+        upsertConversation(conversations, conversation)
+      );
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });

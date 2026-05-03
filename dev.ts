@@ -20,8 +20,11 @@ console.log(
 // Frontend: plain Next.js dev server. Workspace package, run via bun --filter.
 const frontendPromise = $`bun --filter app.nexus-ai dev`.quiet(false);
 
-// Backend: FastAPI dev server via uv, bound to 8000.
+// Backend: explicit ASGI target via uvicorn. `main.app` is wrapped in CORS
+// middleware, so FastAPI CLI discovery cannot treat it as a raw FastAPI instance.
 const backendPromise =
-  $`uv run --project backend fastapi dev backend/main.py --host 127.0.0.1 --port 8000`.quiet(false);
+  $`uv run --project backend uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload --reload-dir backend`.quiet(
+    false
+  );
 
 await Promise.all([frontendPromise, backendPromise]);

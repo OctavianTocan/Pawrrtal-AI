@@ -13,6 +13,21 @@ import { useGenerateConversationTitle } from './hooks/use-generate-conversation-
 
 const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
 const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
+const FALLBACK_TITLE_MAX_LENGTH = 80;
+
+function buildInitialConversationTitle(content: string): string {
+  const collapsedContent = content.trim().replace(/\s+/g, ' ');
+
+  if (!collapsedContent) {
+    return 'New Conversation';
+  }
+
+  if (collapsedContent.length <= FALLBACK_TITLE_MAX_LENGTH) {
+    return collapsedContent;
+  }
+
+  return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
+}
 
 /**
  * Props for the {@link ChatContainer} component.
@@ -75,9 +90,11 @@ export default function ChatContainer({
    */
   const handleSendMessage = async (message: PromptInputMessage): Promise<void> => {
     if (!hasNavigated.current) {
-      await createConversationMutation.mutateAsync();
+      await createConversationMutation.mutateAsync({
+        title: buildInitialConversationTitle(message.content),
+      });
       // Fire-and-forget: title generation shouldn't block the conversation flow.
-      generateConversationTitleMutation.mutateAsync(message.content);
+      generateConversationTitleMutation.mutateAsync(message.content).catch(() => undefined);
 
       // Use replaceState for an instant URL swap without interrupting the stream.
       // The Next.js router is synced after streaming finishes (see below).

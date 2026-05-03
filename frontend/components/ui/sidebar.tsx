@@ -10,7 +10,8 @@
 
 "use client";
 
-import { IconLayoutSidebar } from "@tabler/icons-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
@@ -87,6 +88,8 @@ type SidebarContextProps = {
 	toggleSidebar: () => void;
 	/** Current desktop sidebar width in pixels. */
 	desktopWidth: number;
+	/** Whether the desktop sidebar width has been hydrated from local storage. */
+	isDesktopWidthReady: boolean;
 	/** Set the desktop sidebar width in pixels (clamped to valid range). */
 	setDesktopWidth: (width: number) => void;
 	/** Reset the desktop sidebar width to default. */
@@ -123,6 +126,7 @@ function SidebarProvider({
 	// initializers (server has no window; client would diverge). Hydrate width + collapsed
 	// state from storage in useLayoutEffect before paint.
 	const [desktopWidth, setDesktopWidthState] = React.useState(SIDEBAR_DEFAULT_WIDTH);
+	const [isDesktopWidthReady, setIsDesktopWidthReady] = React.useState(false);
 
 	const [_state, _setState] = React.useState<"expanded" | "collapsed">(() =>
 		defaultOpen ? "expanded" : "collapsed",
@@ -130,6 +134,7 @@ function SidebarProvider({
 
 	React.useLayoutEffect(() => {
 		setDesktopWidthState(loadDesktopSidebarWidth());
+		setIsDesktopWidthReady(true);
 		if (openProp !== undefined) {
 			return;
 		}
@@ -225,6 +230,7 @@ function SidebarProvider({
 			setOpenMobile,
 			toggleSidebar,
 			desktopWidth,
+			isDesktopWidthReady,
 			setDesktopWidth,
 			resetDesktopWidth,
 		}),
@@ -235,6 +241,7 @@ function SidebarProvider({
 			openMobile,
 			toggleSidebar,
 			desktopWidth,
+			isDesktopWidthReady,
 			setDesktopWidth,
 			resetDesktopWidth,
 		],
@@ -370,7 +377,11 @@ function SidebarTrigger({
 	onClick,
 	...props
 }: React.ComponentProps<typeof TopBarButton>) {
-	const { toggleSidebar } = useSidebar();
+	const { isMobile, openMobile, state, toggleSidebar } = useSidebar();
+	const willCloseSidebar = isMobile ? openMobile : state === "expanded";
+	const SidebarActionIcon = willCloseSidebar
+		? PanelLeftCloseIcon
+		: PanelLeftOpenIcon;
 
 	return (
 		<TopBarButton
@@ -384,7 +395,12 @@ function SidebarTrigger({
 			}}
 			{...props}
 		>
-			<IconLayoutSidebar />
+			<HugeiconsIcon
+				icon={SidebarActionIcon}
+				size={16}
+				strokeWidth={1.7}
+				aria-hidden="true"
+			/>
 			<span className="sr-only">Toggle Sidebar</span>
 		</TopBarButton>
 	);
@@ -559,7 +575,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-	"ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-lg px-3 py-2 text-left text-sm transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium peer/menu-button flex w-full items-center overflow-hidden outline-hidden group/menu-button disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
+	"ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground gap-2 rounded-lg px-3 py-2 text-left text-sm transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! focus-visible:ring-2 data-active:font-medium peer/menu-button flex w-full cursor-pointer items-center overflow-hidden outline-hidden group/menu-button disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&_svg]:size-4 [&_svg]:shrink-0",
 	{
 		variants: {
 			variant: {

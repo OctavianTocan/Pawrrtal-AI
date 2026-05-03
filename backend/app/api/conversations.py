@@ -7,7 +7,7 @@ import uuid
 from typing import Any, List, Optional
 
 from agno.agent import Message
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agents import create_history_reader_agent, create_utility_agent
@@ -121,6 +121,35 @@ def _is_missing_session_error(error: Exception) -> bool:
     return "session not found" in str(error).lower()
 
 
+GENERATED_TITLE_REJECTION_PHRASES = (
+    "api key",
+    "authentication",
+    "unauthorized",
+    "invalid request",
+    "no api",
+    "pass a valid",
+    "was provided",
+)
+
+
+def _normalize_generated_title(content: Any) -> str | None:
+    """Return a usable generated title, or ``None`` for provider/error text."""
+
+    title = str(content or "").strip().strip('"').strip("'").strip()
+    if not title:
+        return None
+
+    collapsed_title = " ".join(title.split())
+    title_lower = collapsed_title.lower()
+    if any(phrase in title_lower for phrase in GENERATED_TITLE_REJECTION_PHRASES):
+        return None
+
+    if len(collapsed_title) > 80:
+        return None
+
+    return collapsed_title
+
+
 
 def get_conversations_router() -> APIRouter:
     """Get a router for the conversations API."""
@@ -197,13 +226,21 @@ def get_conversations_router() -> APIRouter:
             + ". Return only the title, no other text or explanation.",
         )
 
+        generated_title = _normalize_generated_title(response.content)
+        if generated_title is None:
+            logger.warning(
+                "Skipping unusable generated title for conversation %s",
+                conversation_id,
+            )
+            return ""
+
         await update_conversation_title_service(
-            title=str(response.content or ""),
+            title=generated_title,
             user_id=user.id,
             conversation_id=conversation_id,
             session=session,
         )
-        return str(response.content or "")
+        return generated_title
 
     @router.patch("/{conversation_id}", response_model=ConversationResponse)
     async def update_conversation(
@@ -270,17 +307,21 @@ def get_conversations_router() -> APIRouter:
     @router.post("/{conversation_id}")
     async def create_conversation(
         conversation_id: uuid.UUID,
+        payload: ConversationCreate | None = Body(default=None),
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ConversationResponse:
-        """Create a new conversation with a default title.
+        """Create a new conversation with an immediate initial title.
 
         Frontend generates the UUID first; this endpoint persists metadata before
         the first streamed turn.
         """
 
+        creation_payload = payload or ConversationCreate()
         new_conversation: Conversation = await create_conversation_service(
-            user.id, session, ConversationCreate(id=conversation_id)
+            user.id,
+            session,
+            ConversationCreate(id=conversation_id, title=creation_payload.title),
         )
         return ConversationResponse(
             title=new_conversation.title,

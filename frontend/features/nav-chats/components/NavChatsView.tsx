@@ -1,4 +1,3 @@
-import { Calligraph } from 'calligraph';
 import { Circle, Inbox, LoaderCircle, Search, ShieldAlert } from 'lucide-react';
 import type {
   KeyboardEvent as ReactKeyboardEvent,
@@ -191,13 +190,7 @@ function ConversationRow({
   return (
     <ConversationSidebarItem
       id={conversation.id}
-      title={
-        isSearchActive ? (
-          highlightMatch(conversation.title, searchQuery)
-        ) : (
-          <Calligraph>{conversation.title}</Calligraph>
-        )
-      }
+      title={isSearchActive ? highlightMatch(conversation.title, searchQuery) : conversation.title}
       updatedAt={conversation.updated_at}
       icon={<ConversationIndicators conversation={conversation} isProcessing={isProcessing} />}
       badges={

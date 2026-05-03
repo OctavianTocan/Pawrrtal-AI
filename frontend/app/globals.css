@@ -1290,12 +1290,10 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 }
 
 .popover-styled.onboarding-panel {
-  background: rgb(17 22 28 / 0.95);
-  color: rgb(245 243 239);
-  border: 1px solid rgb(255 255 255 / 0.08);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.06),
-    0 18px 54px rgb(0 0 0 / 0.32);
+  background: oklch(from var(--background) l c h / 0.95);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-modal-small);
 }
 
 .chat-composer-input-group,

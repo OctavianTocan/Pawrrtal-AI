@@ -243,16 +243,19 @@ function ChatFocusShell({ children }: { children: React.ReactNode }): React.JSX.
  * Renders resizable panels on desktop, plain content on mobile.
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const { isMobile, state, setState, desktopWidth, setDesktopWidth } = useSidebar();
+  const { isMobile, state, setState, desktopWidth, isDesktopWidthReady, setDesktopWidth } =
+    useSidebar();
   const panelGroupId = React.useId();
   const sidebarPanelRef = usePanelRef();
   const [isSidebarTransitioning, setIsSidebarTransitioning] = React.useState(false);
+  const [initialPanelSize, setInitialPanelSize] = React.useState(desktopWidth);
 
   // Guards onResize from syncing state while a programmatic collapse/expand
   // animation is in-flight — without this, ResizeObserver fires intermediate
   // sizes during the CSS flex-grow transition, causing a feedback loop that
   // fights the collapse/expand.
   const isAnimatingRef = React.useRef(false);
+  const didSyncInitialPanelSizeRef = React.useRef(false);
   const transitionTimeoutRef = React.useRef<number | null>(null);
 
   const beginProgrammaticResize = React.useCallback((resizePanel: () => void): void => {
@@ -280,6 +283,15 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
       }
     };
   }, []);
+
+  React.useLayoutEffect(() => {
+    if (!isDesktopWidthReady || didSyncInitialPanelSizeRef.current) {
+      return;
+    }
+
+    didSyncInitialPanelSizeRef.current = true;
+    setInitialPanelSize(desktopWidth);
+  }, [desktopWidth, isDesktopWidthReady]);
 
   // Drive the panel's collapse/expand from the sidebar context state
   // so that the toggle button, keyboard shortcut, etc. all work through
@@ -322,7 +334,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
     >
       <ResizablePanel
         panelRef={sidebarPanelRef}
-        defaultSize={desktopWidth}
+        defaultSize={initialPanelSize}
         outerStyle={{
           transition: isSidebarTransitioning ? 'flex-grow 200ms ease-out' : undefined,
         }}
@@ -391,7 +403,7 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
         <ChatActivityProvider>
           <div className="flex h-svh min-h-0 w-full min-w-0 flex-col overflow-hidden bg-background">
             <OnboardingModal initialOpen={false} />
-            <header className="flex h-9 shrink-0 items-center border-border/50 border-b bg-background/95 px-3">
+            <header className="flex h-9 shrink-0 items-center bg-background/95 px-3">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <SidebarTrigger className="cursor-pointer" />
                 <AppHistoryControls />

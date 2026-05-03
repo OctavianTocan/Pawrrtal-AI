@@ -43,16 +43,16 @@ export function OnboardingWelcomeStep({
   onContinue,
 }: OnboardingWelcomeStepProps): React.JSX.Element {
   return (
-    <section className="popover-styled onboarding-panel flex w-full max-w-[37rem] select-none flex-col gap-7 rounded-xl border border-white/8 bg-[#11161c]/95 px-7 py-8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_54px_rgba(0,0,0,0.32)] sm:px-8 sm:py-9">
+    <section className="popover-styled onboarding-panel flex w-full max-w-[37rem] select-none flex-col gap-7 rounded-xl border border-border bg-background/95 px-7 py-8 text-foreground shadow-modal-small sm:px-8 sm:py-9">
       <div className="flex flex-col gap-4 text-left">
         <DialogHeader className="gap-2 text-left">
           <div
-            className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]"
+            className="text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]"
             aria-hidden="true"
           >
             Welcome to AI Nexus
           </div>
-          <DialogDescription className="max-w-[30rem] text-[0.9375rem] leading-relaxed text-white/52">
+          <DialogDescription className="max-w-[30rem] text-[0.9375rem] leading-relaxed text-muted-foreground">
             Your computer, but it works for you.
           </DialogDescription>
         </DialogHeader>
@@ -65,17 +65,17 @@ export function OnboardingWelcomeStep({
           return (
             <div
               key={item.title}
-              className="flex min-h-[6rem] items-start gap-3 rounded-xl bg-white/[0.025] p-4 ring-1 ring-white/8 transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-white/[0.04] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+              className="flex min-h-[6rem] items-start gap-3 rounded-xl bg-foreground/[0.025] p-4 ring-1 ring-border transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.04] hover:shadow-minimal"
             >
               <span
-                className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.045] text-white/62 ring-1 ring-white/8"
+                className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.045] text-muted-foreground ring-1 ring-border"
                 aria-hidden="true"
               >
                 <HugeiconsIcon icon={Icon} size={20} strokeWidth={1.65} aria-hidden="true" />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-white">{item.title}</span>
-                <span className="mt-1 block text-sm leading-snug text-white/50">
+                <span className="block text-sm font-semibold text-foreground">{item.title}</span>
+                <span className="mt-1 block text-sm leading-snug text-muted-foreground">
                   {item.description}
                 </span>
               </span>
@@ -87,7 +87,7 @@ export function OnboardingWelcomeStep({
       <Button
         type="button"
         size="lg"
-        className="h-11 w-full cursor-pointer rounded-xl bg-white/88 px-8 text-sm font-semibold text-[#11161c] shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.22)] active:bg-white/80"
+        className="h-11 w-full cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80"
         onClick={onContinue}
       >
         Get started

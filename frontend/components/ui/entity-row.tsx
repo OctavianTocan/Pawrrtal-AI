@@ -93,7 +93,7 @@ export function EntityRow({
 				role="button"
 				tabIndex={0}
 				{...buttonProps}
-				onClick={!onMouseDown ? onClick : undefined}
+				onClick={onClick}
 				onMouseDown={onMouseDown}
 				onKeyDown={(e) => {
 					// Activate on Enter/Space like a native button

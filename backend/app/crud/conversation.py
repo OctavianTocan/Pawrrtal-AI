@@ -19,10 +19,11 @@ from app.schemas import ConversationCreate
 async def create_conversation_service(
     user_id: uuid.UUID, session: AsyncSession, schema_data: ConversationCreate
 ) -> Conversation:
-    """Create a new conversation with a default title.
+    """Create a new conversation with an initial title.
 
-    The title starts as "New Conversation" and is later replaced by an
-    LLM-generated title based on the first message.
+    The title starts from the provided first-message fallback when available,
+    otherwise "New Conversation", and can later be replaced by an LLM-generated
+    title based on the first message.
 
     Args:
         user_id: Owner of the conversation.
@@ -35,7 +36,7 @@ async def create_conversation_service(
     new_conversation = Conversation(
         id=schema_data.id,
         user_id=user_id,
-        title="New Conversation",
+        title=schema_data.title or "New Conversation",
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )

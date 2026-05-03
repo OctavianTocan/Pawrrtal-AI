@@ -79,7 +79,7 @@ function ChatView({
   const isEmptyConversation = chatHistory.length === 0;
 
   return (
-    <div className="flex h-[calc(100svh-2.25rem)] min-h-0 w-full overflow-hidden px-4">
+    <div className="flex h-[calc(100svh-2.25rem)] min-h-0 w-full overflow-hidden rounded-l-xl bg-background px-4 shadow-modal-small">
       <div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
         {isEmptyConversation ? (
           <div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
