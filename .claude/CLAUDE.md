@@ -39,6 +39,12 @@ just dev     # starts both frontend + backend
 ## Rules
 Claude Code rules live in `.claude/rules/`. They fire automatically based on file path globs. Every rule has a `Verify` question — use it before committing.
 
+## Stagehand browser automation (MCP + docs)
+
+- **Documentation index:** https://docs.stagehand.dev/llms.txt — fetch this first to discover doc pages before deeper exploration.
+- **Project MCP servers** (see `.mcp.json` and `config/mcporter.json`): **stagehand-docs** (`https://docs.stagehand.dev/mcp`), **context7** (`npx -y @upstash/context7-mcp`, [repo](https://github.com/upstash/context7)), **deepwiki** (`https://mcp.deepwiki.com/mcp`, [site](https://mcp.deepwiki.com/)).
+- **Claude rules:** `.claude/rules/stagehand/stagehand-documentation-and-mcp.md` (session-wide doc/MCP workflow) and `.claude/rules/stagehand/stagehand-v3-typescript-patterns.md` (path-scoped API patterns for `**/*stagehand*`, `**/e2e/**`, `**/playwright/**`).
+
 ## Git
 - Branch from `v1.1` for v1.2 features, from `v1.2` for v1.3
 - Commit with conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`

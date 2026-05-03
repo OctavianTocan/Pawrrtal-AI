@@ -7,13 +7,6 @@
 		"deepwiki": {
 			"url": "https://mcp.deepwiki.com/mcp"
 		},
-		"notion": {
-			"command": "npx",
-			"args": ["-y", "@notionhq/notion-mcp-server"],
-			"env": {
-				"NOTION_TOKEN": "${NOTION_TOKEN}"
-			}
-		},
 		"stagehand-docs": {
 			"url": "https://docs.stagehand.dev/mcp"
 		}

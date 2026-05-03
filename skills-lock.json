@@ -6,6 +6,12 @@
 			"sourceType": "github",
 			"computedHash": "fb5f5a85b48db9b410595b02b84fdf48f7299b9f8e1dcd5964001fb3d9705808"
 		},
+		"biome-js": {
+			"source": "paulrberg/agent-skills",
+			"sourceType": "github",
+			"skillPath": "skills/biome-js/SKILL.md",
+			"computedHash": "30c995e907775ce3a727cbe00288a4fedbb24b8138e1165a51be309ef04799b0"
+		},
 		"javascript-testing-patterns": {
 			"source": "wshobson/agents",
 			"sourceType": "github",

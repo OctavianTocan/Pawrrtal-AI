@@ -1,0 +1,215 @@
+---
+description: Stagehand V3 TypeScript patterns, documentation index, and MCP workflow
+alwaysApply: true
+---
+
+# Stagehand V3 (TypeScript)
+
+Use this when writing or reviewing [Stagehand](https://github.com/browserbase/stagehand) browser automation (`@browserbasehq/stagehand`).
+
+## Documentation index
+
+Fetch the complete documentation index at: https://docs.stagehand.dev/llms.txt
+
+Use that file to discover all available pages before exploring further.
+
+## MCP servers (project)
+
+These MCP servers are configured in `.cursor/mcp.json`, `.mcp.json`, and `config/mcporter.json`:
+
+| Server | Role |
+|--------|------|
+| **stagehand-docs** | Official Stagehand docs (Mintlify MCP) |
+| **context7** | Upstash Context7 — library/docs context (`@upstash/context7-mcp`) |
+| **deepwiki** | DeepWiki — indexed GitHub repos and ecosystem docs |
+
+**Prompting:** Before generating Stagehand code, use **stagehand-docs** (and **context7** / **deepwiki** when needed) so guidance matches current APIs — for example: *"Use the stagehand-docs MCP to fetch the act/observe guidelines, then generate code that follows them. Prefer cached observe results."*
+
+**References:** [Context7 MCP](https://github.com/upstash/context7) · [DeepWiki MCP](https://mcp.deepwiki.com/) · [Stagehand Docs MCP](https://docs.stagehand.dev/mcp)
+
+## Security
+
+- Do not embed secrets in docs or rule files; use environment variables in MCP configs.
+- Prefer `observe` first; avoid broad natural-language actions that could trigger unintended navigation.
+
+---
+
+## Stagehand project patterns (TypeScript)
+
+This project uses **Stagehand V3**, a browser automation framework with AI-powered `act`, `extract`, `observe`, and `agent` methods.
+
+The main class is imported as `Stagehand` from `@browserbasehq/stagehand`.
+
+**Key classes:**
+
+- `Stagehand`: orchestrator with `act`, `extract`, `observe`, and `agent`
+- `context`: `V3Context` — browser contexts and pages
+- `page`: `stagehand.context.pages()[i]` or `await stagehand.context.newPage()`
+
+### Initialize
+
+```typescript
+import { Stagehand } from "@browserbasehq/stagehand";
+
+const stagehand = new Stagehand({
+	env: "LOCAL", // or "BROWSERBASE"
+	verbose: 2, // 0, 1, or 2
+	model: "openai/gpt-4.1-mini", // or any supported model
+});
+
+await stagehand.init();
+
+const page = stagehand.context.pages()[0];
+const context = stagehand.context;
+
+const page2 = await stagehand.context.newPage();
+```
+
+### Act
+
+Call `act` on the `stagehand` instance (not the page). Use **atomic, specific** instructions:
+
+```typescript
+await stagehand.act("click the sign in button");
+
+await stagehand.act("click the sign in button", { page: page2 });
+```
+
+- Good: "Click the sign in button", "Type 'hello' into the search input"
+- Bad: multi-step instructions like "Order me pizza" or "Type in the search bar and hit enter"
+
+### Observe + act (recommended)
+
+Cache `observe` results to avoid unexpected DOM changes:
+
+```typescript
+const instruction = "Click the sign in button";
+
+const actions = await stagehand.observe(instruction);
+
+await stagehand.act(actions[0]);
+```
+
+Target a specific page:
+
+```typescript
+const actions = await stagehand.observe("select blue as the favorite color", {
+	page: page2,
+});
+await stagehand.act(actions[0], { page: page2 });
+```
+
+### Extract
+
+Use natural language; call on `stagehand`.
+
+**With schema (Zod):**
+
+```typescript
+import { z } from "zod";
+
+const data = await stagehand.extract(
+	"extract all apartment listings with prices and addresses",
+	z.object({
+		listings: z.array(
+			z.object({
+				price: z.string(),
+				address: z.string(),
+			}),
+		),
+	}),
+);
+
+console.log(data.listings);
+```
+
+**Simple (no schema):**
+
+```typescript
+const result = await stagehand.extract("extract the sign in button text");
+const { extraction } = await stagehand.extract("extract the sign in button text");
+```
+
+**Selector-scoped:**
+
+```typescript
+const reason = await stagehand.extract(
+	"extract the reason why script injection fails",
+	z.string(),
+	{ selector: "/html/body/div[2]/div[3]/iframe/html/body/p[2]" },
+);
+```
+
+**URLs:** use `z.string().url()` for links.
+
+**Specific page:** pass `{ page: page2 }`.
+
+### Observe
+
+Returns candidate actions:
+
+```typescript
+const [action] = await stagehand.observe("Click the sign in button");
+await stagehand.act(action);
+```
+
+### Agent
+
+```typescript
+const page = stagehand.context.pages()[0];
+await page.goto("https://www.google.com");
+
+const agent = stagehand.agent({
+	model: "google/gemini-2.0-flash",
+	executionModel: "google/gemini-2.0-flash",
+});
+
+const result = await agent.execute({
+	instruction: "Search for the stock price of NVDA",
+	maxSteps: 20,
+});
+
+console.log(result.message);
+```
+
+**Computer use agent (CUA):**
+
+```typescript
+const agent = stagehand.agent({
+	mode: "cua",
+	model: "anthropic/claude-sonnet-4-6",
+	systemPrompt: `You are a helpful assistant that can use a web browser.
+		Do not ask follow up questions, the user will trust your judgement.`,
+});
+
+await agent.execute({
+	instruction: "Apply for a library card at the San Francisco Public Library",
+	maxSteps: 30,
+});
+```
+
+**Custom model object:** pass `{ modelName, apiKey }` when needed.
+
+**Integrations (external MCP):**
+
+```typescript
+const agent = stagehand.agent({
+	integrations: [`https://mcp.exa.ai/mcp?exaApiKey=${process.env.EXA_API_KEY}`],
+	systemPrompt: `You have access to the Exa search tool.`,
+});
+```
+
+### Advanced
+
+**DeepLocator (XPath / shadow DOM / iframes):**
+
+```typescript
+await page
+	.deepLocator("/html/body/div[2]/div[3]/iframe/html/body/p")
+	.highlight({
+		durationMs: 5000,
+		contentColor: { r: 255, g: 0, b: 0 },
+	});
+```
+
+**Multi-page:** pass `{ page }` to `act`, `extract`, and `observe` when not using the active page.

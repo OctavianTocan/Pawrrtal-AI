@@ -341,14 +341,15 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		<ResizablePanelGroup
 			direction="horizontal"
 			id={panelGroupId}
-			className="min-h-0 min-w-0 flex-1"
+			className={`min-h-0 min-w-0 flex-1 ${
+				isSidebarTransitioning
+					? '[&>[data-panel]:first-child]:transition-[flex-grow] [&>[data-panel]:first-child]:duration-200 [&>[data-panel]:first-child]:ease-out'
+					: ''
+			}`}
 		>
 			<ResizablePanel
 				panelRef={sidebarPanelRef}
 				defaultSize={initialPanelSize}
-				outerStyle={{
-					transition: isSidebarTransitioning ? 'flex-grow 200ms ease-out' : undefined,
-				}}
 				style={{ overflow: 'hidden' }}
 				minSize={SIDEBAR_MIN_WIDTH}
 				maxSize={SIDEBAR_MAX_WIDTH}

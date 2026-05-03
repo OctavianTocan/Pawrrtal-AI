@@ -10,7 +10,7 @@
 max_cycles = 0
 max_coupling = "C"
 max_cc = 30
-no_god_files = false
+no_god_files = true
 
 # --- Frontend layers (top → bottom) ---
 
