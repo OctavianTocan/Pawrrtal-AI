@@ -17,7 +17,9 @@ function parseSseMessage(raw: string): string | typeof STREAM_DONE | null {
 
   try {
     const json = JSON.parse(data);
-    return json.type === 'delta' ? json.content : null;
+    // Only surface delta content to the caller; gracefully ignore
+    // thinking, tool_use, tool_result, and error event types for now.
+    return json.type === 'delta' ? (json.content as string) : null;
   } catch {
     // Ignore parse errors from incomplete SSE frames.
     return null;

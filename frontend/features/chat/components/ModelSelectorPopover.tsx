@@ -23,7 +23,10 @@ export type ChatModelId =
   | 'gemini-3-flash-preview'
   | 'gemini-3.1-flash-lite-preview'
   | 'gpt-5.5'
-  | 'gpt-5.4';
+  | 'gpt-5.4'
+  | 'claude-sonnet-4-6'
+  | 'claude-opus-4-7'
+  | 'claude-haiku-4-5';
 
 /** Reasoning levels displayed next to the selected model. */
 export type ChatReasoningLevel = 'low' | 'medium' | 'high' | 'extra-high';
@@ -36,7 +39,7 @@ type ChatModelOption = {
   /** Full label shown in menus. */
   name: string;
   /** Provider logo slug for models.dev. */
-  provider: 'google' | 'openai';
+  provider: 'google' | 'openai' | 'anthropic';
 };
 
 type ReasoningOption = {
@@ -70,6 +73,24 @@ const MODEL_OPTIONS: ChatModelOption[] = [
     shortName: 'GPT-5.4',
     name: 'GPT-5.4',
     provider: 'openai',
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    shortName: 'Claude Sonnet 4.6',
+    name: 'Claude Sonnet 4.6',
+    provider: 'anthropic',
+  },
+  {
+    id: 'claude-opus-4-7',
+    shortName: 'Claude Opus 4.7',
+    name: 'Claude Opus 4.7',
+    provider: 'anthropic',
+  },
+  {
+    id: 'claude-haiku-4-5',
+    shortName: 'Claude Haiku 4.5',
+    name: 'Claude Haiku 4.5',
+    provider: 'anthropic',
   },
 ];
 
