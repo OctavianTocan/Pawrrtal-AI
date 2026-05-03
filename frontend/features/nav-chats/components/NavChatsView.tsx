@@ -7,7 +7,7 @@ import type {
 import { Fragment } from 'react';
 import type { ConversationGroup } from '@/lib/conversation-groups';
 import { highlightMatch } from '@/lib/highlight-match';
-import type { Conversation } from '@/lib/types';
+import type { Conversation, ConversationStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import type { ContentSearchResult } from '../hooks/use-conversation-search';
 import { CollapsibleGroupHeader } from './CollapsibleGroupHeader';
@@ -46,6 +46,16 @@ export interface NavChatsViewProps {
   onRename: (conversationId: string) => void;
   /** Opens the delete confirmation for a conversation. */
   onDelete: (conversationId: string) => void;
+  /** Toggles archived state for a conversation. */
+  onArchive: (conversationId: string) => void;
+  /** Toggles flagged state for a conversation. */
+  onFlag: (conversationId: string) => void;
+  /** Sets the status tag on a conversation. */
+  onSetStatus: (conversationId: string, status: ConversationStatus) => void;
+  /** Toggles the unread indicator on a conversation. */
+  onMarkUnread: (conversationId: string) => void;
+  /** Triggers LLM title regeneration for a conversation. */
+  onRegenerateTitle: (conversationId: string) => void;
   /** Ref attached to the navigator (listbox) root for focus-zone registration. */
   navigatorRef: RefObject<HTMLDivElement | null>;
   /** Per-conversation search results from content matching. */
@@ -157,6 +167,11 @@ function ConversationRow({
   onNavigate,
   onRename,
   onDelete,
+  onArchive,
+  onFlag,
+  onSetStatus,
+  onMarkUnread,
+  onRegenerateTitle,
 }: {
   conversation: Conversation;
   index: number;
@@ -177,6 +192,11 @@ function ConversationRow({
   onNavigate: (href: string) => void;
   onRename: (conversationId: string) => void;
   onDelete: (conversationId: string) => void;
+  onArchive: (conversationId: string) => void;
+  onFlag: (conversationId: string) => void;
+  onSetStatus: (conversationId: string, status: ConversationStatus) => void;
+  onMarkUnread: (conversationId: string) => void;
+  onRegenerateTitle: (conversationId: string) => void;
 }): React.JSX.Element {
   const href = `/c/${conversation.id}`;
   const isSelected = multiSelectedIds.has(conversation.id);
@@ -225,9 +245,18 @@ function ConversationRow({
         onKeyDown: (event: ReactKeyboardEvent) =>
           onConversationKeyDown(event, conversation, visibleIndex),
       }}
+      isArchived={conversation.is_archived}
+      isFlagged={conversation.is_flagged}
+      isUnread={conversation.is_unread}
+      status={conversation.status}
       onNavigate={onNavigate}
       onRename={onRename}
       onDelete={onDelete}
+      onArchive={onArchive}
+      onFlag={onFlag}
+      onSetStatus={onSetStatus}
+      onMarkUnread={onMarkUnread}
+      onRegenerateTitle={onRegenerateTitle}
     />
   );
 }
@@ -280,6 +309,11 @@ function NavChatsContent({
   onNavigate,
   onRename,
   onDelete,
+  onArchive,
+  onFlag,
+  onSetStatus,
+  onMarkUnread,
+  onRegenerateTitle,
   onConversationClick,
   onConversationMouseDown,
   onConversationKeyDown,
@@ -303,6 +337,11 @@ function NavChatsContent({
   | 'onNavigate'
   | 'onRename'
   | 'onDelete'
+  | 'onArchive'
+  | 'onFlag'
+  | 'onSetStatus'
+  | 'onMarkUnread'
+  | 'onRegenerateTitle'
   | 'onConversationClick'
   | 'onConversationMouseDown'
   | 'onConversationKeyDown'
@@ -395,6 +434,11 @@ function NavChatsContent({
                       onNavigate={onNavigate}
                       onRename={onRename}
                       onDelete={onDelete}
+                      onArchive={onArchive}
+                      onFlag={onFlag}
+                      onSetStatus={onSetStatus}
+                      onMarkUnread={onMarkUnread}
+                      onRegenerateTitle={onRegenerateTitle}
                     />
                   ))}
             </Fragment>
@@ -426,6 +470,11 @@ export function NavChatsView({
   onNavigate,
   onRename,
   onDelete,
+  onArchive,
+  onFlag,
+  onSetStatus,
+  onMarkUnread,
+  onRegenerateTitle,
   navigatorRef,
   contentSearchResults,
   activeChatMatchInfo,
@@ -464,6 +513,11 @@ export function NavChatsView({
         onNavigate={onNavigate}
         onRename={onRename}
         onDelete={onDelete}
+        onArchive={onArchive}
+        onFlag={onFlag}
+        onSetStatus={onSetStatus}
+        onMarkUnread={onMarkUnread}
+        onRegenerateTitle={onRegenerateTitle}
         onConversationClick={onConversationClick}
         onConversationMouseDown={onConversationMouseDown}
         onConversationKeyDown={onConversationKeyDown}

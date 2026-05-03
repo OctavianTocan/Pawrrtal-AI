@@ -55,12 +55,20 @@ export function NavChats(): React.JSX.Element {
   // --- search ---
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- grouping & filtering ---
-  const groups = useMemo(() => buildConversationGroups(conversations ?? []), [conversations]);
+  // --- grouping & filtering (archived conversations are hidden from the main list) ---
+  const visibleConversations = useMemo(
+    () => (conversations ?? []).filter((c) => !c.is_archived),
+    [conversations]
+  );
+  const groups = useMemo(
+    () => buildConversationGroups(visibleConversations),
+    [visibleConversations]
+  );
   const filteredGroups = useMemo(
     () => filterConversationGroups(groups, searchQuery),
     [groups, searchQuery]
   );
+
   const resultCount = useMemo(() => countGroupItems(filteredGroups), [filteredGroups]);
 
   // --- collapsed state (persisted in localStorage) ---
@@ -108,6 +116,11 @@ export function NavChats(): React.JSX.Element {
     handleDeleteConfirm,
     handleRenameDialogOpenChange,
     handleDeleteDialogOpenChange,
+    handleArchive,
+    handleFlag,
+    handleSetStatus,
+    handleMarkUnread,
+    handleRegenerateTitle,
   } = useConversationActions(conversations);
 
   // --- list orchestration (search, multi-select, keyboard nav, focus refs) ---
@@ -127,7 +140,7 @@ export function NavChats(): React.JSX.Element {
         onSearchClose={() => setSearchQuery('')}
         resultCount={resultCount}
         isLoading={isLoading}
-        isEmpty={!conversations?.length}
+        isEmpty={!visibleConversations.length}
         isSearchActive={listOrchestration.isSearchActive}
         filteredGroups={filteredGroups}
         collapsedGroups={collapsedGroups}
@@ -136,6 +149,11 @@ export function NavChats(): React.JSX.Element {
         onNavigate={navigateTo}
         onRename={handleRenameClick}
         onDelete={handleDeleteClick}
+        onArchive={handleArchive}
+        onFlag={handleFlag}
+        onSetStatus={handleSetStatus}
+        onMarkUnread={handleMarkUnread}
+        onRegenerateTitle={handleRegenerateTitle}
         navigatorRef={listOrchestration.navigatorRef}
         contentSearchResults={listOrchestration.contentSearchResults}
         activeChatMatchInfo={listOrchestration.activeChatMatchInfo}

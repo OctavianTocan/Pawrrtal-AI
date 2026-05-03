@@ -30,6 +30,9 @@ export type ConversationLabel = {
  */
 export type ConversationLabelLike = ConversationLabel | string;
 
+/** Status values a conversation can be tagged with. */
+export type ConversationStatus = 'todo' | 'in_progress' | 'done' | null;
+
 /** A single conversation record as returned by the backend API. */
 export interface Conversation {
   /** Unique conversation identifier. */
@@ -42,6 +45,14 @@ export interface Conversation {
   created_at: string;
   /** ISO timestamp of last update. */
   updated_at: string;
+  /** Whether the conversation has been archived and hidden from the main list. */
+  is_archived: boolean;
+  /** Whether the conversation has been flagged for follow-up. */
+  is_flagged: boolean;
+  /** Whether the conversation has an unread indicator. */
+  is_unread: boolean;
+  /** Workflow status tag: 'todo', 'in_progress', 'done', or null. */
+  status: ConversationStatus;
   // Optional sidebar metadata ported from Craft-style session rows.
   /** Whether the conversation is currently generating a response. */
   is_processing?: boolean;

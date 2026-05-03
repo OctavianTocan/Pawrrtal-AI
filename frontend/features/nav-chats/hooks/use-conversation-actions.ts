@@ -4,9 +4,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { startTransition, useState } from 'react';
 import { useSidebar } from '@/components/ui/sidebar';
 import type { Conversation } from '@/lib/types';
+import {
+  type UseConversationMetadataActionsResult,
+  useConversationMetadataActions,
+} from './use-conversation-metadata-actions';
 import { useDeleteConversation, useRenameConversation } from './use-conversation-mutations';
 
-interface UseConversationActionsResult {
+/** Dialog and navigation state returned by {@link useConversationActions}. */
+interface UseConversationActionsDialogResult {
   /** The ID of the conversation being renamed, or null if no dialog is open. */
   renameDialogConversationId: string | null;
   /** The ID of the conversation being deleted, or null if no dialog is open. */
@@ -37,12 +42,16 @@ interface UseConversationActionsResult {
   handleDeleteDialogOpenChange: (open: boolean) => void;
 }
 
+/** Full result type combining dialog state with metadata actions. */
+export type UseConversationActionsResult = UseConversationActionsDialogResult &
+  UseConversationMetadataActionsResult;
+
 /**
- * Hook to manage conversation rename and delete actions.
+ * Hook to manage conversation rename, delete, and metadata actions.
  *
  * Encapsulates dialog state, mutation calls, navigation, and mobile sidebar
- * closing logic. Prevents race conditions by tracking whether any mutation
- * is currently pending.
+ * closing logic. Metadata actions (archive, flag, status, unread, regenerate
+ * title) are delegated to `useConversationMetadataActions`.
  */
 export function useConversationActions(
   conversations: Conversation[] | undefined
@@ -52,6 +61,7 @@ export function useConversationActions(
   const { isMobile, setOpenMobile } = useSidebar();
   const renameConversationMutation = useRenameConversation();
   const deleteConversationMutation = useDeleteConversation();
+  const metadataActions = useConversationMetadataActions(conversations);
 
   const [renameDialogConversationId, setRenameDialogConversationId] = useState<string | null>(null);
   const [deleteDialogConversationId, setDeleteDialogConversationId] = useState<string | null>(null);
@@ -62,9 +72,7 @@ export function useConversationActions(
   );
 
   const closeMobileSidebar = (): void => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    if (isMobile) setOpenMobile(false);
   };
 
   const navigateTo = (target: string): void => {
@@ -77,72 +85,46 @@ export function useConversationActions(
   const isMutating = renameConversationMutation.isPending || deleteConversationMutation.isPending;
 
   const handleRenameClick = (conversationId: string): void => {
-    if (isMutating) {
-      return;
-    }
-
-    const conversation = conversations?.find(
-      (currentConversation) => currentConversation.id === conversationId
-    );
-    if (!conversation) {
-      return;
-    }
-
+    if (isMutating) return;
+    const conversation = conversations?.find((c) => c.id === conversationId);
+    if (!conversation) return;
     setDraftTitle(conversation.title);
     setRenameDialogConversationId(conversationId);
   };
 
   const handleDeleteClick = (conversationId: string): void => {
-    if (!isMutating) {
-      setDeleteDialogConversationId(conversationId);
-    }
+    if (!isMutating) setDeleteDialogConversationId(conversationId);
   };
 
   const handleRenameSubmit = async (): Promise<void> => {
-    if (!renameDialogConversationId || !conversationBeingRenamed) {
-      return;
-    }
-
+    if (!renameDialogConversationId || !conversationBeingRenamed) return;
     const normalizedTitle = draftTitle.trim();
     if (!normalizedTitle || normalizedTitle === conversationBeingRenamed.title) {
       setRenameDialogConversationId(null);
       setDraftTitle('');
       return;
     }
-
     try {
       await renameConversationMutation.mutateAsync({
         conversationId: renameDialogConversationId,
         title: normalizedTitle,
       });
-
       setRenameDialogConversationId(null);
       setDraftTitle('');
     } catch {
-      // The mutation stores the error state. Keep the dialog open so the user
-      // can retry without triggering an unhandled promise rejection.
+      // Keep the dialog open so the user can retry.
     }
   };
 
   const handleDeleteConfirm = async (): Promise<void> => {
-    if (!deleteDialogConversationId) {
-      return;
-    }
-
+    if (!deleteDialogConversationId) return;
     try {
-      await deleteConversationMutation.mutateAsync({
-        conversationId: deleteDialogConversationId,
-      });
-
+      await deleteConversationMutation.mutateAsync({ conversationId: deleteDialogConversationId });
       const wasSelected = pathname === `/c/${deleteDialogConversationId}`;
       setDeleteDialogConversationId(null);
-
-      if (wasSelected) {
-        navigateTo('/');
-      }
+      if (wasSelected) navigateTo('/');
     } catch {
-      // The mutation stores the error state. Keep the dialog open so the user
-      // can retry without triggering an unhandled promise rejection.
+      // Keep the dialog open so the user can retry.
     }
   };
 
@@ -154,9 +136,7 @@ export function useConversationActions(
   };
 
   const handleDeleteDialogOpenChange = (open: boolean): void => {
-    if (!open) {
-      setDeleteDialogConversationId(null);
-    }
+    if (!open) setDeleteDialogConversationId(null);
   };
 
   return {
@@ -174,5 +154,6 @@ export function useConversationActions(
     handleDeleteConfirm,
     handleRenameDialogOpenChange,
     handleDeleteDialogOpenChange,
+    ...metadataActions,
   };
 }

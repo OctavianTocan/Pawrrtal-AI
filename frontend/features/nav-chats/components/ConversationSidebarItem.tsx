@@ -3,8 +3,10 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { formatConversationAge } from '@/lib/format-conversation-age';
+import type { ConversationStatus } from '@/lib/types';
 import { ConversationSidebarItemView } from './ConversationSidebarItemView';
 
+/** Props for the ConversationSidebarItem container component. */
 interface ConversationSidebarItemProps {
   /** The conversation ID. */
   id: string;
@@ -14,12 +16,30 @@ interface ConversationSidebarItemProps {
   updatedAt: string;
   /** Whether to render a separator above this item. */
   showSeparator: boolean;
+  /** Whether the conversation is archived. */
+  isArchived: boolean;
+  /** Whether the conversation is flagged. */
+  isFlagged: boolean;
+  /** Whether the conversation has an unread indicator. */
+  isUnread: boolean;
+  /** Current workflow status tag. */
+  status: ConversationStatus;
   /** Called to navigate to a conversation. */
   onNavigate: (href: string) => void;
   /** Called to open the rename dialog for this conversation. */
   onRename: (conversationId: string) => void;
   /** Called to open the delete confirmation for this conversation. */
   onDelete: (conversationId: string) => void;
+  /** Toggles archived state for this conversation. */
+  onArchive: (conversationId: string) => void;
+  /** Toggles flagged state for this conversation. */
+  onFlag: (conversationId: string) => void;
+  /** Sets the status tag on this conversation. */
+  onSetStatus: (conversationId: string, status: ConversationStatus) => void;
+  /** Toggles the unread indicator on this conversation. */
+  onMarkUnread: (conversationId: string) => void;
+  /** Triggers LLM title regeneration for this conversation. */
+  onRegenerateTitle: (conversationId: string) => void;
   /** Icon shown before the title (e.g. processing spinner, unread dot). */
   icon?: ReactNode;
   /** Label badges shown after the title. */
@@ -43,14 +63,30 @@ interface ConversationSidebarItemProps {
  * formats the conversation age. Delegates rendering to
  * `ConversationSidebarItemView`.
  */
+/**
+ * Container for a single conversation sidebar row.
+ *
+ * Resolves route-derived state (isSelected, href, absoluteHref), formats the
+ * conversation age, and binds all action handlers to the current conversation ID
+ * before delegating rendering to `ConversationSidebarItemView`.
+ */
 export function ConversationSidebarItem({
   id,
   title,
   updatedAt,
   showSeparator,
+  isArchived,
+  isFlagged,
+  isUnread,
+  status,
   onNavigate,
   onRename,
   onDelete,
+  onArchive,
+  onFlag,
+  onSetStatus,
+  onMarkUnread,
+  onRegenerateTitle,
   icon,
   badges,
   titleTrailing,
@@ -77,6 +113,10 @@ export function ConversationSidebarItem({
       age={age}
       href={href}
       absoluteHref={absoluteHref}
+      isArchived={isArchived}
+      isFlagged={isFlagged}
+      isUnread={isUnread}
+      status={status}
       icon={icon}
       badges={badges}
       titleTrailing={titleTrailing}
@@ -87,6 +127,11 @@ export function ConversationSidebarItem({
       onNavigate={onNavigate}
       onRename={() => onRename(id)}
       onDelete={() => onDelete(id)}
+      onArchive={() => onArchive(id)}
+      onFlag={() => onFlag(id)}
+      onSetStatus={(s) => onSetStatus(id, s)}
+      onMarkUnread={() => onMarkUnread(id)}
+      onRegenerateTitle={() => onRegenerateTitle(id)}
       buttonProps={buttonProps}
     />
   );
