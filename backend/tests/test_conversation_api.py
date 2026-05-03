@@ -1,0 +1,143 @@
+"""API tests for conversation routes."""
+
+from types import SimpleNamespace
+from uuid import uuid4
+
+import pytest
+from httpx import AsyncClient
+
+
+@pytest.mark.anyio
+async def test_create_conversation_returns_created_metadata(client: AsyncClient) -> None:
+    """POST /api/v1/conversations/{id} creates metadata for a conversation."""
+    conversation_id = uuid4()
+
+    response = await client.post(
+        f"/api/v1/conversations/{conversation_id}",
+        json={"title": "Hello"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["id"] == str(conversation_id)
+    assert payload["title"] == "Hello"
+    assert payload["is_archived"] is False
+    assert payload["status"] is None
+
+
+@pytest.mark.anyio
+async def test_create_conversation_is_idempotent(client: AsyncClient) -> None:
+    """Repeating POST with the same client UUID returns the existing row."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Original"})
+
+    response = await client.post(
+        f"/api/v1/conversations/{conversation_id}",
+        json={"title": "Retry"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Original"
+
+
+@pytest.mark.anyio
+async def test_patch_conversation_accepts_status_only_payload(client: AsyncClient) -> None:
+    """PATCH accepts metadata-only updates without requiring a title."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Status"})
+
+    response = await client.patch(
+        f"/api/v1/conversations/{conversation_id}",
+        json={"status": "done"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "done"
+    assert response.json()["title"] == "Status"
+
+
+@pytest.mark.anyio
+async def test_patch_conversation_rejects_blank_title(client: AsyncClient) -> None:
+    """PATCH rejects blank titles with a validation error."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Title"})
+
+    response = await client.patch(
+        f"/api/v1/conversations/{conversation_id}",
+        json={"title": "   "},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_list_conversations_returns_newest_first(client: AsyncClient) -> None:
+    """GET /api/v1/conversations returns most recent conversations first."""
+    first_id = uuid4()
+    second_id = uuid4()
+    await client.post(f"/api/v1/conversations/{first_id}", json={"title": "First"})
+    await client.post(f"/api/v1/conversations/{second_id}", json={"title": "Second"})
+
+    response = await client.get("/api/v1/conversations")
+
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [str(second_id), str(first_id)]
+
+
+@pytest.mark.anyio
+async def test_delete_conversation_removes_conversation(client: AsyncClient) -> None:
+    """DELETE removes an owned conversation."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Delete"})
+
+    delete_response = await client.delete(f"/api/v1/conversations/{conversation_id}")
+    get_response = await client.get(f"/api/v1/conversations/{conversation_id}")
+
+    assert delete_response.status_code == 204
+    assert get_response.status_code == 200
+    assert get_response.json() is None
+
+
+@pytest.mark.anyio
+async def test_get_conversation_messages_returns_empty_for_missing_agno_session(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Missing Agno sessions are treated as empty conversation history."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Messages"})
+
+    def raise_missing_session(_conversation_id: object) -> list[object]:
+        raise RuntimeError("session not found")
+
+    monkeypatch.setattr(
+        "app.api.conversations.create_history_reader_agent",
+        raise_missing_session,
+    )
+
+    response = await client.get(f"/api/v1/conversations/{conversation_id}/messages")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.anyio
+async def test_generate_conversation_title_persists_usable_title(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Title generation persists normalized provider output."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Old"})
+    monkeypatch.setattr(
+        "app.api.conversations.create_utility_agent",
+        lambda _prompt: SimpleNamespace(content='"Better   Title"'),
+    )
+
+    response = await client.post(
+        f"/api/v1/conversations/{conversation_id}/title",
+        params={"first_message": "hello"},
+    )
+    get_response = await client.get(f"/api/v1/conversations/{conversation_id}")
+
+    assert response.status_code == 200
+    assert response.json() == "Better Title"
+    assert get_response.json()["title"] == "Better Title"

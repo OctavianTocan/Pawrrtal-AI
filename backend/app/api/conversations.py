@@ -213,6 +213,7 @@ def get_conversations_router() -> APIRouter:
                 is_flagged=conversation.is_flagged,
                 is_unread=conversation.is_unread,
                 status=conversation.status,
+                model_id=conversation.model_id,
             )
         return None
 
@@ -282,6 +283,7 @@ def get_conversations_router() -> APIRouter:
             is_flagged=conversation.is_flagged,
             is_unread=conversation.is_unread,
             status=conversation.status,
+            model_id=conversation.model_id,
         )
 
     @router.delete("/{conversation_id}", status_code=204)
@@ -316,6 +318,7 @@ def get_conversations_router() -> APIRouter:
                 is_flagged=conversation.is_flagged,
                 is_unread=conversation.is_unread,
                 status=conversation.status,
+                model_id=conversation.model_id,
             )
             for conversation in conversations
         ]
@@ -353,6 +356,7 @@ def get_conversations_router() -> APIRouter:
             is_flagged=new_conversation.is_flagged,
             is_unread=new_conversation.is_unread,
             status=new_conversation.status,
+            model_id=new_conversation.model_id,
         )
 
     return router
