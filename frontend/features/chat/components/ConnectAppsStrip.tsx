@@ -74,7 +74,7 @@ export function ConnectAppsStrip({
 			<p className="min-w-0 truncate text-[12px] text-muted-foreground">
 				Connect your apps to get better answers
 			</p>
-			<div className="flex shrink-0 items-center gap-0.5">
+			<div className="flex shrink-0 items-center gap-1">
 				{CONNECT_APPS.map((app) => {
 					const Icon = app.icon;
 					return (

@@ -83,7 +83,7 @@ function ChatView({
 			<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 				{isEmptyConversation ? (
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
-						<h1 className="mb-8 text-center text-[28px] font-medium tracking-normal text-foreground sm:text-[30px]">
+						<h1 className="mb-6 text-center text-[28px] font-medium tracking-normal text-foreground sm:text-[30px]">
 							What should we build in AI Nexus?
 						</h1>
 						<ChatComposer

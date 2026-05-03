@@ -154,7 +154,7 @@ function AutoReviewSelector(): React.JSX.Element {
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
 							<Button
-								className="h-7 gap-1.5 rounded-[7px] bg-transparent px-2 text-[12px] font-normal text-accent hover:bg-foreground/[0.04] hover:text-accent aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
+								className="h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal text-accent hover:bg-foreground/[0.04] hover:text-accent aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
 								type="button"
 								variant="ghost"
 							>
@@ -492,13 +492,13 @@ export function ChatComposer({
 				<AnimatedComposerPlaceholder isVisible={!hasContent} text={placeholder} />
 				<PromptInputTextarea
 					aria-label={placeholder}
-					className="max-h-48 min-h-[4.5rem] w-full overflow-y-auto px-3 pt-3 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
+					className="max-h-48 min-h-14 w-full overflow-y-auto px-3 pt-3 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
 					onChange={onUpdateMessage}
 					placeholder=""
 					value={message.content}
 				/>
 			</div>
-			<PromptInputFooter className="min-h-10 px-2 pb-2">
+			<PromptInputFooter className="min-h-9 px-1.5 pb-1.5">
 				<div className="flex min-w-0 flex-1 items-center gap-1">
 					<AttachButton />
 					{isRecording ? (
@@ -511,7 +511,7 @@ export function ChatComposer({
 						<>
 							<ComposerTooltip content="Create a plan">
 								<Button
-									className="h-7 gap-1.5 rounded-[7px] px-2 text-[12px] font-normal text-muted-foreground hover:text-foreground"
+									className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
 									type="button"
 									variant="ghost"
 								>
@@ -540,25 +540,25 @@ export function ChatComposer({
 						<Button
 							aria-label="Start voice input"
 							aria-pressed={isRecording}
-							className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+							className="size-7 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
 							onClick={startRecording}
 							size="icon-sm"
 							type="button"
 							variant="ghost"
 						>
-							<MicIcon aria-hidden="true" className="size-4" />
+							<MicIcon aria-hidden="true" className="size-3.5" />
 						</Button>
 					</ComposerTooltip>
 					<ComposerTooltip content="Send message">
 						<PromptInputSubmit
-							className="size-8 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
+							className="size-7 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
 							disabled={!hasContent || isLoading}
 							status={isLoading ? 'streaming' : 'ready'}
 						>
 							{isLoading ? (
-								<SquareIcon aria-hidden="true" className="size-3 fill-current" />
+								<SquareIcon aria-hidden="true" className="size-2.5 fill-current" />
 							) : (
-								<ArrowUpIcon aria-hidden="true" className="size-4" />
+								<ArrowUpIcon aria-hidden="true" className="size-3.5" />
 							)}
 						</PromptInputSubmit>
 					</ComposerTooltip>
