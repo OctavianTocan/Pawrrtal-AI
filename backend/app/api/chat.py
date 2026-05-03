@@ -1,25 +1,24 @@
-"""
-This module defines the API routes for chat-related operations.
-"""
+"""Chat API — provider-agnostic streaming endpoint."""
+from __future__ import annotations
 
 import json
-from typing import Any, Generator
+import uuid
 
-from fastapi import Depends
-from fastapi.exceptions import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agents import create_agent
-from app.crud.conversation import get_conversation_service
+from app.core.providers import resolve_provider
+from app.crud.conversation import get_conversation_service, update_conversation_model_service
 from app.db import User, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
 
+_DEFAULT_MODEL = "gemini-3-flash-preview"
+
 
 def get_chat_router() -> APIRouter:
-    # Create the router.
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
@@ -28,42 +27,53 @@ def get_chat_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> StreamingResponse:
-        """Stream an Agno agent response as Server-Sent Events.
+        """Stream an AI response as Server-Sent Events.
 
-        Architecture:
-            - Application DB stores conversation metadata (title, user_id, timestamps).
-            - Agno DB stores actual message content and history.
-            - They are linked by ``Conversation.id`` == Agno ``session_id``.
+        SSE event shapes:
+          {"type": "delta", "content": "..."}      — text chunk
+          {"type": "thinking", "content": "..."}   — reasoning (when available)
+          {"type": "tool_use", "name": "...", "input": {...}}
+          {"type": "tool_result", "content": "..."}
+          {"type": "error", "content": "..."}      — stream-level error
+          [DONE]
 
-        Flow:
-            1. Frontend creates conversation via ``POST /api/v1/conversations``.
-            2. Frontend sends chat with ``conversation_id``.
-            3. Backend uses ``conversation_id`` as Agno's ``session_id``.
-            4. Agno persists messages under that session.
-
-        SSE payload format:
-            - ``{"type": "delta", "content": "..."}`` for each streamed chunk.
-            - ``[DONE]`` sentinel when the response is complete.
+        The provider is resolved from model_id — the endpoint is fully
+        provider-agnostic. Changing model_id changes the provider; the
+        stream format never changes.
         """
-        conversation_id = request.conversation_id
-
-        # Ownership check — ensure the conversation belongs to this user.
-        user_conversation = await get_conversation_service(
-            user.id, session, conversation_id
+        conversation = await get_conversation_service(
+            user.id, session, request.conversation_id
         )
-        if user_conversation is None:
+        if conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        agno_agent = create_agent(user.id, conversation_id, request.model_id)
+        # Resolve model: request overrides stored model, stored model overrides default
+        model_id = request.model_id or conversation.model_id or _DEFAULT_MODEL
 
-        def event_stream() -> Generator[str, Any, None]:
-            """Yield SSE-formatted chunks from the Agno agent."""
-            for ev in agno_agent.run(request.question, stream=True):
-                chunk = getattr(ev, "content", None)
-                if chunk:
-                    payload = {"type": "delta", "content": chunk}
-                    yield f"data: {json.dumps(payload)}\n\n"
-            yield "data: [DONE]\n\n"
+        # Persist model change if it differs from what is stored
+        if model_id != conversation.model_id:
+            await update_conversation_model_service(
+                model_id=model_id,
+                user_id=user.id,
+                conversation_id=request.conversation_id,
+                session=session,
+            )
+
+        provider = resolve_provider(model_id)
+
+        async def event_stream():
+            try:
+                async for event in provider.stream(
+                    request.question,
+                    request.conversation_id,
+                    user.id,
+                ):
+                    yield f"data: {json.dumps(event)}\n\n"
+            except Exception as exc:
+                error_event = {"type": "error", "content": str(exc)}
+                yield f"data: {json.dumps(error_event)}\n\n"
+            finally:
+                yield "data: [DONE]\n\n"
 
         return StreamingResponse(
             event_stream(),
