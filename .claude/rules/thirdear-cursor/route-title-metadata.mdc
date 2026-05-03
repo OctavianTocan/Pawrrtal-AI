@@ -1,0 +1,16 @@
+---
+description: Review route titles and metadata for every new page or route
+globs: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/route.ts", "src/pages/**/*.{ts,tsx}"]
+paths: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/route.ts", "src/pages/**/*.{ts,tsx}"]
+alwaysApply: false
+---
+
+# Route Title And Metadata
+
+When creating or changing a page, layout, or route:
+
+- Verify what the browser tab title will be on success, loading, empty, and failure states.
+- Prefer route-specific, user-readable titles. Never leak raw error labels like `Error:` into tab titles.
+- For dynamic routes, make fallback titles generic and branded if the real resource title is unavailable.
+- If metadata depends on a fetch, use a stable absolute URL on the server so title generation does not fail due to relative-path or environment issues.
+- Check `title`, `description`, and any Open Graph or Twitter metadata together so previews and browser tabs stay consistent.

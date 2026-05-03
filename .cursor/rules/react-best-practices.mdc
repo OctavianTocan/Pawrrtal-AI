@@ -1,0 +1,100 @@
+---
+description: Comprehensive React best practices for state, hooks, UI components, and Storybook
+globs: ["**/*.tsx", "**/*.jsx", "**/*.ts"]
+paths: ["**/*.tsx", "**/*.jsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# React Best Practices
+
+## State Management
+
+### 1. Computed vs State (Derived State)
+- **Rule:** NEVER store state that can be derived from props, context, or other state.
+- **Check:** Can I delete this state and still compute the value? If yes, remove it.
+- **Bad:** `useEffect(() => setFiltered(items.filter(...)), [items])`
+- **Good:** `const filtered = useMemo(() => items.filter(...), [items])`
+
+### 2. No Side Effects in Render
+- **Rule:** Render functions must be pure. No `fetch`, subscriptions, or DOM mutations in render.
+- **Fix:** Move side effects to `useEffect` or event handlers.
+
+### 3. Reducer Pattern
+- **Rule:** Use `useReducer` for complex state logic (3+ sub-values or interdependent updates).
+- **Naming:** `reducer` function, `initialState`, `dispatch` action types (discriminated unions).
+
+## Hooks Usage
+
+### 1. Hook Placement
+- **Feature Specific:** Colocate with component (`src/components/[feature]/useFeature.ts`)
+- **Domain Shared:** `src/hooks/[domain]/useShared.ts`
+- **Generic/Global:** `src/hooks/` root (only for truly generic utils)
+
+### 2. useEffect Rules
+- **No Data Fetching:** STOP using `fetch` in `useEffect`. Use TanStack Query, SWR, or Server Components.
+- **No Sync loops:** NEVER put a state variable in the dependency array if the effect sets that same state.
+- **Client Directives:** Use `'use client'` only when needed (hooks, event handlers). Prefer Server Components.
+
+### 3. Memoization
+- **Profile First:** Only use `useMemo` if profiling proves a performance bottleneck.
+- **Callbacks:** Wrap callbacks passed to children in `useCallback` to prevent infinite render loops.
+
+## UI & Components
+
+### 1. Modern Frameworks
+- **Primary:** Tailwind CSS (utility-first).
+- **Components:** Shadcn UI (Radix + Tailwind) or headless primitives.
+- **Forbidden:** Custom CSS files (`.css`), SASS/LESS, or legacy UI libraries (Bootstrap, MUI).
+- **ClassName Composition:** Use `cn()` (clsx + tailwind-merge).
+  - `className={cn('base-class', isActive && 'active-class', className)}`
+
+### 2. Event Handling
+- **Accessibility:** NEVER use `<div onClick>`. Use `<button type="button" onClick>`.
+- **Native Behavior:** Avoid `preventDefault()` unless absolutely necessary. Work with HTML forms.
+- **Buttons:** ALWAYS specify `type="button"` or `type="submit"`.
+
+### 3. Mobile First
+- **Strategy:** Write base styles for mobile, then `md:`, `lg:` overrides.
+- **Breakpoints:** Test at 375px, 768px, 1024px.
+
+### 4. Styles & Assets
+- **Icons:** Use SVG components or Lucide React. NO heavy icon libraries.
+- **Directives:** Minimize `'use client'`. Move interactive parts to leaf components.
+
+## Storybook
+
+### 1. Story Creation
+- **Trigger:** STOP after creating `*View.tsx`.
+- **Action:** Create `ComponentNameView.stories.tsx` immediately.
+- **Variants:** Default, Expanded/WithValues, Disabled.
+
+### 2. Implementation
+- **Actions:** Do NOT use `@storybook/addon-actions`. Use no-op functions `() => {}` or define in `argTypes`.
+- **Imports:** Import from barrel files (`./index`) to ensure proper public API usage.
+
+## Error Handling
+
+### 1. Loading States
+- **Order:** Check `isLoading` -> `isError` -> `isEmpty` -> Render Data.
+- **Anti-Pattern:** Showing error or empty state while data is still loading.
+
+### 2. Async Refs
+- **Race Conditions:** Use refs to track mounted state or async operation IDs to prevent setting state on unmounted components or out-of-order responses.
+
+## UX & Accessibility Guidelines
+
+### 1. Interactions
+- **Focus:** Visible focus rings. `:focus-visible` > `:focus`. No dead zones.
+- **Targets:** Min 44px for touch (mobile). Hit area >= 24px visually.
+- **Loading:** Show spinner + label if >150ms. Debounce to avoid flickers (min visible 300ms).
+- **Keyboard:** Ensure WAI-ARIA flows. Tab order logical.
+
+### 2. Forms
+- **Submission:** `Enter` submits text inputs. `Cmd/Ctrl+Enter` for textareas.
+- **Labels:** `<label>` required. Clicking label focuses input.
+- **Feedback:** Inline errors, focus first error on submit.
+
+### 3. Performance
+- **Metrics:** Layout Shift (CLS) - explicit image dims. Interaction (INP) - < 200ms.
+- **Optimistic UI:** Update UI immediately, reconcile on server response.
+

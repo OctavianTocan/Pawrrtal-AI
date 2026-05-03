@@ -1,0 +1,214 @@
+---
+description: E2E testing patterns - Playwright for CI, agent-browser for recon/visual comparison
+globs: ["e2e/**/*.ts", "e2e/agent-browser/**"]
+alwaysApply: false
+---
+
+# E2E Testing Patterns
+
+## When to Use Which Tool
+
+| Use Case | Tool |
+|---|---|
+| CI pipeline, cross-browser matrix, parallel execution, deterministic assertions | Playwright |
+| AI agent recon, interactive exploration, Pencil design comparison, visual QA | agent-browser |
+
+Both tools share `data-testid` selectors, `e2e/test-assets/` audio files, and the `?e2e_auto_login=true` auth pattern.
+
+---
+
+## Playwright Patterns
+
+### NEVER Use Timeouts
+
+```typescript
+// FORBIDDEN
+await page.waitForTimeout(5000);
+await page.waitForLoadState('networkidle');
+
+// REQUIRED - wait for conditions
+await page.waitForSelector('[data-message-complete="true"]');
+await page.waitForURL(/\/c\//);
+await expect(element).toBeVisible();
+```
+
+### Wait for AI Response Completion
+
+```typescript
+await page.waitForSelector('[data-message-role="assistant"][data-message-complete="true"]');
+```
+
+### Dismiss Changelog Modal
+
+Always call `dismissChangelogModal(page)` after auth - the modal blocks all interactions.
+
+### Use waitForSelector for Long Operations
+
+`expect().toBeVisible()` has 5s timeout. Use `waitForSelector` (30s) for slow ops:
+
+```typescript
+await page.waitForSelector('[data-testid="my-element"]', { timeout: 30000 });
+```
+
+### File Uploads (Playwright)
+
+```typescript
+// Synthetic file from buffer
+await page.setInputFiles('#file-upload', {
+  name: 'sample.mp3',
+  mimeType: 'audio/mpeg',
+  buffer: Buffer.from('fake-audio-binary'),
+});
+
+// Real file from test assets
+await page.setInputFiles('[data-testid="hidden-file-input"]', 'e2e/test-assets/test-audio.mp3');
+```
+
+### API Mocking (Playwright only)
+
+```typescript
+await page.route('**/api/upload-audio', async (route) => {
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ content_id: 'e2e-uuid', transcription: 'Hello' }),
+  });
+});
+```
+
+---
+
+## agent-browser Patterns
+
+### Core Workflow
+
+```bash
+# 1. Navigate
+agent-browser open "http://localhost:3000/enhance-transcribe?e2e_auto_login=true"
+
+# 2. Wait for auth, then snapshot interactive elements
+sleep 3 && agent-browser snapshot -i
+
+# 3. Interact using refs from snapshot output
+agent-browser click @e9              # click by ref
+agent-browser fill @e2 "search text" # fill by ref
+
+# 4. Semantic element targeting (accessible name)
+agent-browser find role button click --name "Start Transcription"
+agent-browser find role link click --name "New Chat"
+agent-browser find role tab click --name "Summary"
+
+# 5. Screenshot for visual comparison
+agent-browser screenshot e2e/agent-browser/artifacts/feature/01-step-name.png
+
+# 6. Re-snapshot after any page state change (refs are ephemeral)
+agent-browser snapshot -i
+```
+
+### File Uploads (agent-browser)
+
+No JS eval needed. Use the `upload` command with the hidden file input selector:
+
+```bash
+agent-browser upload '[data-testid="hidden-file-input"]' e2e/test-assets/test-audio.mp3
+```
+
+### Mobile Viewport Emulation
+
+```bash
+agent-browser set device "iPhone 12"   # 390x844 with touch
+agent-browser set viewport 1024 768    # custom desktop size
+```
+
+### JS Evaluation (escape hatch)
+
+```bash
+agent-browser eval "document.querySelector('[data-testid=\"my-el\"]')?.innerText || 'not found'"
+```
+
+### Chromium Launch Arguments
+
+Pass custom Chromium flags for special capabilities:
+
+```bash
+# Via CLI flag
+agent-browser --args "--use-fake-device-for-media-stream,--use-fake-ui-for-media-stream"
+
+# Via environment variable
+AGENT_BROWSER_ARGS="--use-fake-device-for-media-stream" agent-browser open http://localhost:3000
+```
+
+### Test-User Helpers (`window.__e2e`)
+
+Available when `?e2e_auto_login=true` is active. Use via `agent-browser eval`:
+
+```bash
+agent-browser eval "window.__e2e.openSidebar()"
+agent-browser eval "window.__e2e.has('transcription-result-screen')"
+agent-browser eval "window.__e2e.clickButton('Start Transcription')"
+agent-browser eval "window.__e2e.clickFirstMemory()"
+```
+
+URL params for auto-setup: `&e2e_sidebar=open`, `&e2e_goto=first-memory`
+
+Shell helpers: `source src/e2e/agent-browser-helpers.sh` for `e2e_has`, `e2e_click`, `e2e_poll`, `check` (with auto-screenshot on failure).
+
+Full API reference: see `.cursor/rules/agent-browser-defaults.mdc`
+
+### Key Behaviors
+
+- Chromium auto-grants mic/camera permissions (no dialog), but `MediaRecorder` produces no audio data without `--use-fake-device-for-media-stream`
+- Native dialogs: `confirm()` returns true by default, `prompt()` returns default value
+- Refs (`@e1`, `@e2`) are ephemeral -- re-snapshot after any navigation or state change
+- Auth via `?e2e_auto_login=true` works identically to Playwright
+
+### Screenshot Artifacts Convention
+
+```
+e2e/agent-browser/artifacts/{feature}/
+  01-idle-desktop.png
+  02-setup-fast-model.png
+  03-in-progress.png
+  04-result-transcript.png
+  05-mobile-idle.png
+```
+
+### Pencil Design Comparison
+
+Compare agent-browser screenshots against Pencil MCP design references:
+
+```bash
+# 1. Get design reference (via Pencil MCP get_screenshot tool)
+# 2. Get live screenshot
+agent-browser screenshot e2e/agent-browser/artifacts/enhance-transcribe/01-idle-desktop.png
+# 3. Compare structure, layout, element presence (not text content)
+```
+
+---
+
+## Data Attributes
+
+| Attribute | Purpose |
+|---|---|
+| `data-message-complete="true"` | AI done streaming |
+| `data-state="open\|closed"` | Collapsible state |
+| `data-testid="*"` | Element selection |
+
+### Enhance-Transcribe Selectors
+
+| Element | Selector |
+|---|---|
+| Hidden file input | `[data-testid="hidden-file-input"]` |
+| Idle screen | `[data-testid="upload-or-record-screen"]` |
+| Start Recording button | `[data-testid="upload-or-record-start-recording"]` |
+| Recording screen | `[data-testid="active-recording-screen"]` |
+| Stop Recording button | `[data-testid="active-recording-stop"]` |
+| Setup screen | `[data-testid="transcription-setup-screen"]` |
+| Start Transcription button | `[data-testid="transcription-setup-start"]` |
+| Result screen | `[data-testid="transcription-result-screen"]` |
+| Heading | `[data-testid="transcribe-heading"]` |
+| Benchmark callout | `[data-testid="accuracy-benchmark-callout"]` |
+| File error notice | `[data-testid="inline-file-error-notice"]` |
+| Leave guard "Stay" | button "Stay on page" |
+| Leave guard "Leave" | button "Leave anyway" |
+| Completion signal | button "Transcribe another file" |

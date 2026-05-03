@@ -1,0 +1,47 @@
+---
+description: Document code with TSDoc and inline comments so reviewers and future readers understand why things exist
+globs: **/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Code Documentation Standards
+
+Write code that a tired reviewer can understand on first read. Every function, interface, type, and non-obvious block should explain **why** it exists, not just what it does.
+
+## TSDoc
+
+- **Every exported function/component** gets a TSDoc block explaining its purpose and any non-obvious behavior.
+- **Every interface and its props** get a one-liner each. If a prop has constraints or side effects, say so.
+- **Complex internal functions** (helpers, handlers) get TSDoc explaining the "why" and any gotchas.
+
+## Inline Comments
+
+- Comment **branches and fallbacks** with why they exist ("Safari breaks here", "API can return undefined").
+- Comment **state variables** with what UI they drive and when they change.
+- Use section dividers (`// -- Section Name --`) to group related logic (state, handlers, render).
+- Comment **type assertions** and casts with why the assertion is safe.
+
+## What NOT to Comment
+
+- Self-evident code (`const x = a + b` does not need a comment).
+- Re-stating the code in English ("increment counter by 1").
+- Commented-out code blocks (delete them instead).
+
+## Examples
+
+```tsx
+// Good: explains WHY, not WHAT
+/** True for TIMEOUTS.COPY_FEEDBACK ms after a successful copy.
+ *  Drives the "Copied!" label on the button. */
+const [copied, setCopied] = useState(false);
+
+// Good: documents a non-obvious constraint
+/**
+ * @param currentChips - Passed explicitly (rather than reading `emailChips`)
+ *   so callers can chain: validate -> share in one step without stale state.
+ */
+
+// Bad: restates the obvious
+// Set copied to true
+setCopied(true);
+```

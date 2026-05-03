@@ -1,0 +1,35 @@
+---
+description: Fixed overlays must account for persistent chrome, and sticky layout work must follow the Safari-safe constraints from AGENTS.md
+globs: ["src/**/*.tsx"]
+paths: ["src/**/*.tsx"]
+alwaysApply: false
+---
+
+# Fixed Overlays And Sticky Layouts
+
+Any toast, sheet, popover, sticky tab bar, or highlighted editing container must account for persistent page chrome and Safari sticky behavior.
+
+## Required Rules
+
+- Fixed overlays must offset themselves from the real chrome stack that exists on the page: navbar, download banner, safe areas, and similar persistent UI.
+- Prefer shared constants/hooks for offsets instead of hard-coded numbers scattered across components.
+- When working on sticky elements, follow the `AGENTS.md` constraints:
+  - do not keep redundant `overflow-x: clip` when an ancestor already hides horizontal overflow
+  - use padding instead of margins around sticky boundaries
+  - keep border width stable by toggling color between visible and `border-transparent`
+  - use inset `box-shadow` instead of borders for edit/highlight outlines
+- Any change to sticky containers or fixed overlays requires a Safari sanity check.
+
+## Checklist Before Shipping
+
+1. What fixed or sticky chrome already exists on this route?
+2. Does the new overlay clear that chrome on desktop and mobile?
+3. Did the sticky element keep a stable height when its border/selection state changes?
+4. Did the highlight treatment avoid layout-changing borders?
+
+## Anti-Patterns
+
+- Toasts pinned to `top: 0` on routes with a fixed navbar
+- Sticky elements inside `overflow-x: clip` containers with margin spacing
+- Toggling border presence instead of border color
+- Edit outlines that spill outside the container because they use borders instead of inset shadows

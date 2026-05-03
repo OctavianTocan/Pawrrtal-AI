@@ -1,0 +1,82 @@
+---
+description: Comprehensive guide on file structure, modularity, refactoring, and documentation
+globs: ["**/*.ts", "**/*.tsx", "**/*.md", "**/*.json"]
+paths: ["**/*.ts", "**/*.tsx", "**/*.md", "**/*.json"]
+alwaysApply: false
+---
+
+# Architecture & Structure Standards
+
+## File Organization & Naming
+
+### 1. File Order
+- **Structure:**
+  1. Imports (External -> Internal -> Relative)
+  2. Types/Interfaces
+  3. Constants
+  4. Helpers
+  5. Subcomponents
+  6. Main Component/Function
+- **Rule:** Keep related code close.
+
+### 2. Naming Conventions
+- **Directories:** ALWAYS `kebab-case` (`auth-wizard`, not `AuthWizard`).
+- **Files:** `kebab-case.ts` for utils, `PascalCase.tsx` for components.
+
+### 3. Folder Structure
+- **Feature Folders:** Colocate everything needed for a feature (`components`, `hooks`, `utils`, `types`).
+- **Shared Utils:** `src/utils/domain/index.ts` + `README.md` if complex.
+
+## Modularity & Layering
+
+### 1. Separation of Concerns
+- **Layers:** Separate Lookup/Search, Extraction, Persistence, Orchestration.
+- **Rule:** Each layer should be independently testable and understandable.
+
+### 2. Abstraction Levels
+- **Stepdown Rule:** High-level functions call next level down. Don't mix low-level details (e.g., regex parsing) with high-level logic (e.g., user flow) in the same function.
+
+### 3. Explicit Dependencies
+- **Rule:** All dependencies must be passed as arguments. NO hidden global state or side-channel dependencies.
+
+### 4. Barrel Files
+- **Rule:** Verify exports in `index.ts`. If a function isn't re-exported, import directly from the source file.
+
+## Refactoring & Legacy Code
+
+### 1. Strangler Fig Pattern
+- **Process:**
+  1. Extract new logic to a new file/module.
+  2. Import and use the new module in the old file.
+  3. Once stable, update consumers to use the new module directly.
+  4. Delete old code.
+- **Order:** Pure functions -> Init code -> Auth/Security -> State.
+
+### 2. Safety
+- **Try-Catch:** When refactoring async code, ensure all error-throwing logic remains inside try-catch blocks with proper cleanup.
+- **Duplication:** STOP immediately if duplicating code. Extract to shared utility first.
+
+## Documentation
+
+### 1. Diátaxis Framework
+- **Tutorials:** Learning-oriented, step-by-step.
+- **How-to Guides:** Task-oriented, problem-solving.
+- **Reference:** Information-oriented, technical facts.
+- **Explanation:** Understanding-oriented, context & why.
+- **Rule:** Keep these types distinct.
+
+### 2. Folder READMEs
+- **Rule:** Add `README.md` to feature folders and complex utility directories.
+- **Content:** Purpose, key files, usage, related links.
+- **CLAUDE.md:** Required for packages. Short, high-context summary for AI.
+
+## Assets & Performance
+
+### 1. Images
+- **Rule:** STOP using `<img>`. Use `next/image` with width, height, and alt text.
+
+### 2. Code Splitting
+- **Rule:** Use dynamic imports (`next/dynamic` or `React.lazy`) for:
+  - Heavy dependencies (charts, editors).
+  - Below-the-fold content.
+  - Conditional features.

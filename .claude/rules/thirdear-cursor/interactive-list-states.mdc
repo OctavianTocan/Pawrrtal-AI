@@ -1,0 +1,33 @@
+---
+description: Interactive lists need deliberate hover, drag, remove, and empty states before they are considered complete
+globs: ["src/**/*.tsx"]
+paths: ["src/**/*.tsx"]
+alwaysApply: false
+---
+
+# Interactive List States
+
+If a screen contains a list with hover actions, drag-and-drop, deletion, or empty sections, the interaction states are part of the implementation, not polish for later.
+
+## Required Rules
+
+- Define explicit default, hover, active, and disabled states for new CTA buttons and row actions.
+- Row-local affordances must not scale, shift, or jitter on parent hover unless that motion is intentional and visually validated.
+- Drag-and-drop rows need a deliberate dragging appearance. Do not accept browser-default or obviously degraded visuals.
+- When removing an item from a vertically stacked list, animate the remaining items into place if the screen already uses motion elsewhere.
+- Empty sections should be hidden or replaced with purposeful empty UI. Do not render a full card or list shell that adds no value when empty.
+
+## Review Checklist
+
+1. What happens to row actions on hover?
+2. What does the row look like while dragging?
+3. How do surrounding items move when one item is removed?
+4. Does the empty version of this section still earn its screen space?
+5. Are the new button hover states aligned with existing app patterns?
+
+## Anti-Patterns
+
+- Overflow menus that scale awkwardly when hovering the parent row
+- Dragged rows that lose styling or feel visually broken
+- Instant snap-collapse after deletion in an otherwise animated list
+- Shipping a new button with no hover state on a screen where similar buttons already have one

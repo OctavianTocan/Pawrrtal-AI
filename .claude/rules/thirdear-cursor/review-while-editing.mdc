@@ -1,0 +1,46 @@
+---
+description: Review code for issues while editing and fix them in place
+globs: **/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Review While Editing
+
+When you touch a file, review the code you're working in and fix problems you find. Don't just make the requested change and leave known issues behind.
+
+## What to Look For
+
+### Dead Code
+- Unused props, variables, imports, type members (e.g. a union variant never assigned).
+- Props accepted but never read in the component body.
+- Remove them. Don't leave `_unused` renames or TODO comments.
+
+### Duplicated Logic
+- Two functions with near-identical bodies (e.g. validation in both a handler and a paste handler).
+- Extract a shared helper. Name it after what it does, not where it's called.
+
+### Duplicated JSX
+- Two blocks of JSX that differ by one class or one prop.
+- Extract a shared render function or component with a parameter for the difference.
+
+### Deprecated APIs
+- `onKeyPress` (deprecated React event) -> merge into `onKeyDown`.
+- `componentWillMount`, `findDOMNode`, etc.
+
+### Inconsistent Logging
+- Mix of `console.error` and `logger.error` in the same file.
+- Use `logger` from `@twinmind/logger` everywhere. Follow the pattern: `logger.error({ err: error }, 'message')`.
+
+### Silent Failures
+- `if (x) { doThing() }` with no `else` when `x` being falsy means something went wrong.
+- Add error logging or user feedback in the else branch.
+
+### State Timing Bugs
+- `.finally()` clearing loading state before a success callback sets the next state.
+- Clear loading state explicitly in each outcome branch (success, error, empty result).
+
+## How to Handle It
+
+1. Fix the issue directly if the fix is safe and contained.
+2. If the fix would change behavior in a way you're not sure about, note it as a comment for the reviewer: `// NOTE: [description of potential issue]`.
+3. If the fix requires touching code outside the file you're editing, mention it in your response but don't reach into unrelated files without being asked.

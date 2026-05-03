@@ -1,0 +1,8 @@
+---
+description: Never add backwards-compatibility shims or legacy re-exports
+alwaysApply: true
+---
+
+# No Backwards Compatibility
+
+Never create backwards-compatibility layers, shim exports, or re-exports to satisfy old consumers. When refactoring or building new features, update all consumers directly.

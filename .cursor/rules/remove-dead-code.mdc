@@ -1,0 +1,17 @@
+---
+description: Remove all dead code when writing or modifying TypeScript files
+globs: **/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Remove Dead Code
+
+When writing new code or modifying existing code, remove **all** dead code in the touched files:
+
+- Unused imports
+- Unused variables, functions, types, and interfaces
+- Commented-out code blocks
+- Unreachable code after early returns or throws
+- Leftover feature-flag branches for flags that no longer exist
+
+Don't leave remnants "just in case." If it's not called, not referenced, and not exported — delete it.
