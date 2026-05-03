@@ -1,9 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
 export function useForceUpdate() {
-  const [sigil, setSigil] = useState({});
+	const [sigil, setSigil] = useState({});
 
-  const forceUpdate = useCallback(() => setSigil({}), []);
+	const forceUpdate = useCallback(() => setSigil({}), []);
 
-  return [sigil as unknown, forceUpdate] as const;
+	return [sigil as unknown, forceUpdate] as const;
 }

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { SquarePenRounded } from '@/components/icons/SquarePenRounded';
 import { Button } from '@/components/ui/button';
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,48 +24,48 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
  * button pattern can appear in the sidebar header, command palette, etc.
  */
 export function NewSessionButton(): React.JSX.Element {
-  const router = useRouter();
-  const { isMobile, setOpenMobile } = useSidebar();
+	const router = useRouter();
+	const { isMobile, setOpenMobile } = useSidebar();
 
-  /** Navigates to the root page, which generates a fresh conversation UUID. */
-  const handleNewConversation = (): void => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-    router.push('/');
-  };
+	/** Navigates to the root page, which generates a fresh conversation UUID. */
+	const handleNewConversation = (): void => {
+		if (isMobile) {
+			setOpenMobile(false);
+		}
+		router.push('/');
+	};
 
-  return (
-    <Tooltip>
-      <ContextMenu modal={true}>
-        <TooltipTrigger asChild>
-          <ContextMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={handleNewConversation}
-              className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
-              aria-label="New Session"
-            >
-              <SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
-              New Session
-            </Button>
-          </ContextMenuTrigger>
-        </TooltipTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onSelect={() => {
-              if (typeof window !== 'undefined') {
-                window.open('/', '_blank', 'noopener,noreferrer');
-              }
-            }}
-          >
-            <AppWindow className="h-3.5 w-3.5" />
-            <span className="flex-1">Open in New Window</span>
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-      <TooltipContent side="right">⌘N</TooltipContent>
-    </Tooltip>
-  );
+	return (
+		<Tooltip>
+			<ContextMenu modal={true}>
+				<TooltipTrigger asChild>
+					<ContextMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							type="button"
+							onClick={handleNewConversation}
+							className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+							aria-label="New Session"
+						>
+							<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
+							New Session
+						</Button>
+					</ContextMenuTrigger>
+				</TooltipTrigger>
+				<ContextMenuContent>
+					<ContextMenuItem
+						onSelect={() => {
+							if (typeof window !== 'undefined') {
+								window.open('/', '_blank', 'noopener,noreferrer');
+							}
+						}}
+					>
+						<AppWindow className="h-3.5 w-3.5" />
+						<span className="flex-1">Open in New Window</span>
+					</ContextMenuItem>
+				</ContextMenuContent>
+			</ContextMenu>
+			<TooltipContent side="right">⌘N</TooltipContent>
+		</Tooltip>
+	);
 }

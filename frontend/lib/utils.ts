@@ -8,5 +8,5 @@ import { twMerge } from 'tailwind-merge';
  * @returns A single concatenated class string safe for Tailwind specificity.
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+	return twMerge(clsx(inputs));
 }

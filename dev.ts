@@ -14,7 +14,7 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
 
 console.log(
-  'Starting dev servers — frontend on http://localhost:3001, backend on http://localhost:8000'
+	'Starting dev servers — frontend on http://localhost:3001, backend on http://localhost:8000'
 );
 
 // Frontend: plain Next.js dev server. Workspace package, run via bun --filter.
@@ -23,8 +23,8 @@ const frontendPromise = $`bun --filter app.nexus-ai dev`.quiet(false);
 // Backend: explicit ASGI target via uvicorn. `main.app` is wrapped in CORS
 // middleware, so FastAPI CLI discovery cannot treat it as a raw FastAPI instance.
 const backendPromise =
-  $`uv run --project backend uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload --reload-dir backend`.quiet(
-    false
-  );
+	$`uv run --project backend uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload --reload-dir backend`.quiet(
+		false
+	);
 
 await Promise.all([frontendPromise, backendPromise]);

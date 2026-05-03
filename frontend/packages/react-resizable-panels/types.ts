@@ -1,16 +1,16 @@
 export type Dimensions = {
-  height: number;
-  width: number;
+	height: number;
+	width: number;
 };
 
 export type Point = {
-  x: number;
-  y: number;
+	x: number;
+	y: number;
 };
 
 export type PointerPrecision = {
-  coarse: number;
-  precise: number;
+	coarse: number;
+	precise: number;
 };
 
 export type Rect = Dimensions & Point;

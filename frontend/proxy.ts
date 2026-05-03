@@ -26,21 +26,21 @@ const isPublicRoute = (path: string) => publicRoutes.includes(path);
  * @returns `NextResponse.next()` to continue, or a redirect to `/login` when unauthenticated.
  */
 export function proxy(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  const sessionToken = request.cookies.get('session_token');
+	const path = request.nextUrl.pathname;
+	const sessionToken = request.cookies.get('session_token');
 
-  if (isPublicRoute(path)) {
-    return NextResponse.next();
-  }
+	if (isPublicRoute(path)) {
+		return NextResponse.next();
+	}
 
-  if (isProtectedRoute(path) && !sessionToken) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
+	if (isProtectedRoute(path) && !sessionToken) {
+		return NextResponse.redirect(new URL('/login', request.url));
+	}
 
-  return NextResponse.next();
+	return NextResponse.next();
 }
 
 /** Limits middleware to page navigations; skips API, static assets, and favicon. */
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+	matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

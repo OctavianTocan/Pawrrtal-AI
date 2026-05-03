@@ -8,9 +8,9 @@ import { AppLayout } from '@/components/app-layout';
  * Wraps `(app)/*` routes with the persistent {@link AppLayout} chrome.
  */
 export default function AppLayoutWrapper({
-  children,
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return <AppLayout>{children}</AppLayout>;
+	return <AppLayout>{children}</AppLayout>;
 }

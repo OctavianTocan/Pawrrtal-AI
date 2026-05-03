@@ -34,38 +34,38 @@ import type { AccessRequestBannerViewProps } from './types';
  * @see {@link ExpandedRequestList} for the sliding user-row panel.
  */
 export function AccessRequestBannerView({
-  requests,
-  bannerState,
-  decisions,
-  collapsedAvatars,
-  remainingCount,
-  onToggleExpand,
-  onDismiss,
-  onApproveRequest,
-  onRejectRequest,
-  onResetRequest,
+	requests,
+	bannerState,
+	decisions,
+	collapsedAvatars,
+	remainingCount,
+	onToggleExpand,
+	onDismiss,
+	onApproveRequest,
+	onRejectRequest,
+	onResetRequest,
 }: AccessRequestBannerViewProps) {
-  return (
-    <LayoutGroup>
-      <div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <BannerHeader
-          bannerState={bannerState}
-          requests={requests}
-          collapsedAvatars={collapsedAvatars}
-          remainingCount={remainingCount}
-          onToggleExpand={onToggleExpand}
-          onDismiss={onDismiss}
-        />
+	return (
+		<LayoutGroup>
+			<div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+				<BannerHeader
+					bannerState={bannerState}
+					requests={requests}
+					collapsedAvatars={collapsedAvatars}
+					remainingCount={remainingCount}
+					onToggleExpand={onToggleExpand}
+					onDismiss={onDismiss}
+				/>
 
-        <ExpandedRequestList
-          bannerState={bannerState}
-          requests={requests}
-          decisions={decisions}
-          onApproveRequest={onApproveRequest}
-          onRejectRequest={onRejectRequest}
-          onResetRequest={onResetRequest}
-        />
-      </div>
-    </LayoutGroup>
-  );
+				<ExpandedRequestList
+					bannerState={bannerState}
+					requests={requests}
+					decisions={decisions}
+					onApproveRequest={onApproveRequest}
+					onRejectRequest={onRejectRequest}
+					onResetRequest={onResetRequest}
+				/>
+			</div>
+		</LayoutGroup>
+	);
 }

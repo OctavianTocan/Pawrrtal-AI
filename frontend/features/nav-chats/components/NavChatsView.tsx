@@ -1,8 +1,8 @@
 import { Circle, Inbox, LoaderCircle, Search, ShieldAlert } from 'lucide-react';
 import type {
-  KeyboardEvent as ReactKeyboardEvent,
-  MouseEvent as ReactMouseEvent,
-  RefObject,
+	KeyboardEvent as ReactKeyboardEvent,
+	MouseEvent as ReactMouseEvent,
+	RefObject,
 } from 'react';
 import { Fragment } from 'react';
 import type { ConversationGroup } from '@/lib/conversation-groups';
@@ -18,68 +18,72 @@ import { ConversationsEmptyState } from './ConversationsEmptyState';
 import { SectionHeader } from './SectionHeader';
 
 export interface NavChatsViewProps {
-  /** Current search input value. */
-  searchQuery: string;
-  /** Called on every search keystroke. */
-  onSearchChange: (query: string) => void;
-  /** Called when the user clears the search. */
-  onSearchClose: () => void;
-  /** Total number of matching conversations. */
-  resultCount: number;
-  /** Whether conversations are still being fetched. */
-  isLoading: boolean;
-  /** Whether the data source returned zero conversations. */
-  isEmpty: boolean;
-  /** Whether the search query is long enough to filter (>= 2 chars). */
-  isSearchActive: boolean;
-  /** Date-grouped and search-filtered conversation buckets. */
-  filteredGroups: ConversationGroup[];
-  /** Set of group keys the user has collapsed. */
-  collapsedGroups: Set<string>;
-  /** Toggles a single group's collapsed state. */
-  onToggleGroup: (groupKey: string) => void;
-  /** Navigates to the root page to start a new session. */
-  onNewSession: () => void;
-  /** Navigates to a conversation and closes mobile sidebar. */
-  onNavigate: (href: string) => void;
-  /** Opens the rename dialog for a conversation. */
-  onRename: (conversationId: string) => void;
-  /** Opens the delete confirmation for a conversation. */
-  onDelete: (conversationId: string) => void;
-  /** Toggles archived state for a conversation. */
-  onArchive: (conversationId: string) => void;
-  /** Toggles flagged state for a conversation. */
-  onFlag: (conversationId: string) => void;
-  /** Sets the status tag on a conversation. */
-  onSetStatus: (conversationId: string, status: ConversationStatus) => void;
-  /** Toggles the unread indicator on a conversation. */
-  onMarkUnread: (conversationId: string) => void;
-  /** Triggers LLM title regeneration for a conversation. */
-  onRegenerateTitle: (conversationId: string) => void;
-  /** Ref attached to the navigator (listbox) root for focus-zone registration. */
-  navigatorRef: RefObject<HTMLDivElement | null>;
-  /** Per-conversation search results from content matching. */
-  contentSearchResults: Map<string, ContentSearchResult>;
-  /** Match info for the currently open chat (searched against loaded messages). */
-  activeChatMatchInfo?: { sessionId: string; count: number } | null;
-  /** Set of conversation IDs in the current multi-selection. */
-  multiSelectedIds: Set<string>;
-  /** The conversation ID that should appear keyboard-focused. */
-  focusedConversationId: string | null;
-  /** Called when a conversation row is clicked (select + navigate). */
-  onConversationClick: (conversationId: string, index: number, href: string) => void;
-  /** Called on mouseDown for modifier-key multi-select handling. */
-  onConversationMouseDown: (event: ReactMouseEvent, conversationId: string, index: number) => void;
-  /** Keyboard handler for arrow navigation, range-select, and zone switching. */
-  onConversationKeyDown: (
-    event: ReactKeyboardEvent,
-    conversation: Conversation,
-    index: number
-  ) => void;
-  /** Ref callback to register conversation row elements for programmatic focus. */
-  registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
-  /** Claims navigator focus zone on mouseDown (before click fires). */
-  onNavigatorMouseDown: () => void;
+	/** Current search input value. */
+	searchQuery: string;
+	/** Called on every search keystroke. */
+	onSearchChange: (query: string) => void;
+	/** Called when the user clears the search. */
+	onSearchClose: () => void;
+	/** Total number of matching conversations. */
+	resultCount: number;
+	/** Whether conversations are still being fetched. */
+	isLoading: boolean;
+	/** Whether the data source returned zero conversations. */
+	isEmpty: boolean;
+	/** Whether the search query is long enough to filter (>= 2 chars). */
+	isSearchActive: boolean;
+	/** Date-grouped and search-filtered conversation buckets. */
+	filteredGroups: ConversationGroup[];
+	/** Set of group keys the user has collapsed. */
+	collapsedGroups: Set<string>;
+	/** Toggles a single group's collapsed state. */
+	onToggleGroup: (groupKey: string) => void;
+	/** Navigates to the root page to start a new session. */
+	onNewSession: () => void;
+	/** Navigates to a conversation and closes mobile sidebar. */
+	onNavigate: (href: string) => void;
+	/** Opens the rename dialog for a conversation. */
+	onRename: (conversationId: string) => void;
+	/** Opens the delete confirmation for a conversation. */
+	onDelete: (conversationId: string) => void;
+	/** Toggles archived state for a conversation. */
+	onArchive: (conversationId: string) => void;
+	/** Toggles flagged state for a conversation. */
+	onFlag: (conversationId: string) => void;
+	/** Sets the status tag on a conversation. */
+	onSetStatus: (conversationId: string, status: ConversationStatus) => void;
+	/** Toggles the unread indicator on a conversation. */
+	onMarkUnread: (conversationId: string) => void;
+	/** Triggers LLM title regeneration for a conversation. */
+	onRegenerateTitle: (conversationId: string) => void;
+	/** Ref attached to the navigator (listbox) root for focus-zone registration. */
+	navigatorRef: RefObject<HTMLDivElement | null>;
+	/** Per-conversation search results from content matching. */
+	contentSearchResults: Map<string, ContentSearchResult>;
+	/** Match info for the currently open chat (searched against loaded messages). */
+	activeChatMatchInfo?: { sessionId: string; count: number } | null;
+	/** Set of conversation IDs in the current multi-selection. */
+	multiSelectedIds: Set<string>;
+	/** The conversation ID that should appear keyboard-focused. */
+	focusedConversationId: string | null;
+	/** Called when a conversation row is clicked (select + navigate). */
+	onConversationClick: (conversationId: string, index: number, href: string) => void;
+	/** Called on mouseDown for modifier-key multi-select handling. */
+	onConversationMouseDown: (
+		event: ReactMouseEvent,
+		conversationId: string,
+		index: number
+	) => void;
+	/** Keyboard handler for arrow navigation, range-select, and zone switching. */
+	onConversationKeyDown: (
+		event: ReactKeyboardEvent,
+		conversation: Conversation,
+		index: number
+	) => void;
+	/** Ref callback to register conversation row elements for programmatic focus. */
+	registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
+	/** Claims navigator focus zone on mouseDown (before click fires). */
+	onNavigatorMouseDown: () => void;
 }
 
 /**
@@ -88,203 +92,220 @@ export interface NavChatsViewProps {
  * Secondary indicators animate in/out via width + opacity transitions.
  */
 function ConversationIndicators({
-  conversation,
-  isProcessing,
+	conversation,
+	isProcessing,
 }: {
-  conversation: Conversation;
-  isProcessing: boolean;
+	conversation: Conversation;
+	isProcessing: boolean;
 }): React.JSX.Element {
-  const hasUnreadMeta = Boolean(conversation.has_unread_meta);
-  const hasPlan = conversation.last_message_role === 'plan';
-  const hasPendingPrompt = (conversation.pending_prompt_count ?? 0) > 0;
+	const hasUnreadMeta = Boolean(conversation.has_unread_meta);
+	const hasPlan = conversation.last_message_role === 'plan';
+	const hasPendingPrompt = (conversation.pending_prompt_count ?? 0) > 0;
 
-  return (
-    <>
-      <div className="flex items-center justify-center text-muted-foreground/75">
-        <Circle className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
-      </div>
-      <div
-        className={cn(
-          'flex items-center justify-center overflow-hidden gap-1 transition-all duration-200 ease-out',
-          isProcessing || hasUnreadMeta || hasPlan || hasPendingPrompt
-            ? 'opacity-100 ml-0'
-            : '!w-0 opacity-0 -ml-[10px]'
-        )}
-      >
-        {isProcessing ? (
-          <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[10px]" aria-hidden="true" />
-        ) : null}
-        {hasUnreadMeta ? (
-          <svg
-            className="text-accent h-3.5 w-3.5"
-            viewBox="0 0 25 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <g transform="translate(1.748, 0.7832)">
-              <path
-                fillRule="nonzero"
-                d="M10.9952443,22 C8.89638276,22 7.01311428,21.5426195 5.34543882,20.6278586 C4.85718403,21.0547471 4.29283758,21.3901594 3.65239948,21.6340956 C3.01196138,21.8780319 2.3651823,22 1.71206226,22 C1.5028102,22 1.34111543,21.9466389 1.22697795,21.8399168 C1.11284047,21.7331947 1.05735697,21.6016979 1.06052745,21.4454262 C1.06369794,21.2891545 1.13820435,21.1347886 1.28404669,20.9823285 C1.5693904,20.6621622 1.77547197,20.3400901 1.9022914,20.0161123 C2.02911082,19.6921344 2.09252054,19.3090783 2.09252054,18.8669439 C2.09252054,18.4553015 2.02276985,18.0646223 1.88326848,17.6949064 C1.74376711,17.3251906 1.5693904,16.9383229 1.36013835,16.5343035 C1.15088629,16.1302841 0.941634241,15.6748094 0.732382188,15.1678794 C0.523130134,14.6609494 0.348753423,14.0682606 0.209252054,13.3898129 C0.0697506845,12.7113652 0,11.9147609 0,11 C0,9.40679141 0.271076524,7.93936244 0.813229572,6.5977131 C1.35538262,5.25606376 2.11946966,4.09164934 3.1054907,3.10446985 C4.09151175,2.11729037 5.25507998,1.35308385 6.59619542,0.811850312 C7.93731085,0.270616771 9.40366047,0 10.9952443,0 C12.5868281,0 14.0531777,0.270616771 15.3942931,0.811850312 C16.7354086,1.35308385 17.900562,2.11729037 18.8897536,3.10446985 C19.8789451,4.09164934 20.6446174,5.25606376 21.1867704,6.5977131 C21.7289235,7.93936244 22,9.40679141 22,11 C22,12.5932086 21.7289235,14.0606376 21.1867704,15.4022869 C20.6446174,16.7439362 19.8805303,17.9083507 18.8945093,18.8955301 C17.9084883,19.8827096 16.74492,20.6469161 15.4038046,21.1881497 C14.0626891,21.7293832 12.593169,22 10.9952443,22 Z"
-              />
-            </g>
-          </svg>
-        ) : null}
-        {hasPlan ? (
-          <svg
-            className="text-success h-3.5 w-3.5"
-            viewBox="0 0 25 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="nonzero"
-              d="M13.7207031,22.6523438 C13.264974,22.6523438 12.9361979,22.4895833 12.734375,22.1640625 C12.5325521,21.8385417 12.360026,21.4316406 12.2167969,20.9433594 L10.6640625,15.7871094 C10.5729167,15.4615885 10.5403646,15.1995443 10.5664062,15.0009766 C10.5924479,14.8024089 10.6998698,14.6022135 10.8886719,14.4003906 L20.859375,3.6484375 C20.9179688,3.58984375 20.9472656,3.52473958 20.9472656,3.453125 C20.9472656,3.38151042 20.921224,3.32291667 20.8691406,3.27734375 C20.8170573,3.23177083 20.7568359,3.20735677 20.6884766,3.20410156 C20.6201172,3.20084635 20.5566406,3.22851562 20.4980469,3.28710938 L9.78515625,13.296875 C9.5703125,13.4921875 9.36197917,13.601237 9.16015625,13.6240234 C8.95833333,13.6468099 8.70117188,13.609375 8.38867188,13.5117188 L3.11523438,11.9101562 C2.64648438,11.7669271 2.25911458,11.5960286 1.953125,11.3974609 C1.64713542,11.1988932 1.49414062,10.875 1.49414062,10.4257812 C1.49414062,10.0742188 1.63411458,9.77148438 1.9140625,9.51757812 C2.19401042,9.26367188 2.5390625,9.05859375 2.94921875,8.90234375 L19.7460938,2.46679688 C19.9739583,2.38216146 20.1871745,2.31542969 20.3857422,2.26660156 C20.5843099,2.21777344 20.764974,2.19335938 20.9277344,2.19335938 C21.2467448,2.19335938 21.4973958,2.28450521 21.6796875,2.46679688 C21.8619792,2.64908854 21.953125,2.89973958 21.953125,3.21875 C21.953125,3.38802083 21.9287109,3.5703125 21.8798828,3.765625 C21.8310547,3.9609375 21.7643229,4.17252604 21.6796875,4.40039062 L15.2832031,21.109375 C15.1009115,21.578125 14.8828125,21.952474 14.6289062,22.2324219 C14.375,22.5123698 14.0722656,22.6523438 13.7207031,22.6523438 Z"
-            />
-          </svg>
-        ) : null}
-        {hasPendingPrompt ? (
-          <ShieldAlert className="h-3.5 w-3.5 text-sky-500" aria-hidden="true" />
-        ) : null}
-      </div>
-    </>
-  );
+	return (
+		<>
+			<div className="flex items-center justify-center text-muted-foreground/75">
+				<Circle className="h-3.5 w-3.5" strokeWidth={1.5} aria-hidden="true" />
+			</div>
+			<div
+				className={cn(
+					'flex items-center justify-center overflow-hidden gap-1 transition-all duration-200 ease-out',
+					isProcessing || hasUnreadMeta || hasPlan || hasPendingPrompt
+						? 'opacity-100 ml-0'
+						: '!w-0 opacity-0 -ml-[10px]'
+				)}
+			>
+				{isProcessing ? (
+					<LoaderCircle
+						className="h-3.5 w-3.5 animate-spin text-[10px]"
+						aria-hidden="true"
+					/>
+				) : null}
+				{hasUnreadMeta ? (
+					<svg
+						className="text-accent h-3.5 w-3.5"
+						viewBox="0 0 25 24"
+						fill="currentColor"
+						aria-hidden="true"
+					>
+						<g transform="translate(1.748, 0.7832)">
+							<path
+								fillRule="nonzero"
+								d="M10.9952443,22 C8.89638276,22 7.01311428,21.5426195 5.34543882,20.6278586 C4.85718403,21.0547471 4.29283758,21.3901594 3.65239948,21.6340956 C3.01196138,21.8780319 2.3651823,22 1.71206226,22 C1.5028102,22 1.34111543,21.9466389 1.22697795,21.8399168 C1.11284047,21.7331947 1.05735697,21.6016979 1.06052745,21.4454262 C1.06369794,21.2891545 1.13820435,21.1347886 1.28404669,20.9823285 C1.5693904,20.6621622 1.77547197,20.3400901 1.9022914,20.0161123 C2.02911082,19.6921344 2.09252054,19.3090783 2.09252054,18.8669439 C2.09252054,18.4553015 2.02276985,18.0646223 1.88326848,17.6949064 C1.74376711,17.3251906 1.5693904,16.9383229 1.36013835,16.5343035 C1.15088629,16.1302841 0.941634241,15.6748094 0.732382188,15.1678794 C0.523130134,14.6609494 0.348753423,14.0682606 0.209252054,13.3898129 C0.0697506845,12.7113652 0,11.9147609 0,11 C0,9.40679141 0.271076524,7.93936244 0.813229572,6.5977131 C1.35538262,5.25606376 2.11946966,4.09164934 3.1054907,3.10446985 C4.09151175,2.11729037 5.25507998,1.35308385 6.59619542,0.811850312 C7.93731085,0.270616771 9.40366047,0 10.9952443,0 C12.5868281,0 14.0531777,0.270616771 15.3942931,0.811850312 C16.7354086,1.35308385 17.900562,2.11729037 18.8897536,3.10446985 C19.8789451,4.09164934 20.6446174,5.25606376 21.1867704,6.5977131 C21.7289235,7.93936244 22,9.40679141 22,11 C22,12.5932086 21.7289235,14.0606376 21.1867704,15.4022869 C20.6446174,16.7439362 19.8805303,17.9083507 18.8945093,18.8955301 C17.9084883,19.8827096 16.74492,20.6469161 15.4038046,21.1881497 C14.0626891,21.7293832 12.593169,22 10.9952443,22 Z"
+							/>
+						</g>
+					</svg>
+				) : null}
+				{hasPlan ? (
+					<svg
+						className="text-success h-3.5 w-3.5"
+						viewBox="0 0 25 24"
+						fill="currentColor"
+						aria-hidden="true"
+					>
+						<path
+							fillRule="nonzero"
+							d="M13.7207031,22.6523438 C13.264974,22.6523438 12.9361979,22.4895833 12.734375,22.1640625 C12.5325521,21.8385417 12.360026,21.4316406 12.2167969,20.9433594 L10.6640625,15.7871094 C10.5729167,15.4615885 10.5403646,15.1995443 10.5664062,15.0009766 C10.5924479,14.8024089 10.6998698,14.6022135 10.8886719,14.4003906 L20.859375,3.6484375 C20.9179688,3.58984375 20.9472656,3.52473958 20.9472656,3.453125 C20.9472656,3.38151042 20.921224,3.32291667 20.8691406,3.27734375 C20.8170573,3.23177083 20.7568359,3.20735677 20.6884766,3.20410156 C20.6201172,3.20084635 20.5566406,3.22851562 20.4980469,3.28710938 L9.78515625,13.296875 C9.5703125,13.4921875 9.36197917,13.601237 9.16015625,13.6240234 C8.95833333,13.6468099 8.70117188,13.609375 8.38867188,13.5117188 L3.11523438,11.9101562 C2.64648438,11.7669271 2.25911458,11.5960286 1.953125,11.3974609 C1.64713542,11.1988932 1.49414062,10.875 1.49414062,10.4257812 C1.49414062,10.0742188 1.63411458,9.77148438 1.9140625,9.51757812 C2.19401042,9.26367188 2.5390625,9.05859375 2.94921875,8.90234375 L19.7460938,2.46679688 C19.9739583,2.38216146 20.1871745,2.31542969 20.3857422,2.26660156 C20.5843099,2.21777344 20.764974,2.19335938 20.9277344,2.19335938 C21.2467448,2.19335938 21.4973958,2.28450521 21.6796875,2.46679688 C21.8619792,2.64908854 21.953125,2.89973958 21.953125,3.21875 C21.953125,3.38802083 21.9287109,3.5703125 21.8798828,3.765625 C21.8310547,3.9609375 21.7643229,4.17252604 21.6796875,4.40039062 L15.2832031,21.109375 C15.1009115,21.578125 14.8828125,21.952474 14.6289062,22.2324219 C14.375,22.5123698 14.0722656,22.6523438 13.7207031,22.6523438 Z"
+						/>
+					</svg>
+				) : null}
+				{hasPendingPrompt ? (
+					<ShieldAlert className="h-3.5 w-3.5 text-sky-500" aria-hidden="true" />
+				) : null}
+			</div>
+		</>
+	);
 }
 
 /** Renders a single conversation row within a group, computing derived state from search results. */
 function ConversationRow({
-  conversation,
-  index,
-  visibleIndex,
-  isSearchActive,
-  searchQuery,
-  multiSelectedIds,
-  contentSearchResults,
-  activeChatMatchInfo,
-  onConversationClick,
-  onConversationMouseDown,
-  onConversationKeyDown,
-  registerConversationElement,
-  onNavigate,
-  onRename,
-  onDelete,
-  onArchive,
-  onFlag,
-  onSetStatus,
-  onMarkUnread,
-  onRegenerateTitle,
+	conversation,
+	index,
+	visibleIndex,
+	isSearchActive,
+	searchQuery,
+	multiSelectedIds,
+	contentSearchResults,
+	activeChatMatchInfo,
+	onConversationClick,
+	onConversationMouseDown,
+	onConversationKeyDown,
+	registerConversationElement,
+	onNavigate,
+	onRename,
+	onDelete,
+	onArchive,
+	onFlag,
+	onSetStatus,
+	onMarkUnread,
+	onRegenerateTitle,
 }: {
-  conversation: Conversation;
-  index: number;
-  visibleIndex: number;
-  isSearchActive: boolean;
-  searchQuery: string;
-  multiSelectedIds: Set<string>;
-  contentSearchResults: Map<string, ContentSearchResult>;
-  activeChatMatchInfo?: { sessionId: string; count: number } | null;
-  onConversationClick: (conversationId: string, index: number, href: string) => void;
-  onConversationMouseDown: (event: ReactMouseEvent, conversationId: string, index: number) => void;
-  onConversationKeyDown: (
-    event: ReactKeyboardEvent,
-    conversation: Conversation,
-    index: number
-  ) => void;
-  registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
-  onNavigate: (href: string) => void;
-  onRename: (conversationId: string) => void;
-  onDelete: (conversationId: string) => void;
-  onArchive: (conversationId: string) => void;
-  onFlag: (conversationId: string) => void;
-  onSetStatus: (conversationId: string, status: ConversationStatus) => void;
-  onMarkUnread: (conversationId: string) => void;
-  onRegenerateTitle: (conversationId: string) => void;
+	conversation: Conversation;
+	index: number;
+	visibleIndex: number;
+	isSearchActive: boolean;
+	searchQuery: string;
+	multiSelectedIds: Set<string>;
+	contentSearchResults: Map<string, ContentSearchResult>;
+	activeChatMatchInfo?: { sessionId: string; count: number } | null;
+	onConversationClick: (conversationId: string, index: number, href: string) => void;
+	onConversationMouseDown: (
+		event: ReactMouseEvent,
+		conversationId: string,
+		index: number
+	) => void;
+	onConversationKeyDown: (
+		event: ReactKeyboardEvent,
+		conversation: Conversation,
+		index: number
+	) => void;
+	registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
+	onNavigate: (href: string) => void;
+	onRename: (conversationId: string) => void;
+	onDelete: (conversationId: string) => void;
+	onArchive: (conversationId: string) => void;
+	onFlag: (conversationId: string) => void;
+	onSetStatus: (conversationId: string, status: ConversationStatus) => void;
+	onMarkUnread: (conversationId: string) => void;
+	onRegenerateTitle: (conversationId: string) => void;
 }): React.JSX.Element {
-  const href = `/c/${conversation.id}`;
-  const isSelected = multiSelectedIds.has(conversation.id);
-  const searchCount =
-    activeChatMatchInfo?.sessionId === conversation.id
-      ? activeChatMatchInfo.count
-      : contentSearchResults.get(conversation.id)?.matchCount;
-  const labels = conversation.labels ?? [];
-  const isProcessing = Boolean(conversation.is_processing);
+	const href = `/c/${conversation.id}`;
+	const isSelected = multiSelectedIds.has(conversation.id);
+	const searchCount =
+		activeChatMatchInfo?.sessionId === conversation.id
+			? activeChatMatchInfo.count
+			: contentSearchResults.get(conversation.id)?.matchCount;
+	const labels = conversation.labels ?? [];
+	const isProcessing = Boolean(conversation.is_processing);
 
-  return (
-    <ConversationSidebarItem
-      id={conversation.id}
-      title={isSearchActive ? highlightMatch(conversation.title, searchQuery) : conversation.title}
-      updatedAt={conversation.updated_at}
-      icon={<ConversationIndicators conversation={conversation} isProcessing={isProcessing} />}
-      badges={
-        labels.length > 0
-          ? labels.map((label) => {
-              const labelKey = typeof label === 'string' ? label : (label.id ?? label.name);
-              return (
-                <ConversationLabelBadge key={`${conversation.id}-${labelKey}`} label={label} />
-              );
-            })
-          : undefined
-      }
-      titleTrailing={
-        searchCount && searchCount > 0 ? (
-          <SearchCountBadge count={searchCount} isSelected={isSelected} />
-        ) : undefined
-      }
-      isInMultiSelect={multiSelectedIds.size > 1 && isSelected}
-      showSeparator={index > 0}
-      onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
-      onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
-      buttonProps={{
-        ref: (element: HTMLDivElement | null) =>
-          registerConversationElement(conversation.id, element),
-        // TODO(#83): tabIndex should be driven by focusedConversationId (roving tabindex)
-        // so the keyboard-focused item gets 0 and all others get -1. Currently falls
-        // back to isSelected until the orchestration layer wires focusedConversationId
-        // through to ConversationRow.
-        tabIndex: isSelected ? 0 : -1,
-        role: 'option',
-        'aria-selected': isSelected,
-        onKeyDown: (event: ReactKeyboardEvent) =>
-          onConversationKeyDown(event, conversation, visibleIndex),
-      }}
-      isArchived={conversation.is_archived}
-      isFlagged={conversation.is_flagged}
-      isUnread={conversation.is_unread}
-      status={conversation.status}
-      onNavigate={onNavigate}
-      onRename={onRename}
-      onDelete={onDelete}
-      onArchive={onArchive}
-      onFlag={onFlag}
-      onSetStatus={onSetStatus}
-      onMarkUnread={onMarkUnread}
-      onRegenerateTitle={onRegenerateTitle}
-    />
-  );
+	return (
+		<ConversationSidebarItem
+			id={conversation.id}
+			title={
+				isSearchActive
+					? highlightMatch(conversation.title, searchQuery)
+					: conversation.title
+			}
+			updatedAt={conversation.updated_at}
+			icon={
+				<ConversationIndicators conversation={conversation} isProcessing={isProcessing} />
+			}
+			badges={
+				labels.length > 0
+					? labels.map((label) => {
+							const labelKey =
+								typeof label === 'string' ? label : (label.id ?? label.name);
+							return (
+								<ConversationLabelBadge
+									key={`${conversation.id}-${labelKey}`}
+									label={label}
+								/>
+							);
+						})
+					: undefined
+			}
+			titleTrailing={
+				searchCount && searchCount > 0 ? (
+					<SearchCountBadge count={searchCount} isSelected={isSelected} />
+				) : undefined
+			}
+			isInMultiSelect={multiSelectedIds.size > 1 && isSelected}
+			showSeparator={index > 0}
+			onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
+			onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
+			buttonProps={{
+				ref: (element: HTMLDivElement | null) =>
+					registerConversationElement(conversation.id, element),
+				// TODO(#83): tabIndex should be driven by focusedConversationId (roving tabindex)
+				// so the keyboard-focused item gets 0 and all others get -1. Currently falls
+				// back to isSelected until the orchestration layer wires focusedConversationId
+				// through to ConversationRow.
+				tabIndex: isSelected ? 0 : -1,
+				role: 'option',
+				'aria-selected': isSelected,
+				onKeyDown: (event: ReactKeyboardEvent) =>
+					onConversationKeyDown(event, conversation, visibleIndex),
+			}}
+			isArchived={conversation.is_archived}
+			isFlagged={conversation.is_flagged}
+			isUnread={conversation.is_unread}
+			status={conversation.status}
+			onNavigate={onNavigate}
+			onRename={onRename}
+			onDelete={onDelete}
+			onArchive={onArchive}
+			onFlag={onFlag}
+			onSetStatus={onSetStatus}
+			onMarkUnread={onMarkUnread}
+			onRegenerateTitle={onRegenerateTitle}
+		/>
+	);
 }
 
 /** Small pill showing the number of search matches found in a conversation's history. */
 function SearchCountBadge({
-  count,
-  isSelected,
+	count,
+	isSelected,
 }: {
-  count: number;
-  isSelected: boolean;
+	count: number;
+	isSelected: boolean;
 }): React.JSX.Element {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center justify-center min-w-[24px] px-1 py-0.5 rounded-[6px] text-[10px] font-medium tabular-nums leading-tight whitespace-nowrap shadow-tinted',
-        isSelected
-          ? 'bg-yellow-300/50 border border-yellow-500 text-yellow-900'
-          : 'bg-yellow-300/10 border border-yellow-600/20 text-yellow-800'
-      )}
-      style={{
-        ['--shadow-color' as string]: isSelected ? '234, 179, 8' : '133, 77, 14',
-      }}
-      title="Matches found"
-    >
-      {count}
-    </span>
-  );
+	return (
+		<span
+			className={cn(
+				'inline-flex items-center justify-center min-w-[24px] px-1 py-0.5 rounded-[6px] text-[10px] font-medium tabular-nums leading-tight whitespace-nowrap shadow-tinted',
+				isSelected
+					? 'bg-yellow-300/50 border border-yellow-500 text-yellow-900'
+					: 'bg-yellow-300/10 border border-yellow-600/20 text-yellow-800'
+			)}
+			style={{
+				['--shadow-color' as string]: isSelected ? '234, 179, 8' : '133, 77, 14',
+			}}
+			title="Matches found"
+		>
+			{count}
+		</span>
+	);
 }
 
 /**
@@ -293,160 +314,162 @@ function SearchCountBadge({
  * to keep the main component under the Biome line-count threshold.
  */
 function NavChatsContent({
-  isLoading,
-  isEmpty,
-  isSearchActive,
-  resultCount,
-  filteredGroups,
-  collapsedGroups,
-  navigatorRef,
-  searchQuery,
-  multiSelectedIds,
-  contentSearchResults,
-  activeChatMatchInfo,
-  onToggleGroup,
-  onNewSession,
-  onNavigate,
-  onRename,
-  onDelete,
-  onArchive,
-  onFlag,
-  onSetStatus,
-  onMarkUnread,
-  onRegenerateTitle,
-  onConversationClick,
-  onConversationMouseDown,
-  onConversationKeyDown,
-  registerConversationElement,
-  onNavigatorMouseDown,
+	isLoading,
+	isEmpty,
+	isSearchActive,
+	resultCount,
+	filteredGroups,
+	collapsedGroups,
+	navigatorRef,
+	searchQuery,
+	multiSelectedIds,
+	contentSearchResults,
+	activeChatMatchInfo,
+	onToggleGroup,
+	onNewSession,
+	onNavigate,
+	onRename,
+	onDelete,
+	onArchive,
+	onFlag,
+	onSetStatus,
+	onMarkUnread,
+	onRegenerateTitle,
+	onConversationClick,
+	onConversationMouseDown,
+	onConversationKeyDown,
+	registerConversationElement,
+	onNavigatorMouseDown,
 }: Pick<
-  NavChatsViewProps,
-  | 'isLoading'
-  | 'isEmpty'
-  | 'isSearchActive'
-  | 'resultCount'
-  | 'filteredGroups'
-  | 'collapsedGroups'
-  | 'navigatorRef'
-  | 'searchQuery'
-  | 'multiSelectedIds'
-  | 'contentSearchResults'
-  | 'activeChatMatchInfo'
-  | 'onToggleGroup'
-  | 'onNewSession'
-  | 'onNavigate'
-  | 'onRename'
-  | 'onDelete'
-  | 'onArchive'
-  | 'onFlag'
-  | 'onSetStatus'
-  | 'onMarkUnread'
-  | 'onRegenerateTitle'
-  | 'onConversationClick'
-  | 'onConversationMouseDown'
-  | 'onConversationKeyDown'
-  | 'registerConversationElement'
-  | 'onNavigatorMouseDown'
+	NavChatsViewProps,
+	| 'isLoading'
+	| 'isEmpty'
+	| 'isSearchActive'
+	| 'resultCount'
+	| 'filteredGroups'
+	| 'collapsedGroups'
+	| 'navigatorRef'
+	| 'searchQuery'
+	| 'multiSelectedIds'
+	| 'contentSearchResults'
+	| 'activeChatMatchInfo'
+	| 'onToggleGroup'
+	| 'onNewSession'
+	| 'onNavigate'
+	| 'onRename'
+	| 'onDelete'
+	| 'onArchive'
+	| 'onFlag'
+	| 'onSetStatus'
+	| 'onMarkUnread'
+	| 'onRegenerateTitle'
+	| 'onConversationClick'
+	| 'onConversationMouseDown'
+	| 'onConversationKeyDown'
+	| 'registerConversationElement'
+	| 'onNavigatorMouseDown'
 >): React.JSX.Element | null {
-  if (isLoading) {
-    return null;
-  }
+	if (isLoading) {
+		return null;
+	}
 
-  if (isEmpty) {
-    return (
-      <ConversationsEmptyState
-        icon={<Inbox className="h-4 w-4" />}
-        title="No sessions yet"
-        description="Sessions with your agent appear here. Start one to get going."
-        buttonLabel="New Session"
-        onAction={onNewSession}
-      />
-    );
-  }
+	if (isEmpty) {
+		return (
+			<ConversationsEmptyState
+				icon={<Inbox className="h-4 w-4" />}
+				title="No sessions yet"
+				description="Sessions with your agent appear here. Start one to get going."
+				buttonLabel="New Session"
+				onAction={onNewSession}
+			/>
+		);
+	}
 
-  if (isSearchActive && resultCount === 0) {
-    return (
-      <ConversationsEmptyState
-        icon={<Search className="h-4 w-4" />}
-        title="No matching sessions"
-        description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
-      />
-    );
-  }
+	if (isSearchActive && resultCount === 0) {
+		return (
+			<ConversationsEmptyState
+				icon={<Search className="h-4 w-4" />}
+				title="No matching sessions"
+				description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
+			/>
+		);
+	}
 
-  // Pre-compute collapsed state and flat indices outside the JSX to:
-  // 1. Avoid duplicated isCollapsible/isCollapsed logic (DRY)
-  // 2. Avoid mutable closures that break under React StrictMode
-  const canCollapse = !isSearchActive && filteredGroups.length > 1;
-  const collapsedKeys = canCollapse ? collapsedGroups : new Set<string>();
-  const flatIndexMap = new Map<string, number>();
-  let fi = 0;
-  for (const group of filteredGroups) {
-    if (!collapsedKeys.has(group.key)) {
-      for (const conversation of group.items) {
-        flatIndexMap.set(conversation.id, fi++);
-      }
-    }
-  }
+	// Pre-compute collapsed state and flat indices outside the JSX to:
+	// 1. Avoid duplicated isCollapsible/isCollapsed logic (DRY)
+	// 2. Avoid mutable closures that break under React StrictMode
+	const canCollapse = !isSearchActive && filteredGroups.length > 1;
+	const collapsedKeys = canCollapse ? collapsedGroups : new Set<string>();
+	const flatIndexMap = new Map<string, number>();
+	let fi = 0;
+	for (const group of filteredGroups) {
+		if (!collapsedKeys.has(group.key)) {
+			for (const conversation of group.items) {
+				flatIndexMap.set(conversation.id, fi++);
+			}
+		}
+	}
 
-  return (
-    <div
-      ref={navigatorRef}
-      className="pt-1 outline-none"
-      role="listbox"
-      aria-label="Sessions"
-      aria-multiselectable="true"
-      onMouseDown={onNavigatorMouseDown}
-    >
-      <ul className="flex w-full min-w-0 flex-col gap-0">
-        {filteredGroups.map((group) => {
-          const isCollapsed = collapsedKeys.has(group.key);
+	return (
+		<div
+			ref={navigatorRef}
+			className="pt-1 outline-none"
+			role="listbox"
+			aria-label="Sessions"
+			aria-multiselectable="true"
+			onMouseDown={onNavigatorMouseDown}
+		>
+			<ul className="flex w-full min-w-0 flex-col gap-0">
+				{filteredGroups.map((group) => {
+					const isCollapsed = collapsedKeys.has(group.key);
 
-          return (
-            <Fragment key={group.key}>
-              {canCollapse ? (
-                <CollapsibleGroupHeader
-                  label={group.label}
-                  isCollapsed={isCollapsed}
-                  itemCount={group.items.length}
-                  onToggle={() => onToggleGroup(group.key)}
-                />
-              ) : (
-                <SectionHeader label={group.label} />
-              )}
-              {isCollapsed
-                ? null
-                : group.items.map((conversation, index) => (
-                    <ConversationRow
-                      key={conversation.id}
-                      conversation={conversation}
-                      index={index}
-                      visibleIndex={flatIndexMap.get(conversation.id) ?? 0}
-                      isSearchActive={isSearchActive}
-                      searchQuery={searchQuery}
-                      multiSelectedIds={multiSelectedIds}
-                      contentSearchResults={contentSearchResults}
-                      activeChatMatchInfo={activeChatMatchInfo}
-                      onConversationClick={onConversationClick}
-                      onConversationMouseDown={onConversationMouseDown}
-                      onConversationKeyDown={onConversationKeyDown}
-                      registerConversationElement={registerConversationElement}
-                      onNavigate={onNavigate}
-                      onRename={onRename}
-                      onDelete={onDelete}
-                      onArchive={onArchive}
-                      onFlag={onFlag}
-                      onSetStatus={onSetStatus}
-                      onMarkUnread={onMarkUnread}
-                      onRegenerateTitle={onRegenerateTitle}
-                    />
-                  ))}
-            </Fragment>
-          );
-        })}
-      </ul>
-    </div>
-  );
+					return (
+						<Fragment key={group.key}>
+							{canCollapse ? (
+								<CollapsibleGroupHeader
+									label={group.label}
+									isCollapsed={isCollapsed}
+									itemCount={group.items.length}
+									onToggle={() => onToggleGroup(group.key)}
+								/>
+							) : (
+								<SectionHeader label={group.label} />
+							)}
+							{isCollapsed
+								? null
+								: group.items.map((conversation, index) => (
+										<ConversationRow
+											key={conversation.id}
+											conversation={conversation}
+											index={index}
+											visibleIndex={flatIndexMap.get(conversation.id) ?? 0}
+											isSearchActive={isSearchActive}
+											searchQuery={searchQuery}
+											multiSelectedIds={multiSelectedIds}
+											contentSearchResults={contentSearchResults}
+											activeChatMatchInfo={activeChatMatchInfo}
+											onConversationClick={onConversationClick}
+											onConversationMouseDown={onConversationMouseDown}
+											onConversationKeyDown={onConversationKeyDown}
+											registerConversationElement={
+												registerConversationElement
+											}
+											onNavigate={onNavigate}
+											onRename={onRename}
+											onDelete={onDelete}
+											onArchive={onArchive}
+											onFlag={onFlag}
+											onSetStatus={onSetStatus}
+											onMarkUnread={onMarkUnread}
+											onRegenerateTitle={onRegenerateTitle}
+										/>
+									))}
+						</Fragment>
+					);
+				})}
+			</ul>
+		</div>
+	);
 }
 
 /**
@@ -456,74 +479,74 @@ function NavChatsContent({
  * All data and callbacks are received via props — no hooks.
  */
 export function NavChatsView({
-  searchQuery,
-  onSearchChange,
-  onSearchClose,
-  resultCount,
-  isLoading,
-  isEmpty,
-  isSearchActive,
-  filteredGroups,
-  collapsedGroups,
-  onToggleGroup,
-  onNewSession,
-  onNavigate,
-  onRename,
-  onDelete,
-  onArchive,
-  onFlag,
-  onSetStatus,
-  onMarkUnread,
-  onRegenerateTitle,
-  navigatorRef,
-  contentSearchResults,
-  activeChatMatchInfo,
-  multiSelectedIds,
-  // TODO(#83): Pass focusedConversationId down to ConversationRow for roving tabindex.
-  // Currently unused — the orchestration layer (PR #83) will wire this through.
-  focusedConversationId: _focusedConversationId,
-  onConversationClick,
-  onConversationMouseDown,
-  onConversationKeyDown,
-  registerConversationElement,
-  onNavigatorMouseDown,
+	searchQuery,
+	onSearchChange,
+	onSearchClose,
+	resultCount,
+	isLoading,
+	isEmpty,
+	isSearchActive,
+	filteredGroups,
+	collapsedGroups,
+	onToggleGroup,
+	onNewSession,
+	onNavigate,
+	onRename,
+	onDelete,
+	onArchive,
+	onFlag,
+	onSetStatus,
+	onMarkUnread,
+	onRegenerateTitle,
+	navigatorRef,
+	contentSearchResults,
+	activeChatMatchInfo,
+	multiSelectedIds,
+	// TODO(#83): Pass focusedConversationId down to ConversationRow for roving tabindex.
+	// Currently unused — the orchestration layer (PR #83) will wire this through.
+	focusedConversationId: _focusedConversationId,
+	onConversationClick,
+	onConversationMouseDown,
+	onConversationKeyDown,
+	registerConversationElement,
+	onNavigatorMouseDown,
 }: NavChatsViewProps): React.JSX.Element {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <ConversationSearchHeader
-        searchQuery={searchQuery}
-        onSearchChange={onSearchChange}
-        onSearchClose={onSearchClose}
-        resultCount={resultCount}
-      />
-      <NavChatsContent
-        isLoading={isLoading}
-        isEmpty={isEmpty}
-        isSearchActive={isSearchActive}
-        resultCount={resultCount}
-        filteredGroups={filteredGroups}
-        collapsedGroups={collapsedGroups}
-        navigatorRef={navigatorRef}
-        searchQuery={searchQuery}
-        multiSelectedIds={multiSelectedIds}
-        contentSearchResults={contentSearchResults}
-        activeChatMatchInfo={activeChatMatchInfo}
-        onToggleGroup={onToggleGroup}
-        onNewSession={onNewSession}
-        onNavigate={onNavigate}
-        onRename={onRename}
-        onDelete={onDelete}
-        onArchive={onArchive}
-        onFlag={onFlag}
-        onSetStatus={onSetStatus}
-        onMarkUnread={onMarkUnread}
-        onRegenerateTitle={onRegenerateTitle}
-        onConversationClick={onConversationClick}
-        onConversationMouseDown={onConversationMouseDown}
-        onConversationKeyDown={onConversationKeyDown}
-        registerConversationElement={registerConversationElement}
-        onNavigatorMouseDown={onNavigatorMouseDown}
-      />
-    </div>
-  );
+	return (
+		<div className="flex min-h-0 flex-1 flex-col">
+			<ConversationSearchHeader
+				searchQuery={searchQuery}
+				onSearchChange={onSearchChange}
+				onSearchClose={onSearchClose}
+				resultCount={resultCount}
+			/>
+			<NavChatsContent
+				isLoading={isLoading}
+				isEmpty={isEmpty}
+				isSearchActive={isSearchActive}
+				resultCount={resultCount}
+				filteredGroups={filteredGroups}
+				collapsedGroups={collapsedGroups}
+				navigatorRef={navigatorRef}
+				searchQuery={searchQuery}
+				multiSelectedIds={multiSelectedIds}
+				contentSearchResults={contentSearchResults}
+				activeChatMatchInfo={activeChatMatchInfo}
+				onToggleGroup={onToggleGroup}
+				onNewSession={onNewSession}
+				onNavigate={onNavigate}
+				onRename={onRename}
+				onDelete={onDelete}
+				onArchive={onArchive}
+				onFlag={onFlag}
+				onSetStatus={onSetStatus}
+				onMarkUnread={onMarkUnread}
+				onRegenerateTitle={onRegenerateTitle}
+				onConversationClick={onConversationClick}
+				onConversationMouseDown={onConversationMouseDown}
+				onConversationKeyDown={onConversationKeyDown}
+				registerConversationElement={registerConversationElement}
+				onNavigatorMouseDown={onNavigatorMouseDown}
+			/>
+		</div>
+	);
 }

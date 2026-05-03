@@ -9,12 +9,12 @@ import { useAuthedFetch } from './use-authed-fetch';
  * @param endpoint - API path appended to the configured backend origin (see `lib/api.ts`).
  */
 export function useAuthedQuery<T>(queryKey: QueryKey, endpoint: string) {
-  const authedFetch = useAuthedFetch();
-  return useQuery<T>({
-    queryKey,
-    queryFn: async () => {
-      const response = await authedFetch(endpoint);
-      return response.json();
-    },
-  });
+	const authedFetch = useAuthedFetch();
+	return useQuery<T>({
+		queryKey,
+		queryFn: async () => {
+			const response = await authedFetch(endpoint);
+			return response.json();
+		},
+	});
 }

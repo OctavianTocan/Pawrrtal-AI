@@ -1,8 +1,8 @@
 export function assert(
-  expectedCondition: unknown,
-  message: string = "Assertion error"
+	expectedCondition: unknown,
+	message: string = 'Assertion error'
 ): asserts expectedCondition {
-  if (!expectedCondition) {
-    throw Error(message);
-  }
+	if (!expectedCondition) {
+		throw Error(message);
+	}
 }

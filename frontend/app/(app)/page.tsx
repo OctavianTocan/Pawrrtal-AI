@@ -9,12 +9,12 @@ import { OnboardingModal } from '@/features/onboarding/OnboardingModal';
  * component when navigating back here from an existing conversation.
  */
 export default async function ConversationPage() {
-  const uuid: string = crypto.randomUUID();
+	const uuid: string = crypto.randomUUID();
 
-  return (
-    <div>
-      <OnboardingModal listenForOpenEvent={false} />
-      <ChatContainer key={uuid} conversationId={uuid} />
-    </div>
-  );
+	return (
+		<div>
+			<OnboardingModal listenForOpenEvent={false} />
+			<ChatContainer key={uuid} conversationId={uuid} />
+		</div>
+	);
 }

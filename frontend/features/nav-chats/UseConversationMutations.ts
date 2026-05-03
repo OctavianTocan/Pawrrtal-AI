@@ -15,13 +15,13 @@ import type { Conversation } from '@/lib/types';
 
 /** Variables required to rename a conversation. */
 interface RenameConversationVariables {
-  conversationId: string;
-  title: string;
+	conversationId: string;
+	title: string;
 }
 
 /** Variables required to delete a conversation. */
 interface DeleteConversationVariables {
-  conversationId: string;
+	conversationId: string;
 }
 
 /**
@@ -31,16 +31,16 @@ interface DeleteConversationVariables {
  * Returns the same array reference if conversations is undefined.
  */
 function replaceConversation(
-  conversations: Conversation[] | undefined,
-  updatedConversation: Conversation
+	conversations: Conversation[] | undefined,
+	updatedConversation: Conversation
 ): Conversation[] | undefined {
-  if (!conversations) {
-    return conversations;
-  }
+	if (!conversations) {
+		return conversations;
+	}
 
-  return conversations.map((conversation) =>
-    conversation.id === updatedConversation.id ? updatedConversation : conversation
-  );
+	return conversations.map((conversation) =>
+		conversation.id === updatedConversation.id ? updatedConversation : conversation
+	);
 }
 
 /**
@@ -50,14 +50,14 @@ function replaceConversation(
  * Returns the same array reference if conversations is undefined.
  */
 function removeConversation(
-  conversations: Conversation[] | undefined,
-  deletedConversationId: string
+	conversations: Conversation[] | undefined,
+	deletedConversationId: string
 ): Conversation[] | undefined {
-  if (!conversations) {
-    return conversations;
-  }
+	if (!conversations) {
+		return conversations;
+	}
 
-  return conversations.filter((conversation) => conversation.id !== deletedConversationId);
+	return conversations.filter((conversation) => conversation.id !== deletedConversationId);
 }
 
 /**
@@ -70,37 +70,38 @@ function removeConversation(
  * @returns A mutation object with `mutate` and `mutateAsync` methods.
  */
 export function useRenameConversation(): UseMutationResult<
-  Conversation,
-  Error,
-  RenameConversationVariables
+	Conversation,
+	Error,
+	RenameConversationVariables
 > {
-  const fetcher = useAuthedFetch();
-  const queryClient = useQueryClient();
+	const fetcher = useAuthedFetch();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationKey: ['conversations', 'rename'],
-    mutationFn: async ({ conversationId, title }: RenameConversationVariables) => {
-      const response = await fetcher(API_ENDPOINTS.conversations.update(conversationId), {
-        method: 'PATCH',
-        headers: {
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ title }),
-      });
+	return useMutation({
+		mutationKey: ['conversations', 'rename'],
+		mutationFn: async ({ conversationId, title }: RenameConversationVariables) => {
+			const response = await fetcher(API_ENDPOINTS.conversations.update(conversationId), {
+				method: 'PATCH',
+				headers: {
+					'content-type': 'application/json',
+				},
+				body: JSON.stringify({ title }),
+			});
 
-      return (await response.json()) as Conversation;
-    },
-    onSuccess: (updatedConversation) => {
-      queryClient.setQueryData<Conversation[] | undefined>(['conversations'], (conversations) =>
-        replaceConversation(conversations, updatedConversation)
-      );
-      queryClient.setQueryData<Conversation | undefined>(
-        ['conversations', updatedConversation.id],
-        updatedConversation
-      );
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    },
-  });
+			return (await response.json()) as Conversation;
+		},
+		onSuccess: (updatedConversation) => {
+			queryClient.setQueryData<Conversation[] | undefined>(
+				['conversations'],
+				(conversations) => replaceConversation(conversations, updatedConversation)
+			);
+			queryClient.setQueryData<Conversation | undefined>(
+				['conversations', updatedConversation.id],
+				updatedConversation
+			);
+			queryClient.invalidateQueries({ queryKey: ['conversations'] });
+		},
+	});
 }
 
 /**
@@ -114,28 +115,29 @@ export function useRenameConversation(): UseMutationResult<
  * @returns A mutation object with `mutate` and `mutateAsync` methods.
  */
 export function useDeleteConversation(): UseMutationResult<
-  string,
-  Error,
-  DeleteConversationVariables
+	string,
+	Error,
+	DeleteConversationVariables
 > {
-  const fetcher = useAuthedFetch();
-  const queryClient = useQueryClient();
+	const fetcher = useAuthedFetch();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationKey: ['conversations', 'delete'],
-    mutationFn: async ({ conversationId }: DeleteConversationVariables) => {
-      await fetcher(API_ENDPOINTS.conversations.delete(conversationId), {
-        method: 'DELETE',
-      });
+	return useMutation({
+		mutationKey: ['conversations', 'delete'],
+		mutationFn: async ({ conversationId }: DeleteConversationVariables) => {
+			await fetcher(API_ENDPOINTS.conversations.delete(conversationId), {
+				method: 'DELETE',
+			});
 
-      return conversationId;
-    },
-    onSuccess: (deletedConversationId) => {
-      queryClient.setQueryData<Conversation[] | undefined>(['conversations'], (conversations) =>
-        removeConversation(conversations, deletedConversationId)
-      );
-      queryClient.removeQueries({ queryKey: ['conversations', deletedConversationId] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    },
-  });
+			return conversationId;
+		},
+		onSuccess: (deletedConversationId) => {
+			queryClient.setQueryData<Conversation[] | undefined>(
+				['conversations'],
+				(conversations) => removeConversation(conversations, deletedConversationId)
+			);
+			queryClient.removeQueries({ queryKey: ['conversations', deletedConversationId] });
+			queryClient.invalidateQueries({ queryKey: ['conversations'] });
+		},
+	});
 }

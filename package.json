@@ -1,23 +1,23 @@
 {
-  "name": "ai-nexus",
-  "version": "0.1.0",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun run dev.ts",
-    "commit": "bun run commit.ts",
-    "lint:policies": "bun run check-policies.mjs"
-  },
-  "devDependencies": {
-    "@tanstack/react-query-devtools": "^5.100.8",
-    "@types/bun": "latest",
-    "mcporter": "^0.7.3"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
-  },
-  "workspaces": [
-    "frontend"
-  ]
+	"name": "ai-nexus",
+	"version": "0.1.0",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run dev.ts",
+		"commit": "bun run commit.ts",
+		"lint:policies": "bun run check-policies.mjs"
+	},
+	"devDependencies": {
+		"@tanstack/react-query-devtools": "^5.100.8",
+		"@types/bun": "latest",
+		"mcporter": "^0.7.3"
+	},
+	"peerDependencies": {
+		"typescript": "^5.9.3"
+	},
+	"workspaces": [
+		"frontend"
+	]
 }

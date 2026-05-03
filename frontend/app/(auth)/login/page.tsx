@@ -7,20 +7,20 @@ import { LoginForm } from '@/features/auth/LoginForm';
  * here, so previews and dev deployments can show the button safely.
  */
 function canUseDevAdminLogin(): boolean {
-  // VERCEL_ENV is undefined in local dev, 'preview' on preview deploys,
-  // and 'production' only in production — so this correctly covers all non-prod environments.
-  return process.env.VERCEL_ENV !== 'production';
+	// VERCEL_ENV is undefined in local dev, 'preview' on preview deploys,
+	// and 'production' only in production — so this correctly covers all non-prod environments.
+	return process.env.VERCEL_ENV !== 'production';
 }
 
 /** Login page — renders the login form with an optional dev-only admin shortcut. */
 export default function Page(): React.JSX.Element {
-  const showDevAdminLogin = canUseDevAdminLogin();
+	const showDevAdminLogin = canUseDevAdminLogin();
 
-  return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <LoginForm canUseDevAdminLogin={showDevAdminLogin} />
-      </div>
-    </div>
-  );
+	return (
+		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+			<div className="w-full max-w-sm">
+				<LoginForm canUseDevAdminLogin={showDevAdminLogin} />
+			</div>
+		</div>
+	);
 }

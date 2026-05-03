@@ -10,6 +10,6 @@
  * @returns The conversation ID, or null if the pathname doesn't match.
  */
 export function extractConversationIdFromPath(pathname: string): string | null {
-  const match = pathname.match(/^\/c\/([^/]+)/);
-  return match?.[1] ?? null;
+	const match = pathname.match(/^\/c\/([^/]+)/);
+	return match?.[1] ?? null;
 }

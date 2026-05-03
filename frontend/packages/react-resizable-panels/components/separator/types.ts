@@ -1,53 +1,50 @@
-import type { CSSProperties, HTMLAttributes, Ref } from "react";
+import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 
 export type RegisteredSeparator = {
-  disabled?: boolean | undefined;
-  element: HTMLDivElement;
-  id: string;
+	disabled?: boolean | undefined;
+	element: HTMLDivElement;
+	id: string;
 };
 
-type BaseSeparatorAttributes = Omit<
-  HTMLAttributes<HTMLDivElement>,
-  "role" | "tabIndex"
->;
+type BaseSeparatorAttributes = Omit<HTMLAttributes<HTMLDivElement>, 'role' | 'tabIndex'>;
 
 export type SeparatorProps = BaseSeparatorAttributes & {
-  /**
-   * CSS class name.
-   *
-   * ℹ️ Use the `data-separator` attribute for custom _hover_ and _active_ styles
-   *
-   * ⚠️ The following properties cannot be overridden: `flex-grow`, `flex-shrink`
-   */
-  className?: string | undefined;
+	/**
+	 * CSS class name.
+	 *
+	 * ℹ️ Use the `data-separator` attribute for custom _hover_ and _active_ styles
+	 *
+	 * ⚠️ The following properties cannot be overridden: `flex-grow`, `flex-shrink`
+	 */
+	className?: string | undefined;
 
-  /**
-   * When disabled, the separator cannot be used to resize its neighboring panels.
-   *
-   * ℹ️ The panels may still be resized indirectly (while other panels are being resized).
-   * To prevent a panel from being resized at all, it needs to also be disabled.
-   */
-  disabled?: boolean | undefined;
+	/**
+	 * When disabled, the separator cannot be used to resize its neighboring panels.
+	 *
+	 * ℹ️ The panels may still be resized indirectly (while other panels are being resized).
+	 * To prevent a panel from being resized at all, it needs to also be disabled.
+	 */
+	disabled?: boolean | undefined;
 
-  /**
-   * Ref attached to the root `HTMLDivElement`.
-   */
-  elementRef?: Ref<HTMLDivElement> | undefined;
+	/**
+	 * Ref attached to the root `HTMLDivElement`.
+	 */
+	elementRef?: Ref<HTMLDivElement> | undefined;
 
-  /**
-   * Uniquely identifies the separator within the parent group.
-   * Falls back to `useId` when not provided.
-   *
-   * ℹ️ This value will also be assigned to the `data-separator` attribute.
-   */
-  id?: string | number | undefined;
+	/**
+	 * Uniquely identifies the separator within the parent group.
+	 * Falls back to `useId` when not provided.
+	 *
+	 * ℹ️ This value will also be assigned to the `data-separator` attribute.
+	 */
+	id?: string | number | undefined;
 
-  /**
-   * CSS properties.
-   *
-   * ℹ️ Use the `data-separator` attribute for custom _hover_ and _active_ styles
-   *
-   * ⚠️ The following properties cannot be overridden: `flex-grow`, `flex-shrink`
-   */
-  style?: CSSProperties | undefined;
+	/**
+	 * CSS properties.
+	 *
+	 * ℹ️ Use the `data-separator` attribute for custom _hover_ and _active_ styles
+	 *
+	 * ⚠️ The following properties cannot be overridden: `flex-grow`, `flex-shrink`
+	 */
+	style?: CSSProperties | undefined;
 };

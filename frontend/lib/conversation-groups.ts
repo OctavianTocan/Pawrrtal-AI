@@ -2,9 +2,9 @@ import type { Conversation } from '@/lib/types';
 
 /** A date-keyed bucket of conversations for the sidebar grouped list. */
 export type ConversationGroup = {
-  key: string;
-  label: string;
-  items: Conversation[];
+	key: string;
+	label: string;
+	items: Conversation[];
 };
 
 /**
@@ -13,8 +13,8 @@ export type ConversationGroup = {
  * @param value - An ISO-8601 (or otherwise parseable) date string.
  */
 function getConversationDate(value: string): Date | null {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -23,10 +23,11 @@ function getConversationDate(value: string): Date | null {
  * Prefers `updated_at`; falls back to `created_at`, then epoch zero.
  */
 function getConversationTimestamp(conversation: Conversation): number {
-  const date =
-    getConversationDate(conversation.updated_at) ?? getConversationDate(conversation.created_at);
+	const date =
+		getConversationDate(conversation.updated_at) ??
+		getConversationDate(conversation.created_at);
 
-  return date?.getTime() ?? 0;
+	return date?.getTime() ?? 0;
 }
 
 /**
@@ -35,20 +36,20 @@ function getConversationTimestamp(conversation: Conversation): number {
  * Uses the user's local timezone so that "today" matches their clock.
  */
 function getLocalDayKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
 
-  return `${year}-${month}-${day}`;
+	return `${year}-${month}-${day}`;
 }
 
 /** Returns `true` when both dates fall on the same calendar day (local tz). */
 function isSameLocalDay(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
+	return (
+		left.getFullYear() === right.getFullYear() &&
+		left.getMonth() === right.getMonth() &&
+		left.getDate() === right.getDate()
+	);
 }
 
 /**
@@ -58,21 +59,21 @@ function isSameLocalDay(left: Date, right: Date): boolean {
  * (e.g. `"Mar 25"`) depending on how recent the date is.
  */
 function formatDateGroupLabel(date: Date): string {
-  const now = new Date();
-  if (isSameLocalDay(date, now)) {
-    return 'Today';
-  }
+	const now = new Date();
+	if (isSameLocalDay(date, now)) {
+		return 'Today';
+	}
 
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (isSameLocalDay(date, yesterday)) {
-    return 'Yesterday';
-  }
+	const yesterday = new Date(now);
+	yesterday.setDate(now.getDate() - 1);
+	if (isSameLocalDay(date, yesterday)) {
+		return 'Yesterday';
+	}
 
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
+	return new Intl.DateTimeFormat(undefined, {
+		month: 'short',
+		day: 'numeric',
+	}).format(date);
 }
 
 /**
@@ -82,30 +83,30 @@ function formatDateGroupLabel(date: Date): string {
  * Empty input produces an empty array (no "Today" placeholder).
  */
 export function buildConversationGroups(conversations: Conversation[]): ConversationGroup[] {
-  const sortedConversations = [...conversations].sort(
-    (left, right) => getConversationTimestamp(right) - getConversationTimestamp(left)
-  );
+	const sortedConversations = [...conversations].sort(
+		(left, right) => getConversationTimestamp(right) - getConversationTimestamp(left)
+	);
 
-  const groups = new Map<string, ConversationGroup>();
-  for (const conversation of sortedConversations) {
-    const date =
-      getConversationDate(conversation.updated_at) ??
-      getConversationDate(conversation.created_at) ??
-      new Date(0);
-    const key = getLocalDayKey(date);
+	const groups = new Map<string, ConversationGroup>();
+	for (const conversation of sortedConversations) {
+		const date =
+			getConversationDate(conversation.updated_at) ??
+			getConversationDate(conversation.created_at) ??
+			new Date(0);
+		const key = getLocalDayKey(date);
 
-    if (!groups.has(key)) {
-      groups.set(key, {
-        key,
-        label: formatDateGroupLabel(date),
-        items: [],
-      });
-    }
+		if (!groups.has(key)) {
+			groups.set(key, {
+				key,
+				label: formatDateGroupLabel(date),
+				items: [],
+			});
+		}
 
-    groups.get(key)?.items.push(conversation);
-  }
+		groups.get(key)?.items.push(conversation);
+	}
 
-  return [...groups.values()];
+	return [...groups.values()];
 }
 
 /**
@@ -115,25 +116,25 @@ export function buildConversationGroups(conversations: Conversation[]): Conversa
  * Groups with zero matching items are excluded from the result.
  */
 export function filterConversationGroups(
-  groups: ConversationGroup[],
-  searchQuery: string
+	groups: ConversationGroup[],
+	searchQuery: string
 ): ConversationGroup[] {
-  const trimmedQuery = searchQuery.trim().toLowerCase();
-  if (trimmedQuery.length < 2) {
-    return groups;
-  }
+	const trimmedQuery = searchQuery.trim().toLowerCase();
+	if (trimmedQuery.length < 2) {
+		return groups;
+	}
 
-  return groups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((conversation) =>
-        conversation.title.toLowerCase().includes(trimmedQuery)
-      ),
-    }))
-    .filter((group) => group.items.length > 0);
+	return groups
+		.map((group) => ({
+			...group,
+			items: group.items.filter((conversation) =>
+				conversation.title.toLowerCase().includes(trimmedQuery)
+			),
+		}))
+		.filter((group) => group.items.length > 0);
 }
 
 /** Sums all `items.length` values across the given groups. */
 export function countGroupItems(groups: ConversationGroup[]): number {
-  return groups.reduce((total, group) => total + group.items.length, 0);
+	return groups.reduce((total, group) => total + group.items.length, 0);
 }

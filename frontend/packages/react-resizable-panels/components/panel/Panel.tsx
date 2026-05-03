@@ -37,195 +37,195 @@ import { usePanelImperativeHandle } from './usePanelImperativeHandle';
  * ⚠️ Panel elements must be direct DOM children of their parent Group elements.
  */
 export function Panel({
-  children,
-  className,
-  collapsedSize = '0%',
-  collapsible = false,
-  defaultSize,
-  disabled,
-  elementRef: elementRefProp,
-  groupResizeBehavior = 'preserve-relative-size',
-  id: idProp,
-  maxSize = '100%',
-  minSize = '0%',
-  onResize: onResizeUnstable,
-  outerStyle,
-  panelRef,
-  style,
-  ...rest
+	children,
+	className,
+	collapsedSize = '0%',
+	collapsible = false,
+	defaultSize,
+	disabled,
+	elementRef: elementRefProp,
+	groupResizeBehavior = 'preserve-relative-size',
+	id: idProp,
+	maxSize = '100%',
+	minSize = '0%',
+	onResize: onResizeUnstable,
+	outerStyle,
+	panelRef,
+	style,
+	...rest
 }: PanelProps) {
-  const idIsStable = !!idProp;
+	const idIsStable = !!idProp;
 
-  const id = useId(idProp);
+	const id = useId(idProp);
 
-  const stableProps = useStableObject({
-    disabled,
-  });
+	const stableProps = useStableObject({
+		disabled,
+	});
 
-  const elementRef = useRef<HTMLDivElement | null>(null);
+	const elementRef = useRef<HTMLDivElement | null>(null);
 
-  const mergedRef = useMergedRefs(elementRef, elementRefProp);
+	const mergedRef = useMergedRefs(elementRef, elementRefProp);
 
-  const {
-    getPanelStyles,
-    id: groupId,
-    orientation,
-    registerPanel,
-    togglePanelDisabled,
-  } = useGroupContext();
+	const {
+		getPanelStyles,
+		id: groupId,
+		orientation,
+		registerPanel,
+		togglePanelDisabled,
+	} = useGroupContext();
 
-  const hasOnResize = onResizeUnstable !== null;
-  const onResizeStable = useStableCallback(
-    (
-      panelSize: PanelSize,
-      _: string | number | undefined,
-      prevPanelSize: PanelSize | undefined
-    ) => {
-      onResizeUnstable?.(panelSize, idProp, prevPanelSize);
-    }
-  );
+	const hasOnResize = onResizeUnstable !== null;
+	const onResizeStable = useStableCallback(
+		(
+			panelSize: PanelSize,
+			_: string | number | undefined,
+			prevPanelSize: PanelSize | undefined
+		) => {
+			onResizeUnstable?.(panelSize, idProp, prevPanelSize);
+		}
+	);
 
-  // Register Panel with parent Group
-  useIsomorphicLayoutEffect(() => {
-    const element = elementRef.current;
-    if (element !== null) {
-      const registeredPanel: RegisteredPanel = {
-        element,
-        id,
-        idIsStable,
-        mutableValues: {
-          expandToSize: undefined,
-          prevSize: undefined,
-        },
-        onResize: hasOnResize ? onResizeStable : undefined,
-        panelConstraints: {
-          groupResizeBehavior,
-          collapsedSize,
-          collapsible,
-          defaultSize,
-          disabled: stableProps.disabled,
-          maxSize,
-          minSize,
-        },
-      };
+	// Register Panel with parent Group
+	useIsomorphicLayoutEffect(() => {
+		const element = elementRef.current;
+		if (element !== null) {
+			const registeredPanel: RegisteredPanel = {
+				element,
+				id,
+				idIsStable,
+				mutableValues: {
+					expandToSize: undefined,
+					prevSize: undefined,
+				},
+				onResize: hasOnResize ? onResizeStable : undefined,
+				panelConstraints: {
+					groupResizeBehavior,
+					collapsedSize,
+					collapsible,
+					defaultSize,
+					disabled: stableProps.disabled,
+					maxSize,
+					minSize,
+				},
+			};
 
-      return registerPanel(registeredPanel);
-    }
-  }, [
-    groupResizeBehavior,
-    collapsedSize,
-    collapsible,
-    defaultSize,
-    hasOnResize,
-    id,
-    idIsStable,
-    maxSize,
-    minSize,
-    onResizeStable,
-    registerPanel,
-    stableProps,
-  ]);
+			return registerPanel(registeredPanel);
+		}
+	}, [
+		groupResizeBehavior,
+		collapsedSize,
+		collapsible,
+		defaultSize,
+		hasOnResize,
+		id,
+		idIsStable,
+		maxSize,
+		minSize,
+		onResizeStable,
+		registerPanel,
+		stableProps,
+	]);
 
-  // Not all props require re-registering the panel;
-  useEffect(() => {
-    togglePanelDisabled(id, !!disabled);
-  }, [disabled, id, togglePanelDisabled]);
+	// Not all props require re-registering the panel;
+	useEffect(() => {
+		togglePanelDisabled(id, !!disabled);
+	}, [disabled, id, togglePanelDisabled]);
 
-  usePanelImperativeHandle(id, panelRef);
+	usePanelImperativeHandle(id, panelRef);
 
-  // useSyncExternalStore does not support a custom equality check
-  // stringify avoids re-rendering when the style value hasn't changed
-  const read = () => {
-    const maybePanelStyles = getPanelStyles(groupId, id);
-    if (maybePanelStyles) {
-      return JSON.stringify(maybePanelStyles);
-    }
-  };
+	// useSyncExternalStore does not support a custom equality check
+	// stringify avoids re-rendering when the style value hasn't changed
+	const read = () => {
+		const maybePanelStyles = getPanelStyles(groupId, id);
+		if (maybePanelStyles) {
+			return JSON.stringify(maybePanelStyles);
+		}
+	};
 
-  const panelStylesString = useSyncExternalStore(
-    (subscribe) => subscribeToMountedGroup(groupId, subscribe),
-    read,
-    read
-  );
+	const panelStylesString = useSyncExternalStore(
+		(subscribe) => subscribeToMountedGroup(groupId, subscribe),
+		read,
+		read
+	);
 
-  let panelStyles: CSSProperties;
-  if (panelStylesString) {
-    panelStyles = JSON.parse(panelStylesString);
-  } else if (defaultSize) {
-    panelStyles = {
-      flexGrow: undefined,
-      flexShrink: undefined,
-      flexBasis: defaultSize,
-    };
-  } else {
-    panelStyles = { flexGrow: 1 };
-  }
+	let panelStyles: CSSProperties;
+	if (panelStylesString) {
+		panelStyles = JSON.parse(panelStylesString);
+	} else if (defaultSize) {
+		panelStyles = {
+			flexGrow: undefined,
+			flexShrink: undefined,
+			flexBasis: defaultSize,
+		};
+	} else {
+		panelStyles = { flexGrow: 1 };
+	}
 
-  return (
-    <div
-      {...rest}
-      data-disabled={disabled || undefined}
-      data-panel
-      data-testid={id}
-      id={id}
-      ref={mergedRef}
-      style={{
-        ...PROHIBITED_CSS_PROPERTIES,
+	return (
+		<div
+			{...rest}
+			data-disabled={disabled || undefined}
+			data-panel
+			data-testid={id}
+			id={id}
+			ref={mergedRef}
+			style={{
+				...PROHIBITED_CSS_PROPERTIES,
 
-        display: 'flex',
-        flexBasis: 0,
-        flexShrink: 1,
-        overflow: 'visible',
+				display: 'flex',
+				flexBasis: 0,
+				flexShrink: 1,
+				overflow: 'visible',
 
-        ...panelStyles,
+				...panelStyles,
 
-        // outerStyle is spread last so consumers can set transition, etc.
-        // Disable transitions during drag so the handle tracks instantly.
-        ...(outerStyle && {
-          ...outerStyle,
-          ...(panelStyles.pointerEvents === 'none' && {
-            transition: undefined,
-          }),
-        }),
-      }}
-    >
-      <div
-        className={className}
-        style={{
-          maxHeight: '100%',
-          maxWidth: '100%',
-          flexGrow: 1,
-          overflow: 'auto',
+				// outerStyle is spread last so consumers can set transition, etc.
+				// Disable transitions during drag so the handle tracks instantly.
+				...(outerStyle && {
+					...outerStyle,
+					...(panelStyles.pointerEvents === 'none' && {
+						transition: undefined,
+					}),
+				}),
+			}}
+		>
+			<div
+				className={className}
+				style={{
+					maxHeight: '100%',
+					maxWidth: '100%',
+					flexGrow: 1,
+					overflow: 'auto',
 
-          ...style,
+					...style,
 
-          // Inform the browser that the library is handling touch events for this element
-          // but still allow users to scroll content within panels in the non-resizing direction
-          // NOTE This is not an inherited style
-          // See github.com/bvaughn/react-resizable-panels/issues/662
-          touchAction: orientation === 'horizontal' ? 'pan-y' : 'pan-x',
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
+					// Inform the browser that the library is handling touch events for this element
+					// but still allow users to scroll content within panels in the non-resizing direction
+					// NOTE This is not an inherited style
+					// See github.com/bvaughn/react-resizable-panels/issues/662
+					touchAction: orientation === 'horizontal' ? 'pan-y' : 'pan-x',
+				}}
+			>
+				{children}
+			</div>
+		</div>
+	);
 }
 
 // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/displayName
 Panel.displayName = 'Panel';
 
 const PROHIBITED_CSS_PROPERTIES: CSSProperties = {
-  minHeight: 0,
-  maxHeight: '100%',
-  height: 'auto',
+	minHeight: 0,
+	maxHeight: '100%',
+	height: 'auto',
 
-  minWidth: 0,
-  maxWidth: '100%',
-  width: 'auto',
+	minWidth: 0,
+	maxWidth: '100%',
+	width: 'auto',
 
-  border: 'none',
-  borderWidth: 0,
-  padding: 0,
-  margin: 0,
+	border: 'none',
+	borderWidth: 0,
+	padding: 0,
+	margin: 0,
 };

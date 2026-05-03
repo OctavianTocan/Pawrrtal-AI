@@ -8,9 +8,9 @@ import { useAuthedQuery } from './use-authed-query';
  * @param conversationId - UUID of the conversation; included in the React Query cache key.
  */
 export default function useGetConversation(conversationId: string) {
-  // conversationId in queryKey keeps per-conversation cache entries distinct when navigating.
-  return useAuthedQuery<Conversation>(
-    ['conversations', conversationId],
-    API_ENDPOINTS.conversations.get(conversationId)
-  );
+	// conversationId in queryKey keeps per-conversation cache entries distinct when navigating.
+	return useAuthedQuery<Conversation>(
+		['conversations', conversationId],
+		API_ENDPOINTS.conversations.get(conversationId)
+	);
 }

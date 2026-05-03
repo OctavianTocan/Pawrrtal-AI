@@ -13,12 +13,12 @@ import { getQueryClient } from './get-query-client';
  * @returns The query client provider wrapped around the children.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const queryClient = getQueryClient();
+	const queryClient = getQueryClient();
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools initialIsOpen={false} />
-      {children}
-    </QueryClientProvider>
-  );
+	return (
+		<QueryClientProvider client={queryClient}>
+			<ReactQueryDevtools initialIsOpen={false} />
+			{children}
+		</QueryClientProvider>
+	);
 }

@@ -1,29 +1,27 @@
-"use client";
+'use client';
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from 'react';
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubTrigger,
 	DropdownMenuSubContent,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
 	ContextMenuItem,
 	ContextMenuSeparator,
 	ContextMenuSub,
 	ContextMenuSubTrigger,
 	ContextMenuSubContent,
-} from "@/components/ui/context-menu";
+} from '@/components/ui/context-menu';
 
 type MenuComponents = {
 	MenuItem: typeof DropdownMenuItem | typeof ContextMenuItem;
 	MenuSeparator: typeof DropdownMenuSeparator | typeof ContextMenuSeparator;
 	MenuSub: typeof DropdownMenuSub | typeof ContextMenuSub;
 	MenuSubTrigger: typeof DropdownMenuSubTrigger | typeof ContextMenuSubTrigger;
-	MenuSubContent:
-		| typeof DropdownMenuSubContent
-		| typeof ContextMenuSubContent;
+	MenuSubContent: typeof DropdownMenuSubContent | typeof ContextMenuSubContent;
 };
 
 const MenuComponentsContext = createContext<MenuComponents | null>(null);
@@ -40,7 +38,7 @@ const MenuComponentsContext = createContext<MenuComponents | null>(null);
 export function useMenuComponents(): MenuComponents {
 	const ctx = useContext(MenuComponentsContext);
 	if (!ctx) {
-		throw new Error("useMenuComponents must be used within a MenuProvider");
+		throw new Error('useMenuComponents must be used within a MenuProvider');
 	}
 	return ctx;
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { PanelImperativeHandle } from "./types";
+import { useState } from 'react';
+import type { PanelImperativeHandle } from './types';
 
 /**
  * Convenience hook to return a properly typed ref callback for the Panel component.
@@ -7,5 +7,5 @@ import type { PanelImperativeHandle } from "./types";
  * Use this hook when you need to share the ref with another component or hook.
  */
 export function usePanelCallbackRef() {
-  return useState<PanelImperativeHandle | null>(null);
+	return useState<PanelImperativeHandle | null>(null);
 }
