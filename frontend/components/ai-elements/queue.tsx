@@ -134,7 +134,6 @@ export const QueueItemAttachment = ({ className, ...props }: QueueItemAttachment
 export type QueueItemImageProps = ComponentProps<'img'>;
 
 export const QueueItemImage = ({ className, ...props }: QueueItemImageProps) => (
-  // biome-ignore lint/performance/noImgElement: queue item thumbnails use dynamic user-uploaded URLs
   <img
     alt=""
     className={cn('h-8 w-8 rounded border object-cover', className)}

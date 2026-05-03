@@ -4,8 +4,8 @@
  * @fileoverview Sets Turborepo monorepo root for Turbopack and enables `authInterrupts` for `unauthorized()`.
  */
 
+import path from 'node:path';
 import type { NextConfig } from 'next';
-import path from 'path';
 
 const nextConfig: NextConfig = {
   turbopack: {

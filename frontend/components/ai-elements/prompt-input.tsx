@@ -145,7 +145,9 @@ export function PromptInputProvider({
   // ----- attachments state (global when wrapped)
   const [attachmentFiles, setAttachmentFiles] = useState<(FileUIPart & { id: string })[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const openRef = useRef<() => void>(() => {});
+  const openRef = useRef<() => void>(() => {
+    /* opener wired via PromptInputController */
+  });
 
   const add = useCallback((files: File[] | FileList) => {
     const incoming = Array.from(files);
@@ -296,7 +298,6 @@ export function PromptInputAttachment({ data, className, ...props }: PromptInput
           <div className="relative size-5 shrink-0">
             <div className="absolute inset-0 flex size-5 items-center justify-center overflow-hidden rounded bg-background transition-opacity group-hover:opacity-0">
               {isImage ? (
-                // biome-ignore lint/performance/noImgElement: dynamic user-uploaded attachment thumbnails
                 <img
                   alt={filename || 'attachment'}
                   className="size-5 object-cover"
@@ -332,7 +333,6 @@ export function PromptInputAttachment({ data, className, ...props }: PromptInput
         <div className="w-auto space-y-3">
           {isImage && (
             <div className="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border">
-              {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded attachment preview */}
               <img
                 alt={filename || 'attachment preview'}
                 className="max-h-full max-w-full object-contain"

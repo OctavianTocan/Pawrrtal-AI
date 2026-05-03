@@ -294,7 +294,6 @@ export function MessageAttachment({ data, className, onRemove, ...props }: Messa
     <div className={cn('group relative size-24 overflow-hidden rounded-lg', className)} {...props}>
       {isImage ? (
         <>
-          {/* biome-ignore lint/performance/noImgElement: user-uploaded dynamic URLs are not statically optimizable by next/image */}
           <img
             alt={filename || 'attachment'}
             className="size-full object-cover"

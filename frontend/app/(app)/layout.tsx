@@ -12,9 +12,5 @@ export default function AppLayoutWrapper({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <>
-      <AppLayout>{children}</AppLayout>
-    </>
-  );
+  return <AppLayout>{children}</AppLayout>;
 }

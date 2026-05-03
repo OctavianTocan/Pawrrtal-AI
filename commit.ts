@@ -1,5 +1,3 @@
-import { $ } from 'bun';
-
 const commitPrompt = `Given the current git state, do this:
 
 1. Check for uncommitted changes:
