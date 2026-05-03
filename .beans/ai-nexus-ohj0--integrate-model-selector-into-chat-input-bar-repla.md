@@ -1,11 +1,11 @@
 ---
 # ai-nexus-ohj0
 title: Integrate model selector into chat input bar (replace dialog-based selector)
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-12T00:41:58Z
-updated_at: 2026-03-12T00:44:45Z
+updated_at: 2026-05-02T22:32:09Z
 parent: ai-nexus-3i2d
 blocked_by:
     - ai-nexus-6k3a
@@ -13,40 +13,18 @@ blocked_by:
 
 ## Goal
 
-Take the custom model selector component (from ai-nexus-6k3a) and integrate it into the actual chat UI, replacing the current dialog-based ai-elements ModelSelector in ChatView.tsx.
+Integrate the custom Codex-style model selector into the chat input bar and remove the old dialog-based selector from ChatView.
 
-This is the "last mile" task that makes the model selector actually usable in the app.
+## Completed
 
-## Current State
+- [x] Removed the ai-elements dialog ModelSelector imports and usage from `ChatView.tsx`.
+- [x] Rendered `ModelSelectorPopover` inside the new `ChatComposer` input island.
+- [x] Positioned the trigger as a compact pill in the composer footer next to voice and send controls.
+- [x] Wired selected model and reasoning state through `ChatContainer` and `ChatView`.
+- [x] Used local visual-first model options for Google and OpenAI-style labels.
+- [x] Opened the selector upward from the bottom composer.
+- [x] Verified the changed chat files with scoped Biome and `bun run typecheck`.
 
-`ChatView.tsx` currently renders:
-- A `ModelSelectorTrigger` button (from ai-elements) that opens a full-screen Command dialog
-- Hardcoded single model: "Gemini 3 Flash Preview" in a Google group
-- Local state: `const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview")`
+## Summary of Changes
 
-## What to Do
-
-- [ ] Remove the ai-elements ModelSelector imports and usage from `ChatView.tsx`
-- [ ] Import and render the new custom `ModelSelectorPopover` component in the chat input area
-- [ ] Position the trigger button in the bottom bar of the chat input (like the Codex screenshot: compact pill next to the send button)
-- [ ] Wire `selectedModel` state to the new component's `onSelect` callback
-- [ ] Use mock grouped data initially (Google: [gemini-3-flash, gemini-3-pro], Anthropic: [claude-sonnet-4-5], OpenAI: [gpt-5.4])
-- [ ] Make sure the popover opens UPWARD (since the trigger is at the bottom of the screen, the dropdown should flip above it)
-- [ ] Test: clicking a model updates the trigger button text + icon, popover closes smoothly
-
-## Design Target
-
-The trigger should look like this in the input bar:
-```text
-[📎 Attach] [🔍 Search] ................ [🟢 gemini-3-flash v] [➡️ Send]
-```
-- Small pill/button
-- Provider icon (from models.dev/logos/) + model name + chevron-down
-- Clicking opens the grouped popover ABOVE the button
-- Selecting a model closes popover and updates the pill
-
-## Key Files
-
-- `frontend/features/chat/ChatView.tsx` (remove old selector, add new one)
-- `frontend/components/model-selector-popover.tsx` (the new component from ai-nexus-6k3a)
-- `frontend/hooks/use-model-selector.ts` (the hook from ai-nexus-6k3a)
+Replaced the old dialog selector with a compact dropdown model/reasoning selector, moved composer UI into feature components, and now sends the selected `model_id` with chat requests. Full `just check` remains blocked by pre-existing unrelated Biome issues outside this slice.

@@ -53,13 +53,10 @@ export default async function ConversationPage({ params }: ConversationPageProps
   const messages = await response.json();
 
   return (
-    <div>
-      <h1 className="flex-1 items-center text-center">Conversation {conversationId}</h1>
-      <ChatContainer
-        key={conversationId}
-        conversationId={conversationId}
-        initialChatHistory={messages}
-      />
-    </div>
+    <ChatContainer
+      key={conversationId}
+      conversationId={conversationId}
+      initialChatHistory={messages}
+    />
   );
 }

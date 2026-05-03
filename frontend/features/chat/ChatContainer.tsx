@@ -1,13 +1,18 @@
 'use client';
 import { useRouter } from 'next/navigation';
+import type * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
+import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
+
+const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
+const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
 
 /**
  * Props for the {@link ChatContainer} component.
@@ -30,7 +35,10 @@ interface ChatContainerProps {
  *
  * Render logic is delegated to the presentational {@link ChatView}.
  */
-export default function ChatContainer({ conversationId, initialChatHistory }: ChatContainerProps) {
+export default function ChatContainer({
+  conversationId,
+  initialChatHistory,
+}: ChatContainerProps): React.JSX.Element {
   const { streamMessage } = useChat();
   const createConversationMutation = useCreateConversation(conversationId);
   const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
@@ -49,6 +57,9 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
   });
   const [isLoading, setIsLoading] = useState(false);
   const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(initialChatHistory || []);
+  const [selectedModelId, setSelectedModelId] = useState<ChatModelId>(DEFAULT_CHAT_MODEL_ID);
+  const [selectedReasoning, setSelectedReasoning] =
+    useState<ChatReasoningLevel>(DEFAULT_REASONING_LEVEL);
 
   /**
    * Handles sending a message from the user.
@@ -62,7 +73,7 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
    * After streaming completes, it syncs the Next.js router so future client-side
    * navigations (e.g. "New Conversation") work correctly.
    */
-  const handleSendMessage = async (message: PromptInputMessage) => {
+  const handleSendMessage = async (message: PromptInputMessage): Promise<void> => {
     if (!hasNavigated.current) {
       await createConversationMutation.mutateAsync();
       // Fire-and-forget: title generation shouldn't block the conversation flow.
@@ -87,7 +98,7 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
 
     let assistantMessage = '';
 
-    for await (const chunk of streamMessage(newMessage.content, conversationId)) {
+    for await (const chunk of streamMessage(newMessage.content, conversationId, selectedModelId)) {
       assistantMessage += chunk || '';
       setChatHistory((prev) => {
         const updated = [...prev];
@@ -128,8 +139,18 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
   );
 
   /** Updates the controlled message state as the user types. */
-  const onUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     setMessage({ ...message, content: e.currentTarget.value });
+  };
+
+  /** Replaces the controlled message content while preserving attachments. */
+  const handleReplaceMessageContent = (content: string): void => {
+    setMessage((currentMessage) => ({ ...currentMessage, content }));
+  };
+
+  /** Fills the composer with a suggested prompt without sending it. */
+  const handleSelectSuggestion = (prompt: string): void => {
+    setMessage({ content: prompt, files: [] });
   };
 
   return (
@@ -137,8 +158,14 @@ export default function ChatContainer({ conversationId, initialChatHistory }: Ch
       message={message}
       isLoading={isLoading}
       chatHistory={chatHistory}
+      selectedModelId={selectedModelId}
+      selectedReasoning={selectedReasoning}
       onSendMessage={handleSendMessage}
-      onUpdateMessage={onUpdateMessage}
+      onReplaceMessageContent={handleReplaceMessageContent}
+      onSelectModel={setSelectedModelId}
+      onSelectReasoning={setSelectedReasoning}
+      onSelectSuggestion={handleSelectSuggestion}
+      onUpdateMessage={handleUpdateMessage}
     />
   );
 }

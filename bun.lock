@@ -18,6 +18,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@base-ui/react": "^1.1.0",
+        "@hugeicons/core-free-icons": "^4.1.1",
+        "@hugeicons/react": "^1.1.6",
         "@radix-ui/react-use-controllable-state": "^1.2.2",
         "@tabler/icons-react": "^3.36.1",
         "@tanstack/react-query": "^5.90.21",
@@ -165,6 +167,10 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.9", "", { "peerDependencies": { "hono": "^4" } }, "sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw=="],
+
+    "@hugeicons/core-free-icons": ["@hugeicons/core-free-icons@4.1.1", "", {}, "sha512-teqIBvPHl90ygIwKyJwTxOH8aNp1X1PjDTcMvLkEwdPxPD+8mssrZ5kXKIAJJFYPsz69a8LYQY0UPid4PAdavg=="],
+
+    "@hugeicons/react": ["@hugeicons/react@1.1.6", "", { "peerDependencies": { "react": ">=16.0.0" } }, "sha512-c2LhXJMAW5wN1pC/smBXG0YPqUON6ceR/ZdXHCjEI9KvB+hjtqYjmzIxok5hAQOeXGz0WtORgCQMzqewFKAZwg=="],
 
     "@iarna/toml": ["@iarna/toml@2.2.5", "", {}, "sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg=="],
 

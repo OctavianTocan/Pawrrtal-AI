@@ -13,13 +13,13 @@
 @property --background {
   syntax: "<color>";
   inherits: true;
-  initial-value: oklch(0.98 0.003 265);
+  initial-value: oklch(0.972 0.006 85);
 }
 
 @property --foreground {
   syntax: "<color>";
   inherits: true;
-  initial-value: oklch(0.185 0.01 270);
+  initial-value: oklch(0.165 0.012 265);
 }
 
 @property --accent {
@@ -67,15 +67,15 @@
 /* Light Mode */
 :root {
   /* === 6 BASE COLORS === */
-  --background: oklch(0.98 0.003 265);
+  --background: oklch(0.972 0.006 85);
   --background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
   --background-image:
     radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
     radial-gradient(circle at bottom left, oklch(from var(--info) l c h / 0.12), transparent 40%),
     linear-gradient(180deg, var(--background), var(--foreground-3));
-  --foreground: oklch(0.185 0.01 270);
+  --foreground: oklch(0.165 0.012 265);
   --foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
-  --foreground-rgb: 38, 36, 42;
+  --foreground-rgb: 29, 29, 36;
   --user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
   --user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
   --accent: oklch(0.62 0.13 293);
@@ -218,15 +218,15 @@
 /* Dark Mode */
 .dark {
   /* === 6 BASE COLORS === */
-  --background: oklch(0.2 0.005 270);
-  --background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
+  --background: oklch(0.15 0.012 245);
+  --background-elevated: color-mix(in srgb, var(--foreground) 3%, var(--background));
   --background-image:
     radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.28), transparent 45%),
     radial-gradient(circle at bottom right, oklch(from var(--info) l c h / 0.16), transparent 40%),
     linear-gradient(180deg, var(--background), var(--foreground-5));
-  --foreground: oklch(0.92 0.005 270);
+  --foreground: oklch(0.925 0.006 90);
   --foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
-  --foreground-rgb: 227, 226, 229;
+  --foreground-rgb: 235, 232, 225;
   --user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
   --user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
   --accent: oklch(0.68 0.13 293);
@@ -279,7 +279,7 @@
   --ring: oklch(from var(--foreground) l c h / 0.25);
 
   /* Sidebar tokens */
-  --sidebar: var(--background-elevated);
+  --sidebar: oklch(0.285 0.008 250);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--accent);
   --sidebar-primary-foreground: var(--background);
@@ -350,7 +350,7 @@ html[data-scenic][data-theme-override]::before {
 }
 
 html[data-scenic] {
-  --background: oklch(0.2 0.005 270 / 0.55);
+  --background: oklch(0.145 0.012 265 / 0.55);
 }
 
 /* Inter Font - Opt-in via data-font="inter" attribute */
@@ -1200,6 +1200,50 @@ html.dark[data-scenic] .fullscreen-overlay-background {
    PDF Viewer (react-pdf)
 ============================================================================= */
 
+/* =============================================================================
+   Onboarding Scene
+============================================================================= */
+
+.onboarding-panel {
+  animation: onboarding-panel-enter 260ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.composer-placeholder-enter {
+  animation: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+@keyframes onboarding-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes composer-placeholder-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-panel {
+    animation: none;
+  }
+
+  .composer-placeholder-enter {
+    animation: none;
+  }
+}
+
 .react-pdf__Document {
   display: flex;
   flex-direction: column;
@@ -1243,4 +1287,20 @@ html.dark[data-scenic] .fullscreen-overlay-background {
     rgba(0, 0, 0, 0.02) 0px 6px 6px 0px,
     rgba(0, 0, 0, 0.02) 0px 12px 12px 0px,
     rgba(0, 0, 0, 0.02) 0px 24px 24px 0px;
+}
+
+.popover-styled.onboarding-panel {
+  background: rgb(17 22 28 / 0.95);
+  color: rgb(245 243 239);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 18px 54px rgb(0 0 0 / 0.32);
+}
+
+.chat-composer-input-group,
+.chat-composer-input-group:focus-within,
+.chat-composer-input-group:has([data-slot="input-group-control"]:focus-visible) {
+  border-color: transparent;
+  box-shadow: var(--shadow-minimal);
 }

@@ -1,32 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import type * as React from 'react';
+import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
-import {
-  ModelSelector,
-  ModelSelectorContent,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
-  ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
-  ModelSelectorLogo,
-  ModelSelectorName,
-  ModelSelectorSeparator,
-  ModelSelectorTrigger,
-} from '@/components/ai-elements/model-selector';
-import { Button } from '@/components/ui/button';
 import type { AgnoMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import { Loader } from '../../components/ai-elements/loader';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
-import {
-  PromptInput,
-  PromptInputFooter,
-  PromptInputSubmit,
-  PromptInputTextarea,
-} from '../../components/ai-elements/prompt-input';
+import { ChatComposer } from './components/ChatComposer';
+import { ChatPromptSuggestions } from './components/ChatPromptSuggestions';
+import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
 
 /**
  * Props for the {@link ChatView} presentational component.
@@ -40,8 +24,20 @@ type ChatProps = {
   onUpdateMessage: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   /** Callback fired when the user submits a message. */
   onSendMessage: (message: PromptInputMessage) => void;
+  /** Callback fired when generated text should replace the draft content. */
+  onReplaceMessageContent: (content: string) => void;
   /** The full conversation history to render. */
   chatHistory: Array<AgnoMessage>;
+  /** The selected model used for new chat requests. */
+  selectedModelId: ChatModelId;
+  /** The selected reasoning level shown in the composer. */
+  selectedReasoning: ChatReasoningLevel;
+  /** Callback fired when the model selector changes. */
+  onSelectModel: (modelId: ChatModelId) => void;
+  /** Callback fired when the reasoning selector changes. */
+  onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
+  /** Callback fired when an empty-state prompt suggestion is selected. */
+  onSelectSuggestion: (prompt: string) => void;
 };
 
 /**
@@ -51,14 +47,14 @@ type ChatProps = {
  * Must be rendered inside a `<Conversation>` that provides the
  * `useStickToBottomContext`.
  */
-const ChatScrollAnchor = ({ track: _track }: { track: number }) => {
+function ChatScrollAnchor({ track: _track }: { track: number }): React.JSX.Element | null {
   const { scrollToBottom } = useStickToBottomContext();
 
   useEffect(() => {
     scrollToBottom();
   }, [scrollToBottom]);
   return null;
-};
+}
 
 /**
  * Presentational chat component.
@@ -67,34 +63,50 @@ const ChatScrollAnchor = ({ track: _track }: { track: number }) => {
  * is thinking, and the message composer. All state management is handled by
  * the parent {@link ChatContainer}.
  */
-const ChatView = ({
+function ChatView({
   message,
   isLoading,
   chatHistory,
+  selectedModelId,
+  selectedReasoning,
   onSendMessage,
   onUpdateMessage,
-}: ChatProps) => {
-  // Need to fix this.
-  const [open, setOpen] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gemini-3-flash-preview');
+  onReplaceMessageContent,
+  onSelectModel,
+  onSelectReasoning,
+  onSelectSuggestion,
+}: ChatProps): React.JSX.Element {
+  const isEmptyConversation = chatHistory.length === 0;
 
   return (
-    <div className="overflow-hidden sm:max-w-[80%] lg:max-w-[60%] xl:max-w-[50%] mx-auto">
-      <div className="h-[90vh] flex flex-col overflow-hidden">
-        <Conversation className="flex-1 overflow-y-auto" resize="smooth">
-          <ConversationContent>
-            {chatHistory.length === 0 ? (
-              <div className="text-center my-auto font-semibold mt-8">
-                <p className="text-3xl mt-4 bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
-                  What can we build together?
-                </p>
-              </div>
-            ) : (
-              <>
-                {chatHistory.map((message, index) => (
-                  <Message from={message.role} key={`${message.role}-${index}`}>
+    <div className="flex h-[calc(100svh-2.25rem)] min-h-0 w-full overflow-hidden px-4">
+      <div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
+        {isEmptyConversation ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
+            <h1 className="mb-8 text-center text-[28px] font-medium tracking-normal text-foreground sm:text-[30px]">
+              What should we build in AI Nexus?
+            </h1>
+            <ChatComposer
+              message={message}
+              isLoading={isLoading}
+              selectedModelId={selectedModelId}
+              selectedReasoning={selectedReasoning}
+              onSendMessage={onSendMessage}
+              onReplaceMessageContent={onReplaceMessageContent}
+              onSelectModel={onSelectModel}
+              onSelectReasoning={onSelectReasoning}
+              onUpdateMessage={onUpdateMessage}
+            />
+            <ChatPromptSuggestions className="mt-5" onSelectSuggestion={onSelectSuggestion} />
+          </div>
+        ) : (
+          <>
+            <Conversation className="min-h-0 flex-1 overflow-y-auto" resize="smooth">
+              <ConversationContent className="mx-auto w-full max-w-[48.75rem] px-0 py-6">
+                {chatHistory.map((chatMessage, index) => (
+                  <Message from={chatMessage.role} key={`${chatMessage.role}-${index}`}>
                     <MessageContent>
-                      <MessageResponse>{message.content}</MessageResponse>
+                      <MessageResponse>{chatMessage.content}</MessageResponse>
                     </MessageContent>
                   </Message>
                 ))}
@@ -108,60 +120,27 @@ const ChatView = ({
                     </MessageContent>
                   </Message>
                 )}
-              </>
-            )}
-          </ConversationContent>
-          <ChatScrollAnchor track={chatHistory.length} />
-        </Conversation>
-        <PromptInput onSubmit={onSendMessage} className="px-2 pb-2">
-          <PromptInputTextarea
-            placeholder="Ask anything about your memories or search the web..."
-            className="pr-16 bg-white min-h-12.5"
-            onChange={onUpdateMessage}
-            value={message.content}
-          />
-
-          <PromptInputFooter>
-            <ModelSelector open={open} onOpenChange={setOpen}>
-              <ModelSelectorTrigger asChild>
-                <Button variant="outline">
-                  <ModelSelectorLogo provider="google" />
-                  {selectedModel}
-                </Button>
-              </ModelSelectorTrigger>
-
-              <ModelSelectorContent>
-                <ModelSelectorInput placeholder="Search models..." />
-                <ModelSelectorList>
-                  <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-
-                  <ModelSelectorGroup heading="Google">
-                    <ModelSelectorItem
-                      value="gemini-3-flash-preview"
-                      onSelect={() => {
-                        setSelectedModel('gemini-3-flash-preview');
-                        setOpen(false);
-                      }}
-                    >
-                      <ModelSelectorLogo provider="google" />
-                      <ModelSelectorName>Gemini 3 Flash Preview</ModelSelectorName>
-                    </ModelSelectorItem>
-                  </ModelSelectorGroup>
-
-                  <ModelSelectorSeparator />
-                </ModelSelectorList>
-              </ModelSelectorContent>
-            </ModelSelector>
-            <PromptInputSubmit
-              disabled={message.content.length === 0}
-              className="absolute bottom-1 right-1 cursor-pointer"
-              status={isLoading ? 'streaming' : 'ready'}
-            />
-          </PromptInputFooter>
-        </PromptInput>
+              </ConversationContent>
+              <ChatScrollAnchor track={chatHistory.length} />
+            </Conversation>
+            <div className="flex shrink-0 justify-center pb-4">
+              <ChatComposer
+                message={message}
+                isLoading={isLoading}
+                selectedModelId={selectedModelId}
+                selectedReasoning={selectedReasoning}
+                onSendMessage={onSendMessage}
+                onReplaceMessageContent={onReplaceMessageContent}
+                onSelectModel={onSelectModel}
+                onSelectReasoning={onSelectReasoning}
+                onUpdateMessage={onUpdateMessage}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
-};
+}
 
 export default ChatView;

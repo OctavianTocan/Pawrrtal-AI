@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp
 
 from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
@@ -55,15 +56,6 @@ def create_app() -> FastAPI:
         description="An AI assistant platform",
         version="0.1.0",
     )
-    fastapi_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_origin_regex=settings.cors_origin_regex,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )
@@ -95,5 +87,17 @@ def create_app() -> FastAPI:
     return fastapi_app
 
 
+def with_cors(asgi_app: ASGIApp) -> ASGIApp:
+    """Wrap the whole ASGI app so even unhandled errors include CORS headers."""
+    return CORSMiddleware(
+        asgi_app,
+        allow_origins=settings.cors_origins,
+        allow_origin_regex=settings.cors_origin_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 # Create the app instance.
-app = create_app()
+app = with_cors(create_app())

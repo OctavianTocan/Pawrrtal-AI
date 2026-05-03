@@ -1,49 +1,38 @@
 import {
-  IconFileText,
-  IconFolder,
-  IconPlug,
-  IconRobot,
-  IconTable,
-  IconWorld,
-} from '@tabler/icons-react';
+  FileSpreadsheetIcon,
+  Folder01Icon,
+  GlobeIcon,
+  WorkflowSquare01Icon,
+} from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
 
 const FEATURE_ITEMS = [
   {
-    icon: IconTable,
+    icon: FileSpreadsheetIcon,
     title: 'Edit spreadsheets',
     description: 'Create, clean, and transform CSV and Excel files.',
   },
   {
-    icon: IconWorld,
+    icon: GlobeIcon,
     title: 'Control your browser',
     description: 'Automate Chrome for repetitive web tasks.',
   },
   {
-    icon: IconFolder,
+    icon: Folder01Icon,
     title: 'Organize files',
     description: 'Read, write, and manage files and folders.',
   },
   {
-    icon: IconRobot,
-    title: 'Automate tasks',
-    description: 'Build reusable workflows with skills and commands.',
-  },
-  {
-    icon: IconFileText,
-    title: 'Generate content',
-    description: 'Draft documents, emails, and reports.',
-  },
-  {
-    icon: IconPlug,
-    title: 'Connect to APIs',
-    description: 'Plug into external services and tools via MCP.',
+    icon: WorkflowSquare01Icon,
+    title: 'Run agents',
+    description: 'Turn repeatable work into durable commands.',
   },
 ] as const;
 
+/** Props for the onboarding welcome step. */
 export interface OnboardingWelcomeStepProps {
   /** Advances to the create-workspace step. */
   onContinue: () => void;
@@ -54,57 +43,55 @@ export function OnboardingWelcomeStep({
   onContinue,
 }: OnboardingWelcomeStepProps): React.JSX.Element {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-6 pt-8 pb-10 sm:gap-12 sm:px-10 sm:pt-10 sm:pb-12">
-      <div className="flex flex-col items-center gap-5 text-center">
-        <div
-          className="flex size-16 items-center justify-center rounded-2xl bg-muted/90 text-accent ring-1 ring-foreground/15"
-          aria-hidden
-        >
-          <IconRobot className="size-9" stroke={1.5} />
-        </div>
-        <DialogHeader className="gap-3 sm:text-center">
+    <section className="popover-styled onboarding-panel flex w-full max-w-[37rem] select-none flex-col gap-7 rounded-xl border border-white/8 bg-[#11161c]/95 px-7 py-8 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_54px_rgba(0,0,0,0.32)] sm:px-8 sm:py-9">
+      <div className="flex flex-col gap-4 text-left">
+        <DialogHeader className="gap-2 text-left">
           <div
-            className="text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]"
+            className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[1.65rem]"
             aria-hidden="true"
           >
             Welcome to AI Nexus
           </div>
-          <DialogDescription className="text-base leading-relaxed italic text-muted-foreground">
+          <DialogDescription className="max-w-[30rem] text-[0.9375rem] leading-relaxed text-white/52">
             Your computer, but it works for you.
           </DialogDescription>
         </DialogHeader>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 md:grid-cols-3 md:gap-4">
-        {FEATURE_ITEMS.map((item) => (
-          <Card
-            key={item.title}
-            size="sm"
-            className="min-h-[128px] justify-center gap-0 border-0 py-5 shadow-none ring-1 ring-foreground/10 transition-colors sm:min-h-[136px]"
-          >
-            <CardHeader className="flex flex-1 flex-col items-center justify-center space-y-2.5 px-4 pb-2 text-center">
-              <item.icon
-                className="size-8 shrink-0 text-muted-foreground"
-                stroke={1.5}
-                aria-hidden
-              />
-              <CardTitle className="text-sm font-medium leading-snug">{item.title}</CardTitle>
-              <CardDescription className="text-xs leading-snug text-muted-foreground">
-                {item.description}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {FEATURE_ITEMS.map((item): React.JSX.Element => {
+          const Icon = item.icon;
+
+          return (
+            <div
+              key={item.title}
+              className="flex min-h-[6rem] items-start gap-3 rounded-xl bg-white/[0.025] p-4 ring-1 ring-white/8 transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-white/[0.04] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
+            >
+              <span
+                className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.045] text-white/62 ring-1 ring-white/8"
+                aria-hidden="true"
+              >
+                <HugeiconsIcon icon={Icon} size={20} strokeWidth={1.65} aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-white">{item.title}</span>
+                <span className="mt-1 block text-sm leading-snug text-white/50">
+                  {item.description}
+                </span>
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <Button
         type="button"
         size="lg"
-        className="h-12 w-full rounded-full px-8 text-base font-semibold shadow-sm"
+        className="h-11 w-full cursor-pointer rounded-xl bg-white/88 px-8 text-sm font-semibold text-[#11161c] shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.22)] active:bg-white/80"
         onClick={onContinue}
       >
         Get started
       </Button>
-    </div>
+    </section>
   );
 }

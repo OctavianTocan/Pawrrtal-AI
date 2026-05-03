@@ -1,4 +1,5 @@
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
+import type { ChatModelId } from '../components/ModelSelectorPopover';
 
 /** Sentinel returned by {@link parseSseMessage} when the stream signals completion. */
 const STREAM_DONE = Symbol('STREAM_DONE');
@@ -29,15 +30,26 @@ function parseSseMessage(raw: string): string | typeof STREAM_DONE | null {
  * @returns An object with `streamMessage` — call it to send a user
  *   message and yield assistant response chunks as they arrive.
  */
-export function useChat() {
+export function useChat(): {
+  streamMessage: (
+    message: string,
+    conversationId: string,
+    modelId: ChatModelId
+  ) => AsyncGenerator<string>;
+} {
   const fetcher = useAuthedFetch();
 
-  async function* streamMessage(message: string, conversationId: string): AsyncGenerator<string> {
+  async function* streamMessage(
+    message: string,
+    conversationId: string,
+    modelId: ChatModelId
+  ): AsyncGenerator<string> {
     const response = await fetcher('/api/chat', {
       method: 'POST',
       body: JSON.stringify({
         question: message,
         conversation_id: conversationId,
+        model_id: modelId,
       }),
       headers: {
         'Content-Type': 'application/json',

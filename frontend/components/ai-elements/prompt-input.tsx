@@ -415,6 +415,8 @@ export type PromptInputMessage = {
 export type PromptInputProps = Omit<HTMLAttributes<HTMLFormElement>, 'onSubmit' | 'onError'> & {
   accept?: string; // e.g., "image/*" or leave undefined for any
   multiple?: boolean;
+  /** Additional classes for the internal InputGroup surface. */
+  inputGroupClassName?: string;
   // When true, accepts drops anywhere on document. Default false (opt-in).
   globalDrop?: boolean;
   // Render a hidden input with given name and keep it in sync for native form posts. Default false.
@@ -433,6 +435,7 @@ export const PromptInput = ({
   className,
   accept,
   multiple,
+  inputGroupClassName,
   globalDrop,
   syncHiddenInput,
   maxFiles,
@@ -752,7 +755,7 @@ export const PromptInput = ({
         type="file"
       />
       <form className={cn('w-full', className)} onSubmit={handleSubmit} ref={formRef} {...props}>
-        <InputGroup className="overflow-hidden">{children}</InputGroup>
+        <InputGroup className={cn('overflow-hidden', inputGroupClassName)}>{children}</InputGroup>
       </form>
     </>
   );
