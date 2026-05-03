@@ -53,9 +53,7 @@ order = 4
 
 [[layers]]
 name = "be-entry"
-# Note: admin_seed.py lives under core/ for historical reasons but is logically
-# startup wiring (it calls into the api layer). TODO: relocate to backend/app/cli/.
-paths = ["backend/main.py", "backend/app/cli/*", "backend/app/core/admin_seed.py"]
+paths = ["backend/main.py", "backend/app/cli/*"]
 order = 0
 
 [[layers]]

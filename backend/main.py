@@ -15,7 +15,7 @@ from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
-from app.core.admin_seed import seed_admin_user
+from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.db import create_db_and_tables
 from app.logger_setup import (
