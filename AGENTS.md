@@ -39,8 +39,8 @@ We rely on `just` as our primary task runner for the repository.
 Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0.5.7+.
 
 - **Rules**: `.sentrux/rules.toml` — defines layers (frontend: `app → features → ai-elements → ui-primitives → lib`; backend: `entry → api → crud → models → core`) and the cross-stack boundary (`frontend/* ⇏ backend/*`).
-- **Local check**: `sentrux check .` — exits 1 on any rule violation.
-- **CI**: `.github/workflows/sentrux.yml` runs the same check on every PR to `development`/`main` and posts violations as a PR comment on failure.
+- **Local check**: `just sentrux` — runs `scripts/sentrux-check.sh`, which checks a temporary app-code snapshot and excludes agent/tooling roots such as `.agents/`, `.claude/`, `.cursor/`, `.factory/`, `.goose/`, and `.pi/`.
+- **CI**: `.github/workflows/sentrux.yml` runs the same filtered check on every PR to `development`/`main` and posts violations as a PR comment on failure.
 - **Per-session loop** (agents): if the sentrux MCP is wired into your client (Claude Code, Cursor, etc.), call `session_start` before substantive work and `session_end` after to surface architectural regressions caused by the session. Local baseline is stored at `.sentrux/baseline.json` (gitignored).
 - **Why this exists**: see `docs/decisions/2026-05-03-adopt-sentrux-architecture-gating.md` (baseline quality 6753/10000, equality bottleneck, 2.5% test coverage gap noted).
 

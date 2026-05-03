@@ -48,7 +48,7 @@ jobs:
         id: check
         run: |
           set +e
-          sentrux check . | tee sentrux-output.txt
+          bash scripts/sentrux-check.sh | tee sentrux-output.txt
           status=${PIPESTATUS[0]}
           {
             echo 'output<<EOF'

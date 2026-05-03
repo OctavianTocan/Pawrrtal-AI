@@ -30,6 +30,10 @@ format:
 check:
     bunx --bun @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true .
 
+# Check application architecture with sentrux
+sentrux:
+    bash scripts/sentrux-check.sh
+
 # Run backend tests
 test:
     uv run --project backend pytest backend/tests
