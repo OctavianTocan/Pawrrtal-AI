@@ -142,6 +142,8 @@ export function ChatComposer({
 	const [isRecording, setIsRecording] = useState(false);
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [voiceTranscript, setVoiceTranscript] = useState('');
+	/** When false, the Plan control is hidden (toggle with Shift+Tab from the composer). */
+	const [isPlanTagVisible, setIsPlanTagVisible] = useState(true);
 	const hasContent = message.content.trim().length > 0;
 	const placeholder = useRotatingPlaceholder(hasContent);
 
@@ -215,11 +217,20 @@ export function ChatComposer({
 		finishRecording({ shouldSend: true });
 	};
 
+	const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLFormElement>): void => {
+		if (event.key !== 'Tab' || !event.shiftKey) {
+			return;
+		}
+		event.preventDefault();
+		setIsPlanTagVisible((visible) => !visible);
+	};
+
 	return (
 		<PromptInput
 			className={cn('w-full max-w-[48.75rem]', className)}
 			inputGroupClassName="chat-composer-input-group rounded-[14px] border-transparent bg-foreground-5 shadow-minimal"
 			multiple={true}
+			onKeyDown={handleComposerKeyDown}
 			onSubmit={onSendMessage}
 		>
 			<PromptInputAttachments className="px-3 pt-2 pb-0">
@@ -246,7 +257,7 @@ export function ChatComposer({
 						/>
 					) : (
 						<>
-							<PlanButton />
+							{isPlanTagVisible ? <PlanButton /> : null}
 							<AutoReviewSelector />
 						</>
 					)}

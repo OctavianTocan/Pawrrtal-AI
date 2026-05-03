@@ -11,6 +11,7 @@ import {
 	SquareIcon,
 } from 'lucide-react';
 import type * as React from 'react';
+import { useState } from 'react';
 import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
 import {
@@ -171,25 +172,50 @@ export function AttachButton(): React.JSX.Element {
 /** Renders the compact plan-mode trigger used in the composer toolbar. */
 export function PlanButton(): React.JSX.Element {
 	return (
-		<ComposerTooltip content="Create a plan">
-			<Button
-				className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
-				type="button"
-				variant="ghost"
-			>
-				<ListChecksIcon aria-hidden="true" className="size-3.5" />
-				Plan
-			</Button>
-		</ComposerTooltip>
+		<Tooltip delayDuration={300}>
+			<TooltipTrigger asChild>
+				<Button
+					className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
+					type="button"
+					variant="ghost"
+				>
+					<ListChecksIcon aria-hidden="true" className="size-3.5" />
+					Plan
+				</Button>
+			</TooltipTrigger>
+			<TooltipContent side="top">
+				<span className="block">Create a plan</span>
+				<span className="block text-muted-foreground">Shift+Tab to show or hide</span>
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 
 /** Renders the auto-review permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
+	const [menuOpen, setMenuOpen] = useState(false);
+	const [tooltipOpen, setTooltipOpen] = useState(false);
+
 	return (
 		<TooltipProvider disableHoverableContent>
-			<Tooltip delayDuration={300}>
-				<DropdownMenu>
+			<Tooltip
+				delayDuration={300}
+				onOpenChange={(open) => {
+					if (menuOpen) {
+						return;
+					}
+					setTooltipOpen(open);
+				}}
+				open={menuOpen ? false : tooltipOpen}
+			>
+				<DropdownMenu
+					onOpenChange={(open) => {
+						setMenuOpen(open);
+						if (!open) {
+							setTooltipOpen(false);
+						}
+					}}
+				>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
 							<Button
@@ -237,10 +263,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-				<TooltipContent side="top">
-					<span className="block">Review code changes automatically</span>
-					<span className="block text-muted-foreground">Shift + Tab to toggle</span>
-				</TooltipContent>
+				<TooltipContent side="top">Review code changes automatically</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
 	);

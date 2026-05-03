@@ -1322,3 +1322,12 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	border-color: transparent;
 	box-shadow: var(--shadow-minimal);
 }
+
+/* Model menus opened from the chat composer — match the composer surface so menus don't disappear into the page background. */
+.chat-composer-dropdown-menu.popover-styled {
+	background: var(--foreground-5);
+	color: var(--foreground);
+	border-radius: 14px;
+	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+	box-shadow: var(--shadow-minimal);
+}

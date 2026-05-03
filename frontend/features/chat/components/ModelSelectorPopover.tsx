@@ -2,6 +2,7 @@
 
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
@@ -158,16 +159,34 @@ export function ModelSelectorPopover({
 }: ModelSelectorPopoverProps): React.JSX.Element {
 	const selectedModel = getModelOption(selectedModelId);
 	const reasoningLabel = getReasoningLabel(selectedReasoning);
+	const [menuOpen, setMenuOpen] = useState(false);
+	const [tooltipOpen, setTooltipOpen] = useState(false);
 
 	return (
-		<DropdownMenu>
+		<DropdownMenu
+			onOpenChange={(open) => {
+				setMenuOpen(open);
+				if (!open) {
+					setTooltipOpen(false);
+				}
+			}}
+		>
 			<TooltipProvider disableHoverableContent>
-				<Tooltip delayDuration={300}>
+				<Tooltip
+					delayDuration={300}
+					onOpenChange={(open) => {
+						if (menuOpen) {
+							return;
+						}
+						setTooltipOpen(open);
+					}}
+					open={menuOpen ? false : tooltipOpen}
+				>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
 							<Button
 								aria-label="Select model and reasoning"
-								className="h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
+								className="h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground aria-expanded:bg-foreground/[0.08] data-[state=open]:bg-foreground/[0.08]"
 								size="xs"
 								type="button"
 								variant="ghost"
@@ -181,7 +200,12 @@ export function ModelSelectorPopover({
 					<TooltipContent side="top">Choose model and reasoning level</TooltipContent>
 				</Tooltip>
 			</TooltipProvider>
-			<DropdownMenuContent align="end" className="min-w-48" side="top" sideOffset={8}>
+			<DropdownMenuContent
+				align="end"
+				className="chat-composer-dropdown-menu min-w-48"
+				side="top"
+				sideOffset={8}
+			>
 				<DropdownMenuLabel className="px-2 py-1.5">Intelligence</DropdownMenuLabel>
 				<DropdownMenuGroup>
 					{REASONING_OPTIONS.map((option) => (
@@ -206,7 +230,10 @@ export function ModelSelectorPopover({
 						<ProviderLogo provider={selectedModel.provider} />
 						<span className="min-w-0 flex-1 truncate">{selectedModel.shortName}</span>
 					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent className="min-w-44" sideOffset={8}>
+					<DropdownMenuSubContent
+						className="chat-composer-dropdown-menu min-w-44"
+						sideOffset={8}
+					>
 						<DropdownMenuLabel className="px-2 py-1.5">Model</DropdownMenuLabel>
 						{MODEL_OPTIONS.map((model) => (
 							<DropdownMenuItem

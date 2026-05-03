@@ -66,7 +66,7 @@ export function ConnectAppsStrip({
 		<InputGroupAddon
 			align="block-end"
 			className={cn(
-				'relative cursor-default justify-between gap-3 px-3 py-2 font-normal',
+				'relative cursor-default justify-between gap-3 bg-foreground-10 px-3 py-2 font-normal',
 				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
 				className
 			)}
