@@ -345,14 +345,17 @@ def get_conversations_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ConversationResponse:
-        """Update mutable conversation metadata for the authenticated user."""
+        """Update mutable conversation metadata for the authenticated user.
 
-        normalized_title = payload.title.strip()
-        if not normalized_title:
+        Accepts any combination of: title, is_archived, is_flagged, is_unread,
+        and status. Only fields present in the payload are updated.
+        """
+
+        if payload.title is not None and not payload.title.strip():
             raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
 
-        conversation = await update_conversation_title_service(
-            title=normalized_title,
+        conversation = await update_conversation_service(
+            payload=payload,
             user_id=user.id,
             conversation_id=conversation_id,
             session=session,
@@ -366,6 +369,10 @@ def get_conversations_router() -> APIRouter:
             user_id=conversation.user_id,
             created_at=conversation.created_at,
             updated_at=conversation.updated_at,
+            is_archived=conversation.is_archived,
+            is_flagged=conversation.is_flagged,
+            is_unread=conversation.is_unread,
+            status=conversation.status,
         )
 
     @router.delete("/{conversation_id}", status_code=204)
