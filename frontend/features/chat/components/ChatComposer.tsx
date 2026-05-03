@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { ConnectAppsStrip } from './ConnectAppsStrip';
 import {
 	type ChatModelId,
 	type ChatReasoningLevel,
@@ -51,6 +52,12 @@ export type ChatComposerProps = {
 	selectedReasoning: ChatReasoningLevel;
 	/** Additional classes for the root composer form. */
 	className?: string;
+	/**
+	 * When true, renders the dismissible "Connect your apps" strip as an
+	 * attached footer band at the bottom of the composer surface. Intended
+	 * for the landing/empty-conversation state.
+	 */
+	showConnectAppsStrip?: boolean;
 	/** Callback fired when the textarea content changes. */
 	onUpdateMessage: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
 	/** Callback fired when the user submits the message. */
@@ -61,6 +68,8 @@ export type ChatComposerProps = {
 	onSelectModel: (modelId: ChatModelId) => void;
 	/** Callback fired when the selected reasoning level changes. */
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
+	/** Callback fired when the connect-apps footer band is dismissed. */
+	onDismissConnectApps?: () => void;
 };
 
 type BrowserSpeechRecognition = {
@@ -384,11 +393,13 @@ export function ChatComposer({
 	selectedModelId,
 	selectedReasoning,
 	className,
+	showConnectAppsStrip,
 	onUpdateMessage,
 	onSendMessage,
 	onReplaceMessageContent,
 	onSelectModel,
 	onSelectReasoning,
+	onDismissConnectApps,
 }: ChatComposerProps): React.JSX.Element {
 	const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 	const [isRecording, setIsRecording] = useState(false);
@@ -553,6 +564,7 @@ export function ChatComposer({
 					</ComposerTooltip>
 				</div>
 			</PromptInputFooter>
+			{showConnectAppsStrip ? <ConnectAppsStrip onDismiss={onDismissConnectApps} /> : null}
 		</PromptInput>
 	);
 }

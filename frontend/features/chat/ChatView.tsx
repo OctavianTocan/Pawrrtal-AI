@@ -10,7 +10,6 @@ import { Loader } from '../../components/ai-elements/loader';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
 import { ChatComposer } from './components/ChatComposer';
 import { ChatPromptSuggestions } from './components/ChatPromptSuggestions';
-import { ConnectAppsStrip } from './components/ConnectAppsStrip';
 import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
 
 /**
@@ -92,13 +91,13 @@ function ChatView({
 							isLoading={isLoading}
 							selectedModelId={selectedModelId}
 							selectedReasoning={selectedReasoning}
+							showConnectAppsStrip
 							onSendMessage={onSendMessage}
 							onReplaceMessageContent={onReplaceMessageContent}
 							onSelectModel={onSelectModel}
 							onSelectReasoning={onSelectReasoning}
 							onUpdateMessage={onUpdateMessage}
 						/>
-						<ConnectAppsStrip />
 						<ChatPromptSuggestions
 							className="mt-5"
 							onSelectSuggestion={onSelectSuggestion}

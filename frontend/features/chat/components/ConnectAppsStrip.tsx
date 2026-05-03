@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
+import { InputGroupAddon } from '@/components/ui/input-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -37,11 +38,14 @@ export type ConnectAppsStripProps = {
 };
 
 /**
- * Renders a compact, dismissible strip below the landing chat composer that
- * nudges the user to connect their integrations (Notion, Slack, Google Drive,
- * GitHub, Linear) for richer answers.
+ * Renders a compact, dismissible footer band attached to the bottom of the
+ * landing chat composer. Designed to be rendered as a child of `<PromptInput>`
+ * so it shares the same `<InputGroup>` surface and rounded corners.
  *
- * Dismissal is local-only (per-mount session state); no persistence yet.
+ * The strip nudges the user to connect their integrations (Notion, Slack,
+ * Google Drive, GitHub, Linear) for richer answers and exposes an inline
+ * dismiss control. Dismissal is local-only (per-mount session state); no
+ * persistence yet.
  */
 export function ConnectAppsStrip({
 	className,
@@ -59,16 +63,18 @@ export function ConnectAppsStrip({
 	};
 
 	return (
-		<div
+		<InputGroupAddon
+			align="block-end"
 			className={cn(
-				'mt-2 flex w-full max-w-[48.75rem] items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-1.5',
+				'relative cursor-default justify-between gap-3 px-3 py-2 font-normal',
+				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
 				className
 			)}
 		>
 			<p className="min-w-0 truncate text-[12px] text-muted-foreground">
 				Connect your apps to get better answers
 			</p>
-			<div className="flex shrink-0 items-center gap-1">
+			<div className="flex shrink-0 items-center gap-0.5">
 				{CONNECT_APPS.map((app) => {
 					const Icon = app.icon;
 					return (
@@ -76,7 +82,7 @@ export function ConnectAppsStrip({
 							<TooltipTrigger asChild>
 								<button
 									aria-label={`Connect ${app.label}`}
-									className="flex size-7 items-center justify-center rounded-md border border-border/60 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+									className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 									type="button"
 								>
 									<Icon aria-hidden="true" className="size-3.5" />
@@ -88,13 +94,13 @@ export function ConnectAppsStrip({
 				})}
 				<button
 					aria-label="Dismiss connect apps strip"
-					className="ml-1 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+					className="ml-1 flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 					onClick={handleDismiss}
 					type="button"
 				>
 					<XIcon aria-hidden="true" className="size-3.5" />
 				</button>
 			</div>
-		</div>
+		</InputGroupAddon>
 	);
 }
