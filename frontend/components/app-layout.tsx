@@ -184,12 +184,14 @@ function HelpMenu(): React.JSX.Element {
 }
 
 /**
- * Top-bar chrome rendered alongside the sidebar (not inside it). Stays visible
- * regardless of sidebar collapse state because it lives in the content column.
+ * Top-bar chrome rendered as a full-width overlay above the sidebar and content.
+ * Lives outside the sidebar so its controls (sidebar trigger, history, workspace
+ * selector) stay in their original screen positions even when the sidebar is
+ * hidden — the sidebar visually extends underneath this header.
  */
 function AppHeader(): React.JSX.Element {
 	return (
-		<header className="flex h-9 shrink-0 items-center bg-background/95 px-3">
+		<header className="absolute inset-x-0 top-0 z-20 flex h-9 shrink-0 items-center px-3">
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<SidebarTrigger className="cursor-pointer" />
 				<AppHistoryControls />
@@ -354,7 +356,9 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		}
 	}, [beginProgrammaticResize, state, sidebarPanelRef]);
 
-	// Mobile: Sidebar renders as a Sheet overlay alongside main content
+	// Mobile: Sidebar renders as a Sheet overlay alongside main content.
+	// The Sheet portals above the absolute AppHeader, so its content does not
+	// need a header offset — only the chat surface does.
 	if (isMobile) {
 		return (
 			<>
@@ -368,11 +372,8 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						</SidebarContent>
 					</SidebarFocusShell>
 				</Sidebar>
-				<div className="flex h-full w-full min-w-0 flex-col">
-					<AppHeader />
-					<div className="min-h-0 flex-1">
-						<ChatFocusShell>{children}</ChatFocusShell>
-					</div>
+				<div className="h-full w-full min-w-0 pt-9">
+					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</>
 		);
@@ -415,8 +416,11 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				{/* Content keeps min-width so layout never reflows during collapse —
           the panel clips via overflow:hidden and the content fades out.
           Pointer events disabled when invisible to prevent click-dead-zones
-          per the hidden-overlay-pointer-events rule. */}
-				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden">
+          per the hidden-overlay-pointer-events rule.
+          The pt-9 offsets sidebar contents so they sit below the absolute
+          AppHeader; the panel itself still extends to the top of the viewport
+          so the sidebar background reads as full-height behind the header. */}
+				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-9">
 					<div
 						data-state={state}
 						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-opacity duration-150 ease-out data-[state=collapsed]:pointer-events-none data-[state=collapsed]:opacity-0 data-[state=expanded]:pointer-events-auto data-[state=expanded]:opacity-100"
@@ -434,11 +438,8 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<ResizableHandle />
 
 			<ResizablePanel className="h-full min-w-0">
-				<div className="flex h-full min-w-0 flex-col">
-					<AppHeader />
-					<div className="min-h-0 flex-1">
-						<ChatFocusShell>{children}</ChatFocusShell>
-					</div>
+				<div className="h-full min-w-0 pt-9">
+					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</ResizablePanel>
 		</ResizablePanelGroup>
@@ -455,13 +456,14 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 		<SidebarProvider>
 			<SidebarFocusProvider>
 				<ChatActivityProvider>
-					<div className="flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-background">
+					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-background">
 						<OnboardingModal initialOpen={false} />
 						<ResizableSidebarContent>
 							<SidebarInset className="h-full min-h-0 min-w-0">
 								<div className="min-h-0 min-w-0 flex-1">{children}</div>
 							</SidebarInset>
 						</ResizableSidebarContent>
+						<AppHeader />
 					</div>
 				</ChatActivityProvider>
 			</SidebarFocusProvider>
