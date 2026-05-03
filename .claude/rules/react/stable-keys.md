@@ -1,42 +1,32 @@
 ---
-description: "Use stable, content-derived keys instead of array indices"
-globs: ["frontend/**/*.tsx"]
+name: stable-keys
+paths: ["**/*.{ts,tsx}"]
 ---
+# Stable Server-Provided IDs as React Keys
 
-# Stable React Keys
+Use stable server-provided IDs as React keys, never content-derived values.
+Using `key={text.slice(0,20)}` or similar during streaming causes full
+remounts on every update, losing cursor position, scroll state, and selection.
 
-Array-index keys cause React to re-mount components when items are reordered,
-inserted, or removed — producing stale state, broken animations, and lost focus.
+## Verify
 
-## Rule
+"Am I using content-derived keys that change during streaming or editing?
+Should I use a stable ID instead?"
 
-Use a stable identifier from the item data:
+## Patterns
 
-- `id` field (preferred)
-- `name` or `slug` when `id` is absent
-- A deterministic composite key (`${parentId}-${childName}`)
-
-### Bad
-
-```tsx
-labels.map((label, i) => <Badge key={i} label={label} />)
-```
-
-### Good
+Bad — key changes on every streaming token, causing full remount:
 
 ```tsx
-labels.map((label) => {
-  const key = typeof label === 'string' ? label : (label.id ?? label.name);
-  return <Badge key={key} label={label} />;
-})
+{messages.map(msg => (
+  <Message key={msg.content.slice(0, 20)} message={msg} />
+))}
 ```
 
-## When Index Keys Are Acceptable
+Good — stable ID survives content changes:
 
-Only when **all three** conditions are true:
-
-1. The list is static (never reordered, filtered, or appended).
-2. Items have no state or refs.
-3. Items have no stable unique identifier.
-
-When in doubt, use a content-derived key.
+```tsx
+{messages.map(msg => (
+  <Message key={msg.id} message={msg} />
+))}
+```
