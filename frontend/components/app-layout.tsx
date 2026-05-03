@@ -184,6 +184,42 @@ function HelpMenu(): React.JSX.Element {
 }
 
 /**
+ * Top-bar chrome rendered alongside the sidebar (not inside it). Stays visible
+ * regardless of sidebar collapse state because it lives in the content column.
+ */
+function AppHeader(): React.JSX.Element {
+	return (
+		<header className="flex h-9 shrink-0 items-center bg-background/95 px-3">
+			<div className="flex min-w-0 flex-1 items-center gap-2">
+				<SidebarTrigger className="cursor-pointer" />
+				<AppHistoryControls />
+				<Separator
+					orientation="vertical"
+					className="ml-1 data-vertical:h-4 data-vertical:self-auto"
+				/>
+				<WorkspaceSelector />
+				<div className="ml-auto flex items-center gap-1">
+					<Button
+						aria-label="Create new item"
+						className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
+						size="icon-xs"
+						type="button"
+						variant="ghost"
+					>
+						<PlusIcon aria-hidden="true" className="size-4" />
+					</Button>
+					<Separator
+						orientation="vertical"
+						className="mx-1 data-vertical:h-4 data-vertical:self-auto"
+					/>
+					<HelpMenu />
+				</div>
+			</div>
+		</header>
+	);
+}
+
+/**
  * Wraps sidebar content in a focus zone so keyboard navigation (Tab/Shift+Tab)
  * can jump directly to the sidebar region instead of walking every focusable element.
  * Focuses the first interactive child (input or button) when the zone receives focus.
@@ -332,7 +368,12 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						</SidebarContent>
 					</SidebarFocusShell>
 				</Sidebar>
-				<ChatFocusShell>{children}</ChatFocusShell>
+				<div className="flex h-full w-full min-w-0 flex-col">
+					<AppHeader />
+					<div className="min-h-0 flex-1">
+						<ChatFocusShell>{children}</ChatFocusShell>
+					</div>
+				</div>
 			</>
 		);
 	}
@@ -372,17 +413,13 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				}}
 			>
 				{/* Content keeps min-width so layout never reflows during collapse —
-          the panel clips via overflow:hidden and the content fades out. */}
+          the panel clips via overflow:hidden and the content fades out.
+          Pointer events disabled when invisible to prevent click-dead-zones
+          per the hidden-overlay-pointer-events rule. */}
 				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden">
 					<div
-						style={{
-							opacity: state === 'collapsed' ? 0 : 1,
-							// Disable pointer events when invisible to prevent click-dead-zones
-							// per the hidden-overlay-pointer-events rule.
-							pointerEvents: state === 'collapsed' ? 'none' : 'auto',
-							transition: 'opacity 150ms ease-out',
-						}}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden"
+						data-state={state}
+						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-opacity duration-150 ease-out data-[state=collapsed]:pointer-events-none data-[state=collapsed]:opacity-0 data-[state=expanded]:pointer-events-auto data-[state=expanded]:opacity-100"
 					>
 						<SidebarHeader className="px-2 pb-2 shrink-0">
 							<NewSessionButton />
@@ -397,7 +434,12 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<ResizableHandle />
 
 			<ResizablePanel className="h-full min-w-0">
-				<ChatFocusShell>{children}</ChatFocusShell>
+				<div className="flex h-full min-w-0 flex-col">
+					<AppHeader />
+					<div className="min-h-0 flex-1">
+						<ChatFocusShell>{children}</ChatFocusShell>
+					</div>
+				</div>
 			</ResizablePanel>
 		</ResizablePanelGroup>
 	);
@@ -413,42 +455,13 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 		<SidebarProvider>
 			<SidebarFocusProvider>
 				<ChatActivityProvider>
-					<div className="flex h-svh min-h-0 w-full min-w-0 flex-col overflow-hidden bg-background">
+					<div className="flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-background">
 						<OnboardingModal initialOpen={false} />
-						<header className="flex h-9 shrink-0 items-center bg-background/95 px-3">
-							<div className="flex min-w-0 flex-1 items-center gap-2">
-								<SidebarTrigger className="cursor-pointer" />
-								<AppHistoryControls />
-								<Separator
-									orientation="vertical"
-									className="ml-1 data-vertical:h-4 data-vertical:self-auto"
-								/>
-								<WorkspaceSelector />
-								<div className="ml-auto flex items-center gap-1">
-									<Button
-										aria-label="Create new item"
-										className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
-										size="icon-xs"
-										type="button"
-										variant="ghost"
-									>
-										<PlusIcon aria-hidden="true" className="size-4" />
-									</Button>
-									<Separator
-										orientation="vertical"
-										className="mx-1 data-vertical:h-4 data-vertical:self-auto"
-									/>
-									<HelpMenu />
-								</div>
-							</div>
-						</header>
-						<div className="flex min-h-0 min-w-0 flex-1">
-							<ResizableSidebarContent>
-								<SidebarInset className="h-full min-h-0 min-w-0">
-									<div className="min-h-0 min-w-0 flex-1">{children}</div>
-								</SidebarInset>
-							</ResizableSidebarContent>
-						</div>
+						<ResizableSidebarContent>
+							<SidebarInset className="h-full min-h-0 min-w-0">
+								<div className="min-h-0 min-w-0 flex-1">{children}</div>
+							</SidebarInset>
+						</ResizableSidebarContent>
 					</div>
 				</ChatActivityProvider>
 			</SidebarFocusProvider>
