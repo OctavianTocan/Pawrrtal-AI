@@ -15,7 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /** Stable model IDs available in the local visual-first selector. */
@@ -140,24 +140,26 @@ export function ModelSelectorPopover({
 
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              aria-label="Select model and reasoning"
-              className="h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
-              size="xs"
-              type="button"
-              variant="ghost"
-            >
-              <span className="text-foreground">{selectedModel.shortName}</span>
-              <span>{reasoningLabel}</span>
-              <ChevronDownIcon aria-hidden="true" className="size-3" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent side="top">Choose model and reasoning level</TooltipContent>
-      </Tooltip>
+      <TooltipProvider disableHoverableContent>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label="Select model and reasoning"
+                className="h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                <span className="text-foreground">{selectedModel.shortName}</span>
+                <span>{reasoningLabel}</span>
+                <ChevronDownIcon aria-hidden="true" className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top">Choose model and reasoning level</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DropdownMenuContent align="end" className="min-w-48" side="top" sideOffset={8}>
         <DropdownMenuLabel className="px-2 py-1.5">Intelligence</DropdownMenuLabel>
         <DropdownMenuGroup>

@@ -60,7 +60,9 @@ export function ChatPromptSuggestions({
                 </span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top">{suggestion.label}</TooltipContent>
+            <TooltipContent side="top" align="start">
+              {suggestion.label}
+            </TooltipContent>
           </Tooltip>
         );
       })}

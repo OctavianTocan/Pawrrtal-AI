@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   type ChatModelId,
@@ -139,55 +139,57 @@ function ComposerTooltip({
 
 function AutoReviewSelector(): React.JSX.Element {
   return (
-    <Tooltip>
-      <DropdownMenu>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              className="h-7 gap-1.5 rounded-[7px] bg-transparent px-2 text-[12px] font-normal text-accent hover:bg-foreground/[0.04] hover:text-accent aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
-              type="button"
-              variant="ghost"
-            >
-              <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-              Auto-review
-              <ChevronDownIcon aria-hidden="true" className="size-3" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <DropdownMenuContent align="start" className="min-w-52" side="top" sideOffset={8}>
-          <DropdownMenuItem>
-            <span className="flex size-4 items-center justify-center">
-              <SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-            </span>
-            Default permissions
-          </DropdownMenuItem>
-          <DropdownMenuItem className="justify-between">
-            <span className="flex items-center gap-2">
-              <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-              Auto-review
-            </span>
-            <CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <span className="flex size-4 items-center justify-center">
-              <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-            </span>
-            Full access
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <span className="flex size-4 items-center justify-center">
-              <SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-            </span>
-            Custom (config.toml)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <TooltipContent side="top">
-        <span className="block">Review code changes automatically</span>
-        <span className="block text-muted-foreground">Shift + Tab to toggle</span>
-      </TooltipContent>
-    </Tooltip>
+    <TooltipProvider disableHoverableContent>
+      <Tooltip delayDuration={300}>
+        <DropdownMenu>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="h-7 gap-1.5 rounded-[7px] bg-transparent px-2 text-[12px] font-normal text-accent hover:bg-foreground/[0.04] hover:text-accent aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
+                type="button"
+                variant="ghost"
+              >
+                <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
+                Auto-review
+                <ChevronDownIcon aria-hidden="true" className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <DropdownMenuContent align="start" className="min-w-52" side="top" sideOffset={8}>
+            <DropdownMenuItem>
+              <span className="flex size-4 items-center justify-center">
+                <SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
+              </span>
+              Default permissions
+            </DropdownMenuItem>
+            <DropdownMenuItem className="justify-between">
+              <span className="flex items-center gap-2">
+                <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
+                Auto-review
+              </span>
+              <CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <span className="flex size-4 items-center justify-center">
+                <ShieldCheckIcon aria-hidden="true" className="size-3.5" />
+              </span>
+              Full access
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <span className="flex size-4 items-center justify-center">
+                <SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
+              </span>
+              Custom (config.toml)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <TooltipContent side="top">
+          <span className="block">Review code changes automatically</span>
+          <span className="block text-muted-foreground">Shift + Tab to toggle</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
