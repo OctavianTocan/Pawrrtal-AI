@@ -1,3 +1,9 @@
+/**
+ * Token budget / usage meter using TokenLens data.
+ *
+ * @fileoverview AI Elements — `context`.
+ */
+
 'use client';
 
 import type { LanguageModelUsage } from 'ai';

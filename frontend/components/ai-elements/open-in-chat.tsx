@@ -1,3 +1,9 @@
+/**
+ * Action to open referenced content in the chat surface.
+ *
+ * @fileoverview AI Elements — `open-in-chat`.
+ */
+
 'use client';
 
 import { ChevronDownIcon, ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';

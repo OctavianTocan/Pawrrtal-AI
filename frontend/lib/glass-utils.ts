@@ -1,3 +1,11 @@
+/**
+ * Glassmorphism styling helpers: convert optional customization into inline `style` props and CSS custom properties.
+ *
+ * @fileoverview Shared by surfaces that use frosted-glass backgrounds; pairs with theme variables like `--glass-bg`.
+ */
+
+import type * as React from 'react';
+
 export interface GlassCustomization {
   /**
    * Background color for the glass effect (e.g., "rgba(255, 255, 255, 0.1)" or "#ffffff")

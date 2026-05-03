@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from claude_agent_sdk import (
     AssistantMessage,
     ClaudeAgentOptions,
+    ProcessError,
     TextBlock,
     ThinkingBlock,
     query,
@@ -49,10 +50,20 @@ class ClaudeProvider:
             permission_mode="bypassPermissions",
         )
 
-        async for message in query(prompt=question, options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        yield StreamEvent(type="delta", content=block.text)
-                    elif isinstance(block, ThinkingBlock):
-                        yield StreamEvent(type="thinking", content=block.thinking)
+        try:
+            async for message in query(prompt=question, options=options):
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        if isinstance(block, TextBlock):
+                            yield StreamEvent(type="delta", content=block.text)
+                        elif isinstance(block, ThinkingBlock):
+                            yield StreamEvent(type="thinking", content=block.thinking)
+        except ProcessError as error:
+            yield StreamEvent(
+                type="error",
+                content=(
+                    "Claude provider failed to start. Check Claude Code authentication "
+                    "and CLAUDE_CODE_OAUTH_TOKEN, then retry. "
+                    f"Provider error: {error}"
+                ),
+            )

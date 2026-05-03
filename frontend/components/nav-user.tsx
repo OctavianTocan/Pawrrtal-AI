@@ -1,3 +1,9 @@
+/**
+ * Sidebar footer user menu: avatar trigger and account shortcuts.
+ *
+ * @fileoverview Tabler icon dropdown in the sidebar footer for account actions.
+ */
+
 'use client';
 
 import {
@@ -25,6 +31,9 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
+/**
+ * @param user - Display identity shown in the trigger and menu header.
+ */
 export function NavUser({
   user,
 }: {

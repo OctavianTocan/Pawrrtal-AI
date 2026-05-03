@@ -1,3 +1,10 @@
+/**
+ * Rename and delete conversation mutations with React Query cache updates.
+ *
+ * @fileoverview Duplicate of the rename/delete hooks in `hooks/use-conversation-mutations.ts`.
+ * The app imports from the hooks path; this file is currently unused.
+ */
+
 'use client';
 
 import type { UseMutationResult } from '@tanstack/react-query';

@@ -1,3 +1,9 @@
+/**
+ * Inline confirm/cancel affordance for pending tool actions.
+ *
+ * @fileoverview AI Elements — `confirmation`.
+ */
+
 'use client';
 
 import type { ToolUIPart } from 'ai';

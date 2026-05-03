@@ -1,3 +1,9 @@
+/**
+ * Skeleton shimmer for placeholder content.
+ *
+ * @fileoverview AI Elements — `shimmer`.
+ */
+
 'use client';
 
 import { motion } from 'motion/react';

@@ -1,3 +1,9 @@
+/**
+ * Scroll region with stick-to-bottom behavior for message lists.
+ *
+ * @fileoverview AI Elements — `conversation`.
+ */
+
 'use client';
 
 import { ArrowDownIcon } from 'lucide-react';

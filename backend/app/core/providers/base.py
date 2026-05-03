@@ -7,7 +7,7 @@ from typing import Any, Protocol, TypedDict
 
 
 class StreamEvent(TypedDict, total=False):
-    type: str           # "delta" | "thinking" | "tool_use" | "tool_result"
+    type: str           # "delta" | "thinking" | "tool_use" | "tool_result" | "error"
     content: str        # for delta and thinking
     name: str           # for tool_use
     input: dict[str, Any]   # for tool_use

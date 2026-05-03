@@ -1,3 +1,9 @@
+/**
+ * Checklist-style agent tasks with status.
+ *
+ * @fileoverview AI Elements — `task`.
+ */
+
 'use client';
 
 import { ChevronDownIcon, SearchIcon } from 'lucide-react';

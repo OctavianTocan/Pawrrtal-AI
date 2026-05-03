@@ -1,3 +1,9 @@
+/**
+ * React Flow floating panel wrapper with theme styles.
+ *
+ * @fileoverview AI Elements — `panel`.
+ */
+
 import { Panel as PanelPrimitive } from '@xyflow/react';
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';

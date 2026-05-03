@@ -1,3 +1,9 @@
+/**
+ * Structured multi-step plan visualization.
+ *
+ * @fileoverview AI Elements — `plan`.
+ */
+
 'use client';
 
 import { ChevronsUpDownIcon } from 'lucide-react';

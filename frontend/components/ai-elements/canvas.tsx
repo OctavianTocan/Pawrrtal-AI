@@ -1,3 +1,9 @@
+/**
+ * React Flow canvas host for diagram-style assistant output.
+ *
+ * @fileoverview AI Elements — `canvas`.
+ */
+
 import { Background, ReactFlow, type ReactFlowProps } from '@xyflow/react';
 import type { ReactNode } from 'react';
 import '@xyflow/react/dist/style.css';

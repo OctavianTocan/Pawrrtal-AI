@@ -1,3 +1,9 @@
+/**
+ * Next.js configuration for the AI Nexus frontend.
+ *
+ * @fileoverview Sets Turborepo monorepo root for Turbopack and enables `authInterrupts` for `unauthorized()`.
+ */
+
 import type { NextConfig } from 'next';
 import path from 'path';
 

@@ -4,9 +4,14 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 
-/*
- * This function returns a function that fetches a URL from the API.
- * If the user is not authenticated, it throws an error. (The caller can handle this by redirecting to the login page.)
+/**
+ * Returns a memoized `fetch` wrapper that targets {@link API_BASE_URL}, sends cookies, and handles auth failures.
+ *
+ * - Sends `credentials: 'include'` so the HTTP-only session cookie reaches the API.
+ * - On `401`, replaces the route with `/login` and throws (callers should treat this as a hard logout signal).
+ * - On other non-OK responses, throws with status and body text for debugging.
+ *
+ * @returns Async function `(endpoint, options?) => Response` where `endpoint` is a path string or lazy path factory.
  */
 export function useAuthedFetch() {
   const router = useRouter();

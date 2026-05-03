@@ -1,3 +1,9 @@
+/**
+ * Full-featured chat input: files, shortcuts, and controller context.
+ *
+ * @fileoverview AI Elements — `prompt-input`.
+ */
+
 'use client';
 
 import type { ChatStatus, FileUIPart } from 'ai';

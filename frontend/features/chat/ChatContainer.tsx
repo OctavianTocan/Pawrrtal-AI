@@ -15,6 +15,9 @@ const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
 const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
 const FALLBACK_TITLE_MAX_LENGTH = 80;
 
+/**
+ * Sidebar-safe fallback title before async LLM titling returns: trimmed first line, ellipsized.
+ */
 function buildInitialConversationTitle(content: string): string {
   const collapsedContent = content.trim().replace(/\s+/g, ' ');
 
@@ -27,6 +30,22 @@ function buildInitialConversationTitle(content: string): string {
   }
 
   return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
+}
+
+function replaceLastAssistantMessage({
+  messages,
+  content,
+}: {
+  messages: Array<AgnoMessage>;
+  content: string;
+}): Array<AgnoMessage> {
+  const updatedMessages = [...messages];
+  updatedMessages[updatedMessages.length - 1] = {
+    ...updatedMessages[updatedMessages.length - 1],
+    role: 'assistant',
+    content,
+  };
+  return updatedMessages;
 }
 
 /**
@@ -65,6 +84,7 @@ export default function ChatContainer({
    * Ensures the conversation is only created once (on the first message).
    */
   const hasNavigated = useRef(false);
+  const isSendingRef = useRef(false);
 
   const [message, setMessage] = useState<PromptInputMessage>({
     content: '',
@@ -89,19 +109,11 @@ export default function ChatContainer({
    * navigations (e.g. "New Conversation") work correctly.
    */
   const handleSendMessage = async (message: PromptInputMessage): Promise<void> => {
-    if (!hasNavigated.current) {
-      await createConversationMutation.mutateAsync({
-        title: buildInitialConversationTitle(message.content),
-      });
-      // Fire-and-forget: title generation shouldn't block the conversation flow.
-      generateConversationTitleMutation.mutateAsync(message.content).catch(() => undefined);
-
-      // Use replaceState for an instant URL swap without interrupting the stream.
-      // The Next.js router is synced after streaming finishes (see below).
-      window.history.replaceState(null, '', `/c/${conversationId}`);
-      hasNavigated.current = true;
+    if (isSendingRef.current || isLoading) {
+      return;
     }
 
+    isSendingRef.current = true;
     const newMessage = message;
     setMessage({ content: '', files: [] });
     setIsLoading(true);
@@ -115,25 +127,45 @@ export default function ChatContainer({
 
     let assistantMessage = '';
 
-    for await (const chunk of streamMessage(newMessage.content, conversationId, selectedModelId)) {
-      assistantMessage += chunk || '';
-      setChatHistory((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          role: 'assistant',
-          content: assistantMessage,
-        };
-        return updated;
-      });
-      setIsLoading(false);
-    }
+    try {
+      if (!hasNavigated.current) {
+        await createConversationMutation.mutateAsync({
+          title: buildInitialConversationTitle(newMessage.content),
+        });
+        // Fire-and-forget: title generation shouldn't block the conversation flow.
+        generateConversationTitleMutation.mutateAsync(newMessage.content).catch(() => undefined);
 
-    // Sync the Next.js router now that streaming is done.
-    // replaceState earlier left the router desynced — this call aligns its
-    // internal state so that router.push("/") in the sidebar works correctly.
-    if (hasNavigated.current) {
-      router.replace(`/c/${conversationId}`);
+        // Use replaceState for an instant URL swap without interrupting the stream.
+        // The Next.js router is synced after streaming finishes (see below).
+        window.history.replaceState(null, '', `/c/${conversationId}`);
+        hasNavigated.current = true;
+      }
+
+      for await (const chunk of streamMessage(
+        newMessage.content,
+        conversationId,
+        selectedModelId
+      )) {
+        assistantMessage += chunk || '';
+        setChatHistory((prev) =>
+          replaceLastAssistantMessage({ messages: prev, content: assistantMessage })
+        );
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Chat stream failed.';
+      setChatHistory((prev) =>
+        replaceLastAssistantMessage({ messages: prev, content: `Error: ${errorMessage}` })
+      );
+    } finally {
+      setIsLoading(false);
+      isSendingRef.current = false;
+
+      // Sync the Next.js router now that streaming is done.
+      // replaceState earlier left the router desynced — this call aligns its
+      // internal state so that router.push("/") in the sidebar works correctly.
+      if (hasNavigated.current) {
+        router.replace(`/c/${conversationId}`);
+      }
     }
   };
 

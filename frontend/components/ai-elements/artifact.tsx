@@ -1,3 +1,9 @@
+/**
+ * Surfaces downloadable or previewable artifacts produced during generation.
+ *
+ * @fileoverview AI Elements — `artifact`.
+ */
+
 'use client';
 
 import { type LucideIcon, XIcon } from 'lucide-react';

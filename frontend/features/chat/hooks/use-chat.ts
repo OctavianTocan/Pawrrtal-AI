@@ -1,14 +1,29 @@
+/**
+ * Streaming chat transport: POST to the chat endpoint and parse SSE deltas into an async generator.
+ *
+ * @fileoverview Consumes server-sent events (`data: {...}` frames); yields assistant text chunks until `[DONE]`.
+ */
+
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
+import { API_ENDPOINTS } from '@/lib/api';
 import type { ChatModelId } from '../components/ModelSelectorPopover';
 
 /** Sentinel returned by {@link parseSseMessage} when the stream signals completion. */
 const STREAM_DONE = Symbol('STREAM_DONE');
 
+/** Parsed SSE error event emitted by the backend stream. */
+type StreamError = {
+  /** Discriminator for stream error events. */
+  type: 'error';
+  /** Human-readable error message. */
+  content: string;
+};
+
 /**
  * Parses a single SSE message and returns the delta content, a done
  * sentinel, or `null` for non-data / unparseable frames.
  */
-function parseSseMessage(raw: string): string | typeof STREAM_DONE | null {
+function parseSseMessage(raw: string): string | StreamError | typeof STREAM_DONE | null {
   if (!raw.startsWith('data: ')) return null;
 
   const data = raw.slice(6);
@@ -19,11 +34,29 @@ function parseSseMessage(raw: string): string | typeof STREAM_DONE | null {
     const json = JSON.parse(data);
     // Only surface delta content to the caller; gracefully ignore
     // thinking, tool_use, tool_result, and error event types for now.
-    return json.type === 'delta' ? (json.content as string) : null;
+    if (json.type === 'delta') return json.content as string;
+    if (json.type === 'error') {
+      return {
+        type: 'error',
+        content: typeof json.content === 'string' ? json.content : 'Chat stream failed.',
+      };
+    }
+    return null;
   } catch {
     // Ignore parse errors from incomplete SSE frames.
     return null;
   }
+}
+
+/** Convert parsed stream frames into yielded text or throw on backend error events. */
+function resolveParsedFrame(
+  parsed: ReturnType<typeof parseSseMessage>
+): string | typeof STREAM_DONE | null {
+  if (parsed === STREAM_DONE || parsed === null || typeof parsed === 'string') {
+    return parsed;
+  }
+
+  throw new Error(parsed.content);
 }
 
 /**
@@ -46,7 +79,7 @@ export function useChat(): {
     conversationId: string,
     modelId: ChatModelId
   ): AsyncGenerator<string> {
-    const response = await fetcher('/api/chat', {
+    const response = await fetcher(API_ENDPOINTS.chat.messages, {
       method: 'POST',
       body: JSON.stringify({
         question: message,
@@ -80,7 +113,7 @@ export function useChat(): {
       buffer = frames.pop() || '';
 
       for (const frame of frames) {
-        const parsed = parseSseMessage(frame);
+        const parsed = resolveParsedFrame(parseSseMessage(frame));
 
         if (parsed === STREAM_DONE) {
           yield buffer;

@@ -1,3 +1,9 @@
+/**
+ * React Query mutation: create a conversation row on the server using a client-reserved id.
+ *
+ * @fileoverview See inline TODO about user-scoped query keys on logout.
+ */
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ENDPOINTS } from '@/lib/api';
 import type { Conversation } from '@/lib/types';
@@ -7,6 +13,9 @@ type CreateConversationVariables = {
   title: string;
 };
 
+/**
+ * Replaces or inserts a conversation at the head of the sidebar list while preserving other rows.
+ */
 function upsertConversation(
   conversations: Array<Conversation> | undefined,
   conversation: Conversation
@@ -18,10 +27,11 @@ function upsertConversation(
 }
 
 /**
- * useCreateConversation is a hook that creates a new conversation.
+ * React Query mutation: `POST` a new conversation with the given client-generated id (path) and title (body).
  *
- * @returns A function that creates a new conversation.
- * @returns The conversation ID.
+ * Optimistically merges the returned row into `['conversations']` cache and invalidates the list.
+ *
+ * @param conversationId - UUID reserved on the client that must match the URL/session used for chat.
  */
 export function useCreateConversation(conversationId: string) {
   const fetcher = useAuthedFetch();

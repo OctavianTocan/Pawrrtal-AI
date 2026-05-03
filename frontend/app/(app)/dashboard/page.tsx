@@ -1,3 +1,9 @@
+/**
+ * Demo dashboard route: legacy sidebar + breadcrumb shell with placeholder cards.
+ *
+ * @fileoverview Scaffold for experimenting with `SidebarProvider` layout; not the main chat shell.
+ */
+
 import { AppSidebar } from '@/components/app-sidebar';
 import {
   Breadcrumb,

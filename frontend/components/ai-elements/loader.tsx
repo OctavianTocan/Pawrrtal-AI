@@ -1,3 +1,9 @@
+/**
+ * Determinate/indeterminate loader for streaming replies.
+ *
+ * @fileoverview AI Elements — `loader`.
+ */
+
 import { type HTMLAttributes, useId } from 'react';
 import { cn } from '@/lib/utils';
 

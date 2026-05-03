@@ -33,6 +33,17 @@ async def create_conversation_service(
     Returns:
         The newly created ``Conversation`` row.
     """
+    if schema_data.id is not None:
+        existing_conversation_result = await session.execute(
+            select(Conversation).where(Conversation.id == schema_data.id)
+        )
+        existing_conversation = existing_conversation_result.scalar_one_or_none()
+
+        if existing_conversation is not None:
+            if existing_conversation.user_id != user_id:
+                raise ValueError("Conversation ID is already in use.")
+            return existing_conversation
+
     new_conversation = Conversation(
         id=schema_data.id,
         user_id=user_id,

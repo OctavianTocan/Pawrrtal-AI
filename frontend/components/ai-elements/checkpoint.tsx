@@ -1,3 +1,9 @@
+/**
+ * Marks resumable checkpoints inside a long-running conversation.
+ *
+ * @fileoverview AI Elements — `checkpoint`.
+ */
+
 'use client';
 
 import { BookmarkIcon, type LucideProps } from 'lucide-react';

@@ -1,3 +1,9 @@
+/**
+ * Flow graph node with handles for React Flow.
+ *
+ * @fileoverview AI Elements — `node`.
+ */
+
 import { Handle, Position } from '@xyflow/react';
 import type { ComponentProps } from 'react';
 import {

@@ -1,3 +1,9 @@
+/**
+ * Dropdown for choosing an LLM before sending.
+ *
+ * @fileoverview AI Elements — `model-selector`.
+ */
+
 import type { ComponentProps, ReactNode } from 'react';
 
 import {

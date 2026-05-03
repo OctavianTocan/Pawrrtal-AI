@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSidebar } from '@/components/ui/sidebar';
 import useGetConversations from '@/hooks/get-conversations';
 import {
   buildConversationGroups,
@@ -49,7 +48,6 @@ function loadCollapsedGroups(): Set<string> {
  * Delegates all rendering to `NavChatsView`.
  */
 export function NavChats(): React.JSX.Element {
-
   const { data: conversations, isLoading } = useGetConversations();
 
   // --- search ---

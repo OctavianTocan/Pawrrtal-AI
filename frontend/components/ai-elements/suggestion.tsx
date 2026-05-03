@@ -1,3 +1,9 @@
+/**
+ * Starter prompt chips for empty states.
+ *
+ * @fileoverview AI Elements — `suggestion`.
+ */
+
 'use client';
 
 import type { ComponentProps } from 'react';

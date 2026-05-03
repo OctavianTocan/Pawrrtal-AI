@@ -1,3 +1,9 @@
+/**
+ * Node-attached toolbar for flow editors.
+ *
+ * @fileoverview AI Elements — `toolbar`.
+ */
+
 import { NodeToolbar, Position } from '@xyflow/react';
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';

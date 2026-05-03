@@ -29,4 +29,5 @@ export const hoverEffects = cva('transition-all duration-300', {
   },
 });
 
+/** Named hover variant understood by {@link hoverEffects} (`cva`). */
 export type HoverEffect = 'none' | 'glow' | 'shimmer' | 'ripple' | 'lift' | 'scale';

@@ -1,3 +1,9 @@
+/**
+ * Syntax-highlighted code fence with copy affordances.
+ *
+ * @fileoverview AI Elements — `code-block`.
+ */
+
 'use client';
 
 import { CheckIcon, CopyIcon } from 'lucide-react';

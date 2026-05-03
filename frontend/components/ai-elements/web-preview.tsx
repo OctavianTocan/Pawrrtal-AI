@@ -1,3 +1,9 @@
+/**
+ * Embedded iframe-style preview of linked web content.
+ *
+ * @fileoverview AI Elements — `web-preview`.
+ */
+
 'use client';
 
 import { ChevronDownIcon } from 'lucide-react';

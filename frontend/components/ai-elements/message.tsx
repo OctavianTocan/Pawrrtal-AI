@@ -1,3 +1,9 @@
+/**
+ * User and assistant message row with content subcomponents.
+ *
+ * @fileoverview AI Elements — `message`.
+ */
+
 'use client';
 
 import type { FileUIPart, UIMessage } from 'ai';

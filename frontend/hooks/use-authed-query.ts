@@ -1,8 +1,13 @@
 import { type QueryKey, useQuery } from '@tanstack/react-query';
 import { useAuthedFetch } from './use-authed-fetch';
 
-// This hook is a wrapper around useQuery that automatically includes the session token in the request and handles 401 errors by redirecting to the login page.
-// It allows us to cache API responses using React Query while ensuring that the user is authenticated.
+/**
+ * `useQuery` bound to {@link useAuthedFetch}: JSON GET with cookie auth and shared 401 handling.
+ *
+ * @typeParam T - Parsed JSON type of the response body.
+ * @param queryKey - React Query cache key (include all values that should invalidate the fetch).
+ * @param endpoint - API path appended to the configured backend origin (see `lib/api.ts`).
+ */
 export function useAuthedQuery<T>(queryKey: QueryKey, endpoint: string) {
   const authedFetch = useAuthedFetch();
   return useQuery<T>({

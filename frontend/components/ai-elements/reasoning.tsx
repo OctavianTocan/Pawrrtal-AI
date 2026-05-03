@@ -1,3 +1,9 @@
+/**
+ * Expandable “thinking” panel for extended model rationale.
+ *
+ * @fileoverview AI Elements — `reasoning`.
+ */
+
 'use client';
 
 import { useControllableState } from '@radix-ui/react-use-controllable-state';

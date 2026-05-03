@@ -1,3 +1,9 @@
+/**
+ * Root Next.js layout: HTML shell, theme bootstrap script, and global providers.
+ *
+ * @fileoverview Applies FOUC-safe dark-mode class before hydration and wraps the tree in {@link Providers}.
+ */
+
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
@@ -9,6 +15,9 @@ export const metadata: Metadata = {
     'An AI chat application built with Next.js and FastAPI, all by hand, no code generation tools (or AI) used.',
 };
 
+/**
+ * Root layout for all routes: `Providers` + blocking theme script on `<html>`.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

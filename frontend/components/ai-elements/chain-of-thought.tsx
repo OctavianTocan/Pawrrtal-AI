@@ -1,3 +1,9 @@
+/**
+ * Collapsible step list for model reasoning traces.
+ *
+ * @fileoverview AI Elements — `chain-of-thought`.
+ */
+
 'use client';
 
 import { useControllableState } from '@radix-ui/react-use-controllable-state';

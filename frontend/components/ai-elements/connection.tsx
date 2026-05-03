@@ -1,3 +1,9 @@
+/**
+ * Custom connection line for React Flow edges.
+ *
+ * @fileoverview AI Elements — `connection`.
+ */
+
 import type { ConnectionLineComponent } from '@xyflow/react';
 
 const HALF = 0.5;

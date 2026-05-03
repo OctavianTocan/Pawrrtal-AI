@@ -1,3 +1,9 @@
+/**
+ * Sidebar conversation list behavior: search, multi-select, keyboard nav, and focus zones.
+ *
+ * @fileoverview Feeds {@link NavChatsView} with handlers derived from route, groups, and collapse state.
+ */
+
 'use client';
 
 import { usePathname } from 'next/navigation';

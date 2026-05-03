@@ -1,6 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 
+/**
+ * React Query mutations for JWT login and dev-only admin shortcut.
+ *
+ * @fileoverview Uses form-urlencoded login to match FastAPI Users; both paths set cookies via `credentials: 'include'`.
+ */
+
 /** Arguments for a standard email/password login request. */
 export interface LoginArgs {
   email: string;

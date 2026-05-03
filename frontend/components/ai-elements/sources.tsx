@@ -1,3 +1,9 @@
+/**
+ * Footnotes list of URLs or documents used in a reply.
+ *
+ * @fileoverview AI Elements — `sources`.
+ */
+
 'use client';
 
 import { BookIcon, ChevronDownIcon } from 'lucide-react';

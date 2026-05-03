@@ -1,3 +1,9 @@
+/**
+ * Styled edge primitive for flow diagrams.
+ *
+ * @fileoverview AI Elements — `edge`.
+ */
+
 import {
   BaseEdge,
   type EdgeProps,

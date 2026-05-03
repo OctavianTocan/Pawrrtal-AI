@@ -1,3 +1,9 @@
+/**
+ * Self-service registration card: posts to FastAPI then performs an automatic login.
+ *
+ * @fileoverview Uses `credentials: 'include'` on follow-up login so the session cookie is stored for the SPA.
+ */
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -9,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
+/** Registration form with invite code gate (when enabled server-side). */
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [errorMessage, setErrorMessage] = useState('');
   // To disable buttons while submitting.

@@ -37,7 +37,7 @@ def create_agent(
         name="Agno Agent",
         user_id=str(user_id),
         session_id=str(conversation_id),
-        model=Gemini(id=model_id),
+        model=Gemini(id=model_id, api_key=settings.google_api_key),
         db=agno_db,
         tools=[
             MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp"),
@@ -65,7 +65,7 @@ def create_utility_agent(prompt: str) -> RunOutput:
     Helps with one-off requests, using an Agno agent.
     """
     agent = Agent(
-        model=Gemini(id="gemini-3.1-flash-lite-preview"),
+        model=Gemini(id="gemini-3.1-flash-lite-preview", api_key=settings.google_api_key),
     )
     return agent.run(prompt)
 

@@ -1,3 +1,9 @@
+/**
+ * Tool call and tool result transcript rows.
+ *
+ * @fileoverview AI Elements — `tool`.
+ */
+
 'use client';
 
 import type { ToolUIPart } from 'ai';

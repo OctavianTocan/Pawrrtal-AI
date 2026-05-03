@@ -1,3 +1,9 @@
+/**
+ * Renders generated image parts from the AI SDK.
+ *
+ * @fileoverview AI Elements — `image`.
+ */
+
 import type { Experimental_GeneratedImage } from 'ai';
 import { cn } from '@/lib/utils';
 

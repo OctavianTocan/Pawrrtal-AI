@@ -1,3 +1,9 @@
+/**
+ * Playback or transport controls for rich media in chat.
+ *
+ * @fileoverview AI Elements — `controls`.
+ */
+
 'use client';
 
 import { Controls as ControlsPrimitive } from '@xyflow/react';
