@@ -168,3 +168,93 @@ A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` 
 - Local dev runs on plain localhost: Next.js on `http://localhost:3001`, FastAPI on `http://localhost:8000`. `dev.ts` (run via `just dev` or `bun run dev`) starts both side-by-side. No HTTPS, no proxy, no special hostnames.
 - Frontend → backend cookie auth works because both run on the same host (`localhost`); cookies ignore ports, so `Set-Cookie` from `:8000` is visible to fetches from `:3001` with `credentials: 'include'`. Use `COOKIE_SAMESITE=lax` and `COOKIE_SECURE=false` in dev.
 
+
+
+<claude-mem-context>
+# Memory Context
+
+# [ai-nexus] recent context, 2026-05-03 11:00pm GMT+2
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 50 obs (17,256t read) | 85,110t work | 80% savings
+
+### Feb 15, 2026
+S7 Update Task List After Successfully Implementing Conversation Rendering (Feb 15 at 3:49 PM)
+S1 Check Notion todos for project status and verify CLAUDE.md symlink setup (Feb 15 at 3:49 PM)
+19 4:33p 🟣 Enhanced git commit automation with stream piping
+20 4:34p 🟣 Implemented React Query with authenticated API fetching
+21 " 🔄 Refactored conversation fetching to use React Query caching
+### Feb 16, 2026
+120 5:13p 🔵 Notion Integration Tools Available in ai-nexus Project
+121 " 🔵 AppSidebar Component Structure in ai-nexus Frontend
+122 5:14p 🔵 AI Nexus Project Architecture and Task Management System
+123 " 🔵 App Layout Structure Uses Sidebar Wrapper Component
+124 " 🔵 Sidebar Component Architecture Using SidebarProvider Pattern
+125 5:27p 🟣 Conversations Successfully Rendering in UI
+S8 Fix React Query cache invalidation issue where new conversations weren't appearing in the sidebar after creation (Feb 16 at 5:33 PM)
+### Feb 17, 2026
+S9 Architectural design help for organizing chat interface code in frontend/app/(app)/page.tsx (Feb 17 at 4:06 PM)
+320 4:07p 🔵 Frontend File Structure Discovery
+321 4:08p 🔵 Complete Frontend Source File Inventory
+322 " 🔵 Root Layout Configuration
+323 " 🔵 App Layout Uses NewSidebar Component
+324 " 🔵 Landing Page Uses Conversation Creation Hook
+325 " 🔵 Providers Component Wraps React Query Client
+326 4:09p 🔵 Import Dependency Graph Extracted
+327 " 🔵 NewSidebar Component Architecture
+328 4:10p 🔵 AppSidebar Contains Unused Navigation Data
+329 " 🔵 Component Example File is Demo Showcase
+330 " 🔵 ComponentExample Confirmed as Orphaned File
+331 " 🔵 Example Component Wrapper Utilities
+332 " 🔵 AI Elements Component Usage Verification
+333 4:11p 🔵 Chat Component Uses Five AI Elements
+334 " 🔵 Chat Component Implementation Details
+335 " 🔵 Complete AI Elements Component Inventory
+336 " 🔵 AI Elements Search Pattern Issue Detected
+337 " 🔵 Chat Component Uses Mixed Import Paths
+338 4:12p 🔵 Chat Component Complete Import Analysis
+339 " 🔵 Message Component Complexity Analysis
+340 " 🔵 Conversation Component Wrapper for Scrolling
+341 " 🔵 Prompt Input Component Massive Size
+342 4:13p 🔵 Loader Component Simple Spinner
+343 " 🔵 Automated Search Produces False Negatives
+344 4:19p 🔵 Chat Feature Relocated to Features Directory
+345 4:20p 🔵 Features Directory Contains Modular Chat Implementation
+346 " 🔵 Conversation Page Uses ChatContainer from Features Directory
+347 " 🔵 Dashboard Page is Placeholder Demo UI
+348 " 🔵 Login Page Uses LoginForm Component
+349 " 🔵 Signup Page Uses SignupForm Component
+350 4:21p 🔵 Page-Level Imports Reveal Active Components
+351 " 🔵 Layout Files Import NewSidebar and Providers
+352 " 🔵 ChatContainer is Thin Wrapper Around ChatView
+353 " 🔵 Features Chat Component Entirely Commented Out
+354 4:22p 🔵 ChatView is Non-Functional Placeholder
+355 " 🔵 Comprehensive Unused File Analysis Complete
+**356** " 🔵 **Orphaned Navigation Components Confirmed**
+Grep search confirms nav-main, nav-projects, and nav-secondary navigation components are completely orphaned with zero references across the entire codebase. These components were likely created as part of sidebar scaffolding alongside nav-chats and nav-user, but were never integrated into either NewSidebar or AppSidebar. The components represent planned but unimplemented navigation features (project management, secondary navigation menus, main navigation structure) that can be safely deleted. This confirms the Python import analysis accuracy and provides additional validation for the unused file list.
+~279t 🔍 808
+
+**357** " 🔵 **NavMain Component Is Functional But Unused**
+NavMain is a fully functional, well-implemented navigation component that creates collapsible menu sections with nested items. Unlike placeholder code, this component is production-ready with proper accessibility (tooltips, screen reader labels) and interaction patterns (collapsible sections, active state). The "Platform" label suggests it was intended for top-level application navigation. However, despite being complete, it's never imported or used anywhere. This represents over-engineering - building components speculatively before they're needed. The component may have been created during initial scaffolding when the sidebar architecture was being designed, but the final implementation (NewSidebar and AppSidebar) took different approaches and never used NavMain. Safe to delete as high-quality but unused scaffolding code.
+~371t 🔍 1,322
+
+### Feb 22, 2026
+**1543** 8:53p ✅ **Added implementation context to Task 71 Notion page**
+Added comprehensive implementation context to the Notion task page for "Fix create_conversation_service to accept pre-generated UUID" (Task ID 71). The documentation explains that the current implementation in backend/app/crud/conversation.py always auto-generates a new UUID for conversations, which works fine for the standard POST /api/v1/conversations endpoint but causes issues in the /api/chat fallback path where the frontend's pre-created UUID must be preserved. The context includes a code example showing how to add an optional conversation_id parameter that defaults to None, allowing the function to either use a provided UUID or let SQLAlchemy auto-generate one. This preserves backward compatibility while enabling the new functionality needed for Task 72. The documentation emphasizes why this is critical: without this fix, Agno would store messages under a different session ID than what the frontend expects, breaking the conversation flow.
+~422t 🛠️ 913
+
+**1544** 8:54p ✅ **Added implementation context to Task 72 Notion page**
+Added comprehensive implementation context to the Notion task page for "Fix POST /api/chat to use frontend's conversation_id for new conversations" (Task ID 72). The documentation explains a critical UUID mismatch bug in the /api/chat endpoint's fallback path. Currently, when a conversation_id lookup fails, the backend creates a new conversation with an auto-generated UUID instead of using the UUID the frontend sent. This causes Agno to store messages under a different session ID than what the frontend expects, breaking the conversation link. The context includes a detailed edge case scenario showing the race condition, a code example of the fix, and a flow diagram illustrating the corrected behavior. The documentation clarifies this is the second task in a two-part fix and requires Task 71 to be completed first, as it depends on the create_conversation_service accepting an optional conversation_id parameter.
+~426t 🛠️ 1,564
+
+S15 Clarification on task scope after documenting implementation details for 5 Notion tasks (Feb 22 at 9:16 PM)
+**1545** 9:17p 🔵 **Task Backlog Contains 93 Tasks Across 6 Sprints**
+The Notion database query revealed the complete project scope after user questioned why only "5 pages" were mentioned. The ai-nexus project has 93 tracked tasks spanning 6 sprints. Sprint 1 (22 tasks) and Sprint 2 (16 tasks) show substantial completion with most tasks marked "Done". Sprint 3 begins with critical UUID handling fixes (tasks 71-72), sidebar features (73-75), and conversation management features. Later sprints (4-6) contain 50+ additional tasks covering technical debt, polish, testing, deployment, and accessibility improvements. The recent documentation effort targeted only 5 specific Sprint 3 tasks, representing a small fraction of the total backlog. This explains the user's confusion - the phrase "all 5 pages updated" implied completeness when it was actually a focused subset.
+~397t 🔍 10,114
+
+
+Access 85k tokens of past work via get_observations([IDs]) or mem-search skill.
+</claude-mem-context>
