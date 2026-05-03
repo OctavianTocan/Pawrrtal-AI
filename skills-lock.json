@@ -5,6 +5,24 @@
 			"source": "vercel/ai-elements",
 			"sourceType": "github",
 			"computedHash": "fb5f5a85b48db9b410595b02b84fdf48f7299b9f8e1dcd5964001fb3d9705808"
+		},
+		"javascript-testing-patterns": {
+			"source": "wshobson/agents",
+			"sourceType": "github",
+			"skillPath": "plugins/javascript-typescript/skills/javascript-testing-patterns/SKILL.md",
+			"computedHash": "8d0a8d7615ff343770af0218720691d56c55ae258793565936c8b3a97e188f51"
+		},
+		"next-best-practices": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"skillPath": "skills/next-best-practices/SKILL.md",
+			"computedHash": "db85045827ebeb83ac8dbc992b69188755eeb74dcf01cbf5e694d58aa494a106"
+		},
+		"test-master": {
+			"source": "jeffallan/claude-skills",
+			"sourceType": "github",
+			"skillPath": "skills/test-master/SKILL.md",
+			"computedHash": "176d5be77c9fb4e64335a4ad9e38dfb82ccb029dc302c417db99a11e2d880180"
 		}
 	}
 }
