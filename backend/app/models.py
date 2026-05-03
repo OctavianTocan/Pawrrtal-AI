@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import DateTime, ForeignKey, String, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 from sqlalchemy_utils import StringEncryptedType
@@ -44,6 +44,10 @@ class Conversation(Base):
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "todo"|"in_progress"|"done"|null
 
 
 class UserPreferences(Base):

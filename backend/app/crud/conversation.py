@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
 from app.models import Conversation
-from app.schemas import ConversationCreate
+from app.schemas import ConversationCreate, ConversationUpdate
 
 
 async def create_conversation_service(
@@ -115,6 +115,55 @@ async def update_conversation_title_service(
         return None
 
     conversation.title = title
+    conversation.updated_at = datetime.now()
+    session.add(conversation)
+    await session.commit()
+    await session.refresh(conversation)
+    return conversation
+
+
+async def update_conversation_service(
+    payload: ConversationUpdate,
+    user_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    session: AsyncSession,
+) -> Optional[Conversation]:
+    """Update mutable fields on an existing conversation.
+
+    Only fields explicitly set in ``payload`` are applied. Supports title,
+    is_archived, is_flagged, is_unread, and status.
+
+    Args:
+        payload: Partial update schema — unset fields are left unchanged.
+        user_id: Owner to match against (ownership check).
+        conversation_id: The conversation to update.
+        session: Async database session.
+
+    Returns:
+        The updated ``Conversation``, or ``None`` if not found / not owned.
+    """
+    stmt = (
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .where(Conversation.user_id == user_id)
+    )
+    result = await session.execute(stmt)
+    conversation = result.scalar_one_or_none()
+
+    if conversation is None:
+        return None
+
+    if payload.title is not None:
+        conversation.title = payload.title.strip()
+    if payload.is_archived is not None:
+        conversation.is_archived = payload.is_archived
+    if payload.is_flagged is not None:
+        conversation.is_flagged = payload.is_flagged
+    if payload.is_unread is not None:
+        conversation.is_unread = payload.is_unread
+    if payload.status is not None:
+        conversation.status = payload.status
+
     conversation.updated_at = datetime.now()
     session.add(conversation)
     await session.commit()

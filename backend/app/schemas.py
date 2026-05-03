@@ -87,12 +87,20 @@ class ConversationResponse(BaseModel):
     title: str
     created_at: datetime
     updated_at: datetime
+    is_archived: bool = False
+    is_flagged: bool = False
+    is_unread: bool = False
+    status: Optional[str] = None
 
 
 class ConversationUpdate(BaseModel):
     """Request schema for updating mutable conversation fields."""
 
-    title: ConversationTitle
+    title: Optional[ConversationTitle] = None
+    is_archived: Optional[bool] = None
+    is_flagged: Optional[bool] = None
+    is_unread: Optional[bool] = None
+    status: Optional[str] = None
 
 
 # --- Chat schemas -------------------------------------------------------------
