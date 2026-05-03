@@ -48,6 +48,7 @@ class Conversation(Base):
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "todo"|"in_progress"|"done"|null
+    model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class UserPreferences(Base):

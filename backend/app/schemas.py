@@ -91,6 +91,7 @@ class ConversationResponse(BaseModel):
     is_flagged: bool = False
     is_unread: bool = False
     status: Optional[str] = None
+    model_id: Optional[str] = None
 
 
 class ConversationUpdate(BaseModel):
@@ -101,6 +102,7 @@ class ConversationUpdate(BaseModel):
     is_flagged: Optional[bool] = None
     is_unread: Optional[bool] = None
     status: Optional[str] = None
+    model_id: Optional[str] = None  # optional — only set when changing model
 
 
 # --- Chat schemas -------------------------------------------------------------
@@ -117,7 +119,7 @@ class ChatRequest(BaseModel):
 
     question: str
     conversation_id: uuid.UUID
-    model_id: str = "gemini-3-flash-preview"
+    model_id: str | None = None
 
 
 class ChatResponse(BaseModel):

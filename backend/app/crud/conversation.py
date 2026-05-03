@@ -163,7 +163,45 @@ async def update_conversation_service(
         conversation.is_unread = payload.is_unread
     if payload.status is not None:
         conversation.status = payload.status
+    if payload.model_id is not None:
+        conversation.model_id = payload.model_id
 
+    conversation.updated_at = datetime.now()
+    session.add(conversation)
+    await session.commit()
+    await session.refresh(conversation)
+    return conversation
+
+
+async def update_conversation_model_service(
+    model_id: str,
+    user_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    session: AsyncSession,
+) -> Optional[Conversation]:
+    """Persist a model_id change on an existing conversation.
+
+    Args:
+        model_id: The new model identifier to store.
+        user_id: Owner to match against (ownership check).
+        conversation_id: The conversation to update.
+        session: Async database session.
+
+    Returns:
+        The updated ``Conversation``, or ``None`` if not found / not owned.
+    """
+    stmt = (
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .where(Conversation.user_id == user_id)
+    )
+    result = await session.execute(stmt)
+    conversation = result.scalar_one_or_none()
+
+    if conversation is None:
+        return None
+
+    conversation.model_id = model_id
     conversation.updated_at = datetime.now()
     session.add(conversation)
     await session.commit()
