@@ -72,7 +72,8 @@ Frontend runs at [http://localhost:3001](http://localhost:3001), backend at [htt
 
 ```bash
 AUTH_SECRET=your-jwt-secret        # Required: JWT signing key
-GOOGLE_API_KEY=your-gemini-key     # Required: Google AI API key
+GOOGLE_API_KEY=your-gemini-key           # Required: Google AI API key
+CLAUDE_CODE_OAUTH_TOKEN=your-claude-token  # Required for Claude models
 FERNET_KEY=your-fernet-key         # Required: API key encryption
 ENV=dev                            # Optional: 'dev' or 'prod'
 DATABASE_URL=sqlite+aiosqlite:///./app.db  # Optional: database path
