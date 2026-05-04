@@ -115,28 +115,28 @@ const { contextBridge } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   showContextMenu: () => {
     const menu = new Menu()
-    
+
     menu.append(new MenuItem({
       label: 'Copy',
       role: 'copy'
     }))
-    
+
     menu.append(new MenuItem({
       label: 'Paste',
       role: 'paste'
     }))
-    
+
     menu.append(new MenuItem({
       type: 'separator'
     }))
-    
+
     menu.append(new MenuItem({
       label: 'Custom Action',
       click: () => {
         console.log('Custom action clicked')
       }
     }))
-    
+
     menu.popup()
   }
 })
@@ -170,7 +170,7 @@ function updateMenu(hasFile) {
       ]
     }
   ]
-  
+
   const menu = Menu.buildFromTemplate(template)
   Menu.setApplicationMenu(menu)
 }

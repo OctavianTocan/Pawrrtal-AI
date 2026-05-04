@@ -49,15 +49,37 @@ check-py:
     cd backend && uv run ruff check .
     cd backend && uv run ruff format --check .
 
-# Static type-check with mypy (advisory — does not block `just check`).
-# Surfaces pre-existing type tech debt; address incrementally. The leading
-# `-` tells just to ignore a non-zero exit so the recipe reports findings
-# without failing the build until the legacy backlog is drained.
+# Static type-check with mypy (advisory — surfaces tech debt without failing the gate)
 typecheck:
+    # The leading `-` tells just to ignore a non-zero exit so the recipe
+    # reports findings without failing the build until the legacy backlog
+    # is drained. Address findings incrementally.
     -cd backend && uv run mypy
 
-# Full health gate: ruff + biome + mypy (strict). Use this before pushing.
-check-all: check typecheck
+# Security scan with bandit (Python). Findings here are real and should fail.
+security-py:
+    cd backend && uv run bandit -r app -c pyproject.toml --quiet
+
+# Full health gate: ruff + biome + bandit + mypy. Use before pushing.
+check-all: check security-py typecheck
+
+# --- Pre-commit hooks --------------------------------------------------------
+
+# Install pre-commit git hooks (run once after cloning the repo)
+install-hooks:
+    cd backend && uv run pre-commit install --install-hooks
+
+# Update all pre-commit hook versions to their latest release
+update-hooks:
+    cd backend && uv run pre-commit autoupdate
+
+# Run pre-commit on staged files (mimics what runs on `git commit`)
+pre-commit:
+    cd backend && uv run pre-commit run
+
+# Run pre-commit across the entire repo (use before opening a PR)
+pre-commit-all:
+    cd backend && uv run pre-commit run --all-files
 
 # Check application architecture with sentrux
 sentrux:
@@ -67,10 +89,11 @@ sentrux:
 test:
     uv run --project backend pytest backend/tests
 
-# Install all dependencies (frontend + backend)
+# Install all dependencies (frontend + backend) and git hooks
 install:
     bun install
     uv sync --project backend
+    just install-hooks
 
 # Show active tasks from Notion
 tasks:

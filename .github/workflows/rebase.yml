@@ -90,18 +90,18 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
           if [[ -z "$BRANCH_NAME" ]]; then
             echo "Failed to fetch branch name for PR $PR_NUMBER"
             exit 1
           fi
-          
+
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          
+
           git fetch origin "$BRANCH_NAME"
           git checkout "$BRANCH_NAME"
-          
+
           if git rebase origin/development; then
             echo "Clean rebase successful. Force pushing..."
             git push origin "$BRANCH_NAME" --force-with-lease

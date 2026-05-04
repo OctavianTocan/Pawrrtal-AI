@@ -10,21 +10,21 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   // Get app version
   getVersion: () => ipcRenderer.invoke('get-app-version'),
-  
+
   // Window controls
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
-  
+
   // File operations
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
-  
+
   // Listen to main process
   onUpdateAvailable: (callback) => {
     ipcRenderer.on('update-available', (event, data) => callback(data))
   },
-  
+
   // Remove listeners
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel)
@@ -47,13 +47,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'dialog:openFile',
       'dialog:saveFile'
     ]
-    
+
     if (validChannels.includes(channel)) {
       return await ipcRenderer.invoke(channel, ...args)
     }
     throw new Error(`Invalid channel: ${channel}`)
   },
-  
+
   // Safe IPC send
   send: (channel, ...args) => {
     const validChannels = [
@@ -61,21 +61,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
       'window-maximize',
       'window-close'
     ]
-    
+
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, ...args)
     }
   },
-  
+
   // Safe event listener
   on: (channel, callback) => {
     const validChannels = ['update-available', 'app-version']
-    
+
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (event, ...args) => callback(...args))
     }
   },
-  
+
   // Remove listener
   removeListener: (channel, callback) => {
     ipcRenderer.removeListener(channel, callback)

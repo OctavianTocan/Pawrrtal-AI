@@ -61,10 +61,10 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('get-app-version'),
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
-  
+
   // Two-way communication
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
-  
+
   // Listen to main process
   onUpdateAvailable: (callback) => {
     ipcRenderer.on('update-available', (event, data) => callback(data))
@@ -81,18 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.electronAPI.getVersion().then(version => {
     console.log('App version:', version)
   })
-  
+
   // Minimize window
   document.getElementById('minimize-btn').addEventListener('click', () => {
     window.electronAPI.minimizeWindow()
   })
-  
+
   // Open file dialog
   document.getElementById('open-file-btn').addEventListener('click', async () => {
     const result = await window.electronAPI.openFile()
     console.log('Selected file:', result)
   })
-  
+
   // Listen for updates
   window.electronAPI.onUpdateAvailable((data) => {
     console.log('Update available:', data)
@@ -111,7 +111,7 @@ ipcMain.handle('dialog:openFile', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ['openFile']
   })
-  
+
   if (!canceled) {
     return filePaths[0]
   }

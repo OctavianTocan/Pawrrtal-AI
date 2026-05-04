@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 MAX_GENERATED_TITLE_LENGTH = 80
 
 
-def _extract_message_text(  # noqa: PLR0911, PLR0912 — content shape is a sealed union; flat dispatch is clearest
+def _extract_message_text(  # noqa: PLR0911, PLR0912, C901 — content shape is a sealed union; flat dispatch is clearest
     content: Any, *, _depth: int = 0, _max_depth: int = 5, _max_length: int = 4000
 ) -> str:
     """Flatten Agno/Gemini message content into safe plain text for the frontend.
@@ -150,7 +150,7 @@ def _normalize_generated_title(content: Any) -> str | None:
     return collapsed_title
 
 
-def get_conversations_router() -> APIRouter:
+def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router builders aggregate many route handlers; complexity reflects route count, not branching depth
     """Get a router for the conversations API."""
     router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
 

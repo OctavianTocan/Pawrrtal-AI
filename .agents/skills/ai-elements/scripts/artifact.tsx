@@ -40,19 +40,19 @@ def dijkstra(graph, start):
     distances[start] = 0
     heap = [(0, start)]
     visited = set()
-    
+
     while heap:
         current_distance, current_node = heapq.heappop(heap)
         if current_node in visited:
             continue
         visited.add(current_node)
-        
+
         for neighbor, weight in graph[current_node].items():
             distance = current_distance + weight
             if distance < distances[neighbor]:
                 distances[neighbor] = distance
                 heapq.heappush(heap, (distance, neighbor))
-    
+
     return distances
 
 # Example graph

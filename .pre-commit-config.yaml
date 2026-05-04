@@ -1,0 +1,116 @@
+# Pre-commit hooks: run linters/formatters on staged files before each commit.
+# Install once with `just install-hooks` (or `pre-commit install`), then it
+# runs automatically on `git commit`. To run on the full repo: `just pre-commit-all`.
+#
+# Keep hook configs FAST — they run on every commit. Use `args: [--show-diff-on-failure]`
+# style flags only when output helps the developer fix the issue immediately.
+
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
+fail_fast: false  # show every failing hook in one pass, not just the first
+
+repos:
+  # ---- generic file checks (all languages) ---------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-yaml
+        # Workflow YAML uses GitHub Actions extensions like `${{ ... }}`; allow.
+        args: [--unsafe]
+      - id: check-toml
+      - id: check-json
+        # Exclude JSONC files (allow comments + trailing commas) — the .zed
+        # config and TypeScript tsconfigs are JSONC, not strict JSON.
+        exclude: |
+          (?x)^(
+              frontend/.*\.json
+            | .*tsconfig.*\.json
+            | \.zed/.*\.json
+            | \.vscode/.*\.json
+          )$
+      - id: detect-private-key
+      - id: check-case-conflict
+
+  # ---- secret scanning -----------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+        # Catches AWS keys, GitHub tokens, generic API keys, etc.
+        # Add findings to .gitleaksignore (line: file:rule:secret-fingerprint).
+
+  # ---- Python: ruff (lint + format) ----------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.12
+    hooks:
+      - id: ruff-check
+        name: ruff lint (backend)
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/.*\.py$
+      - id: ruff-format
+        name: ruff format (backend)
+        files: ^backend/.*\.py$
+
+  # ---- Python: mypy strict type-check --------------------------------------
+  # Run mypy from the backend venv (where all deps are installed) instead of
+  # the mirrored isolated env, otherwise it can't resolve fastapi/sqlalchemy
+  # imports and floods with "module not found". Advisory: passes even with
+  # legacy type debt — gate `just check-all` on this when the backlog drains.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy (backend, advisory)
+        language: system
+        entry: bash -c 'cd backend && uv run mypy "$@" || true' --
+        types: [python]
+        files: ^backend/.*\.py$
+        pass_filenames: false  # mypy reads files= from pyproject.toml
+
+  # ---- Python: bandit security scan ----------------------------------------
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        name: bandit (backend)
+        files: ^backend/app/.*\.py$  # only app code; tests/cli are excluded by config
+        args: [--configfile=backend/pyproject.toml, --quiet]
+
+  # ---- JS/TS: biome (lint + format) ----------------------------------------
+  # The wrapper already passes `--no-errors-on-unmatched --files-ignore-unknown`
+  # internally — don't duplicate them here or biome rejects the args.
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.4.10
+    hooks:
+      - id: biome-check
+        name: biome check (frontend + scripts)
+        # Pin to the same version as frontend/package.json so schema versions match.
+        additional_dependencies: ["@biomejs/biome@2.4.10"]
+        files: \.(js|jsx|ts|tsx|json|jsonc)$
+        exclude: ^backend/.*\.json$  # backend has no JS, but be defensive
+
+  # ---- commit-msg: enforce conventional commits ----------------------------
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        # Allowed types match the project's CLAUDE.md convention.
+        args:
+          - feat
+          - fix
+          - chore
+          - refactor
+          - docs
+          - test
+          - perf
+          - build
+          - ci
+          - revert

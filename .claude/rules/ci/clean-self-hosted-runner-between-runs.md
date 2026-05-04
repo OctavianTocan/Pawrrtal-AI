@@ -18,7 +18,7 @@ Unlike ephemeral GitHub-hosted runners, self-hosted runners keep the workspace b
 ```yaml
 - name: Clean generated directories
   run: rm -rf ios android Pods .expo
-  
+
 - name: Install dependencies
   run: pnpm install --frozen-lockfile
 ```

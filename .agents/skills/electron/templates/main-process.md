@@ -21,12 +21,12 @@ function createWindow() {
   })
 
   mainWindow.loadFile('index.html')
-  
+
   // Open DevTools in development
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools()
   }
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -70,7 +70,7 @@ function createWindow() {
   })
 
   mainWindow.loadFile('index.html')
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })

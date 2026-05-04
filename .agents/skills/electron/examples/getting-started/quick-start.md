@@ -86,7 +86,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 // renderer.js
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Renderer process loaded')
-  
+
   // Use exposed API from preload
   window.electronAPI.openFile().then(result => {
     console.log('File selected:', result)

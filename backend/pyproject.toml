@@ -26,6 +26,9 @@ dev = [
     "pytest>=9.0.2",
     "ruff>=0.14.0",
     "mypy>=1.18.0",
+    "bandit[toml]>=1.7.10",
+    "pre-commit>=4.0.0",
+    "types-pyyaml>=6.0.12",
 ]
 
 # --- ruff: linter + formatter ----------------------------------------------
@@ -41,18 +44,33 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# Selected rule families:
-#   E, W   = pycodestyle errors/warnings
-#   F      = pyflakes (unused imports, undefined names)
-#   I      = isort (import sorting)
-#   B      = flake8-bugbear (real bugs: mutable default args, etc.)
-#   UP     = pyupgrade (modernize syntax for target Python)
-#   SIM    = flake8-simplify
-#   ASYNC  = flake8-async (async/await footguns)
-#   PL     = pylint (subset)
-#   RUF    = ruff-specific
-#   D      = pydocstyle (docstrings on public API — matches project rule)
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "ASYNC", "PL", "RUF", "D"]
+# Strict ruleset. Each family adds a class of catch:
+#   E, W    = pycodestyle errors/warnings
+#   F       = pyflakes (unused imports, undefined names)
+#   I       = isort (import sorting)
+#   N       = pep8-naming (consistent naming conventions)
+#   B       = flake8-bugbear (real bugs: mutable defaults, etc.)
+#   A       = flake8-builtins (don't shadow builtins)
+#   C4      = flake8-comprehensions (idiomatic comprehensions)
+#   C90     = mccabe complexity (function complexity cap)
+#   UP      = pyupgrade (modernize syntax for target Python)
+#   SIM     = flake8-simplify (collapse redundant patterns)
+#   ASYNC   = flake8-async (async/await footguns)
+#   PERF    = perflint (avoid known-slow patterns)
+#   PL      = pylint (subset)
+#   PT      = flake8-pytest-style (idiomatic pytest)
+#   PTH     = flake8-use-pathlib (prefer pathlib over os.path)
+#   RET     = flake8-return (clean control flow on returns)
+#   RUF     = ruff-specific (latest catches)
+#   S       = flake8-bandit (security: hardcoded secrets, weak crypto, eval, etc.)
+#   T20     = flake8-print (no stray print statements)
+#   TID     = flake8-tidy-imports (banned-imports + relative-import policy)
+#   TRY     = tryceratops (exception-handling antipatterns)
+#   D       = pydocstyle (docstrings on public API — matches project rule)
+select = [
+    "E", "W", "F", "I", "N", "B", "A", "C4", "C90", "UP", "SIM", "ASYNC",
+    "PERF", "PL", "PT", "PTH", "RET", "RUF", "S", "T20", "TID", "TRY", "D",
+]
 ignore = [
     "E501",     # line length — handled by formatter, soft cap only
     "D100",     # missing module docstring (too noisy on small modules)
@@ -62,12 +80,40 @@ ignore = [
     "D213",     # incompatible with D212 (multi-line summary on first line)
     "PLR0913",  # too many args — FastAPI handlers regularly need many deps
     "B008",     # function call in default arg — required for FastAPI Depends()
+    "TRY003",   # long exception messages — over-prescriptive
+    "TRY300",   # else-after-try — clearer to keep return inline for short paths
+    "TRY301",   # raise within try — sometimes clearer for explicit re-raise
+    "RET504",   # unnecessary assignment before return — assignment often aids readability
+    "S101",     # assert in tests is fine (per-file ignore covers tests; this catches asserts in app code only)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["D", "PLR2004"]      # tests don't need docstrings or named magic numbers
-"tests/conftest.py" = ["D", "E402"] # sys.path manipulation must come before imports
-"alembic/**" = ["D", "E", "I"]     # migrations are auto-generated
+"tests/**" = [
+    "D",       # tests don't need docstrings on every fn
+    "PLR2004", # magic numbers in test data are fine
+    "S101",    # assert is the whole point of pytest
+    "S105",    # hardcoded password strings (test fixtures)
+    "S106",    # hardcoded password (function arg)
+    "S108",    # /tmp paths in test scenarios are fine
+    "PT018",   # compound asserts in tests are fine if they're checking related state
+]
+"tests/conftest.py" = ["D", "E402"]   # sys.path manipulation must come before imports
+"alembic/**" = ["D", "E", "I", "S"]   # migrations are auto-generated
+"app/cli/**" = [
+    "T20",   # CLI scripts legitimately use print
+    "S603",  # subprocess calls in CLI are operator-driven, not user-input
+    "S607",  # `git` and similar trusted binaries on PATH are intentional
+]
+
+[tool.ruff.lint.mccabe]
+# Cap cyclomatic complexity. Functions above this should be split.
+max-complexity = 12
+
+[tool.ruff.lint.flake8-tidy-imports]
+# "parents" allows same-package relative imports (from .base import X) but
+# bans parent-traversing ones (from ..foo). The all-relative ban produced
+# 12 violations in legitimate intra-package imports.
+ban-relative-imports = "parents"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -108,3 +154,19 @@ disallow_untyped_defs = false  # test fixtures are fine without explicit types
 # Third-party packages without complete type stubs.
 module = ["sqlalchemy_utils.*", "agno.*", "mcp.*"]
 ignore_missing_imports = true
+
+# --- bandit: security scanner ------------------------------------------------
+# Catches hardcoded secrets, weak crypto, shell injection, unsafe deserialization.
+# Ruff already covers most flake8-bandit (S) rules during lint, but bandit's
+# AST-based checks find a few extras that ruff doesn't yet implement.
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    "alembic/versions",
+    "workspaces",
+    "app/cli",  # CLI subprocess calls are operator-driven; ruff S-rules with per-file ignore handles them
+]
+skips = [
+    "B101",  # assert_used — covered by ruff S101 with its own per-file ignore policy
+]

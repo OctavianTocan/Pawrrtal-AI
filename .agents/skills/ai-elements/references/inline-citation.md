@@ -160,14 +160,14 @@ export async function POST(req: Request) {
   const result = streamObject({
     model: "openai/gpt-4o",
     schema: citationSchema,
-    prompt: `Generate a well-researched paragraph about ${prompt} with proper citations. 
-    
+    prompt: `Generate a well-researched paragraph about ${prompt} with proper citations.
+
     Include:
     - A comprehensive paragraph with inline citations marked as [1], [2], etc.
     - 2-3 citations with realistic source information
     - Each citation should have a title, URL, and optional description/quote
     - Make the content informative and the sources credible
-    
+
     Format citations as numbered references within the text.`,
   });
 
