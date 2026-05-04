@@ -4,6 +4,7 @@ import { CheckIcon, CopyIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -46,21 +47,25 @@ export function UserMessage({ content, isCopied, onCopy }: UserMessageProps): Re
 						'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
 					)}
 				>
-					<Button
-						aria-label={isCopied ? 'Copied' : 'Copy message'}
-						className="size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-						onClick={onCopy}
-						size="sm"
-						title={isCopied ? 'Copied' : 'Copy'}
-						type="button"
-						variant="ghost"
-					>
-						{isCopied ? (
-							<CheckIcon className="size-3.5" />
-						) : (
-							<CopyIcon className="size-3.5" />
-						)}
-					</Button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								aria-label={isCopied ? 'Copied' : 'Copy message'}
+								className="size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+								onClick={onCopy}
+								size="sm"
+								type="button"
+								variant="ghost"
+							>
+								{isCopied ? (
+									<CheckIcon className="size-3.5" />
+								) : (
+									<CopyIcon className="size-3.5" />
+								)}
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>{isCopied ? 'Copied' : 'Copy'}</TooltipContent>
+					</Tooltip>
 				</div>
 			) : null}
 		</div>

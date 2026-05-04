@@ -3,6 +3,7 @@
 import { CheckIcon, CopyIcon, RefreshCwIcon, Share2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -46,50 +47,64 @@ export function ReplyActionsRow({
 	return (
 		<div className={cn('mt-1 flex items-center gap-0.5', className)}>
 			{onCopy ? (
-				<Button
-					aria-label={isCopied ? 'Copied' : 'Copy message'}
-					className={buttonClass}
-					onClick={onCopy}
-					size="sm"
-					title={isCopied ? 'Copied' : 'Copy'}
-					type="button"
-					variant="ghost"
-				>
-					{isCopied ? (
-						<CheckIcon className="size-3.5" />
-					) : (
-						<CopyIcon className="size-3.5" />
-					)}
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							aria-label={isCopied ? 'Copied' : 'Copy message'}
+							className={buttonClass}
+							onClick={onCopy}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							{isCopied ? (
+								<CheckIcon className="size-3.5" />
+							) : (
+								<CopyIcon className="size-3.5" />
+							)}
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>{isCopied ? 'Copied' : 'Copy'}</TooltipContent>
+				</Tooltip>
 			) : null}
 			{onRegenerate ? (
-				<Button
-					aria-label="Regenerate response"
-					className={buttonClass}
-					disabled={isRegenerating}
-					onClick={onRegenerate}
-					size="sm"
-					title="Regenerate"
-					type="button"
-					variant="ghost"
-				>
-					<RefreshCwIcon
-						className={cn('size-3.5', isRegenerating ? 'animate-spin' : null)}
-					/>
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							aria-label="Regenerate response"
+							className={buttonClass}
+							disabled={isRegenerating}
+							onClick={onRegenerate}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							<RefreshCwIcon
+								className={cn('size-3.5', isRegenerating ? 'animate-spin' : null)}
+							/>
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>
+						{isRegenerating ? 'Regenerating' : 'Regenerate'}
+					</TooltipContent>
+				</Tooltip>
 			) : null}
 			{onShare ? (
-				<Button
-					aria-label="Share message"
-					className={buttonClass}
-					onClick={onShare}
-					size="sm"
-					title="Share"
-					type="button"
-					variant="ghost"
-				>
-					<Share2Icon className="size-3.5" />
-				</Button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<Button
+							aria-label="Share message"
+							className={buttonClass}
+							onClick={onShare}
+							size="sm"
+							type="button"
+							variant="ghost"
+						>
+							<Share2Icon className="size-3.5" />
+						</Button>
+					</TooltipTrigger>
+					<TooltipContent>Share</TooltipContent>
+				</Tooltip>
 			) : null}
 		</div>
 	);
