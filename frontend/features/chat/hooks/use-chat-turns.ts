@@ -56,7 +56,11 @@ export function useChatTurns({
 	const [isLoading, setIsLoading] = useState(false);
 	const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 	const isSendingRef = useRef(false);
-	const hasSentRef = useRef(false);
+	// Seed from initialHistory so existing conversations (loaded via
+	// /c/[uuid] with hydrated messages) don't re-fire onFirstSend on the
+	// next user message — that fires conversation-creation and title
+	// generation, both of which would re-run on every reply otherwise.
+	const hasSentRef = useRef(initialHistory.length > 0);
 	const { copy, copiedId } = useCopyToClipboard();
 
 	/**
