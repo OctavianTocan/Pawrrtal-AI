@@ -1,6 +1,14 @@
 'use client';
 
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
+import {
+	type Dispatch,
+	type SetStateAction,
+	useCallback,
+	useDebugValue,
+	useEffect,
+	useRef,
+	useSyncExternalStore,
+} from 'react';
 
 /**
  * Options for {@link usePersistedState}.
@@ -22,14 +30,18 @@ export interface UsePersistedStateOptions<T> {
 }
 
 /**
- * `useState` backed by `window.localStorage`.
+ * `useState` backed by `window.localStorage`, hydration-safe by construction.
  *
- * **Hydration model:** the first render — both on the server and on the client —
- * always returns `defaultValue`. The persisted value is loaded inside a mount
- * effect and committed via `setValue`, which triggers a second client render.
- * This is the only safe pattern: reading `localStorage` synchronously during
- * the initializer would diverge from the SSR'd HTML and break hydration on
- * any consumer that renders the value (e.g. the model name in the composer).
+ * Built on `useSyncExternalStore`: the `getServerSnapshot` callback returns
+ * `defaultValue`, so SSR and the first client render always emit identical
+ * markup. The real persisted value is read on the second client render via
+ * `getSnapshot`, after React has finished hydrating. This avoids the
+ * SSR-vs-CSR mismatch that a synchronous `useState` initializer reading
+ * `localStorage` would create.
+ *
+ * Cross-tab sync comes for free: the subscriber listens for `storage` events
+ * and a custom in-page event, so changes from other tabs and from another
+ * caller in this same tab both trigger a re-render in every consumer.
  *
  * Storage I/O is wrapped in try/catch because reads can throw in private
  * browsing or when storage access is blocked, and writes can throw on quota
@@ -42,52 +54,101 @@ export function usePersistedState<T>(
 ): [T, Dispatch<SetStateAction<T>>] {
 	const { storageKey, defaultValue, validate } = options;
 
-	const [value, setValue] = useState<T>(defaultValue);
-	// Don't write back to storage until after the read-on-mount has run —
-	// otherwise the first render's `defaultValue` would clobber whatever the
-	// user previously persisted.
-	const [isHydrated, setIsHydrated] = useState(false);
-
-	// Refs let the hydration effect see the *latest* defaultValue / validate
-	// without forcing those into its dep array. If callers pass new function
-	// identities every render (common for `validate`), depending on them would
-	// cause the effect to re-fire and clobber a user-set value mid-session.
+	// Refs decouple the latest defaultValue/validate from the memoized
+	// `getSnapshot`/`subscribe` identities — the snapshot fns must stay stable
+	// across renders or `useSyncExternalStore` will throw a "snapshot is not
+	// cached" warning under StrictMode.
 	const defaultValueRef = useRef(defaultValue);
 	defaultValueRef.current = defaultValue;
 	const validateRef = useRef(validate);
 	validateRef.current = validate;
 
-	// Hydrate from localStorage on mount, or whenever the storage key itself
-	// changes. The first render — server and client — always returns
-	// `defaultValue` so SSR markup matches; this effect commits the persisted
-	// value on the second client render.
-	useEffect(() => {
-		const persisted = readPersistedValue(
-			storageKey,
-			defaultValueRef.current,
-			validateRef.current
-		);
-		setValue(persisted);
-		setIsHydrated(true);
+	const subscribe = useCallback(
+		(onChange: () => void) => {
+			if (typeof window === 'undefined') {
+				// SSR has no window to listen on — nothing to unsubscribe.
+				return noop;
+			}
+
+			const handleStorage = (event: StorageEvent): void => {
+				// Filter to our key — the storage event fires on every key in the document.
+				if (event.storageArea === window.localStorage && event.key === storageKey) {
+					onChange();
+				}
+			};
+			const handleLocal = (event: Event): void => {
+				if ((event as CustomEvent<string>).detail === storageKey) onChange();
+			};
+
+			window.addEventListener('storage', handleStorage);
+			window.addEventListener(LOCAL_STORAGE_EVENT, handleLocal);
+			return () => {
+				window.removeEventListener('storage', handleStorage);
+				window.removeEventListener(LOCAL_STORAGE_EVENT, handleLocal);
+			};
+		},
+		[storageKey]
+	);
+
+	// `getSnapshot` is invariant for a given `storageKey` — the cache slot
+	// inside `useSyncExternalStore` keys on its identity, so memoising it
+	// stabilises the returned tuple.
+	const getSnapshot = useCallback((): T => {
+		return readPersistedValue(storageKey, defaultValueRef.current, validateRef.current);
 	}, [storageKey]);
 
+	// `getServerSnapshot` MUST return the same value on every call during the
+	// initial client render — return defaultValue so SSR and the first client
+	// commit produce identical HTML. The persisted value lands on the next
+	// commit, after React calls `subscribe` and `getSnapshot` for real.
+	const getServerSnapshot = useCallback((): T => defaultValueRef.current, []);
+
+	const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+	useDebugValue(value);
+
+	const setValue = useCallback<Dispatch<SetStateAction<T>>>(
+		(updater) => {
+			if (typeof window === 'undefined') return;
+			const next =
+				typeof updater === 'function'
+					? (updater as (prev: T) => T)(getSnapshot())
+					: updater;
+			writePersistedValue(storageKey, next);
+			// Notify same-tab listeners — `storage` events only fire across tabs.
+			window.dispatchEvent(new CustomEvent(LOCAL_STORAGE_EVENT, { detail: storageKey }));
+		},
+		[getSnapshot, storageKey]
+	);
+
+	// Backfill: if the user has nothing persisted yet, write the default once
+	// after mount so the next page-load reads it back instead of bouncing
+	// through `defaultValue` on every refresh. Wrapped in a guard so we don't
+	// overwrite a value that's already there.
 	useEffect(() => {
-		if (!isHydrated || typeof window === 'undefined') return;
+		if (typeof window === 'undefined') return;
 		try {
-			window.localStorage.setItem(storageKey, JSON.stringify(value));
+			if (window.localStorage.getItem(storageKey) === null) {
+				writePersistedValue(storageKey, defaultValueRef.current);
+			}
 		} catch {
-			// Storage write failed (quota exceeded, private browsing, etc.) — ignore.
+			// Private browsing or quota exhausted — silent.
 		}
-	}, [isHydrated, storageKey, value]);
+	}, [storageKey]);
 
 	return [value, setValue];
+}
+
+/** Custom event name fired on the window so same-tab callers can subscribe. */
+const LOCAL_STORAGE_EVENT = 'persisted-state:change';
+
+/** Stable no-op returned in SSR/unsubscribe slots — avoids a fresh closure per call. */
+function noop(): void {
+	// intentionally empty — see callers
 }
 
 /**
  * Read and validate a value from `localStorage`, falling back to `defaultValue`
  * when the entry is missing, unparseable, or fails the optional `validate` guard.
- *
- * Kept as a free function so the hydration effect stays a single expression.
  */
 function readPersistedValue<T>(
 	storageKey: string,
@@ -113,5 +174,15 @@ function readPersistedValue<T>(
 		return parsedValue as T;
 	} catch {
 		return defaultValue;
+	}
+}
+
+/** Persist a value to localStorage, swallowing quota / availability errors. */
+function writePersistedValue<T>(storageKey: string, value: T): void {
+	if (typeof window === 'undefined') return;
+	try {
+		window.localStorage.setItem(storageKey, JSON.stringify(value));
+	} catch {
+		// Storage write failed (quota exceeded, private browsing, etc.) — ignore.
 	}
 }
