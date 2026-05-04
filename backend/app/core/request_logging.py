@@ -39,13 +39,33 @@ def get_request_id() -> str:
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """Log every HTTP request on entry and exit with a unique request ID."""
+    """Log every HTTP request on entry and exit with a unique request ID.
+
+    Mounted via ``app.add_middleware(RequestLoggingMiddleware)`` in
+    ``main.py``. Each request produces:
+
+      * one ``REQ_IN`` line before the route handler runs, and
+      * one ``REQ_OUT`` line in the ``finally`` block (so it fires even on
+        unhandled exceptions, with ``status=500`` as the default).
+
+    The 8-char ``rid`` in both lines lets downstream log lines (e.g.
+    ``CHAT_IN``) be correlated back to the originating HTTP request.
+    """
 
     async def dispatch(
         self,
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
+        """Wrap the downstream handler with entry/exit log lines.
+
+        Args:
+            request: The incoming Starlette request.
+            call_next: The next handler in the middleware chain.
+
+        Returns:
+            The response produced by the downstream handler.
+        """
         request_id = uuid.uuid4().hex[:8]
         token = _request_id_ctx.set(request_id)
 

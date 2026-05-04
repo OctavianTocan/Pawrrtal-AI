@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-import uuid
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -24,6 +23,12 @@ _DEFAULT_MODEL = "gemini-3-flash-preview"
 
 
 def get_chat_router() -> APIRouter:
+    """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
+
+    Returns:
+        An ``APIRouter`` exposing a single streaming ``POST /`` endpoint
+        that emits Server-Sent Events from the resolved AI provider.
+    """
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
@@ -85,6 +90,13 @@ def get_chat_router() -> APIRouter:
         provider = resolve_provider(model_id)
 
         async def event_stream():
+            """Yield SSE-framed events from the provider stream.
+
+            Wraps the provider's async iterator with timing, event counting,
+            and structured ``CHAT_OUT`` / ``CHAT_ERR`` log markers so a
+            single user message produces exactly one entry/exit pair in
+            ``backend/app.log`` per request ID.
+            """
             stream_start = time.perf_counter()
             event_count = 0
             try:
