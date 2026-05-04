@@ -15,6 +15,7 @@ import {
 	useGetProjects,
 	useRenameProject,
 } from '../hooks/use-projects';
+import { CreateProjectModal } from './CreateProjectModal';
 import { ProjectRow } from './ProjectRow';
 
 /** Props for {@link ProjectsList}. */
@@ -43,11 +44,24 @@ export function ProjectsList({
 	const assignConversation = useAssignConversationToProject();
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-	const handleCreate = (): void => {
+	const openCreateModal = (): void => {
+		setIsCreateModalOpen(true);
+	};
+
+	const closeCreateModal = (): void => {
+		setIsCreateModalOpen(false);
+	};
+
+	const handleCreateSubmit = (name: string): void => {
 		createProject.mutate(
-			{ name: 'New Project' },
+			{ name },
 			{
+				onSuccess: () => {
+					closeCreateModal();
+					toast.success(`Project "${name}" created`);
+				},
 				onError: () => toast.error('Could not create project'),
 			}
 		);
@@ -104,7 +118,7 @@ export function ProjectsList({
 						'ml-auto cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground',
 						'group-hover/projects-header:opacity-100 focus-visible:opacity-100'
 					)}
-					onClick={handleCreate}
+					onClick={openCreateModal}
 					type="button"
 				>
 					<FolderPlus className="size-4" />
@@ -121,7 +135,7 @@ export function ProjectsList({
 					{!isLoading && list.length === 0 ? (
 						<button
 							className="flex cursor-pointer items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
-							onClick={handleCreate}
+							onClick={openCreateModal}
 							type="button"
 						>
 							<FolderPlus className="size-4" />
@@ -143,6 +157,13 @@ export function ProjectsList({
 					))}
 				</div>
 			)}
+
+			<CreateProjectModal
+				isPending={createProject.isPending}
+				onDismiss={closeCreateModal}
+				onSubmit={handleCreateSubmit}
+				open={isCreateModalOpen}
+			/>
 
 			<RenameProjectModal
 				isPending={renameProject.isPending}

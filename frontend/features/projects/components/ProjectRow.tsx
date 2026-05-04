@@ -27,9 +27,15 @@ export interface ProjectRowProps {
  * Single project row in the sidebar's Projects list.
  *
  * Acts as both a navigation target (click → open project filter) and a
- * drop target for chat rows being dragged in. Highlights with an accent
- * outline + tinted background while a chat is hovering over it so the
- * user sees the drop will land here.
+ * drop target for chat rows being dragged in. Per DESIGN.md → Interactive
+ * Affordances → Hit Targets, the **whole row** is the drop target with
+ * `min-h-9` so the drop zone matches what the user perceives. While a
+ * valid conversation drag hovers, the row paints `bg-foreground-10` plus
+ * an accent ring and switches the cursor to `copy` so the drop affordance
+ * is unambiguous.
+ *
+ * The rename pencil sits inside the row but stops drag/click propagation
+ * so dragging onto the pencil still lands as a project assignment.
  */
 export function ProjectRow({
 	id,
@@ -41,28 +47,47 @@ export function ProjectRow({
 }: ProjectRowProps): React.JSX.Element {
 	const [isDropTarget, setIsDropTarget] = useState(false);
 
-	const acceptsConversation = (event: React.DragEvent<HTMLDivElement>): boolean => {
+	const acceptsConversation = (event: React.DragEvent<HTMLElement>): boolean => {
 		return Array.from(event.dataTransfer.types).includes(CONVERSATION_DRAG_MIME);
 	};
 
-	const handleDragEnter = (event: React.DragEvent<HTMLDivElement>): void => {
+	const handleDragEnter = (event: React.DragEvent<HTMLElement>): void => {
 		if (!acceptsConversation(event)) return;
 		event.preventDefault();
 		setIsDropTarget(true);
 	};
 
-	const handleDragOver = (event: React.DragEvent<HTMLDivElement>): void => {
+	const handleDragOver = (event: React.DragEvent<HTMLElement>): void => {
 		if (!acceptsConversation(event)) return;
+		// Spec: must call preventDefault on every dragover to mark the
+		// element as a valid drop target. Without it the drop event never
+		// fires even if the dataTransfer payload matches.
 		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
+		event.dataTransfer.dropEffect = 'copy';
+		// Re-assert during drag-over so quick re-entries (cursor briefly
+		// over a child element) restore the highlight before drop.
+		if (!isDropTarget) setIsDropTarget(true);
 	};
 
-	const handleDragLeave = (event: React.DragEvent<HTMLDivElement>): void => {
+	const handleDragLeave = (event: React.DragEvent<HTMLElement>): void => {
 		if (!acceptsConversation(event)) return;
+		// Only clear when leaving the row itself, not when crossing into
+		// nested children — descendants of the row's wrapper still belong
+		// to the same hit area, so a child→parent boundary crossing must
+		// not reset the highlight. Compare against currentTarget to ignore
+		// child-internal moves.
+		const next = event.relatedTarget;
+		if (
+			next instanceof Node &&
+			event.currentTarget instanceof Node &&
+			event.currentTarget.contains(next)
+		) {
+			return;
+		}
 		setIsDropTarget(false);
 	};
 
-	const handleDrop = (event: React.DragEvent<HTMLDivElement>): void => {
+	const handleDrop = (event: React.DragEvent<HTMLElement>): void => {
 		if (!acceptsConversation(event)) return;
 		event.preventDefault();
 		setIsDropTarget(false);
@@ -73,44 +98,51 @@ export function ProjectRow({
 	};
 
 	return (
-		<div
-			className={cn(
-				'group/project-row relative flex w-full items-center rounded-[8px] transition-colors',
-				isSelected && 'bg-foreground/[0.07]',
-				isDropTarget && 'bg-accent/15 ring-1 ring-accent ring-inset'
-			)}
-			data-project-id={id}
-			onDragEnter={handleDragEnter}
-			onDragLeave={handleDragLeave}
-			onDragOver={handleDragOver}
-			onDrop={handleDrop}
-		>
+		// Whole row is one drop target: the outer wrapper holds the drop
+		// handlers + the visual ring, the inner button is the click
+		// affordance with cursor-pointer/copy. The rename pencil is
+		// absolutely positioned inside, marked as transparent to drag
+		// events so the row beneath still receives them.
+		<div className="group/project-row relative" data-project-id={id}>
 			<button
 				aria-current={isSelected ? 'page' : undefined}
 				className={cn(
-					'flex min-w-0 flex-1 items-center gap-2 rounded-[8px] px-2 py-1 text-left text-[13px]',
-					'cursor-pointer text-foreground/85 hover:bg-foreground/[0.05] hover:text-foreground',
-					isSelected && 'text-foreground hover:bg-transparent'
+					'flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-2 pr-9 text-left text-sm transition-colors',
+					'text-foreground/85 hover:bg-foreground/[0.05] hover:text-foreground',
+					isSelected && 'bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.07]',
+					isDropTarget &&
+						'cursor-copy bg-foreground/[0.10] text-foreground ring-1 ring-accent ring-inset hover:bg-foreground/[0.10]'
 				)}
 				onClick={onClick}
+				onDragEnter={handleDragEnter}
+				onDragLeave={handleDragLeave}
+				onDragOver={handleDragOver}
+				onDrop={handleDrop}
 				type="button"
 			>
 				<Folder
 					aria-hidden="true"
-					className="size-3.5 shrink-0 text-muted-foreground group-hover/project-row:text-foreground"
+					className="size-4 shrink-0 text-muted-foreground group-hover/project-row:text-foreground"
 				/>
 				<span className="min-w-0 flex-1 truncate">{name}</span>
 			</button>
 			<button
 				aria-label={`Rename ${name}`}
-				className="absolute right-1 rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground group-hover/project-row:opacity-100 focus-visible:opacity-100"
+				className="absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground group-hover/project-row:opacity-100 focus-visible:opacity-100"
 				onClick={(event) => {
 					event.stopPropagation();
 					onRename();
 				}}
+				// Pencil must not swallow drag events — pass them through to
+				// the row so the user can drop a chat anywhere along the row,
+				// including over the pencil icon. Calling preventDefault on
+				// dragOver tells the browser the underlying row is the
+				// effective drop target.
+				onDragEnter={(event) => event.preventDefault()}
+				onDragOver={(event) => event.preventDefault()}
 				type="button"
 			>
-				<Pencil className="size-3" />
+				<Pencil className="size-3.5" />
 			</button>
 		</div>
 	);

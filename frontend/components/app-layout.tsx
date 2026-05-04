@@ -444,17 +444,27 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           so the sidebar background reads as full-height behind the header. */}
 				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
 					{/*
-					 * The translate-x trick gives the sidebar a "pushed off the
-					 * left edge" feel during collapse instead of the previous
-					 * "chat panel paints over it" look. While the parent
-					 * react-resizable-panel shrinks its flex-grow, the inner
-					 * content also slides leftward by its own width — matching
-					 * the same 200ms duration as the panel transition so the
-					 * two animations stay in lockstep.
+					 * Inner panel content keeps its full min-w-[240px] width
+					 * and stays anchored to the LEFT edge of the parent
+					 * react-resizable-panel. As the parent shrinks during a
+					 * collapse, content clips from the RIGHT (the side closest
+					 * to the chat panel). This matches the "the whole panel
+					 * with its full size moves left and disappears off-screen"
+					 * behavior described in DESIGN.md → Motion → "Sidebar Open
+					 * / Close": titles stay put for the duration of the slide
+					 * and only the right-side metadata gets clipped first.
+					 *
+					 * Pointer events are disabled while collapsed so the
+					 * (clipped to 0px) panel can't capture stray clicks. We
+					 * intentionally do NOT translate-x on this inner div —
+					 * a translate makes the LEFT-aligned content slide off-
+					 * screen first, leaving right-aligned metadata visible
+					 * during the slide. That created the "chat panel
+					 * approaches the row titles" creeping effect.
 					 */}
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-transform duration-200 ease-out data-[state=collapsed]:-translate-x-full data-[state=collapsed]:pointer-events-none data-[state=expanded]:translate-x-0 data-[state=expanded]:pointer-events-auto"
+						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
 						<SidebarHeader className="px-2 pb-2 shrink-0">
 							<NewSessionButton />

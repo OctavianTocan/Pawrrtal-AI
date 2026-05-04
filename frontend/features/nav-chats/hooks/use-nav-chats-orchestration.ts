@@ -318,11 +318,14 @@ export function useNavChatsOrchestration(input: {
 		(conversationId: string, index: number, href: string): void => {
 			const modifier = pendingModifier.current;
 			pendingModifier.current = 'none';
-			if (modifier === 'meta') {
-				return;
-			}
-			if (modifier === 'shift') {
-				navigateTo(href);
+			// Cmd/Ctrl-click and Shift-click are pure multi-select gestures —
+			// neither one navigates. Navigating on Shift-click previously
+			// caused the URL to change, which fired `usePathnameSelectionSync`
+			// and collapsed the freshly-extended range back to a single row
+			// (the deselect-after-shift-click bug). Match Finder/Linear: the
+			// modifier extends the selection, plain click is the only thing
+			// that changes the active conversation.
+			if (modifier === 'meta' || modifier === 'shift') {
 				return;
 			}
 			setSelection(singleSelect(conversationId, index));

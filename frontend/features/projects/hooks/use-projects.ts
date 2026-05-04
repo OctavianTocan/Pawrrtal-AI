@@ -142,9 +142,11 @@ export function useAssignConversationToProject(): UseMutationResult<
 			});
 		},
 		onSuccess: () => {
-			// The conversations list reflects which project each row sits in,
-			// so invalidate to force a re-fetch + re-group.
+			// Invalidate both the conversations list (its rows carry
+			// `project_id`, used by any future per-project view) and the
+			// projects list (counts/membership shown alongside each row).
 			queryClient.invalidateQueries({ queryKey: ['conversations'] });
+			queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY });
 		},
 	});
 }
