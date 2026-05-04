@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.providers import resolve_provider
 from app.crud.conversation import get_conversation_service, update_conversation_model_service
+from app.crud.message import create_message
 from app.db import User, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
@@ -61,18 +62,42 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_provider(model_id)
 
+        # Persist the user message before streaming begins
+        await create_message(
+            session,
+            conversation_id=request.conversation_id,
+            user_id=user.id,
+            role="user",
+            content=request.question,
+        )
+        await session.commit()
+
         async def event_stream():
+            full_response_parts: list[str] = []
             try:
                 async for event in provider.stream(
                     request.question,
                     request.conversation_id,
                     user.id,
                 ):
+                    # Collect assistant text chunks for persistence
+                    if isinstance(event, dict) and event.get("type") == "delta":
+                        full_response_parts.append(event.get("content", ""))
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as exc:
                 error_event = {"type": "error", "content": str(exc)}
                 yield f"data: {json.dumps(error_event)}\n\n"
             finally:
+                # Persist assistant message after stream completes
+                if full_response_parts:
+                    await create_message(
+                        session,
+                        conversation_id=request.conversation_id,
+                        user_id=None,
+                        role="assistant",
+                        content="".join(full_response_parts),
+                    )
+                    await session.commit()
                 yield "data: [DONE]\n\n"
 
         return StreamingResponse(
