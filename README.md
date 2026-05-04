@@ -1,11 +1,14 @@
 # AI Nexus
 
 <p align="center">
-  <video src="docs/assets/header.mp4" controls muted playsinline width="100%" autoplay loop>
-    Your browser does not support the video tag. Watch the demo here:
-    <a href="docs/assets/header.mp4">docs/assets/header.mp4</a>
-  </video>
+  <a href="docs/assets/header.mp4" title="Click to play the demo video">
+    <img src="docs/assets/header-poster.jpg" alt="AI Nexus demo — click to play" width="100%" />
+  </a>
 </p>
+
+> ▶︎ Click the image above to play the demo video on GitHub. (GitHub strips
+> `<video>` tags from rendered READMEs for security, so we link the file
+> directly — clicking opens GitHub's built-in video player.)
 
 [![Formatted with Biome](https://img.shields.io/badge/Formatted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev/)
 [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
