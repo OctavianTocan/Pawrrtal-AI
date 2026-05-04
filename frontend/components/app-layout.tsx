@@ -449,7 +449,15 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				className="relative z-10 h-full min-w-0"
 				style={{ overflow: 'visible' }}
 			>
-				<div className="h-full min-w-0 pt-10">
+				{/*
+				 * pr-2 + pb-2 leave breathing room so the floating chat
+				 * panel's right and bottom shadow layers actually paint —
+				 * without this, the panel hugs the viewport edges and the
+				 * shadow gets clipped against them. The left edge still
+				 * butts up against the sidebar so the leftward shadow
+				 * casts onto it.
+				 */}
+				<div className="h-full min-w-0 pt-10 pr-2 pb-2">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</ResizablePanel>
