@@ -93,6 +93,9 @@ class ConversationResponse(BaseModel):
     is_unread: bool = False
     status: str | None = None
     model_id: str | None = None
+    # Always serialized as a list (never null) so the frontend never has to
+    # narrow with `?? []` before iterating.
+    labels: list[str] = []
 
 
 class ConversationUpdate(BaseModel):
@@ -104,6 +107,10 @@ class ConversationUpdate(BaseModel):
     is_unread: bool | None = None
     status: str | None = None
     model_id: str | None = None  # optional — only set when changing model
+    # Optional in the PATCH body — when provided, fully replaces the row's
+    # label set. Sentinel `None` means "leave labels unchanged" (matches the
+    # other partial-update fields above).
+    labels: list[str] | None = None
 
 
 # --- Chat schemas -------------------------------------------------------------

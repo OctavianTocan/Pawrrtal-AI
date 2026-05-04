@@ -56,6 +56,10 @@ export interface NavChatsViewProps {
 	onMarkUnread: (conversationId: string) => void;
 	/** Triggers LLM title regeneration for a conversation. */
 	onRegenerateTitle: (conversationId: string) => void;
+	/** Toggles a single label ID on/off for a conversation. */
+	onToggleLabel: (conversationId: string, labelId: string) => void;
+	/** Triggers a Markdown download for a conversation. */
+	onExportMarkdown: (conversationId: string) => void;
 	/** Ref attached to the navigator (listbox) root for focus-zone registration. */
 	navigatorRef: RefObject<HTMLDivElement | null>;
 	/** Per-conversation search results from content matching. */
@@ -179,6 +183,8 @@ function ConversationRow({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 }: {
 	conversation: Conversation;
 	index: number;
@@ -208,6 +214,8 @@ function ConversationRow({
 	onSetStatus: (conversationId: string, status: ConversationStatus) => void;
 	onMarkUnread: (conversationId: string) => void;
 	onRegenerateTitle: (conversationId: string) => void;
+	onToggleLabel: (conversationId: string, labelId: string) => void;
+	onExportMarkdown: (conversationId: string) => void;
 }): React.JSX.Element {
 	const href = `/c/${conversation.id}`;
 	const isSelected = multiSelectedIds.has(conversation.id);
@@ -270,6 +278,7 @@ function ConversationRow({
 			isFlagged={conversation.is_flagged}
 			isUnread={conversation.is_unread}
 			status={conversation.status}
+			appliedLabelIds={labels.filter((label): label is string => typeof label === 'string')}
 			onNavigate={onNavigate}
 			onRename={onRename}
 			onDelete={onDelete}
@@ -278,6 +287,8 @@ function ConversationRow({
 			onSetStatus={onSetStatus}
 			onMarkUnread={onMarkUnread}
 			onRegenerateTitle={onRegenerateTitle}
+			onToggleLabel={onToggleLabel}
+			onExportMarkdown={onExportMarkdown}
 		/>
 	);
 }
@@ -335,6 +346,8 @@ function NavChatsContent({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 	onConversationClick,
 	onConversationMouseDown,
 	onConversationKeyDown,
@@ -363,6 +376,8 @@ function NavChatsContent({
 	| 'onSetStatus'
 	| 'onMarkUnread'
 	| 'onRegenerateTitle'
+	| 'onToggleLabel'
+	| 'onExportMarkdown'
 	| 'onConversationClick'
 	| 'onConversationMouseDown'
 	| 'onConversationKeyDown'
@@ -462,6 +477,8 @@ function NavChatsContent({
 											onSetStatus={onSetStatus}
 											onMarkUnread={onMarkUnread}
 											onRegenerateTitle={onRegenerateTitle}
+											onToggleLabel={onToggleLabel}
+											onExportMarkdown={onExportMarkdown}
 										/>
 									))}
 						</Fragment>
@@ -498,6 +515,8 @@ export function NavChatsView({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 	navigatorRef,
 	contentSearchResults,
 	activeChatMatchInfo,
@@ -541,6 +560,8 @@ export function NavChatsView({
 				onSetStatus={onSetStatus}
 				onMarkUnread={onMarkUnread}
 				onRegenerateTitle={onRegenerateTitle}
+				onToggleLabel={onToggleLabel}
+				onExportMarkdown={onExportMarkdown}
 				onConversationClick={onConversationClick}
 				onConversationMouseDown={onConversationMouseDown}
 				onConversationKeyDown={onConversationKeyDown}

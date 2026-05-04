@@ -93,8 +93,77 @@ function usePathnameSelectionSync(
 	}, [pathConversationId, flatOrderIds, setSelection]);
 }
 
+/** Returns true if the event is a plain keypress (no Cmd/Ctrl/Alt held). */
+function isPlainKeyPress(event: ReactKeyboardEvent): boolean {
+	return !event.metaKey && !event.ctrlKey && !event.altKey;
+}
+
 /**
- * @returns Keyboard handler for roving list navigation, Tab zone escape, and Home/End.
+ * @returns Whether a Tab/Shift-Tab event was handled as a focus-zone escape.
+ */
+function tryHandleZoneEscape(event: ReactKeyboardEvent, focus: OptionalSidebarFocus): boolean {
+	if (event.key !== 'Tab') return false;
+	if (event.shiftKey) {
+		focus?.focusPreviousZone();
+	} else {
+		focus?.focusNextZone();
+	}
+	event.preventDefault();
+	return true;
+}
+
+/**
+ * @returns Whether the keypress was an action shortcut (F2/E/Backspace) and
+ *          was handled. Action shortcuts fire only on bare keys to avoid
+ *          fighting with browser shortcuts like Cmd-E.
+ */
+function tryHandleActionShortcut(
+	event: ReactKeyboardEvent,
+	conversationId: string,
+	handlers: {
+		onRenameShortcut: (id: string) => void;
+		onArchiveShortcut: (id: string) => void;
+		onDeleteShortcut: (id: string) => void;
+	}
+): boolean {
+	if (!isPlainKeyPress(event)) return false;
+	if (event.key === 'F2') {
+		event.preventDefault();
+		handlers.onRenameShortcut(conversationId);
+		return true;
+	}
+	if (event.key === 'e' || event.key === 'E') {
+		event.preventDefault();
+		handlers.onArchiveShortcut(conversationId);
+		return true;
+	}
+	if (event.key === 'Backspace' || event.key === 'Delete') {
+		event.preventDefault();
+		handlers.onDeleteShortcut(conversationId);
+		return true;
+	}
+	return false;
+}
+
+/** Resolves the next index for a roving keypress, or `null` if not applicable. */
+function getNavTargetIndex(
+	event: ReactKeyboardEvent,
+	currentIndex: number,
+	listLength: number
+): number | null {
+	if (event.key === 'Home') return 0;
+	if (event.key === 'End') return listLength - 1;
+	if (event.key === 'ArrowUp') return currentIndex - 1;
+	if (event.key === 'ArrowDown') return currentIndex + 1;
+	return null;
+}
+
+/**
+ * @returns Keyboard handler for roving list navigation, Tab zone escape,
+ *          Home/End, and the F2 / E / Backspace action shortcuts.
+ *
+ * Internally split into small `tryHandle*` helpers so the cognitive
+ * complexity of the dispatch loop stays under the project's lint budget.
  */
 function createNavChatsListKeydownHandler(options: {
 	flatOrderIds: string[];
@@ -102,60 +171,43 @@ function createNavChatsListKeydownHandler(options: {
 	setSelection: Dispatch<SetStateAction<MultiSelectState>>;
 	conversationElements: MutableRefObject<Map<string, HTMLDivElement>>;
 	focus: OptionalSidebarFocus;
-}): (event: ReactKeyboardEvent, _conversation: Conversation, index: number) => void {
-	const { flatOrderIds, navigateTo, setSelection, conversationElements, focus } = options;
-	return (event, _conversation, index) => {
-		if (event.key === 'Tab' && !event.shiftKey) {
-			focus?.focusNextZone();
-			event.preventDefault();
-			return;
-		}
-		if (event.key === 'Tab' && event.shiftKey) {
-			focus?.focusPreviousZone();
-			event.preventDefault();
-			return;
-		}
-
+	onRenameShortcut: (conversationId: string) => void;
+	onArchiveShortcut: (conversationId: string) => void;
+	onDeleteShortcut: (conversationId: string) => void;
+}): (event: ReactKeyboardEvent, conversation: Conversation, index: number) => void {
+	const {
+		flatOrderIds,
+		navigateTo,
+		setSelection,
+		conversationElements,
+		focus,
+		onRenameShortcut,
+		onArchiveShortcut,
+		onDeleteShortcut,
+	} = options;
+	return (event, conversation, index) => {
+		if (tryHandleZoneEscape(event, focus)) return;
 		if (
-			event.key !== 'ArrowUp' &&
-			event.key !== 'ArrowDown' &&
-			event.key !== 'Home' &&
-			event.key !== 'End'
+			tryHandleActionShortcut(event, conversation.id, {
+				onRenameShortcut,
+				onArchiveShortcut,
+				onDeleteShortcut,
+			})
 		) {
 			return;
 		}
-		if (flatOrderIds.length === 0) {
-			return;
-		}
 
+		const targetIndex = getNavTargetIndex(event, index, flatOrderIds.length);
+		if (targetIndex === null || flatOrderIds.length === 0) return;
 		event.preventDefault();
-		const currentIndex = index;
 
-		const moveTo = (nextIndex: number): void => {
-			const safeIndex = Math.max(0, Math.min(flatOrderIds.length - 1, nextIndex));
-			const id = flatOrderIds[safeIndex];
-			if (!id) {
-				return;
-			}
-			setSelection(singleSelect(id, safeIndex));
-			navigateTo(`/c/${id}`);
-			const element = conversationElements.current.get(id);
-			queueMicrotask(() => element?.focus());
-		};
-
-		if (event.key === 'Home') {
-			moveTo(0);
-			return;
-		}
-		if (event.key === 'End') {
-			moveTo(flatOrderIds.length - 1);
-			return;
-		}
-		if (event.key === 'ArrowUp') {
-			moveTo(currentIndex - 1);
-			return;
-		}
-		moveTo(currentIndex + 1);
+		const safeIndex = Math.max(0, Math.min(flatOrderIds.length - 1, targetIndex));
+		const id = flatOrderIds[safeIndex];
+		if (!id) return;
+		setSelection(singleSelect(id, safeIndex));
+		navigateTo(`/c/${id}`);
+		const element = conversationElements.current.get(id);
+		queueMicrotask(() => element?.focus());
 	};
 }
 
@@ -174,6 +226,12 @@ export function useNavChatsOrchestration(input: {
 	collapsedGroups: Set<string>;
 	/** Route navigation and mobile sidebar close (from `useConversationActions`). */
 	navigateTo: (href: string) => void;
+	/** Opens the rename modal for a conversation — fires on F2 from the keyboard. */
+	onRenameShortcut: (conversationId: string) => void;
+	/** Toggles archive on a conversation — fires on E from the keyboard. */
+	onArchiveShortcut: (conversationId: string) => void;
+	/** Opens the delete confirmation — fires on Backspace/Delete from the keyboard. */
+	onDeleteShortcut: (conversationId: string) => void;
 }): Pick<
 	NavChatsViewProps,
 	| 'navigatorRef'
@@ -188,7 +246,16 @@ export function useNavChatsOrchestration(input: {
 	| 'onNavigatorMouseDown'
 	| 'isSearchActive'
 > {
-	const { conversations, searchQuery, filteredGroups, collapsedGroups, navigateTo } = input;
+	const {
+		conversations,
+		searchQuery,
+		filteredGroups,
+		collapsedGroups,
+		navigateTo,
+		onRenameShortcut,
+		onArchiveShortcut,
+		onDeleteShortcut,
+	} = input;
 	const conversationList = conversations ?? [];
 	const pathname = usePathname();
 	const pathConversationId = getConversationIdFromPathname(pathname);
@@ -272,8 +339,18 @@ export function useNavChatsOrchestration(input: {
 				setSelection,
 				conversationElements,
 				focus: sidebarFocus,
+				onRenameShortcut,
+				onArchiveShortcut,
+				onDeleteShortcut,
 			}),
-		[flatOrderIds, navigateTo, sidebarFocus]
+		[
+			flatOrderIds,
+			navigateTo,
+			sidebarFocus,
+			onRenameShortcut,
+			onArchiveShortcut,
+			onDeleteShortcut,
+		]
 	);
 
 	return {

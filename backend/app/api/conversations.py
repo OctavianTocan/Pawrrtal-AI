@@ -128,6 +128,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
                 is_unread=conversation.is_unread,
                 status=conversation.status,
                 model_id=conversation.model_id,
+                labels=list(conversation.labels or []),
             )
         return None
 
@@ -196,6 +197,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
             is_unread=conversation.is_unread,
             status=conversation.status,
             model_id=conversation.model_id,
+            labels=list(conversation.labels or []),
         )
 
     @router.delete("/{conversation_id}", status_code=204)
@@ -230,6 +232,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
                 is_unread=conversation.is_unread,
                 status=conversation.status,
                 model_id=conversation.model_id,
+                labels=list(conversation.labels or []),
             )
             for conversation in conversations
         ]
@@ -267,6 +270,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
             is_unread=new_conversation.is_unread,
             status=new_conversation.status,
             model_id=new_conversation.model_id,
+            labels=list(new_conversation.labels or []),
         )
 
     return router

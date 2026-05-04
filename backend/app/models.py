@@ -48,6 +48,12 @@ class Conversation(Base):
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
     model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # JSON array of label IDs (e.g. ["bug", "feature"]). Validated against
+    # the frontend pre-defined CHAT_LABELS list — the backend stores raw
+    # IDs without enforcement so adding a new label client-side does not
+    # require a migration. Defaults to an empty list rather than NULL so
+    # `Conversation.labels.append(...)` always works without a None guard.
+    labels: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
 class UserPreferences(Base):

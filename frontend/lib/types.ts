@@ -62,7 +62,16 @@ export interface Conversation {
 	last_message_role?: MessageRole | null;
 	/** Number of queued prompts awaiting processing. */
 	pending_prompt_count?: number;
-	/** Tags or categories assigned to the conversation. */
+	/**
+	 * Tags or categories assigned to the conversation.
+	 *
+	 * Two shapes coexist:
+	 * - Server-issued: array of pre-defined label IDs (strings) from
+	 *   `NAV_CHATS_LABELS`. The badge renderer resolves each ID to its
+	 *   colored display metadata via `getLabelById`.
+	 * - Legacy / hand-rolled: structured `ConversationLabel` objects. Kept
+	 *   so demo data and hand-built fixtures keep rendering.
+	 */
 	labels?: ConversationLabelLike[];
 }
 

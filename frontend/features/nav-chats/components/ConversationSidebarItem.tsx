@@ -24,6 +24,8 @@ interface ConversationSidebarItemProps {
 	isUnread: boolean;
 	/** Current workflow status tag. */
 	status: ConversationStatus;
+	/** String label IDs currently applied (resolved against NAV_CHATS_LABELS). */
+	appliedLabelIds: readonly string[];
 	/** Called to navigate to a conversation. */
 	onNavigate: (href: string) => void;
 	/** Called to open the rename dialog for this conversation. */
@@ -40,6 +42,10 @@ interface ConversationSidebarItemProps {
 	onMarkUnread: (conversationId: string) => void;
 	/** Triggers LLM title regeneration for this conversation. */
 	onRegenerateTitle: (conversationId: string) => void;
+	/** Toggles a single label ID on/off for this conversation. */
+	onToggleLabel: (conversationId: string, labelId: string) => void;
+	/** Triggers a Markdown download for this conversation. */
+	onExportMarkdown: (conversationId: string) => void;
 	/** Icon shown before the title (e.g. processing spinner, unread dot). */
 	icon?: ReactNode;
 	/** Label badges shown after the title. */
@@ -79,6 +85,7 @@ export function ConversationSidebarItem({
 	isFlagged,
 	isUnread,
 	status,
+	appliedLabelIds,
 	onNavigate,
 	onRename,
 	onDelete,
@@ -87,6 +94,8 @@ export function ConversationSidebarItem({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 	icon,
 	badges,
 	titleTrailing,
@@ -117,6 +126,7 @@ export function ConversationSidebarItem({
 			isFlagged={isFlagged}
 			isUnread={isUnread}
 			status={status}
+			appliedLabelIds={appliedLabelIds}
 			icon={icon}
 			badges={badges}
 			titleTrailing={titleTrailing}
@@ -132,6 +142,8 @@ export function ConversationSidebarItem({
 			onSetStatus={(s) => onSetStatus(id, s)}
 			onMarkUnread={() => onMarkUnread(id)}
 			onRegenerateTitle={() => onRegenerateTitle(id)}
+			onToggleLabel={(labelId) => onToggleLabel(id, labelId)}
+			onExportMarkdown={() => onExportMarkdown(id)}
 			buttonProps={buttonProps}
 		/>
 	);
