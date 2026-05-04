@@ -8,13 +8,11 @@ import {
 	filterConversationGroups,
 } from '@/lib/conversation-groups';
 import { NavChatsView } from './components/NavChatsView';
+import { NAV_CHATS_STORAGE_KEYS } from './constants';
 import { ConversationDeleteDialog } from './dialogs/ConversationDeleteDialog';
 import { ConversationRenameDialog } from './dialogs/ConversationRenameDialog';
 import { useConversationActions } from './hooks/use-conversation-actions';
 import { useNavChatsOrchestration } from './hooks/use-nav-chats-orchestration';
-
-/** localStorage key used to persist which date groups the user has collapsed. */
-const COLLAPSED_GROUPS_STORAGE_KEY = 'nav-chats-collapsed-groups';
 
 /**
  * Reads persisted collapsed group keys from localStorage.
@@ -28,7 +26,7 @@ function loadCollapsedGroups(): Set<string> {
 	}
 
 	try {
-		const storedGroups = window.localStorage.getItem(COLLAPSED_GROUPS_STORAGE_KEY);
+		const storedGroups = window.localStorage.getItem(NAV_CHATS_STORAGE_KEYS.collapsedGroups);
 		if (!storedGroups) {
 			return new Set();
 		}
@@ -79,7 +77,7 @@ export function NavChats(): React.JSX.Element {
 
 		try {
 			window.localStorage.setItem(
-				COLLAPSED_GROUPS_STORAGE_KEY,
+				NAV_CHATS_STORAGE_KEYS.collapsedGroups,
 				JSON.stringify([...collapsedGroups])
 			);
 		} catch {

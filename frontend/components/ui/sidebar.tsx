@@ -29,13 +29,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TopBarButton } from '@/components/ui/top-bar-button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SIDEBAR_STORAGE_KEYS } from '@/lib/storage-keys';
 import { cn } from '@/lib/utils';
 
-const SIDEBAR_STATE_STORAGE_KEY = 'sidebar_state';
 export const SIDEBAR_DEFAULT_WIDTH = 300;
 export const SIDEBAR_MIN_WIDTH = 240;
 export const SIDEBAR_MAX_WIDTH = 420;
-const SIDEBAR_WIDTH_STORAGE_KEY = 'sidebar_width';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
@@ -56,7 +55,7 @@ function loadDesktopSidebarWidth(): number {
 	if (typeof window === 'undefined') return SIDEBAR_DEFAULT_WIDTH;
 
 	try {
-		const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+		const storedWidth = window.localStorage.getItem(SIDEBAR_STORAGE_KEYS.width);
 		if (!storedWidth) return SIDEBAR_DEFAULT_WIDTH;
 
 		const parsedWidth = Number.parseInt(storedWidth, 10);
@@ -135,7 +134,7 @@ function SidebarProvider({
 			return;
 		}
 		try {
-			const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
+			const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEYS.state);
 			if (stored === 'expanded' || stored === 'collapsed') {
 				_setState(stored);
 			}
@@ -158,7 +157,7 @@ function SidebarProvider({
 			// Persist state to localStorage
 			if (typeof window !== 'undefined') {
 				try {
-					window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, newState);
+					window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.state, newState);
 				} catch {
 					// Storage writes are best-effort only for this UI preference.
 				}
@@ -190,7 +189,7 @@ function SidebarProvider({
 	// that must happen after render, and effects don't run on SSR.
 	React.useEffect(() => {
 		try {
-			window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(desktopWidth));
+			window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.width, String(desktopWidth));
 		} catch {
 			// Storage writes are best-effort only for this UI preference.
 		}
