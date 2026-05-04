@@ -49,8 +49,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# logs
+# logs (including rotated logs like app.log.1, app.log.2.gz, etc.)
 *.log
+*.log.[0-9]*
+*.log.[0-9]*.gz
 
 # env files (can opt-in for committing if needed)
 .env*
