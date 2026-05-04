@@ -3,7 +3,6 @@
 import type * as React from 'react';
 import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import type { AgnoMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
@@ -11,6 +10,7 @@ import { AssistantMessage } from './components/AssistantMessage';
 import { ChatComposer } from './components/ChatComposer';
 import { ChatPromptSuggestions } from './components/ChatPromptSuggestions';
 import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
+import { UserMessage } from './components/UserMessage';
 
 /**
  * Props for the {@link ChatView} presentational component.
@@ -161,12 +161,18 @@ function ChatView({
 										/>
 									);
 								}
+								const userMessageId = `user-${index}`;
 								return (
-									<Message from={chatMessage.role} key={key}>
-										<MessageContent>
-											<MessageResponse>{chatMessage.content}</MessageResponse>
-										</MessageContent>
-									</Message>
+									<UserMessage
+										content={chatMessage.content}
+										isCopied={copiedMessageId === userMessageId}
+										key={key}
+										onCopy={
+											onCopy
+												? () => onCopy(userMessageId, chatMessage.content)
+												: undefined
+										}
+									/>
 								);
 							})}
 						</ConversationContent>
