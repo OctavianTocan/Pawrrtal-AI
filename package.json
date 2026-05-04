@@ -7,9 +7,13 @@
 	"scripts": {
 		"dev": "bun run dev.ts",
 		"commit": "bun run commit.ts",
-		"lint:policies": "bun run check-policies.mjs"
+		"lint:policies": "bun run check-policies.mjs",
+		"design:lint": "bunx @google/design.md lint DESIGN.md",
+		"design:diff": "bunx @google/design.md diff",
+		"design:export:css": "bunx @google/design.md export --format css-tailwind DESIGN.md"
 	},
 	"devDependencies": {
+		"@google/design.md": "^0.1.1",
 		"@tanstack/react-query-devtools": "^5.100.8",
 		"@types/bun": "latest",
 		"mcporter": "^0.9.0"

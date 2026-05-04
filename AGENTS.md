@@ -10,13 +10,14 @@
 
 - **Frontend (`frontend/`)**: Next.js App Router, TypeScript, Tailwind CSS v4, and shadcn-style UI. Routes live in `frontend/app/`, UI components in `frontend/components/`, feature modules in `frontend/features/`.
 - **Backend (`backend/`)**: Python FastAPI application. API routes in `backend/app/api/`, database models in `backend/app/models/`, CRUD operations in `backend/app/crud/`.
+- **Design system (`DESIGN.md`)**: Repo-root [DESIGN.md](https://github.com/google-labs-code/design.md)-format spec describing the Craft Agents-inspired visual identity — colors, typography, spacing, shapes, elevation, and component bindings. Canonical token values live in `frontend/app/globals.css`; `DESIGN.md` mirrors them as machine-readable YAML front matter so coding agents have a persistent, structured understanding of the system. Lint with `bun run design:lint`.
 - **Docs (`docs/`)**: Project documentation, migration plans, and design specs.
 - **Tasks (`.beans/`)**: Markdown-based task tracking. Update the status of `.beans` files as work is completed.
 - **Rule**: Always use the `beans` CLI (e.g. `beans create`, `beans update`) to manage `.beans` files. Never create or edit them manually.
 - **AI Rules (`.claude/rules/`)**: Most rules are vendored from [github.com/OctavianTocan/claude-rules](https://github.com/OctavianTocan/claude-rules) into `.claude/rules/`; each file uses YAML frontmatter with `paths` globs so rules apply only for matching files. This repo also keeps project-specific rule sets under `.claude/rules/clean-code/` and `.claude/rules/github-actions/`.
 - **Stagehand + browser MCP (Cursor / Claude Code)**: Project MCP servers in `.cursor/mcp.json`, `.mcp.json`, and `config/mcporter.json`: **stagehand-docs** (`https://docs.stagehand.dev/mcp`), **context7** (`@upstash/context7-mcp`, [GitHub](https://github.com/upstash/context7)), **deepwiki** (`https://mcp.deepwiki.com/mcp`, [DeepWiki](https://mcp.deepwiki.com/)). **Documentation index** for Stagehand (discover all pages before drilling in): https://docs.stagehand.dev/llms.txt — agents should fetch this (or query **stagehand-docs** MCP) before asserting Stagehand V3 APIs. **Cursor:** `.cursor/rules/stagehand-v3-typescript.mdc` (always-on patterns + MCP workflow). **Claude Code:** `.claude/rules/stagehand/stagehand-documentation-and-mcp.md` and path-scoped `.claude/rules/stagehand/stagehand-v3-typescript-patterns.md`; see `.claude/CLAUDE.md` § Stagehand.
 - **Rule**: Frontend code must only communicate with the backend via the established API endpoints (using `useAuthedFetch` or TanStack Query mutations). Do not mix frontend and backend responsibilities.
-- **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching).
+- **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching). `DESIGN.md` at the repo root is the source of truth for tokens; do not introduce literal Tailwind colors (`text-gray-*`, `bg-blue-500`, etc.) or new `--radius-*` tokens — use the existing scale or `0`.
 - **Rule**: Ensure PascalCase is used for components inside `frontend/features/`.
 
 ## Build, Test, and Development Commands
@@ -27,6 +28,8 @@ We rely on `just` as our primary task runner for the repository.
 - **Check (Lint/Format read-only)**: `just check` (runs Biome).
 - **Lint & Auto-fix**: `just lint-fix` (runs Biome check with writes).
 - **Format**: `just format` (runs Biome format).
+- **Design system lint**: `bun run design:lint` (validates `DESIGN.md` against the spec; CI runs the same gate).
+- **Design system diff**: `bun run design:diff -- DESIGN.md DESIGN-v2.md` (compare two design system snapshots).
 - **Install All Dependencies**: `just install` (runs `bun install` for frontend and `uv sync` for backend).
 - **Auto-commit**: `just commit` (auto-generates conventional commit).
 - **Push**: `just push` (runs push with auth switching).
