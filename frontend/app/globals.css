@@ -118,6 +118,20 @@
 		rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 12px 12px 0px,
 		rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 24px 24px 0px;
 
+	/*
+	 * Floating panel shadow used by surfaces that sit on top of another
+	 * panel (e.g. the chat panel above the sidebar). Stronger than
+	 * --shadow-modal-small so the surface visibly separates on all four
+	 * sides — top/right/bottom drop AND a left-edge cast that lands on
+	 * whatever sits behind it.
+	 */
+	--shadow-panel-floating:
+		rgba(var(--foreground-rgb), 0.1) 0px 0px 0px 1px,
+		rgba(0, 0, 0, 0.04) 0px 1px 2px 0px,
+		rgba(0, 0, 0, 0.06) 0px 4px 8px -2px,
+		rgba(0, 0, 0, 0.08) 0px 12px 24px -6px,
+		rgba(0, 0, 0, 0.06) 0px 24px 48px -12px;
+
 	/* === MIX VARIANTS (solid interpolation toward background) === */
 	--foreground-1\.5: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
 	--foreground-2: color-mix(in srgb, var(--foreground) 2%, var(--background));
@@ -706,6 +720,10 @@ html[data-font="inter"] {
 
 	.shadow-modal-small {
 		box-shadow: var(--shadow-modal-small);
+	}
+
+	.shadow-panel-floating {
+		box-shadow: var(--shadow-panel-floating);
 	}
 
 	/* Unified popover styling */

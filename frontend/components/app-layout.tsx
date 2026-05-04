@@ -437,7 +437,18 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 
 			<ResizableHandle />
 
-			<ResizablePanel className="h-full min-w-0">
+			{/*
+			 * Chat panel stacks above the sidebar via z-index so its left-edge
+			 * shadow visibly casts onto the sidebar — this is what makes the
+			 * panel feel like it "closes over" the sidebar when collapsing.
+			 * overflow:visible lets the shadow escape the panel container
+			 * (react-resizable-panels otherwise clips children to the panel
+			 * box, swallowing the shadow).
+			 */}
+			<ResizablePanel
+				className="relative z-10 h-full min-w-0"
+				style={{ overflow: 'visible' }}
+			>
 				<div className="h-full min-w-0 pt-10">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
