@@ -196,6 +196,7 @@ class ClaudeProvider:
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
+        history: list[dict[str, str]] | None = None,  # ignored: Claude SDK handles session continuity via `resume`
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 

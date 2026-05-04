@@ -25,8 +25,9 @@ class StreamEvent(TypedDict, total=False):
 class AIProvider(Protocol):
     """Unified streaming interface for all AI providers.
 
-    Both Gemini (via Agno) and Claude (via Claude Agent SDK) implement this.
-    The chat endpoint only depends on this protocol — never on a concrete class.
+    GeminiProvider uses ``history`` (read from our Message table) to build
+    multi-turn context.  ClaudeProvider manages its own session continuity
+    via ``resume`` and can ignore ``history``.
     """
 
     def stream(
@@ -34,6 +35,7 @@ class AIProvider(Protocol):
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
+        history: list[dict[str, str]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -43,5 +45,15 @@ class AIProvider(Protocol):
         iterator directly — declaring it ``async def`` would imply a
         coroutine that *returns* an iterator, requiring callers to
         ``await`` first, which is not what the runtime contract is.
+
+        Args:
+            question: Current user message.
+            conversation_id: Conversation UUID (used for session continuity).
+            user_id: Authenticated user UUID.
+            history: Optional list of prior messages oldest-first, each a
+                     dict with ``role`` (``"user"``/``"assistant"``) and
+                     ``content`` keys.  Providers that manage their own
+                     history (e.g. ClaudeProvider via ``resume``) may ignore
+                     this.
         """
         ...
