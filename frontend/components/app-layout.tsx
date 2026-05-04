@@ -414,16 +414,18 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				}}
 			>
 				{/* Content keeps min-width so layout never reflows during collapse —
-          the panel clips via overflow:hidden and the content fades out.
-          Pointer events disabled when invisible to prevent click-dead-zones
-          per the hidden-overlay-pointer-events rule.
-          The pt-9 offsets sidebar contents so they sit below the absolute
+          the panel clips via overflow:hidden and the content slides out
+          of view (no fade) as the chat panel pushes leftward to fill the
+          space. Pointer events are disabled while collapsed so the
+          clipped content can't capture clicks bleeding past the
+          panel boundary.
+          The pt-10 offsets sidebar contents so they sit below the absolute
           AppHeader; the panel itself still extends to the top of the viewport
           so the sidebar background reads as full-height behind the header. */}
 				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-opacity duration-150 ease-out data-[state=collapsed]:pointer-events-none data-[state=collapsed]:opacity-0 data-[state=expanded]:pointer-events-auto data-[state=expanded]:opacity-100"
+						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
 						<SidebarHeader className="px-2 pb-2 shrink-0">
 							<NewSessionButton />
@@ -475,7 +477,15 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 		<SidebarProvider>
 			<SidebarFocusProvider>
 				<ChatActivityProvider>
-					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-background">
+					{/*
+					 * Root chrome uses the sidebar surface color so the area
+					 * around the floating chat panel — the AppHeader strip
+					 * across the top, plus the pr-2/pb-2 gap framing the
+					 * panel — visually reads as one continuous "outside"
+					 * surface with the sidebar. The chat panel keeps its
+					 * own bg-background, so the contrast stays.
+					 */}
+					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-sidebar">
 						<OnboardingModal initialOpen={false} />
 						<ResizableSidebarContent>
 							<SidebarInset className="h-full min-h-0 min-w-0">

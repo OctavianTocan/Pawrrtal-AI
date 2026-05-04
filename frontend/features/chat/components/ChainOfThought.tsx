@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckIcon, ChevronRightIcon } from 'lucide-react';
+import { ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { Streamdown } from 'streamdown';
 import { Shimmer } from '@/components/ai-elements/shimmer';
@@ -12,108 +12,65 @@ import type { ChatTimelineEntry, ChatToolCall } from '../types';
 import { ToolResultChipsRow } from './ToolResultChipsRow';
 
 /**
- * Single rail item.
+ * Hoverable row for a single tool invocation.
  *
- * Layout copies thirdear's chain-of-thought: an absolutely-positioned
- * 1px connector line runs through the row, and the leading marker
- * (bullet for thinking, status circle for tools) sits on `bg-background`
- * with positive z-index to "punch through" the line — so the rail looks
- * like one continuous vertical line interrupted by markers, not a
- * sequence of independent segments.
+ * Matches the Perplexity-style chain-of-thought aesthetic: leading tool
+ * icon, compact label, trailing chevron — wrapped in a subtle hover
+ * background. Active steps shimmer; completed steps render the same
+ * row plus optional source chips below.
  */
-function RailRow({
-	marker,
-	showConnector,
-	children,
-}: {
-	marker: ReactNode;
-	showConnector: boolean;
-	children: ReactNode;
-}): ReactNode {
+function ToolStep({ call, chips }: { call: ChatToolCall; chips: ToolResultChips }): ReactNode {
+	const Icon = getToolIcon(call.name);
+	const isComplete = call.status === 'completed';
+	const label = isComplete ? getCompletedToolLabel(call.name) : getToolLabel(call.name);
+
 	return (
-		<div className="relative flex items-start gap-2 py-1">
-			{showConnector ? (
-				<span
+		<div className="flex flex-col">
+			<div
+				className={cn(
+					'group flex items-center gap-2 rounded-md px-1.5 py-1 text-sm',
+					'text-muted-foreground transition-colors hover:bg-muted/50'
+				)}
+			>
+				<Icon aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground/80" />
+				<span className="min-w-0 flex-1 truncate">
+					{isComplete ? (
+						<span className="text-foreground/85">{label}</span>
+					) : (
+						<Shimmer duration={1.2}>{label}</Shimmer>
+					)}
+				</span>
+				<ChevronRightIcon
 					aria-hidden="true"
-					className="absolute top-6 bottom-1 left-[7px] w-px bg-border"
+					className={cn(
+						'size-3.5 shrink-0 text-muted-foreground/60',
+						'opacity-0 transition-opacity group-hover:opacity-100'
+					)}
 				/>
-			) : null}
-			<span className="relative z-10 flex h-5 w-4 shrink-0 items-center justify-center bg-background">
-				{marker}
-			</span>
-			<div className="min-w-0 flex-1">{children}</div>
+			</div>
+			<ToolResultChipsRow chips={chips} />
 		</div>
 	);
 }
 
 /**
- * Render a single tool step. Active steps shimmer; completed steps get a
- * filled success-tinted check so the user can scan the chain at a glance.
+ * A single rendered thinking section: optional title, then markdown body.
+ *
+ * Sits flush with tool rows (no rail, no connector) — the muted typography
+ * is what ties it to the surrounding chain. Headings are raised to
+ * `text-foreground/85` so a Gemini-style `## Title` reads as a step
+ * boundary without an extra divider.
  */
-function ToolStep({
-	call,
-	chips,
-	showConnector,
-}: {
-	call: ChatToolCall;
-	chips: ToolResultChips;
-	showConnector: boolean;
-}): ReactNode {
-	const Icon = getToolIcon(call.name);
-	const isComplete = call.status === 'completed';
-	const label = isComplete ? getCompletedToolLabel(call.name) : getToolLabel(call.name);
-
-	const marker = isComplete ? (
-		<CheckIcon className="size-3 text-success" strokeWidth={3} aria-hidden="true" />
-	) : (
-		<span aria-hidden="true" className="size-1.5 rounded-full bg-muted-foreground/60" />
-	);
-
+function ThinkingStep({ title, content }: { title: string; content: string }): ReactNode {
 	return (
-		<RailRow marker={marker} showConnector={showConnector}>
-			<div className="flex flex-col gap-1">
-				<div className="flex items-center gap-1.5 text-sm leading-5">
-					<Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
-					{isComplete ? (
-						<span className="text-foreground">{label}</span>
-					) : (
-						<Shimmer duration={1.2}>{label}</Shimmer>
-					)}
-				</div>
-				<ToolResultChipsRow chips={chips} />
-			</div>
-		</RailRow>
-	);
-}
-
-/** A single rendered thinking section: optional header, then markdown body. */
-function ThinkingStep({
-	title,
-	content,
-	showConnector,
-}: {
-	title: string;
-	content: string;
-	showConnector: boolean;
-}): ReactNode {
-	return (
-		<RailRow
-			marker={
-				<span aria-hidden="true" className="text-muted-foreground/70 leading-none">
-					•
-				</span>
-			}
-			showConnector={showConnector}
-		>
-			<div className="space-y-1 text-sm leading-5 text-muted-foreground">
-				{title ? <div className="font-medium text-foreground">{title}</div> : null}
-				{content ? (
-					<Streamdown className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-						{content}
-					</Streamdown>
-				) : null}
-			</div>
-		</RailRow>
+		<div className="flex flex-col gap-1 px-1.5 py-1 text-sm leading-5 text-muted-foreground">
+			{title ? <div className="font-medium text-foreground/85">{title}</div> : null}
+			{content ? (
+				<Streamdown className="text-sm text-muted-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+					{content}
+				</Streamdown>
+			) : null}
+		</div>
 	);
 }
 
@@ -142,7 +99,11 @@ const EMPTY_CHIPS: ToolResultChips = {
  * calls) so the user sees reasoning and tool steps interleaved exactly as
  * they happened. Each `thinking` slot is split into sub-sections by
  * {@link parseThinkingSections} so Gemini-style `## Title` headings turn
- * into individual bulleted steps.
+ * into individual rows.
+ *
+ * Layout follows Perplexity's chain-of-thought pattern: flat hoverable
+ * rows, no vertical rail, tool icon + label + trailing chevron — keeps
+ * the panel scannable without competing with the assistant's reply.
  */
 export const ChainOfThought = memo(function ChainOfThought({
 	timeline,
@@ -175,7 +136,9 @@ export const ChainOfThought = memo(function ChainOfThought({
 
 	if (items.length === 0) {
 		return (
-			<div className={cn('flex items-center gap-1 text-sm text-muted-foreground')}>
+			<div
+				className={cn('flex items-center gap-2 px-1.5 py-1 text-sm text-muted-foreground')}
+			>
 				<ChevronRightIcon aria-hidden="true" className="size-3.5" />
 				<Shimmer duration={1.2}>Thinking...</Shimmer>
 			</div>
@@ -183,16 +146,14 @@ export const ChainOfThought = memo(function ChainOfThought({
 	}
 
 	return (
-		<div>
+		<div className="flex flex-col gap-0.5">
 			{items.map((item, index) => {
-				const showConnector = index < items.length - 1;
 				if (item.kind === 'tool') {
 					return (
 						<ToolStep
 							call={item.call}
 							chips={item.chips}
 							key={`tool-${item.call.id}`}
-							showConnector={showConnector}
 						/>
 					);
 				}
@@ -200,7 +161,6 @@ export const ChainOfThought = memo(function ChainOfThought({
 					<ThinkingStep
 						content={item.content}
 						key={`thinking-${index}-${item.title}`}
-						showConnector={showConnector}
 						title={item.title}
 					/>
 				);
