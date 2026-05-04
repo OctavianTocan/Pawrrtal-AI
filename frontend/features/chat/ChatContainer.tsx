@@ -13,18 +13,15 @@ import {
 	type ChatModelId,
 	type ChatReasoningLevel,
 } from './components/ModelSelectorPopover';
+import {
+	CHAT_STORAGE_KEYS,
+	DEFAULT_CHAT_MODEL_ID,
+	DEFAULT_REASONING_LEVEL,
+	FALLBACK_TITLE_MAX_LENGTH,
+} from './constants';
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
-
-const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
-const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
-const FALLBACK_TITLE_MAX_LENGTH = 80;
-
-/** localStorage key for the user's most recently selected chat model. */
-const SELECTED_MODEL_STORAGE_KEY = 'chat-composer:selected-model-id';
-/** localStorage key for the user's most recently selected reasoning level. */
-const SELECTED_REASONING_STORAGE_KEY = 'chat-composer:selected-reasoning-level';
 
 /** Runtime guard for persisted model IDs — older builds may have stored a now-renamed model. */
 function isChatModelId(value: unknown): value is ChatModelId {
@@ -116,12 +113,12 @@ export default function ChatContainer({
 	const [isLoading, setIsLoading] = useState(false);
 	const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(initialChatHistory || []);
 	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
-		storageKey: SELECTED_MODEL_STORAGE_KEY,
+		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
 		defaultValue: DEFAULT_CHAT_MODEL_ID,
 		validate: isChatModelId,
 	});
 	const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>({
-		storageKey: SELECTED_REASONING_STORAGE_KEY,
+		storageKey: CHAT_STORAGE_KEYS.selectedReasoning,
 		defaultValue: DEFAULT_REASONING_LEVEL,
 		validate: isChatReasoningLevel,
 	});

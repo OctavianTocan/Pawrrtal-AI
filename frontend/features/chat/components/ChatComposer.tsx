@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
+import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
 import {
 	AttachButton,
 	AutoReviewSelector,
@@ -66,25 +67,23 @@ export type ChatComposerProps = {
 	onDismissConnectApps?: () => void;
 };
 
-/** localStorage key for the persisted Plan-mode toggle in the composer toolbar. */
-const PLAN_MODE_STORAGE_KEY = 'chat-composer:plan-mode-visible';
-
 /** Module-level type guard so the validator reference stays stable across renders. */
 function isBoolean(value: unknown): value is boolean {
 	return typeof value === 'boolean';
 }
 
 /**
- * Persists the Plan-mode toggle across sessions. Defaults to `false` so a fresh
- * chat does not start in Plan mode — the user opts in once and the choice sticks.
+ * Persists the Plan-mode toggle across sessions. Defaults match
+ * {@link DEFAULT_PLAN_MODE_VISIBLE} (off) so a fresh chat does not start in
+ * Plan mode — the user opts in once and the choice sticks.
  */
 function usePlanModeVisible(): readonly [
 	boolean,
 	(next: boolean | ((prev: boolean) => boolean)) => void,
 ] {
 	return usePersistedState<boolean>({
-		storageKey: PLAN_MODE_STORAGE_KEY,
-		defaultValue: false,
+		storageKey: CHAT_STORAGE_KEYS.planModeVisible,
+		defaultValue: DEFAULT_PLAN_MODE_VISIBLE,
 		validate: isBoolean,
 	});
 }

@@ -23,6 +23,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import {
+	CHAT_STORAGE_KEYS,
+	DEFAULT_SAFETY_MODE,
+	SAFETY_MODE_ADVANCED,
+	SAFETY_MODE_ORDER,
+	SAFETY_MODES,
+	type SafetyMode,
+} from '../constants';
 
 const VOICE_METER_BARS = [8, 14, 10, 18, 12, 24, 16, 30, 18, 26, 14, 22, 10, 18, 12, 20];
 
@@ -192,28 +200,6 @@ export function PlanButton(): React.JSX.Element {
 	);
 }
 
-/**
- * Identifiers for the safety/auto-review permissions exposed in the composer toolbar.
- *
- * `as const` so we can derive both the {@link SafetyMode} union and a runtime
- * validator from a single source of truth.
- */
-export const SAFETY_MODES = [
-	'default-permissions',
-	'auto-review',
-	'full-access',
-	'custom',
-] as const;
-
-/** Available safety/auto-review permission modes. */
-export type SafetyMode = (typeof SAFETY_MODES)[number];
-
-/** localStorage key for the persisted safety/auto-review selection. */
-const SAFETY_MODE_STORAGE_KEY = 'chat-composer:safety-mode';
-
-/** Default selection — matches the previously hardcoded "Auto-review" entry. */
-const DEFAULT_SAFETY_MODE: SafetyMode = 'auto-review';
-
 interface SafetyModeMeta {
 	/** Human-readable label shown in the dropdown and trigger. */
 	label: string;
@@ -224,6 +210,10 @@ interface SafetyModeMeta {
 /**
  * Static metadata for each safety mode. Indexed by {@link SafetyMode} so adding
  * a new mode forces a TypeScript error until both the union and metadata are updated.
+ *
+ * Lives next to the renderer (not in `constants.ts`) because the Lucide icon
+ * components are React render concerns, not data; keeping them here means the
+ * shared constants module stays free of UI imports.
  */
 const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
 	'default-permissions': { label: 'Default permissions', Icon: SlidersHorizontalIcon },
@@ -237,27 +227,12 @@ function isSafetyMode(value: unknown): value is SafetyMode {
 	return typeof value === 'string' && (SAFETY_MODES as readonly string[]).includes(value);
 }
 
-/**
- * Order in which the modes are listed in the dropdown. Kept separate from
- * {@link SAFETY_MODE_META} so the visual order can change without altering the
- * declaration order of the union (which matters for type narrowing).
- */
-const SAFETY_MODE_ORDER: ReadonlyArray<SafetyMode> = [
-	'default-permissions',
-	'auto-review',
-	'full-access',
-	'custom',
-];
-
-/** Modes that render below the in-menu separator (advanced options). */
-const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set(['custom']);
-
 /** Renders the auto-review/safety permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [tooltipOpen, setTooltipOpen] = useState(false);
 	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
-		storageKey: SAFETY_MODE_STORAGE_KEY,
+		storageKey: CHAT_STORAGE_KEYS.safetyMode,
 		defaultValue: DEFAULT_SAFETY_MODE,
 		validate: isSafetyMode,
 	});
