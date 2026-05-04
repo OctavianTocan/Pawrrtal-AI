@@ -41,6 +41,18 @@ extend-exclude = [
     ".venv",
     "alembic/versions",  # auto-generated migrations
     "workspaces",        # ephemeral runtime data
+    # Agentic tooling / editor metadata directories — never lint these.
+    ".agents",
+    ".claude",
+    ".cursor",
+    ".pi",
+    ".opencode",
+    ".crush",
+    ".codex",
+    ".beans",
+    ".zed",
+    ".vscode",
+    ".sentrux",
 ]
 
 [tool.ruff.lint]
@@ -143,7 +155,23 @@ disallow_untyped_decorators = false  # FastAPI/pytest decorators trip this
 explicit_package_bases = true
 mypy_path = "."
 plugins = ["pydantic.mypy"]
-exclude = ["alembic/versions/", "workspaces/", ".venv/"]
+exclude = [
+    "alembic/versions/",
+    "workspaces/",
+    ".venv/",
+    # Agentic tooling / editor metadata directories.
+    "\\.agents/",
+    "\\.claude/",
+    "\\.cursor/",
+    "\\.pi/",
+    "\\.opencode/",
+    "\\.crush/",
+    "\\.codex/",
+    "\\.beans/",
+    "\\.zed/",
+    "\\.vscode/",
+    "\\.sentrux/",
+]
 files = ["app", "tests", "main.py"]
 
 [[tool.mypy.overrides]]
@@ -166,6 +194,18 @@ exclude_dirs = [
     "alembic/versions",
     "workspaces",
     "app/cli",  # CLI subprocess calls are operator-driven; ruff S-rules with per-file ignore handles them
+    # Agentic tooling / editor metadata directories.
+    ".agents",
+    ".claude",
+    ".cursor",
+    ".pi",
+    ".opencode",
+    ".crush",
+    ".codex",
+    ".beans",
+    ".zed",
+    ".vscode",
+    ".sentrux",
 ]
 skips = [
     "B101",  # assert_used — covered by ruff S101 with its own per-file ignore policy
