@@ -1,13 +1,16 @@
-import { NewSidebar } from "@/components/new-sidebar";
+/**
+ * Authenticated app segment layout: sidebar shell and main content region.
+ */
 
-export default function AppLayout({
+import { AppLayout } from '@/components/app-layout';
+
+/**
+ * Wraps `(app)/*` routes with the persistent {@link AppLayout} chrome.
+ */
+export default function AppLayoutWrapper({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	return (
-		<>
-			<NewSidebar>{children}</NewSidebar>
-		</>
-	);
+	return <AppLayout>{children}</AppLayout>;
 }

@@ -1,0 +1,30 @@
+---
+description: Optimistic entities need collision-proof client identities and one-to-one reconciliation
+globs: ["src/**/*.ts", "src/**/*.tsx"]
+paths: ["src/**/*.ts", "src/**/*.tsx"]
+alwaysApply: false
+---
+
+# Optimistic ID Reconciliation
+
+Optimistic updates are only safe when every optimistic entity has a unique client identity and reconciliation targets exactly one row.
+
+## Required Rules
+
+- Never use `Date.now()` alone, array index, or user-entered text as an optimistic ID.
+- Prefer `crypto.randomUUID()` for optimistic IDs. If that is unavailable, add a monotonic counter or another collision-proof suffix.
+- Each mutation invocation must reconcile and roll back exactly one optimistic record.
+- Batch flows such as “Save all”, bulk import, or parallel creates must generate one optimistic identity per item.
+- Reconciliation must not rely on matching rendered text or other non-unique fields.
+
+## Required Coverage
+
+- Same-tick creates produce distinct optimistic IDs.
+- Out-of-order responses reconcile the correct optimistic rows.
+- A failure removes or reverts only the optimistic entity created by that request.
+
+## Anti-Patterns
+
+- `const optimisticId = "optimistic-" + Date.now()`
+- Mapping all rows with a duplicated optimistic ID to the first real server ID
+- Bulk create loops that assume requests will not share a clock tick

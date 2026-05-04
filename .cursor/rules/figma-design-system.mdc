@@ -1,0 +1,332 @@
+---
+description: Figma MCP design system rules for translating Figma designs to code
+globs:
+  - "src/**/*View.tsx"
+  - "src/**/*Container.tsx"
+  - "src/**/*.stories.tsx"
+  - "src/features/**/*.tsx"
+  - "src/components/**/*.tsx"
+alwaysApply: false
+---
+
+# Figma MCP Design System Rules
+
+These rules define how to translate Figma designs into code for this project using the Figma MCP server. Follow them for every Figma-driven change.
+
+## Required Workflow (Do Not Skip)
+
+1. Run `get_design_context` first to fetch the structured representation for the exact node(s).
+2. If the response is too large or truncated, run `get_metadata` to get the high-level node map, then re-fetch only the required child node(s) with `get_design_context`.
+3. Run `get_screenshot` for a visual reference of the node variant being implemented.
+4. Only after you have both `get_design_context` and `get_screenshot`, download any assets needed and start implementation.
+5. Translate the output (usually React + Tailwind) into this project's conventions, styles, and framework. Reuse the project's color tokens, components, and typography wherever possible.
+6. After implementation, visually compare your rendered output against the Figma screenshot before marking complete.
+
+## Mandatory Spec Sheet (3+ Element Components)
+
+Before writing JSX for any component with 3 or more visual elements, produce a design spec block from the MCP tool outputs. This is the contract between extraction and implementation.
+
+Requirements:
+- Every dimension must cite which MCP tool it came from (`get_metadata`, `get_design_context`, `get_variable_defs`)
+- Derived values must show arithmetic: `gap = child2.y - (child1.y + child1.h) = 63 - 45 = 18px`
+- Values not extractable from any tool are marked `UNKNOWN` and flagged to the user before coding
+- Distinguish **fixed** values (padding, font-size, border-radius) from **flexible** values (w-full, flex-1)
+- Use arbitrary Tailwind values for exact matches: `p-[17px]` not `p-4`. Never round to nearest standard class.
+
+Spec sheet format (YAML block in a code fence):
+```yaml
+component: Component Name
+figma_node: "1141:11158"
+
+container:
+  width: fill-parent        # flexible
+  height: 312px             # from get_metadata (fixed)
+  padding:
+    top: 16px               # DERIVED: firstChild.y - border = 17 - 1
+    bottom: 12px            # DERIVED: card.h - (lastChild.y + lastChild.h)
+```
+
+Full format reference: `docs/solutions/prevention-guidelines/figma-design-to-code-spec-sheet.md`
+
+## Chart / Data Visualization Rules
+
+Charts require extra extraction because Figma flattens charting library output (Recharts, etc.) into positioned vectors. `get_design_context` returns absolute-positioned divs — never use as structural reference for charts.
+
+Before writing chart code:
+1. Extract chart container frame from `get_metadata`: width, height → SVG `width` and `height` attributes (exact pixels, never CSS-scaled)
+2. Extract plot area / bar group frame: x, y, width → `PLOT_LEFT`, `PLOT_RIGHT`, `PLOT_W`
+3. Extract bar/line data frames: positions and sizes → `BAR_HEIGHT`, `ROW_HEIGHT`, `BAR_GAP`
+4. Read text nodes for tick values → reverse-engineer the tick algorithm from actual values
+5. Compute card padding per-side from child positions vs card edges
+
+Rules:
+- **Never CSS-scale chart SVGs.** Use `width={266} height={220}` attributes, not `w-full h-full`.
+- **Derive all constants from metadata math.** `PLOT_RIGHT = barGroup.x + barGroup.width`, never `CHART_WIDTH - 6`.
+- **Read tick values from text nodes.** If Figma shows `0, 9, 18, 27, 36`, the step is `ceil(34/4) = 9`. Don't substitute a "nicer" algorithm.
+- **Verify with DOM measurements.** After implementation, use `agent-browser eval` to extract rendered positions and compare against metadata values. Tolerance: 2px on fixed values.
+
+## Implementation Rules
+
+- Treat Figma MCP output (React + Tailwind) as a **specification of design intent**, not final code style.
+- **Never copy Figma's layout structure directly.** Figma uses absolute positioning internally. Translate to semantic flexbox/grid layouts.
+- Replace Tailwind utility classes from MCP output with this project's design tokens and color system.
+- Reuse existing UI components (Button, Badge, Modal, Tooltip, etc.) instead of recreating them.
+- Use the project's color system, typography scale, and spacing tokens consistently.
+- Respect existing routing, state management, and data-fetch patterns.
+- Strive for 1:1 visual parity with the Figma design. When conflicts arise between MCP code and screenshot, **the screenshot is ground truth**.
+
+## Asset Handling
+
+- The Figma MCP Server provides an assets endpoint which can serve image and SVG assets.
+- **IMPORTANT:** If the Figma MCP Server returns a localhost source for an image or SVG, use that source directly.
+- **IMPORTANT:** DO NOT import/add new icon packages. All assets should come from Figma payload or existing project icons.
+- **IMPORTANT:** Do NOT use or create placeholders if a localhost source is provided.
+- For icons: prefer Lucide React for standard UI icons, custom inline SVGs (using `currentColor`) for brand/Figma-specific icons.
+
+## Token Definitions
+
+### Design Token Files
+
+| File | Purpose |
+|------|---------|
+| `packages/design-tokens/tokens.json` | Source of truth: DTCG-format primitives + semantics (colors, spacing, typography, radii) |
+| `src/lib/design-tokens.ts` | Global runtime tokens: shadows (ELEVATED_SHADOW, PRESSED_SHADOW), animations (PRESS_ANIMATION, FADE_ANIMATION), timing |
+| `src/lib/chat-tokens.ts` | Chat-specific tokens: glass wrapper, shell dimensions, input sizes, z-index stacking, focus ring |
+| `src/app/globals.css` | Tailwind v4 `@theme` block: CSS custom properties for colors, spacing, animations |
+
+### Color System
+
+#### Brand Colors (use these Tailwind classes)
+
+| Figma Variable | Hex | Tailwind Class |
+|----------------|-----|----------------|
+| Brand 1 / Primary Blue 100 | `#0B4F75` | `text-brand-primary`, `bg-brand-primary` |
+| Primary 140 | `#093F5E` | `text-brand-primary-dark`, `bg-brand-primary-dark` |
+| Primary Blue 80 | `#54849E` | Use arbitrary: `text-[#54849E]` |
+| Primary Blue 20 | `#B6CAD6` | Use arbitrary: `text-[#B6CAD6]` |
+| Primary Blue 10 | `#CEDCE3` | Use arbitrary: `bg-[#CEDCE3]` |
+| Primary Blue 05 | `#E7EDF1` | Use arbitrary: `bg-[#E7EDF1]` |
+| Secondary Orange 100 | `#EF6D00` | Use arbitrary: `text-[#EF6D00]` |
+| Secondary Orange 05 | `#FDF0E6` | Use arbitrary: `bg-[#FDF0E6]` |
+| Grey 120 | `#3A3B44` | Use arbitrary: `text-[#3A3B44]` |
+| Grey 100 | `#454652` | Use arbitrary: `text-[#454652]` |
+| Grey 60 | `#737588` | `text-secondary-text` |
+| Grey 10 | `#E3E3E7` | Use arbitrary: `bg-[#E3E3E7]` |
+| Grey 05 | `#F1F1F3` | Use arbitrary: `bg-[#F1F1F3]` |
+| White | `#FFFFFF` | `bg-white`, `text-white` |
+| Success 100 | `#077F60` | Use arbitrary: `text-[#077F60]` |
+| Error 100 | `#CB0000` | Use arbitrary: `text-[#CB0000]` |
+| Custom Purple | `#3E2F5B` | Use arbitrary: `text-[#3E2F5B]` |
+
+#### Brand color with alpha (border/bg overlays)
+
+| Figma Pattern | Tailwind |
+|---------------|----------|
+| `rgba(11,79,117,0.2)` border | `border-brand-primary-light` |
+| `rgba(11,79,117,0.4)` border | `border-brand-primary-border-medium` |
+| `rgba(11,79,117,0.05)` bg | `bg-brand-primary-light-bg` |
+
+#### Feature-Specific Colors
+
+For the My Mind feature, import from `@/features/my-mind/constants/colors`:
+
+```typescript
+import { MY_MIND_COLORS } from '@/features/my-mind/constants';
+```
+
+This maps every Figma color variable used in My Mind to a typed constant, including severity indicators and chart palettes.
+
+### Typography
+
+| Figma Font | Project Equivalent |
+|------------|-------------------|
+| `SF Pro` (any weight) | `font-inter` (Inter, the project's primary font) |
+| `Inter` | `font-inter` |
+
+Common weight mappings:
+- `SF Pro:Medium` / `Inter:Medium` → `font-medium` (500)
+- `SF Pro:Semibold` / `Inter:Semi Bold` → `font-semibold` (600)
+- `SF Pro:Bold` / `Inter:Bold` → `font-bold` (700)
+- `SF Pro:Regular` / `Inter:Regular` → `font-normal` (400)
+
+Common size mappings (use arbitrary values when Figma differs from standard scale):
+- Figma `10.5px` → `text-[10.5px]`
+- Figma `14px` → `text-sm`
+- Figma `15px` → `text-[15px]`
+- Figma `16px` → `text-base`
+- Figma `20px` → `text-xl`
+- Figma `24px` → `text-2xl`
+- Figma `28px` → `text-[28px]`
+
+**Rule:** When a Figma font size doesn't match a standard Tailwind size, use an arbitrary value. Never round to the nearest standard size.
+
+### Spacing
+
+The project uses Tailwind's default spacing scale. When Figma specifies a value that doesn't land on a standard increment:
+- Use arbitrary values: `p-[17px]`, `gap-[58px]`, `mt-[19px]`
+- **Never** round to the nearest Tailwind class (e.g., don't use `p-4` for 17px)
+- Add a comment with the arithmetic when the value is derived: `{/* 728px - 2×335px = 58px */}`
+
+### Border Radius
+
+| Figma Value | Tailwind |
+|-------------|----------|
+| `20px` | `rounded-[20px]` (insight cards) |
+| `12px` | `rounded-xl` |
+| `8px` | `rounded-lg` |
+| `6px` | `rounded-md` |
+| `99px` / `9999px` | `rounded-full` (pills) |
+| `39px` | `rounded-[39px]` (chat glass wrapper — use `CHAT_GLASS.borderRadius` token) |
+
+## Component Library
+
+### UI Primitives (`src/components/ui/`)
+
+Always check these before creating new elements:
+
+| Component | Import | Use Instead Of |
+|-----------|--------|---------------|
+| `Button` | `@/components/ui/button` | Raw `<button>` tags. Variants: `default`, `destructive`, `outline`, `secondary`, `ghost`, `link`. Sizes: `default`, `sm`, `lg`, `icon` |
+| `PrimaryButton` | `@/components/ui/button` | Primary CTAs with loading states |
+| `Badge` | `@/components/ui/badge` | Raw styled `<span>` for labels |
+| `Input` | `@/components/ui/input` | Raw `<input>` tags |
+| `Textarea` | `@/components/ui/textarea` | Raw `<textarea>` tags |
+| `ScrollArea` | `@/components/ui/scroll-area` | Custom scroll containers |
+| `Tooltip` / `TooltipTrigger` / `TooltipContent` | `@/components/ui/tooltip` | Custom hover reveals |
+| `Modal` | `@/components/ui/modal` | Custom dialog/overlay implementations |
+| `Tabs` / `TabButton` / `TabList` | `@/components/ui/tabs` | Custom tab implementations |
+| `Carousel` | `@/components/ui/carousel` | Custom slider/carousel |
+| `InfoBanner` | `@/components/ui/InfoBanner` | Custom info callouts |
+| `Toast` | `@/components/ui/Toast` | Custom notification popups |
+| `LoadingSkeleton` | `@/components/ui/LoadingSkeleton` | Custom loading placeholders |
+
+### Icon System
+
+| Source | When to Use | Import |
+|--------|-------------|--------|
+| **Lucide React** | Standard UI icons (arrows, loaders, alerts, checkmarks, X, etc.) | `import { IconName } from 'lucide-react'` |
+| **Custom inline SVGs** (`src/components/icons/`) | Brand/Figma-specific icons not in Lucide | `import { IconName } from '@/components/icons'` |
+| **Feature-colocated SVGs** | Decorative/illustrative SVGs used by one feature | Import from same feature folder |
+
+**Rule:** Never use Lucide or other icon libraries as substitutes for Pencil/Figma design icons. If a Figma design uses a custom icon, ask the user for the exported SVG or extract via `get_design_context` asset URLs.
+
+## Component Architecture
+
+### View/Container Split (Required)
+
+| File Type | Purpose | Rules |
+|-----------|---------|-------|
+| `*View.tsx` | Pure presentational | No hooks (except `useMediaQuery`). All data/callbacks via props. `'use client'`. JSDoc on exports. |
+| `*Container.tsx` | State + logic | Hooks, state, side effects, API calls. Passes data/callbacks to View. |
+| `*Skeleton.tsx` | Loading states | Tailwind `animate-pulse` shimmer. Matches View layout structure. |
+| `*.stories.tsx` | Storybook stories | In `__storybook__/` folder. Cover all visual states. Use `fn()` for callbacks. Include `tags: ['autodocs']`. |
+| `*.test.tsx` | Tests | In `__tests__/` folder. Colocated with the component they test. |
+
+### Feature Folder Structure
+
+```
+src/features/{feature-name}/
+  index.ts              # Barrel exports (explicit named exports)
+  types.ts              # Discriminated unions for feature state
+  CLAUDE.md             # Feature-specific AI context
+  constants/            # Color palettes, mock data, config values
+  hooks/                # Feature hooks with colocated __tests__/
+  screens/              # One screen per flow state
+    {ScreenName}/
+      *Container.tsx
+      *View.tsx
+      *Skeleton.tsx
+      index.ts
+      __storybook__/
+      __tests__/
+  shared-components/    # Reusable across screens
+    {ComponentName}/
+      *View.tsx
+      index.ts
+      __storybook__/
+      __tests__/
+  utils/                # Pure functions with colocated __tests__/
+```
+
+### Barrel Exports
+
+Every folder gets an `index.ts` with explicit named exports. The chain cascades:
+- Component `index.ts` → Screen/Component `index.ts` → Feature `index.ts`
+- Route `page.tsx` imports from feature barrel: `import { Container } from '@/features/{name}'`
+
+## Styling Approach
+
+### Primary: Tailwind CSS v4
+
+- Use `cn()` from `@/lib/utils` for conditional class composition
+- Tailwind v4 configuration lives in `src/app/globals.css` (`@theme` block)
+- Custom animations defined as `@keyframes` in globals.css with utility classes in `@utility` layer
+
+### Secondary: CSS Modules (Rare)
+
+- Only used where complex selectors or pseudo-elements exceed Tailwind's capability
+- 10 CSS module files in the codebase, all for rich-text editors or complex layout components
+- Pattern: `ComponentName.module.css` colocated with component
+
+### Responsive Design
+
+- Mobile-first approach with `md:` and `lg:` breakpoints
+- `useMediaQuery` hook for runtime viewport checks (allowed in View components)
+- Modal → BottomSheet pattern for responsive overlays:
+  - Desktop: `<Modal>` from `@octavian-tocan/react-overlay`
+  - Mobile: `<BottomSheet>` from `@octavian-tocan/react-overlay`
+
+## Figma-to-Tailwind Color Translation
+
+When you see these colors in `get_design_context` output, translate to project tokens:
+
+| Figma MCP Output | Replace With |
+|-------------------|-------------|
+| `text-[#0b4f75]` | `text-brand-primary` |
+| `text-[color:var(--brand-1,#0b4f75)]` | `text-brand-primary` |
+| `bg-[#0b4f75]` | `bg-brand-primary` |
+| `border-[rgba(11,79,117,0.2)]` | `border-brand-primary-light` |
+| `bg-[rgba(11,79,117,0.05)]` | `bg-brand-primary-light-bg` |
+| `text-[#717182]` | `text-secondary-text` |
+| `bg-[#fffdfc]` | `bg-app-bg-light-gray` |
+| `bg-[#f1f6f8]` | `bg-app-bg-item-hover` |
+| `text-[#dc2626]` | `text-error` |
+
+For colors NOT in the theme (feature-specific like `#54849E`, `#3A3B44`, etc.), use arbitrary Tailwind values but reference the semantic name in a comment if it maps to a known Figma variable.
+
+## Design Source Traceability
+
+When implementing from Figma, add design source annotations to the file's JSDoc header:
+
+```typescript
+/**
+ * @file MyScreenView.tsx
+ * @description Screen for displaying insights.
+ * @figma wxU0NpjXq7hqh1c5G9hGLF node 1141:10586 (My Mind Page)
+ */
+```
+
+When implementing from a Pencil (.pen) design, use `@pencil` instead:
+
+```typescript
+/**
+ * @pencil my-design.pen
+ * - Desktop: node `abc12` (Frame Name)
+ * - Mobile: node `xyz34` (Mobile Frame Name)
+ */
+```
+
+## Verification Checklist
+
+After implementing a Figma design, verify:
+
+- [ ] Spacing matches Figma (padding, margins, gaps) — use arbitrary values for non-standard sizes
+- [ ] Typography matches (font family, size, weight, line-height, letter-spacing)
+- [ ] Colors use project tokens where available, arbitrary values with correct hex otherwise
+- [ ] Border radius, shadows, and borders match
+- [ ] Layout uses flex/grid (never absolute positioning from Figma output)
+- [ ] All existing UI components are reused (Button, Badge, Modal, etc.)
+- [ ] Icons use Lucide or existing custom SVGs — no new icon packages
+- [ ] View/Container split is correct
+- [ ] Storybook stories exist for all visual states
+- [ ] Design source annotation (`@figma` or `@pencil`) is in the file header

@@ -1,5 +1,12 @@
 # AI Nexus
 
+<p align="center">
+  <video src="docs/assets/header.mp4" controls muted playsinline width="100%" autoplay loop>
+    Your browser does not support the video tag. Watch the demo here:
+    <a href="docs/assets/header.mp4">docs/assets/header.mp4</a>
+  </video>
+</p>
+
 [![Formatted with Biome](https://img.shields.io/badge/Formatted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev/)
 [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 [![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
@@ -72,7 +79,8 @@ Frontend runs at [http://localhost:3001](http://localhost:3001), backend at [htt
 
 ```bash
 AUTH_SECRET=your-jwt-secret        # Required: JWT signing key
-GOOGLE_API_KEY=your-gemini-key     # Required: Google AI API key
+GOOGLE_API_KEY=your-gemini-key           # Required: Google AI API key
+CLAUDE_CODE_OAUTH_TOKEN=your-claude-token  # Required for Claude models
 FERNET_KEY=your-fernet-key         # Required: API key encryption
 ENV=dev                            # Optional: 'dev' or 'prod'
 DATABASE_URL=sqlite+aiosqlite:///./app.db  # Optional: database path

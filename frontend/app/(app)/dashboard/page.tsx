@@ -1,4 +1,10 @@
-import { AppSidebar } from "@/components/app-sidebar";
+/**
+ * Demo dashboard route: legacy sidebar + breadcrumb shell with placeholder cards.
+ *
+ * @fileoverview Scaffold for experimenting with `SidebarProvider` layout; not the main chat shell.
+ */
+
+import { AppSidebar } from '@/components/app-sidebar';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -6,13 +12,9 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-	SidebarInset,
-	SidebarProvider,
-	SidebarTrigger,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function Page() {
 	return (
@@ -29,9 +31,7 @@ export default function Page() {
 						<Breadcrumb>
 							<BreadcrumbList>
 								<BreadcrumbItem className="hidden md:block">
-									<BreadcrumbLink href="#">
-										Build Your Application
-									</BreadcrumbLink>
+									<BreadcrumbLink href="#">Build Your Application</BreadcrumbLink>
 								</BreadcrumbItem>
 								<BreadcrumbSeparator className="hidden md:block" />
 								<BreadcrumbItem>

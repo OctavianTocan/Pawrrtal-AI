@@ -1,0 +1,33 @@
+---
+description: Every visible interactive control must have a real state owner, complete wiring, and a submit/reset contract
+globs: ["src/features/**/*.tsx", "src/components/**/*.tsx"]
+paths: ["src/features/**/*.tsx", "src/components/**/*.tsx"]
+alwaysApply: false
+---
+
+# Controlled Input State Ownership
+
+Do not ship interactive controls that look editable but are only partially wired.
+
+## Required Rules
+
+- If a component renders a user-editable control, some parent must own that control's state.
+- If a component API exposes a pair like `value`/`onChange`, `selected`/`onSelect`, `dueDate`/`onDueDateChange`, every render path that uses the control must wire both sides or intentionally render the control as read-only.
+- Submit handlers must consume every visible field in the draft contract. If a field is intentionally draft-only, document that explicitly in code and reset it intentionally.
+- Dismiss, delete, cancel, and submit flows must reset transient draft state on purpose. Never rely on incidental unmounts.
+- Add and edit flows must both be audited. A control is not “done” if only one sheet/modal path is wired.
+
+## Checklist Before Shipping
+
+1. Where does this control's state live?
+2. Which component initializes that state for add vs edit?
+3. Which submit handler receives it?
+4. Which dismiss/reset path clears it?
+5. Which test proves the control is not a no-op?
+
+## Anti-Patterns
+
+- Optional callbacks that silently drop user input
+- Desktop and mobile/modal and sheet render paths with different wiring
+- Visible controls whose values never leave local child state
+- Submit handlers that ignore fields the user just edited

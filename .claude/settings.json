@@ -3,11 +3,7 @@
 		"notion-workspace-plugin@notion-plugin-marketplace": true
 	},
 	"hooks": {
-		"SessionStart": [
-			{ "hooks": [{ "type": "command", "command": "beans prime" }] }
-		],
-		"PreCompact": [
-			{ "hooks": [{ "type": "command", "command": "beans prime" }] }
-		]
+		"SessionStart": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }],
+		"PreCompact": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }]
 	}
 }

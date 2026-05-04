@@ -1,0 +1,72 @@
+---
+description: Comprehensive testing standards, TDD workflow, and Jest best practices
+globs: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/jest.config.js"]
+paths: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/jest.config.js"]
+alwaysApply: false
+---
+
+# Testing Standards
+
+## Methodology
+
+### 1. TDD Workflow (Red-Green-Refactor)
+- **Red:** Write a failing test first. STOP if implementing without a failing test.
+- **Green:** Implement the minimum code to pass the test.
+- **Refactor:** Clean up code while tests stay green.
+- **Commit:** Stage and commit after each GREEN state.
+
+### 2. Characterization Tests
+- **Context:** When refactoring legacy code.
+- **Goal:** Capture *actual* behavior (bugs and all), not *ideal* behavior.
+- **Process:** Write tests that pass against current code -> Refactor -> Update tests.
+
+## Test Structure & Naming
+
+### 1. Naming
+- **File:** `ComponentName.featureName.test.tsx` (camelCase).
+- **Extension:** `.tsx` if it contains JSX, `.ts` otherwise.
+- **Constants:** Extract magic numbers/strings to named constants at top of file.
+
+### 2. Scope & Design
+- **Unit:** Test small, focused functions in isolation. Mock external deps.
+- **Integration:** Verify service interactions explicitly (arguments, not just outcome).
+- **Responsive:** Use `getAllBy*` queries for responsive components (multiple rendered elements).
+
+## Mocking Best Practices
+
+### 1. Fresh Mocks
+- **Rule:** Create mocks in `beforeEach`, never at module level (unless constant).
+- **Why:** Prevents test pollution from call counts retained between tests.
+- **Pattern:**
+  ```typescript
+  let mockFn;
+  beforeEach(() => { mockFn = jest.fn(); });
+  ```
+
+### 2. Typing Mocks
+- **Rule:** Explicitly type mock return values to avoid `never` inference.
+- **Pattern:** `mockFn.mockResolvedValue({ id: '1' } as User)`
+
+### 3. External Dependencies
+- **Rule:** ALL external dependencies (APIs, File System, Time, Chrome APIs) must be mocked.
+- **Chrome Extensions:** Mock `chrome.storage`, `chrome.runtime` explicitly. Mirror real behavior (callbacks, lastError).
+
+## Monorepo & Configuration
+
+### 1. Package Imports
+- **Rule:** Tests should import from package public paths (`@twinmind/api`), not relative (`../src`).
+- **Why:** Validates public API and survives refactoring.
+
+### 2. Jest & React
+- **Resolution:** Force single React instance in `jest.config.js` via `moduleNameMapper` if context hooks return null.
+- **Platform:** Use optional chaining (`Platform?.OS`) for code running at module load time to avoid crashes during mock init.
+
+### 2. Script Testability
+- **Rule:** Scripts must export their main logic functions. Use `require.main === module` check for the CLI entry point.
+- **Why:** Allows testing script logic without executing the CLI command.
+
+## Maintenance
+
+### 1. Fix Immediately
+- **Rule:** STOP immediately when tests fail. Fix before proceeding.
+- **Workflow:** Run tests after *every* change.

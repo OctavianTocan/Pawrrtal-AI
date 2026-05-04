@@ -1,9 +1,11 @@
 /**
  * Base URL for all API requests.
- * Determined from NEXT_PUBLIC_API_URL environment variable, or defaults to http://localhost:8000
+ * Determined from NEXT_PUBLIC_API_URL environment variable.
+ *
+ * Default targets the local FastAPI dev server on `http://localhost:8000`.
+ * In production (Vercel) the env var must be set to the deployed API origin.
  */
-export const API_BASE_URL =
-	process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 /**
  * API endpoint definitions for frontend requests.
@@ -15,10 +17,10 @@ export const API_ENDPOINTS = {
 	chat: {
 		/**
 		 * Chat streaming endpoint.
-		 * @returns `/api/chat`
+		 * @returns `/api/v1/chat`
 		 */
-		messages: "/api/v1/chat",
-		models: "/api/v1/models",
+		messages: '/api/v1/chat',
+		models: '/api/v1/models',
 	},
 	/** Endpoints for conversation management */
 	conversations: {
@@ -39,14 +41,26 @@ export const API_ENDPOINTS = {
 		 * @returns `/api/v1/conversations`
 		 */
 		create: (id: string) => `/api/v1/conversations/${id}`,
-		list: "/api/v1/conversations",
+		/**
+		 * Update conversation metadata.
+		 * @param id - Conversation ID
+		 * @returns `/api/v1/conversations/${id}`
+		 */
+		update: (id: string) => `/api/v1/conversations/${id}`,
+		/**
+		 * Delete a conversation.
+		 * @param id - Conversation ID
+		 * @returns `/api/v1/conversations/${id}`
+		 */
+		delete: (id: string) => `/api/v1/conversations/${id}`,
+		list: '/api/v1/conversations',
 		/**
 		 * Generate a conversation title.
 		 * @param id - Conversation ID
 		 * @returns `/api/v1/conversations/${id}/title`
 		 */
 		generateTitle: (id: string, firstMessage: string) =>
-			`/api/v1/conversations/${id}/title?first_message=${firstMessage}`,
+			`/api/v1/conversations/${id}/title?first_message=${encodeURIComponent(firstMessage)}`,
 	},
 	/** Endpoints for authentication actions */
 	auth: {
@@ -54,22 +68,27 @@ export const API_ENDPOINTS = {
 		 * Login endpoint.
 		 * @returns `/auth/jwt/login`
 		 */
-		login: "/auth/jwt/login",
+		login: '/auth/jwt/login',
+		/**
+		 * Dev-only admin login shortcut.
+		 * @returns `/auth/dev-login`
+		 */
+		devLogin: '/auth/dev-login',
 		/**
 		 * Register endpoint.
 		 * @returns `/auth/register`
 		 */
-		register: "/auth/register",
+		register: '/auth/register',
 		/**
 		 * Logout endpoint.
 		 * @returns `/auth/logout`
 		 */
-		logout: "/auth/logout",
+		logout: '/auth/logout',
 		/**
 		 * Get current user info.
 		 * @returns `/me`
 		 */
-		me: "/me",
+		me: '/me',
 	},
 	/** Endpoints related to user management */
 	users: {
@@ -77,7 +96,7 @@ export const API_ENDPOINTS = {
 		 * Get all users.
 		 * @returns `/users`
 		 */
-		get: "/users",
+		get: '/users',
 	},
 	/** Endpoints for session management */
 	session: {
@@ -85,7 +104,7 @@ export const API_ENDPOINTS = {
 		 * Get session info.
 		 * @returns `/session`
 		 */
-		get: "/session",
+		get: '/session',
 	},
 	/** Endpoints for token management */
 	token: {
@@ -93,6 +112,6 @@ export const API_ENDPOINTS = {
 		 * Get token info.
 		 * @returns `/token`
 		 */
-		get: "/token",
+		get: '/token',
 	},
 } as const;

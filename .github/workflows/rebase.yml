@@ -1,0 +1,125 @@
+name: Auto-rebase PRs
+
+on:
+  push:
+    branches:
+      - development
+  # pull_request_target is used deliberately: this workflow never executes
+  # code from the PR branch, so the elevated base-branch token is safe.
+  pull_request_target:
+    types: [labeled]
+    branches:
+      - development
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+# Prevent race conditions if multiple triggers fire for the same PR simultaneously
+concurrency:
+  group: rebase-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  get-prs:
+    name: Find Open PRs
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.set-prs.outputs.prs }}
+    # Guard: Only run if the base branch is exactly 'development' (for PR events), and check the specific trigger conditions.
+    if: >-
+      (github.event_name == 'push') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'development' && github.event.label.name == 'auto-rebase') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '/rebase') && contains(fromJson('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Get PR list
+        id: set-prs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            if [[ -z "$ISSUE_NUMBER" ]]; then
+              echo "No issue number found, skipping." && exit 1
+            fi
+            echo "prs=[$ISSUE_NUMBER]" >> $GITHUB_OUTPUT
+          elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            if [[ -z "$PR_NUMBER" ]]; then
+              echo "No PR number found, skipping." && exit 1
+            fi
+            echo "prs=[$PR_NUMBER]" >> $GITHUB_OUTPUT
+          else
+            # Note: PRs MUST have the "auto-rebase" label applied to be included here.
+            # This prevents the bot from force-pushing over active work.
+            PRS=$(gh pr list --base development --state open --search "label:auto-rebase" --json number -q '[.[] | .number]')
+            echo "prs=$PRS" >> $GITHUB_OUTPUT
+          fi
+
+  rebase:
+    name: Rebase PR #${{ matrix.pr }}
+    needs: get-prs
+    if: ${{ needs.get-prs.outputs.prs != '[]' && needs.get-prs.outputs.prs != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJson(needs.get-prs.outputs.prs) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Attempt Rebase
+        id: rebase
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_TRIGGER_TOKEN: ${{ secrets.CLAUDE_TRIGGER_TOKEN }}
+          PR_NUMBER: ${{ matrix.pr }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          BRANCH_NAME=$(gh pr view $PR_NUMBER --json headRefName -q .headRefName)
+          if [[ -z "$BRANCH_NAME" ]]; then
+            echo "Failed to fetch branch name for PR $PR_NUMBER"
+            exit 1
+          fi
+          
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          git fetch origin "$BRANCH_NAME"
+          git checkout "$BRANCH_NAME"
+          
+          if git rebase origin/development; then
+            echo "Clean rebase successful. Force pushing..."
+            git push origin "$BRANCH_NAME" --force-with-lease
+            gh pr comment $PR_NUMBER --body "✅ **Automated Rebase Successful:** Branch was cleanly rebased onto \`development\`."
+          else
+            echo "Merge conflict detected! Aborting git rebase and handing off to Claude..."
+            git rebase --abort
+
+            CLAUDE_REQUEST=$(printf '@claude[agent] The automated rebase for this PR failed due to merge conflicts. Please run `git fetch origin development`, `git checkout %s`, `git rebase origin/development`, find all files with conflict markers (`<<<<<<<`), resolve them intelligently to preserve the intent of both branches, and then run `git add -u`, `git rebase --continue`, and finally `git push origin %s --force-with-lease`.' "$BRANCH_NAME" "$BRANCH_NAME")
+
+            if [[ -n "$CLAUDE_TRIGGER_TOKEN" ]]; then
+              # Comments authored with the repository GITHUB_TOKEN show up as github-actions[bot]
+              # and Claude ignores that automated mention. Use a separate user/app token
+              # (preferably octagent) so the handoff matches the working manual comment path.
+              GH_TOKEN="$CLAUDE_TRIGGER_TOKEN" gh pr comment "$PR_NUMBER" --body "$CLAUDE_REQUEST"
+            else
+              MANUAL_FOLLOWUP=$(printf '⚠️ **Automated Rebase Blocked by Conflicts:** `CLAUDE_TRIGGER_TOKEN` is not configured, so this workflow cannot summon Claude automatically. A maintainer needs to post this comment manually:\n\n%s' "$CLAUDE_REQUEST")
+              GH_TOKEN="$GITHUB_TOKEN" gh pr comment "$PR_NUMBER" --body "$MANUAL_FOLLOWUP"
+              echo "::warning::CLAUDE_TRIGGER_TOKEN is not configured; posted manual follow-up instructions instead of a dead @claude[agent] mention from github-actions[bot]."
+            fi
+          fi

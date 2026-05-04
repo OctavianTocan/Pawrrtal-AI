@@ -23,6 +23,7 @@ node_modules/
 
 # Private
 /private
+.private
 
 # testing
 /coverage
@@ -72,3 +73,6 @@ __pycache__
 agno.db
 agno.db-shm
 agno.db-wal
+
+# sentrux local baseline (per-developer, not shared)
+.sentrux/baseline.json

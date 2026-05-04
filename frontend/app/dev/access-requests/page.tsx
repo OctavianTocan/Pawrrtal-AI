@@ -1,18 +1,30 @@
-"use client";
+/**
+ * Dev-only test page for the AccessRequestBanner component.
+ *
+ * Renders multiple banner variants across different widths and user counts to
+ * verify text logic branches, avatar overflow, and layout edge cases. Useful for
+ * testing the banner's responsive design and text formatting without needing real
+ * access request data.
+ *
+ * @fileoverview Test page for AccessRequestBanner component with multiple variants
+ */
 
-import { useState } from "react";
-import {
-	type AccessRequest,
-	AccessRequestBanner,
-} from "@/components/access-request-banner";
+'use client';
+
+import { useState } from 'react';
+import { type AccessRequest, AccessRequestBanner } from '@/features/access-request-banner';
+
+/** Dev-only logger — isolates console usage to satisfy lint in the test page. */
+// biome-ignore lint/suspicious/noConsole: dev-only test page — actions are logged for visual verification
+const devLog = (...args: unknown[]): void => console.log(...args);
 
 /** Mock data for testing the banner with various name lengths and counts. */
 const MOCK_REQUESTS: AccessRequest[] = [
-	{ id: "1", name: "Octavian Tocan" },
-	{ id: "2", name: "Jane Smith" },
-	{ id: "3", name: "Alex Chen" },
-	{ id: "4", name: "Maria Lopez" },
-	{ id: "5", name: "Sam Wilson" },
+	{ id: '1', name: 'Octavian Tocan' },
+	{ id: '2', name: 'Jane Smith' },
+	{ id: '3', name: 'Alex Chen' },
+	{ id: '4', name: 'Maria Lopez' },
+	{ id: '5', name: 'Sam Wilson' },
 ];
 
 /**
@@ -45,8 +57,8 @@ export default function AccessRequestsDevPage() {
 								<p className="mb-2 text-xs text-muted-foreground">5 users:</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
 									onDismiss={() => setDismissed((d) => ({ ...d, full: true }))}
 								/>
 							</div>
@@ -58,8 +70,8 @@ export default function AccessRequestsDevPage() {
 								<p className="mb-2 text-xs text-muted-foreground">2 users:</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS.slice(0, 2)}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
 									onDismiss={() => setDismissed((d) => ({ ...d, two: true }))}
 								/>
 							</div>
@@ -71,11 +83,9 @@ export default function AccessRequestsDevPage() {
 								<p className="mb-2 text-xs text-muted-foreground">1 user:</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS.slice(0, 1)}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
-									onDismiss={() =>
-										setDismissed((d) => ({ ...d, single: true }))
-									}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
+									onDismiss={() => setDismissed((d) => ({ ...d, single: true }))}
 								/>
 							</div>
 						)}
@@ -95,8 +105,8 @@ export default function AccessRequestsDevPage() {
 								</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
 									onDismiss={() =>
 										setDismissed((d) => ({
 											...d,
@@ -114,8 +124,8 @@ export default function AccessRequestsDevPage() {
 								</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS.slice(0, 1)}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
 									onDismiss={() =>
 										setDismissed((d) => ({
 											...d,
@@ -141,8 +151,8 @@ export default function AccessRequestsDevPage() {
 								</p>
 								<AccessRequestBanner
 									requests={MOCK_REQUESTS}
-									onApprove={(id) => console.log("Approved:", id)}
-									onReject={(id) => console.log("Rejected:", id)}
+									onApprove={(id) => devLog('Approved:', id)}
+									onReject={(id) => devLog('Rejected:', id)}
 									onDismiss={() =>
 										setDismissed((d) => ({
 											...d,

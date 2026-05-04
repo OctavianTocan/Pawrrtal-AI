@@ -1,0 +1,137 @@
+---
+description: Search documented solutions before implementing fixes or debugging issues
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+paths: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
+alwaysApply: true
+---
+
+# Check Previous Solutions First
+
+## Purpose
+
+Before implementing any fix or debugging any issue, search the `docs/solutions/` knowledge base. The team documents solved problems via `/compound` to compound knowledge and prevent rework.
+
+## When This Rule Applies
+
+- Debugging errors, exceptions, or unexpected behavior
+- Fixing UI bugs, layout issues, or styling problems
+- Resolving build or compilation errors
+- Investigating performance issues
+- Troubleshooting integration problems
+
+## Required Process
+
+### Step 1: Search Before Acting
+
+Before writing any fix, search the solutions database:
+
+```bash
+# Search by error message
+grep -r "error message text" docs/solutions/
+
+# Search by component name
+grep -r "ComponentName" docs/solutions/
+
+# Search by symptom or technology
+grep -r "hydration\|SSR" docs/solutions/
+grep -r "framer-motion" docs/solutions/
+```
+
+### Step 2: Browse Relevant Categories
+
+Check the category folder most likely to contain your issue:
+
+| Category | Issues |
+|----------|--------|
+| `ui-bugs/` | Visual glitches, layout shift, styling, animations |
+| `runtime-errors/` | Crashes, exceptions, error states |
+| `build-errors/` | Compilation failures, bundler issues |
+| `performance-issues/` | Slow rendering, memory leaks, optimization |
+| `architecture-patterns/` | Design patterns, refactoring approaches |
+| `integration-issues/` | API mismatches, third-party problems |
+
+### Step 3: Apply or Document
+
+**If a solution exists:**
+1. Read the full document
+2. Follow the documented fix
+3. Reference the solution in your commit message
+
+**If no solution exists:**
+1. Debug and solve the problem
+2. Use `/compound` to document your solution
+3. Future agents will benefit from your knowledge
+
+## Solution Document Structure
+
+Each solution contains:
+
+```yaml
+---
+title: Descriptive title
+category: ui-bugs|runtime-errors|build-errors|etc
+tags: [searchable, keywords]
+symptoms: [observable behaviors]
+root_cause: Brief explanation
+---
+```
+
+- **Problem Description**: What was happening
+- **Observable Symptoms**: How to recognize this issue
+- **Root Cause**: Why it happened
+- **Solution**: Step-by-step fix with code
+- **Prevention**: How to avoid in the future
+
+## Examples
+
+### Example 1: Layout Shift Issue
+
+```bash
+# Before implementing a fix for layout shift
+grep -r "layout shift" docs/solutions/
+grep -r "FOUC\|flash" docs/solutions/
+ls docs/solutions/ui-bugs/
+```
+
+Found: `docs/solutions/ui-bugs/react-native-web-layout-shift-fouc-css-injection-timing.md`
+→ Apply the documented solution.
+
+### Example 2: SSE Streaming Bug
+
+```bash
+# Before debugging SSE issues
+grep -r "SSE\|streaming" docs/solutions/
+grep -r "server-sent" docs/solutions/
+```
+
+Found multiple solutions:
+- `sse-chat-streaming-choppy-raf-throttling.md`
+- `sse-chat-intermediate-content-concatenation.md`
+→ Check which symptoms match, apply relevant fix.
+
+### Example 3: Build Error
+
+```bash
+# Before investigating build failure
+grep -r "build\|compile" docs/solutions/build-errors/
+ls docs/solutions/build-errors/
+```
+
+## Anti-Patterns
+
+| Don't | Do |
+|-------|-----|
+| Jump straight to debugging | Search solutions first |
+| Assume the issue is new | Check if it's been solved before |
+| Fix without documenting | Use `/compound` for new solutions |
+| Ignore similar solutions | Read related docs for context |
+
+## Commit Message Reference
+
+When applying an existing solution, reference it:
+
+```
+fix(component): resolve layout shift on SSR
+
+Applied solution from docs/solutions/ui-bugs/react-native-web-layout-shift-fouc-css-injection-timing.md
+```

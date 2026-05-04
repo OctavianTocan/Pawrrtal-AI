@@ -1,0 +1,39 @@
+---
+description: Standards for git commits, PRs, and pre-commit checks
+globs: ["**/.git/**"]
+paths: ["**/.git/**"]
+---
+
+# Git Workflow & Process
+
+## Commits
+
+### 1. Conventional Commits
+- **Format:** `type(scope): description`
+- **Types:**
+  - `feat`: New feature
+  - `fix`: Bug fix
+  - `refactor`: Code change that neither fixes a bug nor adds a feature
+  - `test`: Adding missing tests or correcting existing tests
+  - `docs`: Documentation only changes
+  - `chore`: Build process, aux tools
+- **Example:** `feat(auth): add Google OAuth integration`
+
+## Pull Requests
+
+### 1. Creation
+- **Rule:** When using GitHub CLI (`gh`), ALWAYS use `--body-file` for descriptions containing markdown/backticks.
+- **Why:** Avoids shell escaping issues (especially on Windows/PowerShell).
+
+### 2. Linting
+- **Rule:** Lint ONLY changed files during development (`eslint path/to/file`).
+- **Why:** Full project lint is too slow for the inner loop.
+
+## Security & Quality Checks
+
+### 1. Secrets
+- **Rule:** If `detect-secrets` fails on a false positive, update the baseline (`pnpm run secrets:baseline`).
+- **Never:** Use inline pragma comments (`// pragma: allowlist secret`) or skip the hook.
+
+### 2. Monitoring
+- **Rule:** For parsing/validation logic that might fail silently (return null/empty), add logging (`console.warn`) and telemetry (Amplitude) to track failure rates.

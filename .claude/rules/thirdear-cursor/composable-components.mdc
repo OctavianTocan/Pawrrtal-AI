@@ -1,0 +1,97 @@
+---
+description: Prefer composable (compound) components over monolithic prop-based components
+globs: ["**/*.tsx", "**/*.jsx"]
+alwaysApply: false
+---
+
+# Composable Components Pattern
+
+## Rule
+
+**ALWAYS prefer composable (compound) components over monolithic components with many props.** When a component has 3+ configuration props or needs flexible layouts, use the compound component pattern.
+
+## Pattern
+
+```tsx
+// ❌ BAD: Monolithic with prop drilling
+interface NavbarProps {
+  onOpenSidebar: () => void;
+  onNewChat: () => void;
+  showNewChat?: boolean;
+  showTitle?: boolean;
+  title?: string;
+  rightActions?: ReactNode;
+}
+
+function Navbar({ onOpenSidebar, onNewChat, showNewChat, showTitle, title, rightActions }: NavbarProps) {
+  return (
+    <div className="flex items-center justify-between">
+      <HamburgerButton onClick={onOpenSidebar} />
+      {showTitle && <h1>{title}</h1>}
+      {rightActions}
+      {showNewChat && <NewChatButton onClick={onNewChat} />}
+    </div>
+  );
+}
+
+// ✅ GOOD: Composable compound component
+export const Navbar = {
+  Root: ({ children, className }: { children: ReactNode; className?: string }) => (
+    <div className={cn('flex items-center justify-between', className)}>{children}</div>
+  ),
+  Hamburger: ({ onClick }: { onClick: () => void }) => (
+    <HamburgerButton onClick={onClick} />
+  ),
+  Title: ({ children }: { children: ReactNode }) => (
+    <h1 className="flex-1 truncate">{children}</h1>
+  ),
+  Actions: ({ children }: { children: ReactNode }) => (
+    <div className="flex items-center gap-2">{children}</div>
+  ),
+  NewChat: ({ onClick }: { onClick: () => void }) => (
+    <NewChatButton onClick={onClick} />
+  ),
+};
+```
+
+## Usage
+
+```tsx
+// Minimal
+<Navbar.Root>
+  <Navbar.Hamburger onClick={openSidebar} />
+  <Navbar.NewChat onClick={onNewChat} />
+</Navbar.Root>
+
+// With title
+<Navbar.Root>
+  <Navbar.Hamburger onClick={openSidebar} />
+  <Navbar.Title>Page Title</Navbar.Title>
+  <Navbar.NewChat onClick={onNewChat} />
+</Navbar.Root>
+
+// Custom layout - no prop changes needed
+<Navbar.Root>
+  <Navbar.Hamburger onClick={openSidebar} />
+  <Navbar.Actions>
+    <ShareButton />
+    <Navbar.NewChat onClick={onNewChat} />
+  </Navbar.Actions>
+</Navbar.Root>
+```
+
+## When to Use
+
+| Composable Pattern | Monolithic Props |
+|--------------------|------------------|
+| 3+ layout variations | Single fixed layout |
+| Flexible child ordering | Strict child order |
+| Custom elements between parts | No custom injection |
+| Reusable across pages | Single-use component |
+
+## Benefits
+
+- **No prop explosion**: Add features without new props
+- **Flexible layouts**: Consumers control structure
+- **Type-safe slots**: Each part has its own interface
+- **Storybook-friendly**: Easy to showcase variations

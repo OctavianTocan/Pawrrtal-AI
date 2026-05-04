@@ -1,84 +1,131 @@
-import { useAuthedFetch } from "@/hooks/use-authed-fetch";
+/**
+ * Streaming chat transport: POST to the chat endpoint and parse SSE deltas into an async generator.
+ *
+ * @fileoverview Consumes server-sent events (`data: {...}` frames); yields assistant text chunks until `[DONE]`.
+ */
 
-/*
-    Custom hook to interact with the chat API.
-*/
-export function useChat() {
+import { useAuthedFetch } from '@/hooks/use-authed-fetch';
+import { API_ENDPOINTS } from '@/lib/api';
+import type { ChatModelId } from '../components/ModelSelectorPopover';
+
+/** Sentinel returned by {@link parseSseMessage} when the stream signals completion. */
+const STREAM_DONE = Symbol('STREAM_DONE');
+
+/** Parsed SSE error event emitted by the backend stream. */
+type StreamError = {
+	/** Discriminator for stream error events. */
+	type: 'error';
+	/** Human-readable error message. */
+	content: string;
+};
+
+/**
+ * Parses a single SSE message and returns the delta content, a done
+ * sentinel, or `null` for non-data / unparseable frames.
+ */
+function parseSseMessage(raw: string): string | StreamError | typeof STREAM_DONE | null {
+	if (!raw.startsWith('data: ')) return null;
+
+	const data = raw.slice(6);
+
+	if (data.includes('[DONE]')) return STREAM_DONE;
+
+	try {
+		const json = JSON.parse(data);
+		// Only surface delta content to the caller; gracefully ignore
+		// thinking, tool_use, tool_result, and error event types for now.
+		if (json.type === 'delta') return json.content as string;
+		if (json.type === 'error') {
+			return {
+				type: 'error',
+				content: typeof json.content === 'string' ? json.content : 'Chat stream failed.',
+			};
+		}
+		return null;
+	} catch {
+		// Ignore parse errors from incomplete SSE frames.
+		return null;
+	}
+}
+
+/** Convert parsed stream frames into yielded text or throw on backend error events. */
+function resolveParsedFrame(
+	parsed: ReturnType<typeof parseSseMessage>
+): string | typeof STREAM_DONE | null {
+	if (parsed === STREAM_DONE || parsed === null || typeof parsed === 'string') {
+		return parsed;
+	}
+
+	throw new Error(parsed.content);
+}
+
+/**
+ * Hook that exposes a streaming chat API via an async generator.
+ *
+ * @returns An object with `streamMessage` — call it to send a user
+ *   message and yield assistant response chunks as they arrive.
+ */
+export function useChat(): {
+	streamMessage: (
+		message: string,
+		conversationId: string,
+		modelId: ChatModelId
+	) => AsyncGenerator<string>;
+} {
 	const fetcher = useAuthedFetch();
 
 	async function* streamMessage(
 		message: string,
 		conversationId: string,
+		modelId: ChatModelId
 	): AsyncGenerator<string> {
-		// Send the message to the chat API, and get the response.
-		const response = await fetcher("/api/chat", {
-			method: "POST",
+		const response = await fetcher(API_ENDPOINTS.chat.messages, {
+			method: 'POST',
 			body: JSON.stringify({
 				question: message,
 				conversation_id: conversationId,
+				model_id: modelId,
 			}),
 			headers: {
-				"Content-Type": "application/json",
-				Accept: "text/event-stream",
+				'Content-Type': 'application/json',
+				Accept: 'text/event-stream',
 			},
 		});
 
-		// Handle errors.
-		if (!response.body) throw new Error("Failed to get body");
+		if (!response.body) throw new Error('Failed to get response body from chat API');
 
-		// Transform the stream.
-		// .pipeThrough() takes the raw bytes and runs them through the decoder.
-		// .getReader() gives us a way to read the resulting text.
-		const reader = response.body
-			.pipeThrough(new TextDecoderStream())
-			.getReader();
+		// Pipe raw bytes through a text decoder so we can read string chunks.
+		const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
 
-		// Buffer to store the streamed text.
-		let buffer = "";
+		// SSE frames can arrive split across chunks — buffer partial frames here.
+		let buffer = '';
 
-		// While the stream is not done, read the next chunk.
 		while (true) {
-			// Read the next chunk.
 			const { done, value } = await reader.read();
-
-			// If the stream is done, break the loop.
 			if (done) break;
 
-			// Add the new text to our buffer.
 			buffer += value;
 
-			// Split buffer by newlines to find individual messages. (SSE events are delimited by newlines).
-			const messages = buffer.split("\n\n");
+			// SSE events are delimited by double newlines.
+			const frames = buffer.split('\n\n');
 
-			// Save the last piece. The last item in the array is usually incomplete, so we save it to the buffer. We pop it off and add it back to the buffer.
-			buffer = messages.pop() || "";
+			// The last element is either empty or a partial frame — keep it buffered.
+			buffer = frames.pop() || '';
 
-			// Process each message.
-			for (const message of messages) {
-				// Check for the SSE delimiter.
-				if (message.startsWith("data: ")) {
-					// Remove the 'data: ' prefix.
-					const data = message.slice(6);
+			for (const frame of frames) {
+				const parsed = resolveParsedFrame(parseSseMessage(frame));
 
-					// Handle the stream end event.
-					if (data.includes("[DONE]")) {
-						yield buffer;
-						// Need this or we get an error when parsing the JSON below.
-						break;
-					}
+				if (parsed === STREAM_DONE) {
+					yield buffer;
+					return;
+				}
 
-					try {
-						// Parse the message as JSON.
-						const json = JSON.parse(data);
-
-						// Yield the delta content.
-						yield json.type === "delta" ? json.content : null;
-					} catch (error) {
-						// Ignore errors for incomplete messages.
-					}
+				if (parsed !== null) {
+					yield parsed;
 				}
 			}
 		}
 	}
+
 	return { streamMessage };
 }

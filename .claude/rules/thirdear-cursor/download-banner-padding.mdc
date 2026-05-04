@@ -1,0 +1,39 @@
+---
+description: Account for the fixed desktop download banner on every new route/page
+globs: src/app/**/page.tsx, src/features/**/containers/*.tsx
+alwaysApply: false
+---
+
+# Download Banner Bottom Padding
+
+Every scrollable page container must account for the fixed desktop download banner (`DesktopDownloadBanner`) which sits at `position: fixed; bottom: 0` with a height of 56px.
+
+## Pattern
+
+```tsx
+import {
+  useIsDesktopDownloadBannerVisible,
+  DESKTOP_BANNER_HEIGHT,
+} from '@/features/download-banner';
+
+const isDesktopBannerVisible = useIsDesktopDownloadBannerVisible();
+
+<div
+  style={{
+    paddingBottom: isDesktopBannerVisible ? DESKTOP_BANNER_HEIGHT + 24 : undefined,
+  }}
+>
+  {/* page content */}
+</div>
+```
+
+The formula is `DESKTOP_BANNER_HEIGHT + 24` (56 + 24 = 80px) when visible. This gives the banner height plus 24px breathing room.
+
+For fixed-position elements at the bottom, offset their `bottom` value by `DESKTOP_BANNER_HEIGHT` instead.
+
+## References
+
+See existing usage in:
+- `src/features/enhance-transcribe/containers/EnhanceTranscribePageContainer.tsx`
+- `src/features/daily-digest/screens/DigestPageScreen/DigestPageScreenContainer.tsx`
+- `src/features/my-mind/screens/MyMindPageScreen/MyMindPageScreenContainer.tsx`

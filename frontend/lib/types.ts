@@ -1,30 +1,81 @@
-/*
-    Conversation type for the frontend.
-    @param id - The ID of the conversation.
-    @param user_id - The ID of the user who owns the conversation.
-    @param title - The title of the conversation.
-    @param created_at - The date and time the conversation was created.
-    @param updated_at - The date and time the conversation was last updated.
-*/
+/**
+ * Shared TypeScript type definitions for conversations, messages, and sidebar items.
+ *
+ * @fileoverview Types consumed by both the sidebar and the chat view.
+ */
+
+/** The role of a message sender: human user, AI assistant, or a plan artifact. */
+export type MessageRole = 'user' | 'assistant' | 'plan';
+
+/** Structured label attached to a conversation (e.g. status tags, categories). */
+export type ConversationLabel = {
+	/** Machine-readable slug derived from the label name. */
+	id?: string;
+	/** Human-readable label text. */
+	name: string;
+	/** Optional hex color for badge rendering. */
+	color?: string;
+	/** Optional string value associated with the label. */
+	value?: string;
+	/**
+	 * Semantic type hint for the value.
+	 * The value itself is always stored as a string regardless of this hint.
+	 */
+	valueType?: 'string' | 'number' | 'date';
+};
+
+/**
+ * A label that is either a structured object or a legacy plain string.
+ * TODO: Remove the plain-string branch once label migration is complete.
+ */
+export type ConversationLabelLike = ConversationLabel | string;
+
+/** Status values a conversation can be tagged with. */
+export type ConversationStatus = 'todo' | 'in_progress' | 'done' | null;
+
+/** A single conversation record as returned by the backend API. */
 export interface Conversation {
-	// The ID of the conversation.
+	/** Unique conversation identifier. */
 	id: string;
-	// The ID of the user who owns the conversation.
+	/** ID of the user who owns the conversation. */
 	user_id: string;
-	// The title of the conversation.
+	/** Display title of the conversation. */
 	title: string;
-	// The date and time the conversation was created.
+	/** ISO timestamp of creation. */
 	created_at: string;
-	// The date and time the conversation was last updated.
+	/** ISO timestamp of last update. */
 	updated_at: string;
+	/** Whether the conversation has been archived and hidden from the main list. */
+	is_archived: boolean;
+	/** Whether the conversation has been flagged for follow-up. */
+	is_flagged: boolean;
+	/** Whether the conversation has an unread indicator. */
+	is_unread: boolean;
+	/** Workflow status tag: 'todo', 'in_progress', 'done', or null. */
+	status: ConversationStatus;
+	// Optional sidebar metadata ported from Craft-style session rows.
+	/** Whether the conversation is currently generating a response. */
+	is_processing?: boolean;
+	/** Whether the sidebar should show an unread indicator. */
+	has_unread_meta?: boolean;
+	/** Role of the most recent message in the conversation. */
+	last_message_role?: MessageRole | null;
+	/** Number of queued prompts awaiting processing. */
+	pending_prompt_count?: number;
+	/** Tags or categories assigned to the conversation. */
+	labels?: ConversationLabelLike[];
 }
 
 /**
  * Message shape used by the Agno agent / chat API.
- * @property role - Sender of the message: user or assistant.
+ *
+ * @property role - Sender of the message. Intentionally a subset of {@link MessageRole}
+ *   (excludes `'plan'`, which is not a valid Agno API role).
  * @property content - Plain-text message body.
  */
 export interface AgnoMessage {
-	role: "user" | "assistant";
+	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
+	role: Exclude<MessageRole, 'plan'>;
+	/** Plain-text message body. */
 	content: string;
 }

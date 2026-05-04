@@ -1,3 +1,11 @@
+/**
+ * Glassmorphism styling helpers: convert optional customization into inline `style` props and CSS custom properties.
+ *
+ * @fileoverview Shared by surfaces that use frosted-glass backgrounds; pairs with theme variables like `--glass-bg`.
+ */
+
+import type * as React from 'react';
+
 export interface GlassCustomization {
 	/**
 	 * Background color for the glass effect (e.g., "rgba(255, 255, 255, 0.1)" or "#ffffff")
@@ -48,103 +56,104 @@ export interface GlassCustomization {
 	innerGlowBlur?: number | string;
 }
 
+const DEFAULT_GLASS_COLOR = 'rgba(255, 255, 255, 0.1)';
+const DEFAULT_GLASS_BORDER = 'rgba(255, 255, 255, 0.3)';
+const DEFAULT_GLASS_SHADOW = '0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)';
+const DEFAULT_INNER_GLOW_BLUR = '20px';
+
+const toPixelValue = (value: number | string): string =>
+	typeof value === 'number' ? `${value}px` : value;
+
+const hasBaseGlassCustomization = (customization: GlassCustomization): boolean =>
+	Boolean(
+		customization.color ||
+			customization.transparency !== undefined ||
+			customization.blur !== undefined
+	);
+
+const applyTransparency = (color: string, transparency?: number): string => {
+	if (transparency === undefined) {
+		return color;
+	}
+
+	const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+	if (rgbaMatch) {
+		const [, r, g, b] = rgbaMatch;
+		return `rgba(${r}, ${g}, ${b}, ${transparency})`;
+	}
+
+	if (color.startsWith('#')) {
+		const hex = color.replace('#', '');
+		const r = Number.parseInt(hex.substring(0, 2), 16);
+		const g = Number.parseInt(hex.substring(2, 4), 16);
+		const b = Number.parseInt(hex.substring(4, 6), 16);
+		return `rgba(${r}, ${g}, ${b}, ${transparency})`;
+	}
+
+	return `${color}${transparency}`;
+};
+
+const getBackgroundColor = (customization: GlassCustomization): string =>
+	applyTransparency(customization.color ?? DEFAULT_GLASS_COLOR, customization.transparency);
+
+const addBorderStyles = (styles: React.CSSProperties, customization: GlassCustomization): void => {
+	if (customization.outline !== undefined) {
+		styles.borderColor = customization.outline;
+		styles.borderWidth = toPixelValue(customization.outlineWidth ?? '1px');
+		styles.borderStyle = 'solid';
+		return;
+	}
+
+	if (hasBaseGlassCustomization(customization)) {
+		styles.borderColor = DEFAULT_GLASS_BORDER;
+		styles.borderWidth = '1px';
+		styles.borderStyle = 'solid';
+	}
+};
+
+const buildBoxShadow = (customization: GlassCustomization): string | undefined => {
+	const shadows: string[] = [];
+
+	if (customization.shadow !== undefined) {
+		shadows.push(customization.shadow);
+	} else if (hasBaseGlassCustomization(customization)) {
+		shadows.push(DEFAULT_GLASS_SHADOW);
+	}
+
+	if (customization.innerGlow !== undefined) {
+		const glowBlur =
+			customization.innerGlowBlur !== undefined
+				? toPixelValue(customization.innerGlowBlur)
+				: DEFAULT_INNER_GLOW_BLUR;
+		shadows.push(`inset 0 0 ${glowBlur} ${customization.innerGlow}`);
+	}
+
+	return shadows.length > 0 ? shadows.join(', ') : undefined;
+};
+
 /**
  * Converts glass customization props to CSS style object
  */
-export function getGlassStyles(
-	customization?: GlassCustomization,
-): React.CSSProperties {
+export function getGlassStyles(customization?: GlassCustomization): React.CSSProperties {
 	if (!customization) return {};
 
 	const styles: React.CSSProperties = {};
 
-	// Handle background color and transparency
 	if (customization.color || customization.transparency !== undefined) {
-		let bgColor = customization.color || "rgba(255, 255, 255, 0.1)";
-
-		// If transparency is provided, adjust the alpha channel
-		if (customization.transparency !== undefined) {
-			// Extract RGB from color string if it's rgba/rgb
-			const rgbaMatch = bgColor.match(
-				/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
-			);
-			if (rgbaMatch) {
-				const [, r, g, b] = rgbaMatch;
-				bgColor = `rgba(${r}, ${g}, ${b}, ${customization.transparency})`;
-			} else if (bgColor.startsWith("#")) {
-				// Convert hex to rgba
-				const hex = bgColor.replace("#", "");
-				const r = parseInt(hex.substring(0, 2), 16);
-				const g = parseInt(hex.substring(2, 4), 16);
-				const b = parseInt(hex.substring(4, 6), 16);
-				bgColor = `rgba(${r}, ${g}, ${b}, ${customization.transparency})`;
-			} else {
-				// Fallback: append transparency
-				bgColor = `${bgColor}${customization.transparency}`;
-			}
-		}
-
-		styles.backgroundColor = bgColor;
+		styles.backgroundColor = getBackgroundColor(customization);
 	}
 
-	// Handle blur
 	if (customization.blur !== undefined) {
-		const blurValue =
-			typeof customization.blur === "number"
-				? `${customization.blur}px`
-				: customization.blur;
+		const blurValue = toPixelValue(customization.blur);
 		styles.backdropFilter = `blur(${blurValue})`;
 		styles.WebkitBackdropFilter = `blur(${blurValue})`; // Safari support
 	}
 
-	// Handle outline/border - always apply border for glassmorphism effect
-	if (customization.outline !== undefined) {
-		const width = customization.outlineWidth || "1px";
-		styles.borderColor = customization.outline;
-		styles.borderWidth = typeof width === "number" ? `${width}px` : width;
-		styles.borderStyle = "solid";
-	} else if (
-		!customization.outline &&
-		(customization.color ||
-			customization.transparency !== undefined ||
-			customization.blur !== undefined)
-	) {
-		// Apply default border if glass customization is provided but outline is not
-		styles.borderColor = "rgba(255, 255, 255, 0.3)";
-		styles.borderWidth = "1px";
-		styles.borderStyle = "solid";
-	}
+	addBorderStyles(styles, customization);
 
-	// Handle shadow and inner glow - combine both if provided
-	const shadows: string[] = [];
-
-	// Add outer shadow
-	if (customization.shadow !== undefined) {
-		shadows.push(customization.shadow);
-	} else if (
-		customization.color ||
-		customization.transparency !== undefined ||
-		customization.blur !== undefined
-	) {
-		// Apply default glass shadow for depth
-		shadows.push(
-			"0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05)",
-		);
-	}
-
-	// Add inner glow as inset shadow
-	if (customization.innerGlow !== undefined) {
-		const glowBlur =
-			customization.innerGlowBlur !== undefined
-				? typeof customization.innerGlowBlur === "number"
-					? `${customization.innerGlowBlur}px`
-					: customization.innerGlowBlur
-				: "20px";
-		shadows.push(`inset 0 0 ${glowBlur} ${customization.innerGlow}`);
-	}
-
-	if (shadows.length > 0) {
-		styles.boxShadow = shadows.join(", ");
+	const boxShadow = buildBoxShadow(customization);
+	if (boxShadow) {
+		styles.boxShadow = boxShadow;
 	}
 
 	return styles;
@@ -154,69 +163,37 @@ export function getGlassStyles(
  * Generates CSS custom properties for glass customization
  * Useful for components that need to pass styles to child elements
  */
-export function getGlassCSSVars(
-	customization?: GlassCustomization,
-): Record<string, string> {
+export function getGlassCSSVars(customization?: GlassCustomization): Record<string, string> {
 	if (!customization) return {};
 
 	const vars: Record<string, string> = {};
 
 	if (customization.color || customization.transparency !== undefined) {
-		let bgColor = customization.color || "rgba(255, 255, 255, 0.1)";
-
-		if (customization.transparency !== undefined) {
-			const rgbaMatch = bgColor.match(
-				/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
-			);
-			if (rgbaMatch) {
-				const [, r, g, b] = rgbaMatch;
-				bgColor = `rgba(${r}, ${g}, ${b}, ${customization.transparency})`;
-			} else if (bgColor.startsWith("#")) {
-				const hex = bgColor.replace("#", "");
-				const r = parseInt(hex.substring(0, 2), 16);
-				const g = parseInt(hex.substring(2, 4), 16);
-				const b = parseInt(hex.substring(4, 6), 16);
-				bgColor = `rgba(${r}, ${g}, ${b}, ${customization.transparency})`;
-			}
-		}
-
-		vars["--glass-bg-custom"] = bgColor;
+		vars['--glass-bg-custom'] = getBackgroundColor(customization);
 	}
 
 	if (customization.blur !== undefined) {
-		const blurValue =
-			typeof customization.blur === "number"
-				? `${customization.blur}px`
-				: customization.blur;
-		vars["--blur-custom"] = blurValue;
+		vars['--blur-custom'] = toPixelValue(customization.blur);
 	}
 
 	if (customization.outline !== undefined) {
-		vars["--glass-border-custom"] = customization.outline;
+		vars['--glass-border-custom'] = customization.outline;
 	}
 
 	if (customization.outlineWidth !== undefined) {
-		const width =
-			typeof customization.outlineWidth === "number"
-				? `${customization.outlineWidth}px`
-				: customization.outlineWidth;
-		vars["--glass-border-width-custom"] = width;
+		vars['--glass-border-width-custom'] = toPixelValue(customization.outlineWidth);
 	}
 
 	if (customization.shadow !== undefined) {
-		vars["--glass-shadow-custom"] = customization.shadow;
+		vars['--glass-shadow-custom'] = customization.shadow;
 	}
 
 	if (customization.innerGlow !== undefined) {
-		vars["--glass-inner-glow-custom"] = customization.innerGlow;
+		vars['--glass-inner-glow-custom'] = customization.innerGlow;
 	}
 
 	if (customization.innerGlowBlur !== undefined) {
-		const blurValue =
-			typeof customization.innerGlowBlur === "number"
-				? `${customization.innerGlowBlur}px`
-				: customization.innerGlowBlur;
-		vars["--glass-inner-glow-blur-custom"] = blurValue;
+		vars['--glass-inner-glow-blur-custom'] = toPixelValue(customization.innerGlowBlur);
 	}
 
 	return vars;

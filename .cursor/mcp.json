@@ -1,0 +1,14 @@
+{
+	"mcpServers": {
+		"context7": {
+			"command": "npx",
+			"args": ["-y", "@upstash/context7-mcp"]
+		},
+		"deepwiki": {
+			"url": "https://mcp.deepwiki.com/mcp"
+		},
+		"stagehand-docs": {
+			"url": "https://docs.stagehand.dev/mcp"
+		}
+	}
+}

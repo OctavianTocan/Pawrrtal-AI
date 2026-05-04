@@ -1,0 +1,54 @@
+---
+description: Prevent race conditions in useEffect data fetching by requiring cleanup via AbortController or boolean flag
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Prevent Race Conditions in `useEffect` Data Fetching
+
+When fetching data inside `useEffect` based on a changing dependency:
+
+1. **Always use the cleanup function** to invalidate stale requests.
+2. **Preferred — `AbortController`:** Pass its `signal` to `fetch`, abort in cleanup, silently handle `AbortError`.
+3. **Fallback — boolean flag:** Only call state setters if `active` is still `true`.
+4. **Never** write a bare async fetch without one of these safeguards.
+
+```tsx
+// ❌ BAD — race condition when dependency changes rapidly
+useEffect(() => {
+  const fetchData = async () => {
+    const res = await fetch(url);
+    const data = await res.json();
+    setState(data);
+  };
+  fetchData();
+}, [dependency]);
+
+// ✅ GOOD — AbortController (preferred)
+useEffect(() => {
+  const abortController = new AbortController();
+  const fetchData = async () => {
+    try {
+      const res = await fetch(url, { signal: abortController.signal });
+      const data = await res.json();
+      setState(data);
+    } catch (err) {
+      if (err.name !== 'AbortError') throw err;
+    }
+  };
+  fetchData();
+  return () => abortController.abort();
+}, [dependency]);
+
+// ✅ GOOD — boolean flag (fallback)
+useEffect(() => {
+  let active = true;
+  const fetchData = async () => {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (active) setState(data);
+  };
+  fetchData();
+  return () => { active = false; };
+}, [dependency]);
+```

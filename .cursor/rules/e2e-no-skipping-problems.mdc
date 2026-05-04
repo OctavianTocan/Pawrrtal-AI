@@ -1,0 +1,38 @@
+---
+description: E2E tests must fix failures, never skip them as a workaround
+globs: ["**/e2e/**/*.sh", "**/e2e/**/*.ts"]
+alwaysApply: false
+---
+
+# E2E Tests: Fix Problems, Never Skip Them
+
+## Rule
+
+When an E2E test fails, you MUST fix the root cause. Do not convert a failure to a `skip()` as a workaround.
+
+## What counts as skipping
+
+- Changing `check` to `skip` because the test is hard to make pass
+- Removing a test step instead of fixing it
+- Adding `|| true` or `2>/dev/null` to hide failures
+- Commenting out assertions that fail
+
+## When `skip()` IS acceptable
+
+Only when the **code under test** has a documented, known limitation that makes the assertion impossible regardless of test quality:
+
+- Backend unreachable in local dev (mutation rollback reverts state)
+- Browser automation tool limitation (e.g., `.click()` doesn't trigger React synthetic events for a specific element)
+
+Even then, every skip MUST include:
+1. A reason string explaining the root cause
+2. What code change would un-skip it (e.g., "removing rollback from useUpdateTodo would fix this")
+
+## What to do instead of skipping
+
+1. Use `agent-browser eval` to work around overlay/ref issues
+2. Refresh refs with `snap_interactive` after DOM changes
+3. Add guards (`if [ -n "$ref" ]`) for empty refs
+4. Increase sleep time if timing-dependent
+5. Use alternative selectors (CSS, text content, aria labels)
+6. Fix the component code if the test reveals a real bug

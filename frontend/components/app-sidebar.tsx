@@ -1,8 +1,14 @@
-"use client";
+/**
+ * Thin sidebar shell that only mounts the conversations list.
+ *
+ * @fileoverview Prefer {@link AppLayout} for the full app chrome; this is used by the dashboard demo page.
+ */
 
-import type * as React from "react";
-import { Sidebar, SidebarContent } from "@/components/ui/sidebar";
-import { NavChats } from "./nav-chats";
+'use client';
+
+import type * as React from 'react';
+import { Sidebar, SidebarContent } from '@/components/ui/sidebar';
+import { NavChats } from '@/features/nav-chats/NavChats';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (

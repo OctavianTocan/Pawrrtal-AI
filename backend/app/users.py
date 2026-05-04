@@ -1,12 +1,10 @@
 """
-Authentication and user management configuration.
-
-Uses fastapi-users with JWT tokens transported via HTTP-only cookies.
+User management and authentication using FastAPI-Users. This module defines the UserManager class that handles user lifecycle events (registration, login, etc.) and sets up the authentication backend using JWTs stored in secure cookies. It also provides FastAPI dependencies for accessing the user manager and the current active user.
 """
 
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Optional
+from typing import AsyncGenerator, Optional
 
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi_users import (
@@ -80,14 +78,14 @@ async def get_user_manager(
 # --- Transport & Strategy ---------------------------------------------------
 
 should_secure_cookie = (
-    settings.is_production
-)  # Use secure cookies in production, but allow non-secure in development
+    settings.cookie_secure if settings.cookie_secure is not None else settings.is_production
+)  # Use secure cookies if requested, otherwise fallback to is_production
 
 cookie_transport = CookieTransport(
     cookie_name="session_token",
     cookie_httponly=True,
     cookie_secure=should_secure_cookie,
-    cookie_samesite="lax",
+    cookie_samesite=settings.cookie_samesite,
     cookie_max_age=3600,
     cookie_domain=settings.cookie_domain,
 )

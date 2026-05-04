@@ -9,10 +9,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp
 
+from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.db import create_db_and_tables
 from app.logger_setup import (
@@ -35,6 +38,8 @@ configure_logging()
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Run startup tasks (database table creation) before the app begins serving."""
     await create_db_and_tables()
+    # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
+    await seed_admin_user()
     yield
 
 
@@ -51,16 +56,11 @@ def create_app() -> FastAPI:
         description="An AI assistant platform",
         version="0.1.0",
     )
-    fastapi_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
+    )
+    fastapi_app.include_router(
+        get_auth_router(),
     )
     fastapi_app.include_router(
         fastapi_users.get_register_router(UserRead, UserCreate),
@@ -87,5 +87,17 @@ def create_app() -> FastAPI:
     return fastapi_app
 
 
+def with_cors(asgi_app: ASGIApp) -> ASGIApp:
+    """Wrap the whole ASGI app so even unhandled errors include CORS headers."""
+    return CORSMiddleware(
+        asgi_app,
+        allow_origins=settings.cors_origins,
+        allow_origin_regex=settings.cors_origin_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 # Create the app instance.
-app = create_app()
+app = with_cors(create_app())

@@ -6,16 +6,20 @@ default:
 dev:
     bun run dev.ts
 
-# Auto-generate conventional commits via Claude
+# Auto-generate conventional commit via Gemini
 commit:
-    bun run commit.ts
+    cd backend && uv run python -m app.cli.commit
 
 # Push with GitHub auth switching
 push:
     bash scripts/push.sh
 
-# Lint and auto-fix with Biome
+# Lint check (read-only) with Biome + custom policies
 lint:
+    bunx --bun @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true . && bun run lint:policies
+
+# Lint and auto-fix with Biome
+lint-fix:
     bunx --bun @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true .
 
 # Format with Biome
@@ -25,6 +29,10 @@ format:
 # Check with Biome (read-only, no writes)
 check:
     bunx --bun @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true .
+
+# Check application architecture with sentrux
+sentrux:
+    bash scripts/sentrux-check.sh
 
 # Run backend tests
 test:

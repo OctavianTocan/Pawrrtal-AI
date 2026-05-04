@@ -1,0 +1,89 @@
+# sentrux architectural rules for AI Nexus
+# Run locally:   sentrux check .
+# Run in CI:     same — exits 1 on violation
+#
+# Layer ordering convention (sentrux): LOWER order = HIGHER in the stack
+# (the consumer); HIGHER order = MORE foundational. Imports must flow from
+# lower-order layers DOWN to higher-order layers, never the reverse.
+
+[constraints]
+max_cycles = 0
+max_coupling = "C"
+max_cc = 30
+no_god_files = true
+
+# --- Frontend layers (top → bottom) ---
+
+[[layers]]
+name = "fe-app"
+paths = ["frontend/app/*"]
+order = 0
+
+[[layers]]
+name = "fe-features"
+paths = ["frontend/features/*"]
+order = 1
+
+[[layers]]
+name = "fe-shell"
+paths = ["frontend/components/app-*", "frontend/components/nav-*", "frontend/components/new-*", "frontend/components/signup-form.tsx"]
+order = 1
+
+[[layers]]
+name = "fe-ai-elements"
+paths = ["frontend/components/ai-elements/*"]
+order = 2
+
+[[layers]]
+name = "fe-ui-primitives"
+paths = ["frontend/components/ui/*", "frontend/components/icons/*"]
+order = 3
+
+[[layers]]
+name = "fe-lib"
+paths = ["frontend/lib/*", "frontend/hooks/*"]
+order = 4
+
+[[layers]]
+name = "fe-vendor"
+paths = ["frontend/packages/*"]
+order = 4
+
+# --- Backend layers (top → bottom) ---
+
+[[layers]]
+name = "be-entry"
+paths = ["backend/main.py", "backend/app/cli/*"]
+order = 0
+
+[[layers]]
+name = "be-api"
+paths = ["backend/app/api/*", "backend/app/users.py"]
+order = 1
+
+[[layers]]
+name = "be-crud"
+paths = ["backend/app/crud/*"]
+order = 2
+
+[[layers]]
+name = "be-models"
+paths = ["backend/app/models.py", "backend/app/schemas.py"]
+order = 3
+
+[[layers]]
+name = "be-core"
+paths = ["backend/app/core/*", "backend/app/db.py", "backend/app/logger_setup.py"]
+order = 4
+
+# --- Boundaries (deny lists) ---
+
+[[boundaries]]
+from = "frontend/*"
+to = "backend/*"
+reason = "Frontend must talk to backend only via HTTP, never import Python."
+
+[[boundaries]]
+from = "backend/*"
+to = "frontend/*"
+reason = "Backend has no business reaching into frontend."

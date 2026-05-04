@@ -1,0 +1,142 @@
+---
+description: Phased testing approach - test each piece in isolation before integrating
+globs: ["**/*.sh", "**/*.bash", "**/test*.{ts,js}", "**/*.test.{ts,js}"]
+paths: ["**/scripts/**", "**/test/**", "**/.claude/**"]
+alwaysApply: false
+---
+
+# Phased Testing Approach
+
+## Philosophy
+
+When fixing or modifying complex systems, **test each piece in isolation before integrating**. Start with the simplest possible test that proves the concept works.
+
+## Why Phased Testing?
+
+- **Reduces risk**: Catch issues early before they compound
+- **Easier debugging**: Isolated tests make it clear what's broken
+- **Builds confidence**: Each passing phase validates the approach
+- **Prevents rework**: Discover problems before integration
+
+## The Process
+
+### 1. Start Simple
+
+Begin with the most basic test that proves the concept:
+
+```bash
+# Example: Testing command output
+claude -p "Say hello"
+```
+
+**Expected:** Output appears immediately.
+
+### 2. Add One Layer at a Time
+
+Build complexity incrementally:
+
+```bash
+# Phase 1: Basic output ✓
+claude -p "Say hello"
+
+# Phase 2: Add file output
+claude -p "Say hello" | tee /tmp/test.log
+
+# Phase 3: Add streaming
+claude -p "Say hello" --output-format stream-json | tee /tmp/test.log
+
+# Phase 4: Add piped input
+claude -p < prompt.txt | tee /tmp/test.log
+```
+
+### 3. Verify Each Phase
+
+Before moving to the next phase:
+- ✅ Verify output matches expectations
+- ✅ Check log files contain correct content
+- ✅ Confirm no errors or unexpected behavior
+
+### 4. Only Integrate After All Phases Pass
+
+Once all isolated tests pass, integrate into the main system:
+
+```bash
+# Final integration uses proven pattern
+claude -p --dangerously-skip-permissions < "$PROMPT_FILE" 2>&1 | tee -a "$LOG_FILE"
+```
+
+## Common Patterns
+
+### Testing Output Redirection
+
+```bash
+# Test 1: Basic output
+command > file.log
+
+# Test 2: Dual output (console + file)
+command | tee file.log
+
+# Test 3: Append mode
+command | tee -a file.log
+```
+
+### Testing Streaming/Unbuffered Output
+
+```bash
+# Option 1: Use stdbuf for line buffering
+stdbuf -oL command | tee file.log
+
+# Option 2: Use native streaming format (if available)
+command --output-format stream-json | tee file.log
+```
+
+### Testing Piped Input
+
+```bash
+# Option 1: Pipe with cat
+cat file.txt | command
+
+# Option 2: Stdin redirect (cleaner)
+command < file.txt
+```
+
+## When to Use Phased Testing
+
+✅ **Use phased testing when:**
+- Fixing complex scripts or automation
+- Modifying critical infrastructure
+- Working with unfamiliar tools/APIs
+- Debugging mysterious failures
+- Integrating new patterns into existing code
+
+❌ **Skip phased testing for:**
+- Trivial one-line changes
+- Well-understood patterns you've used many times
+- Changes with zero risk of side effects
+
+## Example: Fixing Ralph Script
+
+**Problem:** Ralph script output wasn't appearing in console or log file.
+
+**Phased approach:**
+
+1. **Phase 1:** Test basic `claude -p` output → ✅ Works
+2. **Phase 2:** Test `tee` for dual output → ✅ Works
+3. **Phase 3:** Test streaming options → ✅ Verified structure
+4. **Phase 4:** Test piped input → ✅ Works
+5. **Phase 5:** Test minimal loop → ✅ Works
+6. **Phase 6:** Integrate proven pattern → ✅ Fixed
+
+**Result:** Confident fix with minimal risk.
+
+## Anti-Patterns
+
+❌ **Don't:** Jump straight to integration without testing pieces
+❌ **Don't:** Test multiple changes at once
+❌ **Don't:** Skip verification between phases
+❌ **Don't:** Assume "it should work" without testing
+
+✅ **Do:** Test each piece in isolation
+✅ **Do:** Verify each phase before proceeding
+✅ **Do:** Use the simplest possible test
+✅ **Do:** Document what you learned from each phase

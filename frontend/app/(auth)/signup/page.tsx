@@ -1,4 +1,8 @@
-import { SignupForm } from "@/components/signup-form";
+/**
+ * Sign-up route (`/signup`): centered registration form.
+ */
+
+import { SignupForm } from '@/components/signup-form';
 
 export default function Page() {
 	return (

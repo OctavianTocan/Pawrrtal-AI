@@ -1,0 +1,53 @@
+---
+description: Defaults for agent-browser CLI usage in this project
+globs: ["**/*.agent-browser.sh", "**/*.agent-browser.md"]
+alwaysApply: false
+---
+
+# agent-browser Defaults
+
+## Launch
+
+Always headed, always sandbox-disabled, always test-user auth:
+
+```bash
+agent-browser --headed open "http://localhost:3000/route?e2e_auto_login=true"
+```
+
+Every `agent-browser` Bash call requires `dangerouslyDisableSandbox: true` — the socket dir `~/.agent-browser` is outside the sandbox.
+
+## URL Params
+
+| Param | Effect |
+|-------|--------|
+| `e2e_auto_login=true` | Auto-login as test user (required) |
+| `e2e_sidebar=open` | Auto-open sidebar after auth |
+| `e2e_goto=first-memory` | Navigate to first memory after auth |
+
+## `window.__e2e` Helpers
+
+Available after auth completes. Use via `agent-browser eval "window.__e2e.methodName()"`.
+
+Sidebar: `openSidebar()`, `closeSidebar()`, `isSidebarOpen()`
+DOM: `has(testid)`, `lacks(testid)`, `getText(testid)`, `clickButton(label)`, `setInput(placeholder, value)`
+Scroll: `scrollTo(selector)`, `getBox(selector)` → `"x,y,w,h"`
+State: `isAuthComplete()`, `isAIResponseComplete()`, `getCompletedAIResponseCount()`
+Compound: `clickFirstMemory()`, `findMemory(title)`, `installFetchInterceptor(urlPattern)`, `getFetchLogs()`, `clearFetchLogs()`
+Mocks: `mockClipboard()` (fix headless clipboard), `mockFetchDelay(urlPattern, delayMs, response?)` (delay/mock API responses)
+
+## Broken Commands
+
+| Command | Why | Use instead |
+|---------|-----|-------------|
+| `scrollintoview @ref` | Crashes — parses ref as CSS selector | `eval "window.__e2e.scrollTo('selector')"` |
+| `get box @ref` | Same crash | `eval "window.__e2e.getBox('selector')"` |
+| `find role button click` | Doesn't register on many buttons | `eval "window.__e2e.clickButton('Label')"` |
+| `--auto-connect` | Needs Chrome launched with debug port | `--headed open` |
+
+## After Every Navigation
+
+Refs go stale. Always re-snapshot:
+
+```bash
+agent-browser snapshot -i
+```

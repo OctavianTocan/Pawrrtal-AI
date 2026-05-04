@@ -1,19 +1,32 @@
 """
 Database configuration and session management.
 
-Uses SQLAlchemy async engine with aiosqlite. The User model is defined here
+Uses SQLAlchemy async engine with PostgreSQL or local SQLite. The User model is defined here
 (rather than in models.py) because fastapi-users requires it at import time
 for its dependency chain.
 """
 
+import asyncio
+import logging
 from collections.abc import AsyncGenerator
 
 from fastapi import Depends
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 5
+RETRY_DELAY_SECONDS = 5
+
+
+engine_kwargs = (
+    {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
+)
 
 
 class Base(DeclarativeBase):
@@ -28,7 +41,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     pass
 
 
-engine = create_async_engine(settings.db_url)
+engine = create_async_engine(settings.db_url_async, **engine_kwargs)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
@@ -37,11 +50,30 @@ async def create_db_and_tables() -> None:
 
     Imports app.models to ensure every ORM model is registered with
     ``Base.metadata`` before issuing CREATE TABLE statements.
+    Includes retry logic to survive cold-starts from serverless database providers.
     """
     from . import models  # noqa: F401 — side-effect import to register models
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    for attempt in range(MAX_RETRIES):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            return
+        except OperationalError as e:
+            if attempt == MAX_RETRIES - 1:
+                logger.warning(
+                    "Database connection failed after %d attempts: %s. Giving up.",
+                    MAX_RETRIES,
+                    e,
+                )
+                raise
+            logger.warning(
+                "Database connection failed (attempt %d/%d). Retrying in %d seconds...",
+                attempt + 1,
+                MAX_RETRIES,
+                RETRY_DELAY_SECONDS,
+            )
+            await asyncio.sleep(RETRY_DELAY_SECONDS)
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

@@ -1,4 +1,10 @@
-"use client";
+/**
+ * Sidebar footer user menu: avatar trigger and account shortcuts.
+ *
+ * @fileoverview Tabler icon dropdown in the sidebar footer for account actions.
+ */
+
+'use client';
 
 import {
 	IconBell,
@@ -7,8 +13,8 @@ import {
 	IconRosetteDiscountCheck,
 	IconSelector,
 	IconSparkles,
-} from "@tabler/icons-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from '@tabler/icons-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -17,14 +23,17 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
-} from "@/components/ui/sidebar";
+} from '@/components/ui/sidebar';
 
+/**
+ * @param user - Display identity shown in the trigger and menu header.
+ */
 export function NavUser({
 	user,
 }: {
@@ -58,7 +67,7 @@ export function NavUser({
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
 						className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-						side={isMobile ? "bottom" : "right"}
+						side={isMobile ? 'bottom' : 'right'}
 						align="end"
 						sideOffset={4}
 					>

@@ -1,31 +1,34 @@
-"use client";
+/**
+ * Self-service registration card: posts to FastAPI then performs an automatic login.
+ *
+ * @fileoverview Uses `credentials: 'include'` on follow-up login so the session cookie is stored for the SPA.
+ */
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import {
-	Field,
-	FieldDescription,
-	FieldGroup,
-	FieldLabel,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { API_BASE_URL, API_ENDPOINTS } from "@/lib/api";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+'use client';
 
+import { useRouter } from 'next/navigation';
+import { useId, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+
+/** Registration form with invite code gate (when enabled server-side). */
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
-	const [errorMessage, setErrorMessage] = useState("");
+	const [errorMessage, setErrorMessage] = useState('');
 	// To disable buttons while submitting.
 	const [isLoading, setIsLoading] = useState(false);
 	// Get the router.
 	const router = useRouter();
+	// SSR-stable unique IDs so each Field's label and input pair correctly even
+	// if the form is rendered more than once on the same page.
+	const nameId = useId();
+	const emailId = useId();
+	const passwordId = useId();
+	const confirmPasswordId = useId();
+	const inviteCodeId = useId();
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		// Stops the page from refreshing.
@@ -35,32 +38,29 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 		setIsLoading(true);
 
 		const formData = new FormData(event.target as HTMLFormElement);
-		const email = formData.get("email")?.toString() ?? "";
-		const password = formData.get("password")?.toString() ?? "";
-		const confirmPassword = formData.get("confirm-password")?.toString() ?? "";
-		const inviteCode = formData.get("invite-code")?.toString() ?? "";
+		const email = formData.get('email')?.toString() ?? '';
+		const password = formData.get('password')?.toString() ?? '';
+		const confirmPassword = formData.get('confirm-password')?.toString() ?? '';
+		const inviteCode = formData.get('invite-code')?.toString() ?? '';
 		if (password !== confirmPassword) {
-			setErrorMessage("Passwords do not match");
+			setErrorMessage('Passwords do not match');
 			// Enable the button again.
 			setIsLoading(false);
 			return;
 		}
 
 		// TODO: This inline fetch needs to be moved to a custom hook.
-		const response = await fetch(
-			`${API_BASE_URL}${API_ENDPOINTS.auth.register}`,
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					email: email,
-					password: password,
-					invite_code: inviteCode,
-				}),
+		const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.register}`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
 			},
-		);
+			body: JSON.stringify({
+				email: email,
+				password: password,
+				invite_code: inviteCode,
+			}),
+		});
 
 		// TODO: Check detail for error. ({"detail":"REGISTER_USER_ALREADY_EXISTS"}
 		// TODO: Check response for success: ({
@@ -81,24 +81,24 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 
 		// Reset the error message.
 		// We do it here, so the Alert component doesn't jump unnecessarily every time we press the submit button.
-		setErrorMessage("");
+		setErrorMessage('');
 
 		// We need to log the user in after we've created the account.
 		// Otherwise, it'll feel odd to still need to log in after signing up.
 		await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.login}`, {
-			method: "POST",
+			method: 'POST',
 			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
+				'Content-Type': 'application/x-www-form-urlencoded',
 			},
 			body: new URLSearchParams({
 				username: email,
 				password: password,
 			}),
-			credentials: "include",
+			credentials: 'include',
 		});
 
 		// Redirect to the homepage.
-		router.push("/");
+		router.push('/');
 	};
 
 	return (
@@ -120,9 +120,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 							</Alert>
 						)}
 						<Field>
-							<FieldLabel htmlFor="name">Full Name</FieldLabel>
+							<FieldLabel htmlFor={nameId}>Full Name</FieldLabel>
 							<Input
-								id="name"
+								id={nameId}
 								type="text"
 								placeholder="John Doe"
 								required
@@ -130,9 +130,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 							/>
 						</Field>
 						<Field>
-							<FieldLabel htmlFor="email">Email</FieldLabel>
+							<FieldLabel htmlFor={emailId}>Email</FieldLabel>
 							<Input
-								id="email"
+								id={emailId}
 								type="email"
 								placeholder="m@example.com"
 								required
@@ -144,19 +144,15 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 							</FieldDescription>
 						</Field>
 						<Field>
-							<FieldLabel htmlFor="password">Password</FieldLabel>
-							<Input id="password" type="password" required name="password" />
+							<FieldLabel htmlFor={passwordId}>Password</FieldLabel>
+							<Input id={passwordId} type="password" required name="password" />
 							{/* TODO: We're not validating the password strength here. */}
-							<FieldDescription>
-								Must be at least 8 characters long.
-							</FieldDescription>
+							<FieldDescription>Must be at least 8 characters long.</FieldDescription>
 						</Field>
 						<Field>
-							<FieldLabel htmlFor="confirm-password">
-								Confirm Password
-							</FieldLabel>
+							<FieldLabel htmlFor={confirmPasswordId}>Confirm Password</FieldLabel>
 							<Input
-								id="confirm-password"
+								id={confirmPasswordId}
 								type="password"
 								required
 								name="confirm-password"
@@ -164,9 +160,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 							<FieldDescription>Please confirm your password.</FieldDescription>
 						</Field>
 						<Field>
-							<FieldLabel htmlFor="invite-code">Invite Code</FieldLabel>
+							<FieldLabel htmlFor={inviteCodeId}>Invite Code</FieldLabel>
 							<Input
-								id="invite-code"
+								id={inviteCodeId}
 								type="password"
 								required
 								name="invite-code"

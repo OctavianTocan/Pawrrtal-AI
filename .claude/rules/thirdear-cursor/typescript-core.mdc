@@ -1,0 +1,70 @@
+---
+description: Comprehensive TypeScript, typing, and general coding standards
+globs: ["**/*.ts", "**/*.tsx"]
+paths: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Core Standards
+
+## Type Safety
+
+### 1. No Any
+- **Rule:** NEVER use `any`. Use `unknown` with narrowing or strict interfaces.
+- **Action:** Stop if `any` is found. Create an interface or use a generic.
+
+### 2. Consistency
+- **Rule:** Use declared types consistently.
+- **Example:** If `Record<string, unknown>` is defined, don't use `JSON` or `object` elsewhere.
+
+### 3. Discriminated Unions
+- **Rule:** If you see 2+ boolean flags (`isLoading`, `isError`), replace with a discriminated union (`status: 'idle' | 'loading' | 'error'`).
+- **Single Boolean:** Acceptable for simple toggles (`isDisabled`, `isOpen`).
+
+### 4. Runtime Validation
+- **Rule:** Use Zod for all external data (API responses, user input, URL params).
+- **Inference:** `type User = z.infer<typeof UserSchema>`.
+
+### 5. Type Guards
+- **Rule:** Always use type guards (`instanceof Error`, `typeof x === 'string'`) before accessing properties on `unknown`.
+
+## Code Quality & Style
+
+### 1. Functional over Class
+- **Preference:** Use functional patterns (pure functions, closures) over classes.
+- **Exceptions:** Error types, specific design patterns requiring stateful instances (rare in frontend).
+
+### 2. Control Flow
+- **Guard Clauses:** Handle errors/edge cases early. Avoid "Arrow of Doom" nesting.
+- **Block Scope:** Blocks (`if`, `for`) should be short (1-line ideal). Indent max 2 levels.
+
+### 3. Functions
+- **One Thing:** Functions should do ONE thing. If name has "and", split it.
+- **Parameters:** Max 3 parameters. Use an object for more.
+- **Side Effects:** Isolate side effects (I/O) from pure logic.
+
+### 4. Naming
+- **Booleans:** Use auxiliary verbs: `is`, `has`, `should`, `can`.
+- **Handlers:** Descriptive: `saveUserProfile` (not `handleClick`).
+- **Descriptive:** Long & clear > Short & vague.
+
+## Error Handling
+
+### 1. Custom Errors
+- **Rule:** Extend `Error` for custom exceptions. Add `code` or `metadata`.
+- **Handling:** Catch blocks must reset ALL related state (e.g., `setLoading(false)`).
+
+## Documentation
+
+### 1. JSDoc
+- **Rule:** Exported functions/components MUST have JSDoc.
+- **Tags:** `@param`, `@returns`, `@example`.
+- **Interfaces:** Inline docs for properties.
+
+## Utilities
+
+### 1. Built-ins
+- **Parsing:** Check `typeof === 'string'` before `JSON.parse`.
+- **Input:** `.trim()` strings before validation/parsing.
+- **Env:** Use project specific utils (e.g., `isProduction()`) over direct `process.env` checks.
+- **Deletion:** Use `Reflect.deleteProperty` in strict mode.

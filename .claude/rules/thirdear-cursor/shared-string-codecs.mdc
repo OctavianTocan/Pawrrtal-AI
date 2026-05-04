@@ -1,0 +1,31 @@
+---
+description: If multiple logical fields are packed into one string, all encoding and decoding must go through a shared reversible codec
+globs: ["src/**/*.ts", "src/**/*.tsx"]
+paths: ["src/**/*.ts", "src/**/*.tsx"]
+alwaysApply: false
+---
+
+# Shared String Codecs
+
+If the backend contract forces multiple logical fields into one string, treat that string as a codec boundary, not ad hoc text manipulation.
+
+## Required Rules
+
+- Create one shared encoder and one shared decoder near the service layer.
+- UI components and mutation hooks must call the shared codec helpers instead of building packed strings inline.
+- Decoding must be backward-compatible with existing stored values.
+- User-entered delimiters must round-trip safely. If a legacy delimiter format must stay, parse from known boundaries and preserve the middle text.
+- Prefer first-class API fields over packed strings whenever the API supports them.
+
+## Required Coverage
+
+- Round-trip plain text values
+- Round-trip values containing the delimiter
+- Decode legacy values with missing or partial segments
+- Preserve priority/metadata after refresh
+
+## Anti-Patterns
+
+- Inline templates like `` `${icon}|${text}|${priority}` ``
+- Raw `split('|')` parsing in multiple files
+- Separate encoding rules for create vs update vs move operations

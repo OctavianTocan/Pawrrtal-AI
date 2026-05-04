@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import type * as React from "react";
-import { getQueryClient } from "./get-query-client";
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import type * as React from 'react';
+import { getQueryClient } from './get-query-client';
 
 /**
  * Providers is a React component that provides the query client to the application.

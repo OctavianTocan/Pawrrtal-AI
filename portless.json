@@ -1,0 +1,10 @@
+{
+	"turbo": false,
+	"apps": {
+		"frontend": {
+			"name": "app.nexus-ai",
+			"script": "dev:app",
+			"appPort": 3001
+		}
+	}
+}
