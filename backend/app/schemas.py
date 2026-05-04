@@ -6,7 +6,7 @@ through the API layer.
 
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
 from pydantic import BaseModel, StringConstraints
@@ -131,3 +131,25 @@ class ChatResponse(BaseModel):
     """
 
     response: str
+
+
+# --- Chat history schemas -----------------------------------------------------
+
+
+class ChatMessageRead(BaseModel):
+    """Single rehydrated chat message returned by ``GET /conversations/:id/messages``.
+
+    Mirrors the `AgnoMessage` shape consumed by the frontend so the chat UI
+    can render past turns with the same chain-of-thought, tool steps, source
+    chips, and reasoning duration as the live stream produced.
+    """
+
+    role: Literal["user", "assistant"]
+    content: str
+    thinking: str | None = None
+    # The frontend expects the snake_case field names below; matching them here
+    # avoids a serializer alias dance on the read path.
+    tool_calls: list[dict[str, Any]] | None = None
+    timeline: list[dict[str, Any]] | None = None
+    thinking_duration_seconds: int | None = None
+    assistant_status: Literal["streaming", "complete", "failed"] | None = None
