@@ -1,5 +1,12 @@
 # AI Nexus
 
+<p align="center">
+  <video src="docs/assets/header.mp4" controls muted playsinline width="100%" autoplay loop>
+    Your browser does not support the video tag. Watch the demo here:
+    <a href="docs/assets/header.mp4">docs/assets/header.mp4</a>
+  </video>
+</p>
+
 [![Formatted with Biome](https://img.shields.io/badge/Formatted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev/)
 [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 [![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
