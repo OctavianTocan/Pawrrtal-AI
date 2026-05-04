@@ -60,8 +60,12 @@ function buildExportFilename(conversation: Conversation): string {
 /**
  * Triggers a browser download of the given Markdown content.
  *
- * Wrapped to keep `URL.createObjectURL` use centralised — every call must
- * be paired with `URL.revokeObjectURL` to avoid leaking blob URLs.
+ * Uses a detached `<a>` (never inserted into the live DOM) so the click
+ * doesn't mutate document.body — appending + removing during the click
+ * was triggering a chat re-render that briefly blanked the visible
+ * message stream while the download finalised. The blob URL is revoked
+ * on the next macrotask so the browser has time to finish issuing the
+ * download before the URL is torn down.
  */
 function downloadMarkdown(filename: string, body: string): void {
 	if (typeof window === 'undefined') return;
@@ -70,11 +74,9 @@ function downloadMarkdown(filename: string, body: string): void {
 	const anchor = document.createElement('a');
 	anchor.href = url;
 	anchor.download = filename;
-	anchor.style.display = 'none';
-	document.body.appendChild(anchor);
+	anchor.rel = 'noopener';
 	anchor.click();
-	document.body.removeChild(anchor);
-	URL.revokeObjectURL(url);
+	window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /** Result type for {@link useExportConversation}. */

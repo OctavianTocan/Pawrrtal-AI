@@ -10,6 +10,7 @@ import { AppearanceSection } from './sections/AppearanceSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
 import { PlaceholderSection } from './sections/PlaceholderSection';
+import { UsageSection } from './sections/UsageSection';
 
 /**
  * Renders the right-pane body for the currently selected section.
@@ -22,6 +23,7 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'general') return <GeneralSection />;
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
+	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
 	return <PlaceholderSection title={section?.label ?? 'Settings'} />;
 }

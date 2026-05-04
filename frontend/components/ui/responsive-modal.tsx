@@ -12,6 +12,8 @@
 
 import { BottomSheet, Modal, type ModalSize } from '@octavian-tocan/react-overlay';
 import type * as React from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 /**
@@ -71,6 +73,12 @@ export function ResponsiveModal({
 	testId,
 }: ResponsiveModalProps): React.JSX.Element {
 	const isMobile = useIsMobile();
+	// Mounting flag so we don't try to portal during SSR — `document` is
+	// undefined on the server and the first render has to match.
+	const [isMounted, setIsMounted] = useState(false);
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
 	if (isMobile) {
 		// BottomSheet has no aria* props of its own — wrap children in a
@@ -91,7 +99,7 @@ export function ResponsiveModal({
 		);
 	}
 
-	return (
+	const desktopModal = (
 		<Modal
 			open={open}
 			onDismiss={onDismiss}
@@ -107,4 +115,13 @@ export function ResponsiveModal({
 			{children}
 		</Modal>
 	);
+
+	// Portal to document.body so the modal escapes any ancestor stacking
+	// context — without this the sidebar's `overflow:hidden` + flex
+	// transforms clip the modal and the user sees the rename form
+	// rendered inline as a sidebar row instead of as a centered overlay.
+	if (!isMounted) {
+		return desktopModal;
+	}
+	return createPortal(desktopModal, document.body);
 }

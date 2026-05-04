@@ -56,6 +56,8 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - Keep files concise; extract helpers instead of "V2" copies. Aim to keep files under ~700 LOC. Split/refactor when it improves clarity or testability.
 - **Written English**: Use American spelling and grammar in code, comments, docs, and UI strings (e.g. "color" not "colour", "behavior" not "behaviour", "analyze" not "analyse").
 - **Preserve Documentation**: NEVER remove existing docstrings, JSDoc comments, or explanatory comments when modifying code. Only remove documentation if the code it documents is being deleted, or update it if your changes make it inaccurate. See `.claude/rules/clean-code/preserve-documentation.md` for detailed rules.
+- **Icons + SVGs live in their own files**: Never inline SVG markup or icon definitions inside a component file. Every glyph, logo, status icon, or decorative SVG must live in a dedicated file (e.g. `frontend/features/nav-chats/components/ConversationIndicators.tsx` for the row-status glyphs, `frontend/features/onboarding/OnboardingBackdrop.tsx` for the backdrop). Components import + render the icon, never define it. This keeps feature files focused, lets tree-shaking work, and stops icon swaps from re-flowing unrelated code. Lucide / Tabler imports already follow the rule because they're external packages.
+- **File-line budget**: 500 lines hard ceiling for any `.ts`/`.tsx`/`.py` source file. `node scripts/check-file-lines.mjs` enforces it; CI fails on overflow. Split into smaller modules rather than asking for an exemption.
 
 ## Commit & Pull Request Guidelines
 

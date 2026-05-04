@@ -155,6 +155,15 @@ function ConversationRow({
 			: contentSearchResults.get(conversation.id)?.matchCount;
 	const labels = conversation.labels ?? [];
 	const isProcessing = Boolean(conversation.is_processing);
+	// Only override the row's left icon slot when the row has live activity
+	// (processing spinner, server-side unread meta, plan, queued prompts).
+	// Otherwise let `ConversationSidebarItemView`'s status glyph fallback
+	// render — that's what makes the colored dot reflect status changes.
+	const hasLiveIndicators =
+		isProcessing ||
+		Boolean(conversation.has_unread_meta) ||
+		conversation.last_message_role === 'plan' ||
+		(conversation.pending_prompt_count ?? 0) > 0;
 
 	return (
 		<ConversationSidebarItem
@@ -166,7 +175,12 @@ function ConversationRow({
 			}
 			updatedAt={conversation.updated_at}
 			icon={
-				<ConversationIndicators conversation={conversation} isProcessing={isProcessing} />
+				hasLiveIndicators ? (
+					<ConversationIndicators
+						conversation={conversation}
+						isProcessing={isProcessing}
+					/>
+				) : undefined
 			}
 			badges={
 				labels.length > 0

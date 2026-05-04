@@ -31,7 +31,10 @@ import React from 'react';
 import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity-context';
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
-import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
+import {
+	OnboardingFlow,
+	OPEN_ONBOARDING_FLOW_EVENT,
+} from '@/features/onboarding/v2/OnboardingFlow';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
@@ -82,7 +85,7 @@ const HELP_LINKS = [
 ] as const;
 
 function handleOpenOnboarding(): void {
-	window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT));
+	window.dispatchEvent(new Event(OPEN_ONBOARDING_FLOW_EVENT));
 }
 
 function AppHistoryControls(): React.JSX.Element {
@@ -438,9 +441,18 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           AppHeader; the panel itself still extends to the top of the viewport
           so the sidebar background reads as full-height behind the header. */}
 				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
+					{/*
+					 * The translate-x trick gives the sidebar a "pushed off the
+					 * left edge" feel during collapse instead of the previous
+					 * "chat panel paints over it" look. While the parent
+					 * react-resizable-panel shrinks its flex-grow, the inner
+					 * content also slides leftward by its own width — matching
+					 * the same 200ms duration as the panel transition so the
+					 * two animations stay in lockstep.
+					 */}
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
+						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-transform duration-200 ease-out data-[state=collapsed]:-translate-x-full data-[state=collapsed]:pointer-events-none data-[state=expanded]:translate-x-0 data-[state=expanded]:pointer-events-auto"
 					>
 						<SidebarHeader className="px-2 pb-2 shrink-0">
 							<NewSessionButton />
@@ -511,7 +523,7 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 					 * own bg-background, so the contrast stays.
 					 */}
 					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-sidebar">
-						<OnboardingModal initialOpen={false} />
+						<OnboardingFlow initialOpen={false} />
 						<ResizableSidebarContent>
 							<SidebarInset className="h-full min-h-0 min-w-0">
 								<div className="min-h-0 min-w-0 flex-1">{children}</div>
