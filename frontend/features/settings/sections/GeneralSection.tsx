@@ -15,13 +15,13 @@ import { SettingsCard, SettingsRow, Switch } from '../primitives';
  */
 export function GeneralSection(): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-8">
+		<div className="flex flex-col gap-10">
 			<header>
-				<h2 className="text-lg font-semibold text-foreground">Settings</h2>
+				<h1 className="text-2xl font-semibold tracking-tight text-foreground">General</h1>
 			</header>
 
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">Profile</h3>
+			<section className="flex flex-col gap-3">
+				<h3 className="text-sm font-medium text-muted-foreground">Profile</h3>
 				<SettingsCard>
 					<SettingsRow label="Avatar">
 						<Avatar className="size-9">
@@ -51,25 +51,25 @@ export function GeneralSection(): React.JSX.Element {
 				</SettingsCard>
 			</section>
 
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">Preferences</h3>
+			<section className="flex flex-col gap-3">
+				<h3 className="text-sm font-medium text-muted-foreground">Preferences</h3>
 				<SettingsCard>
 					<SettingsRow label="Appearance">
 						<div className="flex items-center gap-1 rounded-[7px] border border-foreground/10 p-0.5">
 							<button
-								className="rounded-[5px] bg-foreground/10 px-2 py-1 text-xs"
+								className="cursor-pointer rounded-[5px] bg-foreground/10 px-2.5 py-1 text-sm"
 								type="button"
 							>
 								System
 							</button>
 							<button
-								className="rounded-[5px] px-2 py-1 text-xs text-muted-foreground"
+								className="cursor-pointer rounded-[5px] px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"
 								type="button"
 							>
 								Light
 							</button>
 							<button
-								className="rounded-[5px] px-2 py-1 text-xs text-muted-foreground"
+								className="cursor-pointer rounded-[5px] px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"
 								type="button"
 							>
 								Dark
@@ -85,8 +85,8 @@ export function GeneralSection(): React.JSX.Element {
 				</SettingsCard>
 			</section>
 
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+			<section className="flex flex-col gap-3">
+				<h3 className="text-sm font-medium text-muted-foreground">Notifications</h3>
 				<SettingsCard>
 					<SettingsRow
 						description="Get notified when AI Nexus has finished a response. Useful for long-running tasks."

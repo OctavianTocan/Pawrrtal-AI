@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';
+import { ArchivedChatsSection } from './sections/ArchivedChatsSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { IntegrationsSection } from './sections/IntegrationsSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
@@ -25,6 +26,7 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
 	if (activeId === 'integrations') return <IntegrationsSection />;
+	if (activeId === 'archived-chats') return <ArchivedChatsSection />;
 	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
 	return <PlaceholderSection title={section?.label ?? 'Settings'} />;
@@ -46,7 +48,7 @@ export function SettingsLayout(): React.JSX.Element {
 		<div className="grid h-svh w-full grid-cols-[260px_1fr] bg-sidebar">
 			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-foreground/8 px-3 py-4">
 				<button
-					className="flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground"
+					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground"
 					onClick={() => router.push('/')}
 					type="button"
 				>
@@ -60,7 +62,7 @@ export function SettingsLayout(): React.JSX.Element {
 							<button
 								aria-current={isActive ? 'page' : undefined}
 								className={cn(
-									'group flex items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-left text-sm transition-colors',
+									'group flex cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-left text-sm transition-colors',
 									isActive
 										? 'bg-foreground/[0.07] text-foreground'
 										: 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground'

@@ -108,10 +108,10 @@ export function SettingsRow({
 				className
 			)}
 		>
-			<div className="flex min-w-0 max-w-[55%] flex-col gap-0.5">
+			<div className="flex min-w-0 max-w-[55%] flex-col gap-1">
 				<span className="text-sm font-medium text-foreground">{label}</span>
 				{description ? (
-					<span className="text-xs text-muted-foreground">{description}</span>
+					<span className="text-sm text-muted-foreground">{description}</span>
 				) : null}
 			</div>
 			<div className="flex shrink-0 items-center justify-end gap-2 text-right">
@@ -158,7 +158,7 @@ export function SettingsCard({
 						<h3 className="text-sm font-semibold text-foreground">{title}</h3>
 					) : null}
 					{description ? (
-						<p className="text-xs text-muted-foreground">{description}</p>
+						<p className="text-sm text-muted-foreground">{description}</p>
 					) : null}
 				</header>
 			) : null}
