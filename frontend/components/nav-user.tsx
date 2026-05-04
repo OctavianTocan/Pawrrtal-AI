@@ -22,6 +22,7 @@ import {
 	LogOutIcon,
 	SettingsIcon,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -92,19 +93,25 @@ function getInitials(name: string): string {
  */
 export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element | null {
 	const { state, isMobile } = useSidebar();
+	const router = useRouter();
 
 	if (!isMobile && state === 'collapsed') return null;
 
 	return (
-		<div className="px-2 pt-1 pb-2 shrink-0">
+		// Top border = the requested separator above the profile row.
+		// Using `border-foreground/8` (faint) so it reads as a divider, not a
+		// hard line. Wrapper gets its own padding instead of forcing the
+		// trigger button to swallow it — this lets the trigger's hover paint
+		// a clean fully-rounded pill that actually fills the visible row.
+		<div className="shrink-0 border-t border-foreground/8 p-2">
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<button
 						aria-label="Open account menu"
 						className={cn(
-							'group flex w-full items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-left',
+							'group flex w-full items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
 							'transition-[background-color,color] duration-150',
-							'hover:bg-foreground/[0.05] aria-expanded:bg-foreground/[0.06]',
+							'hover:bg-foreground/[0.07] aria-expanded:bg-foreground/[0.09]',
 							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
 						)}
 						type="button"
@@ -138,7 +145,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				>
 					<DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
 
-					<DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => router.push('/settings')}>
 						<SettingsIcon aria-hidden="true" />
 						Settings
 						<DropdownMenuShortcut>⇧⌘,</DropdownMenuShortcut>

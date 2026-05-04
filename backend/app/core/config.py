@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     # Leave empty to disable web search; the tool returns a clear
     # "not configured" error rather than crashing the turn.
     exa_api_key: str = ""
+    # API key for xAI (https://x.ai). Powers the speech-to-text proxy
+    # endpoint at POST /api/v1/stt — the frontend records audio with the
+    # browser's MediaRecorder, uploads the blob, and the backend forwards
+    # it to https://api.x.ai/v1/stt. Leave empty to disable voice input
+    # (the endpoint returns 503 with a clear "not configured" message).
+    xai_api_key: str = ""
     # CORS
     cors_origins: list[str]
     cors_origin_regex: str | None = r"^https:\/\/.*\.vercel\.app$"

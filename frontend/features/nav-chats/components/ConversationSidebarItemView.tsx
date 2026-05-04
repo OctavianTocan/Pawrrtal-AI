@@ -420,21 +420,32 @@ export function ConversationSidebarItemView({
 		onNavigate(href);
 	};
 
-	const hasTrailing = Boolean(titleTrailing) || Boolean(badges) || isUnread || Boolean(age);
+	const hasTrailing = Boolean(titleTrailing) || Boolean(badges) || Boolean(age);
 	const resolvedTrailing = hasTrailing ? (
 		<div className="flex items-center gap-1.5">
 			{titleTrailing}
 			{badges}
-			{isUnread ? <UnreadGlyph /> : null}
 			{age ? (
-				<span className="text-[11px] text-foreground/40 whitespace-nowrap">{age}</span>
+				<span className="whitespace-nowrap text-[11px] text-foreground/40">{age}</span>
 			) : null}
 		</div>
 	) : undefined;
 
-	// Unread = bolder title. EntityRow takes a single classname so we merge the
-	// weight modifier here rather than adding a second prop on the row.
-	const titleClassName = isUnread ? 'text-[13px] font-semibold text-foreground' : 'text-[13px]';
+	// Unread = bolder title weight. The unread glyph itself is hoisted to the
+	// LEFT of the title (see the `title` prop below) instead of the trailing
+	// area so it pushes the title rightward — matches the requested Stitch
+	// reference. EntityRow only takes a single class for the title, so the
+	// weight modifier is merged here rather than added as a separate prop.
+	const titleClassName = isUnread ? 'text-[14px] font-semibold text-foreground' : 'text-[14px]';
+
+	const resolvedTitle = isUnread ? (
+		<span className="inline-flex min-w-0 items-center gap-1.5">
+			<UnreadGlyph />
+			<span className="min-w-0 truncate">{title}</span>
+		</span>
+	) : (
+		title
+	);
 
 	return (
 		<SidebarMenuItem>
@@ -445,7 +456,7 @@ export function ConversationSidebarItemView({
 				isInMultiSelect={isInMultiSelect}
 				onClick={onClick}
 				onMouseDown={onMouseDown}
-				title={title}
+				title={resolvedTitle}
 				titleClassName={titleClassName}
 				titleTrailing={resolvedTrailing}
 				menuContent={

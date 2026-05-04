@@ -63,7 +63,7 @@ function ToolStep({ call, chips }: { call: ChatToolCall; chips: ToolResultChips 
  */
 function ThinkingStep({ title, content }: { title: string; content: string }): ReactNode {
 	return (
-		<div className="flex flex-col gap-1 px-1.5 py-1 text-sm leading-snug text-muted-foreground">
+		<div className="flex flex-col gap-1 px-1.5 py-1 text-base leading-snug text-muted-foreground">
 			{title ? <div className="font-medium text-foreground/85">{title}</div> : null}
 			{content ? (
 				// Streamdown renders each thinking line as its own <p>; default
@@ -73,7 +73,7 @@ function ThinkingStep({ title, content }: { title: string; content: string }): R
 				// as one continuous reasoning block.
 				<Streamdown
 					className={cn(
-						'text-sm text-muted-foreground',
+						'text-base text-muted-foreground',
 						'[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
 						'[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0',
 						'[&_p]:leading-snug'

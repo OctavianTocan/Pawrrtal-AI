@@ -215,9 +215,11 @@
 	--tracking-normal: 0em;
 
 	/* Chat bubble radii — separate token because the global `--radius` is 0
-	 * (flat aesthetic) but message bubbles need an asymmetric "tail" shape. */
+	 * (flat aesthetic) but message bubbles need a fully-pill silhouette. The
+	 * "tail" radius is kept around in case a future variant wants asymmetric
+	 * corners; today it equals the main radius so the bubble reads as a pill. */
 	--radius-bubble: 1.25rem; /* 20px */
-	--radius-bubble-tail: 0.25rem; /* 4px */
+	--radius-bubble-tail: 1.25rem; /* 20px — match for symmetric pill */
 
 	/* Thinking-gradient endpoints — sourced from project semantic colors so
 	 * theme switches propagate to the streaming-state shimmer text. */
