@@ -92,8 +92,8 @@ function ChatView({
 
 	return (
 		<div className="flex h-[calc(100svh-2.25rem)] min-h-0 w-full overflow-hidden rounded-l-xl bg-background px-4 shadow-modal-small">
-			<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
-				{isEmptyConversation ? (
+			{isEmptyConversation ? (
+				<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
 						<h1 className="mb-6 text-center text-[28px] font-medium tracking-normal text-foreground sm:text-[30px]">
 							What should we build in AI Nexus?
@@ -115,76 +115,81 @@ function ChatView({
 							onSelectSuggestion={onSelectSuggestion}
 						/>
 					</div>
-				) : (
-					<>
-						<Conversation className="min-h-0 flex-1 overflow-y-auto" resize="smooth">
-							<ConversationContent className="mx-auto w-full max-w-[48.75rem] px-0 py-6">
-								{chatHistory.map((chatMessage, index) => {
-									const key = `${chatMessage.role}-${index}`;
-									if (chatMessage.role === 'assistant') {
-										const isLast = index === chatHistory.length - 1;
-										const messageId = `assistant-${index}`;
-										const isCurrentlyRegenerating = regeneratingIndex === index;
-										return (
-											<AssistantMessage
-												content={chatMessage.content}
-												isCopied={copiedMessageId === messageId}
-												isFailed={chatMessage.assistant_status === 'failed'}
-												isRegenerating={isCurrentlyRegenerating}
-												isStreaming={Boolean(isLoading && isLast)}
-												key={key}
-												onCopy={
-													onCopy
-														? () =>
-																onCopy(
-																	messageId,
-																	chatMessage.content
-																)
-														: undefined
-												}
-												onRegenerate={
-													onRegenerate
-														? () => onRegenerate(index)
-														: undefined
-												}
-												thinking={chatMessage.thinking}
-												thinkingDurationSeconds={
-													chatMessage.thinking_duration_seconds
-												}
-												timeline={chatMessage.timeline}
-												toolCalls={chatMessage.tool_calls}
-											/>
-										);
-									}
+				</div>
+			) : (
+				// IMPORTANT: the scroll container is intentionally NOT wrapped in
+				// a `max-w-[60rem]` column. Constraining the scroll area there
+				// meant the user could only scroll while the cursor was over the
+				// narrow centered region — moving the mouse to either side of the
+				// chat panel killed scroll capture. Letting `<Conversation>` span
+				// the full panel width fixes that and parks the (hidden) scrollbar
+				// flush with the panel's right edge.
+				<div className="flex h-full w-full min-w-0 flex-col">
+					<Conversation
+						className="scrollbar-hide min-h-0 flex-1 overflow-y-auto"
+						resize="smooth"
+					>
+						<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 py-6">
+							{chatHistory.map((chatMessage, index) => {
+								const key = `${chatMessage.role}-${index}`;
+								if (chatMessage.role === 'assistant') {
+									const isLast = index === chatHistory.length - 1;
+									const messageId = `assistant-${index}`;
+									const isCurrentlyRegenerating = regeneratingIndex === index;
 									return (
-										<Message from={chatMessage.role} key={key}>
-											<MessageContent>
-												<MessageResponse>
-													{chatMessage.content}
-												</MessageResponse>
-											</MessageContent>
-										</Message>
+										<AssistantMessage
+											content={chatMessage.content}
+											isCopied={copiedMessageId === messageId}
+											isFailed={chatMessage.assistant_status === 'failed'}
+											isRegenerating={isCurrentlyRegenerating}
+											isStreaming={Boolean(isLoading && isLast)}
+											key={key}
+											onCopy={
+												onCopy
+													? () => onCopy(messageId, chatMessage.content)
+													: undefined
+											}
+											onRegenerate={
+												onRegenerate ? () => onRegenerate(index) : undefined
+											}
+											thinking={chatMessage.thinking}
+											thinkingDurationSeconds={
+												chatMessage.thinking_duration_seconds
+											}
+											timeline={chatMessage.timeline}
+											toolCalls={chatMessage.tool_calls}
+										/>
 									);
-								})}
-							</ConversationContent>
-							<ChatScrollAnchor track={chatHistory.length} />
-						</Conversation>
-						<div className="flex shrink-0 justify-center pb-4">
-							<ChatComposer
-								message={message}
-								isLoading={isLoading}
-								selectedModelId={selectedModelId}
-								selectedReasoning={selectedReasoning}
-								onSendMessage={onSendMessage}
-								onReplaceMessageContent={onReplaceMessageContent}
-								onSelectModel={onSelectModel}
-								onSelectReasoning={onSelectReasoning}
-								onUpdateMessage={onUpdateMessage}
-							/>
-						</div>
-					</>
-				)}
-			</div>
+								}
+								return (
+									<Message from={chatMessage.role} key={key}>
+										<MessageContent>
+											<MessageResponse>{chatMessage.content}</MessageResponse>
+										</MessageContent>
+									</Message>
+								);
+							})}
+						</ConversationContent>
+						<ChatScrollAnchor track={chatHistory.length} />
+					</Conversation>
+					{/* Composer stays centered on the original `max-w-[60rem]`
+					    column so the input width is unchanged — only the scroll
+					    region was widened. */}
+					<div className="mx-auto flex w-full max-w-[60rem] shrink-0 justify-center pb-4">
+						<ChatComposer
+							message={message}
+							isLoading={isLoading}
+							selectedModelId={selectedModelId}
+							selectedReasoning={selectedReasoning}
+							onSendMessage={onSendMessage}
+							onReplaceMessageContent={onReplaceMessageContent}
+							onSelectModel={onSelectModel}
+							onSelectReasoning={onSelectReasoning}
+							onUpdateMessage={onUpdateMessage}
+						/>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

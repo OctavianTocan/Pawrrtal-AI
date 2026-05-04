@@ -200,6 +200,16 @@
 	--spacing: 0.25rem;
 	--tracking-normal: 0em;
 
+	/* Chat bubble radii — separate token because the global `--radius` is 0
+	 * (flat aesthetic) but message bubbles need an asymmetric "tail" shape. */
+	--radius-bubble: 1.25rem; /* 20px */
+	--radius-bubble-tail: 0.25rem; /* 4px */
+
+	/* Thinking-gradient endpoints — sourced from project semantic colors so
+	 * theme switches propagate to the streaming-state shimmer text. */
+	--thinking-gradient-from: var(--accent);
+	--thinking-gradient-to: var(--info);
+
 	/* === Z-INDEX SCALE === */
 	--z-base: 0;
 	--z-local: 10;
@@ -445,6 +455,8 @@ html[data-font="inter"] {
 	--radius-md: max(0px, calc(var(--radius) - 2px));
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	--radius-bubble: var(--radius-bubble);
+	--radius-bubble-tail: var(--radius-bubble-tail);
 
 	/* === Z-INDEX SCALE === */
 	--z-index-base: var(--z-base);
@@ -1003,6 +1015,47 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: shimmer 1.5s ease-in-out infinite;
 	pointer-events: none;
 	border-radius: inherit;
+}
+
+/* =============================================================================
+   THINKING GRADIENT - flowing-color text used for the chain-of-thought
+   header while the assistant is still streaming. Endpoints are pulled from
+   `--thinking-gradient-from` / `--thinking-gradient-to` so theme overrides
+   carry through automatically.
+============================================================================= */
+
+@keyframes thinking-gradient-flow {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+.thinking-gradient-text {
+	background: linear-gradient(
+		90deg,
+		var(--thinking-gradient-from) 0%,
+		var(--thinking-gradient-to) 25%,
+		var(--thinking-gradient-from) 50%,
+		var(--thinking-gradient-to) 75%,
+		var(--thinking-gradient-from) 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+	animation: thinking-gradient-flow 5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.thinking-gradient-text {
+		animation: none;
+		color: var(--thinking-gradient-from);
+		-webkit-text-fill-color: var(--thinking-gradient-from);
+	}
 }
 
 @keyframes shimmer-loading {

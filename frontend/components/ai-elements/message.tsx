@@ -36,8 +36,15 @@ export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
 export const MessageContent = ({ children, className, ...props }: MessageContentProps) => (
 	<div
 		className={cn(
-			'is-user:dark flex w-fit max-w-full min-w-0 flex-col gap-2 overflow-hidden text-sm',
-			'group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground',
+			// Base sizing flows from the design system (`--font-size-base` = 15px,
+			// surfaced as `text-base`). `leading-relaxed` matches the body rhythm.
+			'is-user:dark flex w-fit max-w-full min-w-0 flex-col gap-2 overflow-hidden text-base leading-relaxed',
+			// User bubble: asymmetric "tail" radii driven by the design-token
+			// pair `--radius-bubble` / `--radius-bubble-tail`. The global
+			// `--radius` is 0 so the standard `rounded-*` scale is no-op here —
+			// this is the project's bubble token by design.
+			'group-[.is-user]:ml-auto group-[.is-user]:rounded-[var(--radius-bubble)] group-[.is-user]:rounded-br-[var(--radius-bubble-tail)]',
+			'group-[.is-user]:bg-user-message-bubble group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground',
 			'group-[.is-assistant]:text-foreground',
 			className
 		)}
@@ -272,7 +279,27 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 export const MessageResponse = memo(
 	({ className, ...props }: MessageResponseProps) => (
 		<Streamdown
-			className={cn('size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0', className)}
+			className={cn(
+				// Base flow.
+				'size-full text-base leading-relaxed',
+				// Reset edge margins so the bubble hugs content.
+				'[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+				// Vertical rhythm — every value comes from the Tailwind spacing /
+				// type scale (which is wired to project tokens in globals.css), no
+				// arbitrary literals.
+				'[&_p]:my-3 [&_p]:leading-relaxed',
+				'[&_ul]:my-3 [&_ol]:my-3 [&_li]:my-1.5 [&_li]:leading-relaxed',
+				'[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6',
+				// Headings: text-lg / text-base / text-base = 17 / 15 / 15px under
+				// the project's `--font-size-base = 15px`. Weight = semibold.
+				'[&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold',
+				'[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold',
+				'[&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_h3]:font-semibold',
+				'[&_strong]:font-semibold',
+				// Inline code: muted surface + mono font from the design-system stack.
+				'[&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm',
+				className
+			)}
 			{...props}
 		/>
 	),

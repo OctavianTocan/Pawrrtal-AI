@@ -11,14 +11,44 @@ import type { ToolResultChips } from '../tool-result-parsers';
 import type { ChatTimelineEntry, ChatToolCall } from '../types';
 import { ToolResultChipsRow } from './ToolResultChipsRow';
 
-/** Connector segment that visually links steps in the chain-of-thought rail. */
-function StepConnector(): ReactNode {
-	return <span className="ml-[7px] block h-3 w-px bg-border" aria-hidden="true" />;
+/**
+ * Single rail item.
+ *
+ * Layout copies thirdear's chain-of-thought: an absolutely-positioned
+ * 1px connector line runs through the row, and the leading marker
+ * (bullet for thinking, status circle for tools) sits on `bg-background`
+ * with positive z-index to "punch through" the line — so the rail looks
+ * like one continuous vertical line interrupted by markers, not a
+ * sequence of independent segments.
+ */
+function RailRow({
+	marker,
+	showConnector,
+	children,
+}: {
+	marker: ReactNode;
+	showConnector: boolean;
+	children: ReactNode;
+}): ReactNode {
+	return (
+		<div className="relative flex items-start gap-2 py-1">
+			{showConnector ? (
+				<span
+					aria-hidden="true"
+					className="absolute top-6 bottom-1 left-[7px] w-px bg-border"
+				/>
+			) : null}
+			<span className="relative z-10 flex h-5 w-4 shrink-0 items-center justify-center bg-background">
+				{marker}
+			</span>
+			<div className="min-w-0 flex-1">{children}</div>
+		</div>
+	);
 }
 
 /**
- * Render a single tool step as a row with: status bullet, icon, label, and
- * (when results are available) a chip row beneath.
+ * Render a single tool step. Active steps shimmer; completed steps get a
+ * filled success-tinted check so the user can scan the chain at a glance.
  */
 function ToolStep({
 	call,
@@ -33,34 +63,26 @@ function ToolStep({
 	const isComplete = call.status === 'completed';
 	const label = isComplete ? getCompletedToolLabel(call.name) : getToolLabel(call.name);
 
+	const marker = isComplete ? (
+		<CheckIcon className="size-3 text-success" strokeWidth={3} aria-hidden="true" />
+	) : (
+		<span aria-hidden="true" className="size-1.5 rounded-full bg-muted-foreground/60" />
+	);
+
 	return (
-		<div>
-			<div className="flex items-start gap-2">
-				<span
-					aria-hidden="true"
-					className={cn(
-						'mt-1 flex size-3.5 shrink-0 items-center justify-center rounded-full',
-						isComplete
-							? 'bg-emerald-500/15 text-emerald-600'
-							: 'bg-muted text-muted-foreground'
+		<RailRow marker={marker} showConnector={showConnector}>
+			<div className="flex flex-col gap-1">
+				<div className="flex items-center gap-1.5 text-sm leading-5">
+					<Icon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+					{isComplete ? (
+						<span className="text-foreground">{label}</span>
+					) : (
+						<Shimmer duration={1.2}>{label}</Shimmer>
 					)}
-				>
-					{isComplete ? <CheckIcon className="size-2.5" strokeWidth={3} /> : null}
-				</span>
-				<div className="min-w-0 flex-1 space-y-1.5">
-					<div className="flex items-center gap-1.5 text-sm">
-						<Icon className="size-3.5 text-muted-foreground" />
-						{isComplete ? (
-							<span className="text-foreground">{label}</span>
-						) : (
-							<Shimmer duration={1.2}>{label}</Shimmer>
-						)}
-					</div>
-					<ToolResultChipsRow chips={chips} />
 				</div>
+				<ToolResultChipsRow chips={chips} />
 			</div>
-			{showConnector ? <StepConnector /> : null}
-		</div>
+		</RailRow>
 	);
 }
 
@@ -75,19 +97,23 @@ function ThinkingStep({
 	showConnector: boolean;
 }): ReactNode {
 	return (
-		<div>
-			<div className="flex items-start gap-2">
-				<span
-					aria-hidden="true"
-					className="mt-1.5 inline-block size-1.5 shrink-0 rounded-full bg-muted-foreground/60"
-				/>
-				<div className="min-w-0 flex-1 space-y-1 text-muted-foreground text-sm leading-snug">
-					{title ? <div className="font-medium text-foreground">{title}</div> : null}
-					{content ? <Streamdown className="text-sm">{content}</Streamdown> : null}
-				</div>
+		<RailRow
+			marker={
+				<span aria-hidden="true" className="text-muted-foreground/70 leading-none">
+					•
+				</span>
+			}
+			showConnector={showConnector}
+		>
+			<div className="space-y-1 text-sm leading-5 text-muted-foreground">
+				{title ? <div className="font-medium text-foreground">{title}</div> : null}
+				{content ? (
+					<Streamdown className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+						{content}
+					</Streamdown>
+				) : null}
 			</div>
-			{showConnector ? <StepConnector /> : null}
-		</div>
+		</RailRow>
 	);
 }
 
@@ -149,15 +175,15 @@ export const ChainOfThought = memo(function ChainOfThought({
 
 	if (items.length === 0) {
 		return (
-			<div className="flex items-center gap-1 text-muted-foreground text-sm">
-				<ChevronRightIcon className="size-3.5" />
+			<div className={cn('flex items-center gap-1 text-sm text-muted-foreground')}>
+				<ChevronRightIcon aria-hidden="true" className="size-3.5" />
 				<Shimmer duration={1.2}>Thinking...</Shimmer>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-2">
+		<div>
 			{items.map((item, index) => {
 				const showConnector = index < items.length - 1;
 				if (item.kind === 'tool') {

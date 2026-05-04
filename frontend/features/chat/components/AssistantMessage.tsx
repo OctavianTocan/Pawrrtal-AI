@@ -1,18 +1,18 @@
 'use client';
 
-import { AlertTriangleIcon, BrainIcon, ChevronDownIcon, RefreshCwIcon } from 'lucide-react';
+import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
-import { Loader } from '@/components/ai-elements/loader';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import { Shimmer } from '@/components/ai-elements/shimmer';
+import { AgentSpinner } from '@/components/ui/agent-spinner';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { formatThinkingDuration } from '../thinking-parser';
 import { extractToolChips, type ToolResultChips } from '../tool-result-parsers';
 import type { ChatTimelineEntry, ChatToolCall } from '../types';
 import { ChainOfThought } from './ChainOfThought';
 import { ReplyActionsRow } from './ReplyActionsRow';
+import { ThinkingHeader } from './ThinkingHeader';
 
 /**
  * Props for {@link AssistantMessage}.
@@ -50,25 +50,13 @@ const EMPTY_CHIPS: ToolResultChips = {
 };
 
 /**
- * Trigger label rendered next to the brain icon. Shows a Shimmer while the
- * model is still reasoning and a static duration label once finished.
- */
-function ThinkingTriggerLabel({
-	isStreaming,
-	durationSeconds,
-}: {
-	isStreaming: boolean;
-	durationSeconds: number | undefined;
-}): ReactNode {
-	if (isStreaming) return <Shimmer duration={1.2}>Thinking...</Shimmer>;
-	if (durationSeconds === undefined) return <span>Thought for a few seconds</span>;
-	return <span>{formatThinkingDuration(durationSeconds)}</span>;
-}
-
-/**
- * Collapsible reasoning panel: brain-icon trigger plus chain-of-thought body.
- * Mounted only when there is something to show (thinking text or tool steps),
- * so plain answers stay free of UI chrome.
+ * Collapsible chain-of-thought panel.
+ *
+ * Header is the {@link ThinkingHeader} (gradient text + animated dots while
+ * streaming, duration label when done). Body is the {@link ChainOfThought}
+ * rail. The wrapper deliberately has no left border or padding — the rail
+ * carries the visual structure on its own. Mounted only when there is
+ * something to show (thinking text or tool steps).
  */
 function ReasoningPanel({
 	timeline,
@@ -86,26 +74,19 @@ function ReasoningPanel({
 	const [isOpen, setIsOpen] = useState<boolean>(true);
 
 	return (
-		<Collapsible className="not-prose mb-3" onOpenChange={setIsOpen} open={isOpen}>
-			<CollapsibleTrigger
-				className={cn(
-					'flex w-full items-center gap-2 text-muted-foreground text-sm',
-					'transition-colors hover:text-foreground'
-				)}
-			>
-				<BrainIcon className="size-4" />
-				<ThinkingTriggerLabel durationSeconds={durationSeconds} isStreaming={isStreaming} />
-				<ChevronDownIcon
-					className={cn(
-						'size-4 transition-transform',
-						isOpen ? 'rotate-180' : 'rotate-0'
-					)}
-				/>
-			</CollapsibleTrigger>
+		<Collapsible className="not-prose mb-3 max-w-prose" onOpenChange={setIsOpen} open={isOpen}>
+			<ThinkingHeader
+				durationSeconds={durationSeconds}
+				hasExpandableContent
+				isOpen={isOpen}
+				isStreaming={isStreaming}
+				onToggle={() => setIsOpen((value) => !value)}
+			/>
 			<CollapsibleContent
 				className={cn(
-					'mt-3 ml-1 border-border border-l pl-3',
-					'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+					'mt-2',
+					'data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2',
+					'data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-2',
 					'data-[state=closed]:animate-out data-[state=open]:animate-in'
 				)}
 			>
@@ -236,7 +217,7 @@ export function AssistantMessage({
 			<MessageContent>
 				{showInitialLoader ? (
 					<div className="flex items-center gap-2 text-muted-foreground text-sm">
-						<Loader />
+						<AgentSpinner size={16} />
 						<Shimmer duration={1.2}>Thinking...</Shimmer>
 					</div>
 				) : null}
