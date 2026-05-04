@@ -32,6 +32,7 @@ import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
+import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
 import {
@@ -57,6 +58,19 @@ import {
 
 /** Duration of the sidebar collapse/expand CSS transition in ms. */
 const COLLAPSE_ANIMATION_DURATION_MS = 250;
+
+/**
+ * Placeholder identity rendered in the sidebar footer.
+ *
+ * The frontend has no client-side auth context yet — once a `useCurrentUser`
+ * (or equivalent) hook lands, replace this with the resolved value. Keeping
+ * the shape declared here means swapping the source is a one-line change.
+ */
+const SIDEBAR_USER: NavUserIdentity = {
+	name: 'Octavian Tocan',
+	email: 'tocanoctavian@gmail.com',
+	plan: 'Max plan',
+};
 
 const HELP_LINKS = [
 	{ label: 'Sources', icon: DatabaseIcon },
@@ -370,6 +384,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<SidebarContent>
 							<NavChats />
 						</SidebarContent>
+						<NavUser user={SIDEBAR_USER} />
 					</SidebarFocusShell>
 				</Sidebar>
 				<div className="h-full w-full min-w-0 pt-10">
@@ -433,6 +448,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<SidebarContent>
 							<NavChats />
 						</SidebarContent>
+						<NavUser user={SIDEBAR_USER} />
 					</div>
 				</SidebarFocusShell>
 			</ResizablePanel>
