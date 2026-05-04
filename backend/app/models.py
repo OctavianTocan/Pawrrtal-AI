@@ -86,7 +86,20 @@ class APIKey(Base):
 
 
 class Message(Base):
-    """A single message in a conversation (user, assistant, thinking, tool_use, tool_result)."""
+    """
+    A single message turn in a conversation.
+
+    Persisted by the application layer (not the Claude Agent SDK) so that
+    the LCM context assembler (Phase 2) can read and compact history before
+    passing it to the SDK via JSONL intercept.
+
+    ``ordinal`` is a per-conversation monotonic counter starting at 0;
+    it determines display and compaction order.  ``token_count`` is
+    populated lazily — ``None`` until the caller counts tokens.
+
+    Allowed roles: ``"user"``, ``"assistant"``, ``"thinking"``,
+    ``"tool_use"``, ``"tool_result"``.
+    """
 
     __tablename__ = "messages"
 
@@ -105,7 +118,18 @@ class Message(Base):
 
 
 class ContextItem(Base):
-    """Ordered context window entry — points to a Message or Summary."""
+    """
+    An ordered entry in the active context window for a conversation.
+
+    Acts as an indirection layer between the context assembler and the
+    underlying storage (``messages`` or ``summaries`` tables).  When the
+    compaction engine replaces a range of messages with a summary it
+    deletes the old ``ContextItem`` rows and inserts a new one pointing to
+    the summary — the ordinal sequence is then re-indexed from 0.
+
+    ``item_type`` is either ``"message"`` or ``"summary"``;
+    ``item_id`` is the UUID primary key of the referenced row.
+    """
 
     __tablename__ = "context_items"
 
@@ -120,7 +144,22 @@ class ContextItem(Base):
 
 
 class Summary(Base):
-    """A compacted summary that replaces a range of messages in the context window."""
+    """
+    A compacted summary produced by the LCM summary engine.
+
+    Summaries are created by ``summary_engine.leaf_pass()`` (Phase 3) when
+    a conversation’s message count exceeds the compaction threshold.  Each
+    summary captures the semantic content of the ``source_ids`` messages it
+    replaces.
+
+    ``depth`` tracks DAG level: ``0`` for leaf summaries (directly over
+    raw messages), ``1`` for summaries-of-summaries, etc.  The multi-level
+    DAG (depth > 0) is a Phase 6 concern.
+
+    ``source_ids`` lists the UUIDs of the ``Message`` rows that were
+    compacted into this summary, enabling lossless expansion for recall
+    tools (``lcm_expand``).
+    """
 
     __tablename__ = "summaries"
 

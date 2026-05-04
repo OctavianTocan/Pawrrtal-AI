@@ -1,4 +1,18 @@
-"""Chat API — provider-agnostic streaming endpoint."""
+"""
+Chat API — provider-agnostic streaming endpoint.
+
+All AI providers (Claude via Agent SDK, Gemini via Agno, …) expose the
+same ``AIProvider.stream()`` interface and emit ``StreamEvent`` TypedDicts.
+This module contains exactly one route: ``POST /api/v1/chat/``.
+
+Message persistence
+-------------------
+The endpoint persists every user and assistant message to the
+``messages`` / ``context_items`` tables (Phase 1 LCM foundation).
+The user message is written *before* the stream starts so it survives
+network errors; the assistant message is written inside the ``finally``
+block so it is persisted even when an error event ends the stream early.
+"""
 from __future__ import annotations
 
 import json
@@ -48,10 +62,12 @@ def get_chat_router() -> APIRouter:
         if conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Resolve model: request overrides stored model, stored model overrides default
+        # Resolve model: request > stored > global default.
+        # This allows per-message model switching without a separate PATCH.
         model_id = request.model_id or conversation.model_id or _DEFAULT_MODEL
 
-        # Persist model change if it differs from what is stored
+        # Persist model change so the next request inherits it without
+        # the client having to re-send model_id every turn.
         if model_id != conversation.model_id:
             await update_conversation_model_service(
                 model_id=model_id,
@@ -62,7 +78,9 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_provider(model_id)
 
-        # Persist the user message before streaming begins
+        # Persist the user message *before* streaming starts.  Writing it
+        # here (outside the generator) ensures it is committed even if the
+        # client disconnects before the first SSE frame is sent.
         await create_message(
             session,
             conversation_id=request.conversation_id,
@@ -73,6 +91,15 @@ def get_chat_router() -> APIRouter:
         await session.commit()
 
         async def event_stream():
+            """Async generator that streams SSE frames to the client.
+
+            Yields one ``data: ...\n\n`` frame per provider event, then
+            a final ``data: [DONE]\n\n`` sentinel.  The assistant message
+            is persisted inside ``finally`` so it is written regardless of
+            whether the stream completes cleanly or raises an exception.
+            """
+            # Accumulate delta chunks so we can write the full assistant
+            # reply as a single Message row once streaming is done.
             full_response_parts: list[str] = []
             try:
                 async for event in provider.stream(
@@ -80,20 +107,25 @@ def get_chat_router() -> APIRouter:
                     request.conversation_id,
                     user.id,
                 ):
-                    # Collect assistant text chunks for persistence
+                    # Only "delta" events carry text we want to persist;
+                    # thinking / tool_use / tool_result are forwarded as-is.
                     if isinstance(event, dict) and event.get("type") == "delta":
                         full_response_parts.append(event.get("content", ""))
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as exc:
+                # Surface provider errors to the client as a typed event
+                # so the frontend can display them rather than silently hang.
                 error_event = {"type": "error", "content": str(exc)}
                 yield f"data: {json.dumps(error_event)}\n\n"
             finally:
-                # Persist assistant message after stream completes
+                # Persist the full assistant reply.  Running in ``finally``
+                # guarantees this executes even when an error interrupted
+                # the stream mid-way, preserving partial responses.
                 if full_response_parts:
                     await create_message(
                         session,
                         conversation_id=request.conversation_id,
-                        user_id=None,
+                        user_id=None,  # assistant messages have no user owner
                         role="assistant",
                         content="".join(full_response_parts),
                     )
