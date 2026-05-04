@@ -83,7 +83,7 @@ export function ThinkingHeader({
 			: formatThinkingDuration(durationSeconds);
 
 	const textClass = cn(
-		'font-medium text-sm',
+		'font-medium text-base',
 		isStreaming ? 'thinking-gradient-text' : 'text-muted-foreground'
 	);
 
