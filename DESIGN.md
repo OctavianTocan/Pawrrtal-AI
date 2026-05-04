@@ -65,7 +65,7 @@ typography:
     lineHeight: 1.5
   caption:
     fontFamily: system-ui
-    fontSize: 0.75rem
+    fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.4
     letterSpacing: 0.01em
@@ -74,6 +74,23 @@ typography:
     fontSize: 0.875rem
     fontWeight: 400
     lineHeight: 1.5
+  sidebar-section-header:
+    fontFamily: system-ui
+    fontSize: 0.875rem
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: 0
+  sidebar-row:
+    fontFamily: system-ui
+    fontSize: 0.875rem
+    fontWeight: 500
+    lineHeight: 1.35
+  sidebar-group-meta:
+    fontFamily: system-ui
+    fontSize: 0.875rem
+    fontWeight: 500
+    lineHeight: 1.35
+    letterSpacing: 0
 rounded:
   none: 0px
   sm: 4px
@@ -262,12 +279,64 @@ clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, …).
 | body-lg   | 1.125rem  | 18px         | Lead paragraph, prominent body    |
 | body-md   | 1rem      | 16px         | Default body, chat messages       |
 | body-sm   | 0.875rem  | 14px         | Secondary body, metadata          |
-| caption   | 0.75rem   | 12px         | Labels, badges, dense UI          |
+| caption   | 0.875rem  | 14px         | Labels, dense UI, group metadata  |
 | code      | 0.875rem  | 14px         | Inline code, pre blocks           |
 
 Headings use **negative letter-spacing** (`-0.01em` to `-0.02em`) to compensate
 for system-ui's default tracking. Body uses default tracking. Caption uses
-slightly **positive tracking** (`+0.01em`) for legibility at small sizes.
+slightly **positive tracking** (`+0.01em`) for legibility.
+
+### Sidebar Type Baseline
+
+The sidebar has its own subset of the type scale because rows there are
+denser than chat content but **must not** drop below 14px (`text-sm`). The
+floor is 14px because rows compete with system-ui's lower-bound legibility
+under the warm low-contrast palette and routinely include status glyphs
+that would shrink with the row.
+
+| Surface                       | Token                   | Tailwind   | px |
+| ----------------------------- | ----------------------- | ---------- | -- |
+| Section header (Projects, Chats) | sidebar-section-header  | `text-sm font-semibold` | 14 |
+| Conversation row              | sidebar-row             | `text-sm`  | 14 |
+| Date-group header (Today, May 3) + count | sidebar-group-meta | `text-sm font-medium` | 14 |
+| Status glyph + unread bubble  | —                       | `h-3.5 w-3.5` | (14px square) |
+
+**Do not** drop sidebar text to `text-[11px]` or `text-xs` (12px); the
+old 11px on date group headers shipped briefly and looked broken next to
+the row text. If a row needs visual de-emphasis, use `text-muted-foreground`
+or the `--foreground-N` mix scale, **not** a smaller font size.
+
+## Interactive Affordances
+
+Every element that responds to a click, drag, or hover **must** declare its
+intent visually. The Tailwind v4 base layer in `globals.css` does not set
+`cursor: pointer` on `<button>` or `[role="button"]` automatically, so each
+interactive surface opts in.
+
+### Cursor Rules
+
+| Element kind                          | Required cursor       |
+| ------------------------------------- | --------------------- |
+| `<button>`, `[role="button"]`         | `cursor-pointer`      |
+| `<a href>`                            | `cursor-pointer`      |
+| Drop target while a valid drag hovers | `cursor-copy`         |
+| Disabled button (`disabled`)          | `cursor-not-allowed`  |
+| Resizable handle (sidebar splitter)   | `cursor-col-resize`   |
+| Drag handle on a row                  | `cursor-grab` → `cursor-grabbing` while held |
+| Non-interactive heading / label       | (default)             |
+
+The verify question for every PR: *"Does every clickable element in this
+diff have `cursor-pointer` (or one of the variants above) on it?"* The
+project linter does not enforce this — humans and review agents do.
+
+### Hit Targets
+
+Drop zones (project rows, archive bin, etc.) need a **minimum 40px tall
+target** with the **whole row reactive**, not just the visible icon or
+text inside it. Use `py-2` / `py-3` to pad the row, attach the
+`onDragOver`/`onDrop` handlers to the outer row element, and call
+`event.preventDefault()` on every nested `onDragOver` so the drop is
+delivered to the row.
 
 ## Layout
 
@@ -342,6 +411,39 @@ visually attaches to its author edge:
 User messages tail toward the right; assistant messages tail toward the left.
 This is the only place in the system that breaks the flat default.
 
+## Motion
+
+The system prefers **transform-based animation** over property animation
+that triggers layout. Two specific animation patterns are load-bearing
+enough to call out.
+
+### Sidebar Open / Close
+
+The sidebar opens and closes by **translating the panel along the X axis
+at its full open width** — not by interpolating its width from `0` to
+`288px`. Animating width forces the content area's text and controls to
+reflow on every frame, which manifests as right-side controls "creeping"
+toward the conversation titles during the animation.
+
+Implementation contract:
+
+- The sidebar lives inside a fixed-width outer wrapper that always occupies
+  its open width in the layout.
+- The inner panel has `translate-x-0` when open and `-translate-x-full`
+  when closed, with `transition-transform duration-200 ease-out`.
+- The main content area listens to the same open/closed state and shifts
+  via `margin-left` (or grid-template-columns), in sync with the panel
+  transform — never via `width`.
+- The resize handle is disabled / hidden while the panel is closed; the
+  user can't grab a panel they can't see.
+
+### Reduced Motion
+
+Honor `prefers-reduced-motion: reduce` on every animation longer than
+~150ms. The sidebar slide, modal entry, and personalization step
+transitions all gate their `transition-*` classes behind a reduced-motion
+check (`motion-safe:transition-transform`).
+
 ## Components
 
 Component tokens record the **typed surfaces** in the chat workspace. Use the
@@ -365,6 +467,20 @@ fall back to the prose below for behavioral notes.
 - **`button-primary`** / **`button-secondary`** — Buttons follow the flat
   default (`rounded.none`). Primary fills with accent; secondary inherits
   the page background and relies on `shadow-thin` for definition.
+- **`personalization-modal`** — The home-page personalization surface
+  (fires on every load while the feature is WIP). Sits over the same
+  scenic dotted backdrop used by the workspace onboarding, with a
+  panel-backed card holding the form fields. Field styling matches
+  `Field` / `FieldLabel` / `Input` from the form primitives. Typography
+  follows the standard `h3` heading + `body-md` body + `caption` helper
+  pattern — it does **not** introduce new font sizes. Dismiss closes
+  for the session only; no localStorage flag while WIP.
+- **`project-row` (drop target)** — Sidebar Projects row. Full-row drop
+  target (the whole `<button>` listens for `dragover`/`drop`), `min-h-9`
+  for hit area, `cursor-pointer` always, `cursor-copy` while a valid
+  conversation drag hovers, hover background `bg-foreground-5`, drag-over
+  background `bg-foreground-10` with a 1px accent ring. Names are set via
+  the project create modal; never auto-named "New Project".
 
 ## Do's and Don'ts
 
@@ -384,6 +500,19 @@ fall back to the prose below for behavioral notes.
 - **Trust the 16px root.** All Tailwind sizing utilities resolve to clean
   pixels; you should rarely need a literal `px` value outside 1px borders
   and a handful of icon-sized affordances.
+
+- **Bump up, never down, the sidebar text scale.** The 14px floor is
+  load-bearing for the sidebar's legibility under the warm low-contrast
+  palette; smaller is unreadable for date-group headers and counts.
+- **Translate, don't resize.** When opening or closing a panel, animate
+  `transform: translateX()` on a fixed-width inner wrapper and shift the
+  content area with `margin-left` (or grid columns) on the same easing.
+  Animating `width` causes the right-side content to creep toward the
+  panel during the transition.
+- **Make every interactive surface declare itself.** `cursor-pointer` on
+  buttons + links, `cursor-copy` on drop targets while a valid drag is
+  over them, `cursor-not-allowed` on disabled controls. The base layer
+  doesn't set these for you.
 
 ### Don't
 
