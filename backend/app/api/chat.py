@@ -1,17 +1,13 @@
 """
 Chat API — provider-agnostic streaming endpoint.
 
-All AI providers (Claude via Agent SDK, Gemini via Agno, …) expose the
-same ``AIProvider.stream()`` interface and emit ``StreamEvent`` TypedDicts.
-This module contains exactly one route: ``POST /api/v1/chat/``.
+All AI providers expose the same ``AIProvider.stream()`` interface and
+emit ``StreamEvent`` TypedDicts.  This module has one route:
+``POST /api/v1/chat/``.
 
-Message persistence
--------------------
-The endpoint persists every user and assistant message to the
-``messages`` / ``context_items`` tables (Phase 1 LCM foundation).
-The user message is written *before* the stream starts so it survives
-network errors; the assistant message is written inside the ``finally``
-block so it is persisted even when an error event ends the stream early.
+The user message is saved before streaming starts; the assistant reply
+is saved after streaming ends (in a ``finally`` block so partial replies
+are still recorded on error).
 """
 from __future__ import annotations
 
