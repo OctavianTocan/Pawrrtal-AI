@@ -9,7 +9,7 @@ dependencies = [
     "alembic>=1.13.0",
     "aiosqlite>=0.22.1",
     "anyio>=4.0.0",
-    "claude-agent-sdk",
+    "claude-agent-sdk>=0.1.72,<0.2",
     "fastapi-users[sqlalchemy]>=15.0.3",
     "fastapi[standard]>=0.127.0",
     "google-genai>=1.56.0",

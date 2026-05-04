@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     google_api_key: str
     # Fernet Encryption Key (used to encrypt API keys)
     fernet_key: str
+    # OAuth token used by the Claude Agent SDK to authenticate the bundled
+    # Claude Code CLI subprocess. Optional — only required when a chat
+    # request resolves to a Claude model. Generate with `claude setup-token`.
+    claude_code_oauth_token: str = ""
     # CORS
     cors_origins: list[str]
     cors_origin_regex: str | None = r"^https:\/\/.*\.vercel\.app$"
