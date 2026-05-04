@@ -437,7 +437,16 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				</SidebarFocusShell>
 			</ResizablePanel>
 
-			<ResizableHandle />
+			{/*
+			 * Constrain the handle height to match the chat panel's visible
+			 * area: mt-10 aligns the top with the chat panel below the
+			 * AppHeader (pt-10), mb-2 aligns the bottom with the chat
+			 * panel's pb-2 gap. The flex-row Group's align:stretch default
+			 * subtracts these cross-axis margins from the handle's height,
+			 * so the drag affordance + ::after hit area only cover the
+			 * panel boundary — not the header strip or the bottom margin.
+			 */}
+			<ResizableHandle className="mt-10 mb-2" />
 
 			{/*
 			 * Chat panel stacks above the sidebar via z-index so its left-edge
