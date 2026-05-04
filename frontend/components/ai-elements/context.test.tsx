@@ -13,7 +13,20 @@ import {
 	ContextTrigger,
 } from './context';
 
-const USAGE = { inputTokens: 100, outputTokens: 50 };
+const USAGE = {
+	inputTokens: 100,
+	outputTokens: 50,
+	totalTokens: 150,
+	inputTokenDetails: {
+		noCacheTokens: 100,
+		cacheReadTokens: 0,
+		cacheWriteTokens: 0,
+	},
+	outputTokenDetails: {
+		textTokens: 50,
+		reasoningTokens: 0,
+	},
+};
 
 describe('Context', () => {
 	it('renders the trigger with default usage display', () => {

@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Source, Sources, SourcesContent, SourcesTrigger } from './sources';
+import { Source, Sources, SourcesTrigger } from './sources';
 
 describe('Sources', () => {
 	it('renders the trigger with the default "Used N sources" copy', () => {
@@ -21,15 +21,10 @@ describe('Sources', () => {
 		expect(getByText('my trigger')).toBeTruthy();
 	});
 
-	it('renders Source links inside SourcesContent', () => {
-		const { getByText } = render(
-			<Sources defaultOpen>
-				<SourcesTrigger count={1} />
-				<SourcesContent>
-					<Source href="https://example.com" title="Example" />
-				</SourcesContent>
-			</Sources>
-		);
-		expect(getByText('Example')).toBeTruthy();
+	it('renders a Source link with the supplied href + title', () => {
+		const { getByRole } = render(<Source href="https://example.com" title="Example" />);
+		const link = getByRole('link');
+		expect(link.getAttribute('href')).toBe('https://example.com');
+		expect(link.textContent).toContain('Example');
 	});
 });

@@ -6,10 +6,10 @@ describe('Tool', () => {
 	it('renders header title + state + content', () => {
 		const { getByText, container } = render(
 			<Tool defaultOpen>
-				<ToolHeader state="output-available" type="search" title="search-web" />
+				<ToolHeader state="output-available" type="tool-search" title="search-web" />
 				<ToolContent>
 					<ToolInput input={{ query: 'foo' }} />
-					<ToolOutput errorText={null} output={'result'} />
+					<ToolOutput errorText={undefined} output={'result'} />
 				</ToolContent>
 			</Tool>
 		);
@@ -22,7 +22,7 @@ describe('Tool', () => {
 		const { getByText } = render(
 			<Tool defaultOpen>
 				<ToolContent>
-					<ToolOutput errorText="boom" output={null} />
+					<ToolOutput errorText="boom" output={undefined} />
 				</ToolContent>
 			</Tool>
 		);
