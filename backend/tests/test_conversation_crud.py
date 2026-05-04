@@ -103,9 +103,7 @@ async def test_create_conversation_rejects_cross_user_uuid_collision(
 
 
 @pytest.mark.anyio
-async def test_get_conversation_scopes_to_owner(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_get_conversation_scopes_to_owner(db_session: AsyncSession, test_user: User) -> None:
     """Conversation lookup returns None for the wrong owner."""
     conversation = await create_conversation_service(
         test_user.id,

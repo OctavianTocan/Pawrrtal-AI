@@ -4,6 +4,7 @@ The factory layer is the only place that reads :mod:`app.core.config`,
 keeping the providers themselves config-agnostic and trivially testable
 by passing :class:`ClaudeProviderConfig` directly.
 """
+
 from __future__ import annotations
 
 from app.core.config import settings

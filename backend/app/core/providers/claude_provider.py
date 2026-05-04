@@ -35,6 +35,7 @@ Notable design decisions:
   does not push the values back into ``os.environ``, so the bundled CLI
   subprocess would otherwise miss the token.
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,11 +46,11 @@ from typing import Any
 
 from claude_agent_sdk import (
     AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKError,
     CLIConnectionError,
     CLIJSONDecodeError,
     CLINotFoundError,
-    ClaudeAgentOptions,
-    ClaudeSDKError,
     PermissionMode,
     ProcessError,
     RateLimitEvent,
@@ -201,8 +202,7 @@ class ClaudeProvider:
             )
         except CLIConnectionError as error:
             yield _error_event(
-                "Lost connection to the Claude Code CLI subprocess. "
-                f"Underlying error: {error}",
+                f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
             )
         except ProcessError as error:
             yield _error_event(
@@ -283,7 +283,7 @@ def _session_exists(session_id: str, directory: str | None) -> bool:
     """
     try:
         return get_session_info(session_id, directory=directory) is not None
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         logger.warning(
             "Probing Claude session %s failed; assuming it does not exist (%s)",
             session_id,
@@ -316,9 +316,7 @@ def _events_from_message(message: Any) -> Iterator[StreamEvent]:
     if isinstance(message, RateLimitEvent):
         info = message.rate_limit_info
         if info.status == "rejected":
-            yield _error_event(
-                "Claude API rate limit reached. Please wait and retry."
-            )
+            yield _error_event("Claude API rate limit reached. Please wait and retry.")
         return
     if isinstance(message, SystemMessage):
         # System messages carry CLI metadata (init details, mirror errors,
@@ -343,9 +341,7 @@ def _events_from_assistant(message: AssistantMessage) -> Iterator[StreamEvent]:
         elif isinstance(block, ToolResultBlock):
             yield _tool_result_event(block)
     if message.error:
-        yield _error_event(
-            f"Assistant message reported an error: {message.error}"
-        )
+        yield _error_event(f"Assistant message reported an error: {message.error}")
 
 
 def _tool_result_event(block: ToolResultBlock) -> StreamEvent:

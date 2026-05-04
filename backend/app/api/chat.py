@@ -1,9 +1,11 @@
 """Chat API — provider-agnostic streaming endpoint."""
+
 from __future__ import annotations
 
 import json
 import logging
 import time
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -63,9 +65,7 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(
-            user.id, session, request.conversation_id
-        )
+        conversation = await get_conversation_service(user.id, session, request.conversation_id)
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -89,7 +89,7 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_provider(model_id)
 
-        async def event_stream():
+        async def event_stream() -> AsyncGenerator[str]:
             """Yield SSE-framed events from the provider stream.
 
             Wraps the provider's async iterator with timing, event counting,

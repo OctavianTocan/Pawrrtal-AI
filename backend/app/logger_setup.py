@@ -49,7 +49,6 @@ def configure_logging() -> None:
     same handlers. Console handler stays at INFO; file handler captures
     DEBUG to give us full fidelity when investigating issues.
     """
-
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 

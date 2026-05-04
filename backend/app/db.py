@@ -1,5 +1,4 @@
-"""
-Database configuration and session management.
+"""Database configuration and session management.
 
 Uses SQLAlchemy async engine with PostgreSQL or local SQLite. The User model is defined here
 (rather than in models.py) because fastapi-users requires it at import time
@@ -24,9 +23,7 @@ MAX_RETRIES = 5
 RETRY_DELAY_SECONDS = 5
 
 
-engine_kwargs = (
-    {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
-)
+engine_kwargs = {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
 
 
 class Base(DeclarativeBase):
@@ -52,7 +49,10 @@ async def create_db_and_tables() -> None:
     ``Base.metadata`` before issuing CREATE TABLE statements.
     Includes retry logic to survive cold-starts from serverless database providers.
     """
-    from . import models  # noqa: F401 — side-effect import to register models
+    # Lazy import: must run before ``Base.metadata.create_all`` so every
+    # mapped class registers itself, but importing at module top would create
+    # a circular import (models.py depends on Base from this module).
+    from app import models  # noqa: F401, PLC0415 — side-effect import to register models
 
     for attempt in range(MAX_RETRIES):
         try:
@@ -76,7 +76,7 @@ async def create_db_and_tables() -> None:
             await asyncio.sleep(RETRY_DELAY_SECONDS)
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields an async database session."""
     async with async_session_maker() as session:
         yield session

@@ -1,6 +1,5 @@
 """Alembic environment configuration for ai-nexus backend migrations."""
 
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -18,8 +17,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import metadata from the app models so autogenerate can detect changes.
-from app.db import Base  # noqa: E402
-from app import models  # noqa: E402, F401  — registers all ORM models
+from app.db import Base
+from app import models  # noqa: F401  — registers all ORM models
 
 target_metadata = Base.metadata
 

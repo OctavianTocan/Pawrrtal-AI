@@ -1,5 +1,4 @@
-"""
-FastAPI application entry point.
+"""FastAPI application entry point.
 
 Defines all API routes, configures middleware, and wires up authentication.
 """
@@ -36,7 +35,7 @@ configure_logging()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Run startup tasks (database table creation) before the app begins serving."""
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
@@ -48,9 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    """
-    Create a FastAPI app instance with middleware and routes.
-    """
+    """Create a FastAPI app instance with middleware and routes."""
     fastapi_app = FastAPI(
         lifespan=lifespan,
         title="Nexus-AI",

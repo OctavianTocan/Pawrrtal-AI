@@ -1,5 +1,4 @@
-"""
-Pydantic schemas for API request/response validation.
+"""Pydantic schemas for API request/response validation.
 
 These are *not* database models — they define the shape of data flowing
 through the API layer.
@@ -7,7 +6,7 @@ through the API layer.
 
 import uuid
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi_users import schemas
 from pydantic import BaseModel, StringConstraints
@@ -41,11 +40,13 @@ class UserCreate(schemas.BaseUserCreate):
     invite_code: str = ""
 
     def create_update_dict(self):
+        """Strip ``invite_code`` from the safe (non-superuser) update dict before persistence."""
         d = super().create_update_dict()
         d.pop("invite_code", None)
         return d
 
     def create_update_dict_superuser(self):
+        """Strip ``invite_code`` from the superuser update dict before persistence."""
         d = super().create_update_dict_superuser()
         d.pop("invite_code", None)
         return d
@@ -75,7 +76,7 @@ class ConversationCreate(BaseModel):
     LLM title generation finishes.
     """
 
-    id: Optional[uuid.UUID] = None
+    id: uuid.UUID | None = None
     title: ConversationTitle | None = None
 
 
@@ -90,19 +91,19 @@ class ConversationResponse(BaseModel):
     is_archived: bool = False
     is_flagged: bool = False
     is_unread: bool = False
-    status: Optional[str] = None
-    model_id: Optional[str] = None
+    status: str | None = None
+    model_id: str | None = None
 
 
 class ConversationUpdate(BaseModel):
     """Request schema for updating mutable conversation fields."""
 
-    title: Optional[ConversationTitle] = None
-    is_archived: Optional[bool] = None
-    is_flagged: Optional[bool] = None
-    is_unread: Optional[bool] = None
-    status: Optional[str] = None
-    model_id: Optional[str] = None  # optional — only set when changing model
+    title: ConversationTitle | None = None
+    is_archived: bool | None = None
+    is_flagged: bool | None = None
+    is_unread: bool | None = None
+    status: str | None = None
+    model_id: str | None = None  # optional — only set when changing model
 
 
 # --- Chat schemas -------------------------------------------------------------

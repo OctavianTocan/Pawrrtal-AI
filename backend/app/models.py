@@ -1,5 +1,4 @@
-"""
-SQLAlchemy ORM models for the application database.
+"""SQLAlchemy ORM models for the application database.
 
 Note: The ``User`` model lives in ``db.py`` because fastapi-users needs it
 at import time. All other domain models are defined here.
@@ -28,8 +27,7 @@ class SenderType(Enum):
 
 
 class Conversation(Base):
-    """
-    Conversation metadata stored in the application database.
+    """Conversation metadata stored in the application database.
 
     Actual message content is persisted by the Agno library in its own database. The two are linked via ``Conversation.id`` ==
     Agno's ``session_id``.
@@ -38,23 +36,21 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "todo"|"in_progress"|"done"|null
+    status: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # "todo"|"in_progress"|"done"|null
     model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
 class UserPreferences(Base):
-    """
-    User preferences stored in the application database.
-    """
+    """User preferences stored in the application database."""
 
     __tablename__ = "user_preferences"
 
@@ -67,16 +63,12 @@ class UserPreferences(Base):
 
 
 class APIKey(Base):
-    """
-    API key for a user's provider account.
-    """
+    """API key for a user's provider account."""
 
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     provider: Mapped[str] = mapped_column(String(50))
     encrypted_key: Mapped[str] = mapped_column(
         StringEncryptedType(String, config.settings.fernet_key, FernetEngine)

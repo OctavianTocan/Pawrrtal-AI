@@ -1,5 +1,4 @@
-"""
-CRUD operations for the Conversation model.
+"""CRUD operations for the Conversation model.
 
 All functions enforce user ownership — a user can only access or modify
 their own conversations.
@@ -7,7 +6,6 @@ their own conversations.
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -59,7 +57,7 @@ async def create_conversation_service(
 
 async def get_conversation_service(
     user_id: uuid.UUID, session: AsyncSession, conversation_id: uuid.UUID
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Retrieve a single conversation by ID, scoped to the given user.
 
     Args:
@@ -81,7 +79,7 @@ async def get_conversation_service(
 
 async def get_conversations_for_user_service(
     user_id: uuid.UUID, session: AsyncSession
-) -> List[Conversation]:
+) -> list[Conversation]:
     """Retrieve all conversations for a user, most-recent first.
 
     Args:
@@ -102,7 +100,7 @@ async def get_conversations_for_user_service(
 
 async def update_conversation_title_service(
     title: str, user_id: uuid.UUID, conversation_id: uuid.UUID, session: AsyncSession
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Update the title of an existing conversation.
 
     Args:
@@ -138,7 +136,7 @@ async def update_conversation_service(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
     session: AsyncSession,
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Update mutable fields on an existing conversation.
 
     Only fields explicitly set in ``payload`` are applied. Supports title,
@@ -189,7 +187,7 @@ async def update_conversation_model_service(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
     session: AsyncSession,
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Persist a model_id change on an existing conversation.
 
     Args:

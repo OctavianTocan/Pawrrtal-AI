@@ -1,10 +1,8 @@
-"""
-This module contains the conversation endpoints for the API.
-"""
+"""This module contains the conversation endpoints for the API."""
 
 import logging
 import uuid
-from typing import Any, List, Optional
+from typing import Any
 
 from agno.agent import Message
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -27,8 +25,12 @@ from app.users import current_active_user
 # Logger follows module namespace conventions for consistent filtering and tracing.
 logger = logging.getLogger(__name__)
 
+# Generated conversation titles longer than this are treated as overflow / model
+# refusal text and rejected in favour of falling back to the heuristic title.
+MAX_GENERATED_TITLE_LENGTH = 80
 
-def _extract_message_text(
+
+def _extract_message_text(  # noqa: PLR0911, PLR0912 — content shape is a sealed union; flat dispatch is clearest
     content: Any, *, _depth: int = 0, _max_depth: int = 5, _max_length: int = 4000
 ) -> str:
     """Flatten Agno/Gemini message content into safe plain text for the frontend.
@@ -58,7 +60,7 @@ def _extract_message_text(
 
     # Lists/tuples: concatenate child text, respecting depth/length limits
     if isinstance(content, (list, tuple)):
-        parts: List[str] = []
+        parts: list[str] = []
         remaining = _max_length
         for item in content:
             if remaining <= 0:
@@ -94,14 +96,13 @@ def _extract_message_text(
     return ""
 
 
-def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
+def _serialize_chat_history(messages: list[Message]) -> list[dict[str, str]]:
     """Convert Agno messages into the minimal chat shape expected by the UI.
 
     The response contract for the ConversationPage is intentionally minimal:
     ``{"role": "user"|"assistant", "content": str}``.
     """
-
-    serialized_messages: List[dict[str, str]] = []
+    serialized_messages: list[dict[str, str]] = []
 
     for message in messages:
         if message.role not in {"user", "assistant"}:
@@ -118,7 +119,6 @@ def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
 
 def _is_missing_session_error(error: Exception) -> bool:
     """Return whether the error indicates an absent Agno session."""
-
     return "session not found" in str(error).lower()
 
 
@@ -135,7 +135,6 @@ GENERATED_TITLE_REJECTION_PHRASES = (
 
 def _normalize_generated_title(content: Any) -> str | None:
     """Return a usable generated title, or ``None`` for provider/error text."""
-
     title = str(content or "").strip().strip('"').strip("'").strip()
     if not title:
         return None
@@ -145,11 +144,10 @@ def _normalize_generated_title(content: Any) -> str | None:
     if any(phrase in title_lower for phrase in GENERATED_TITLE_REJECTION_PHRASES):
         return None
 
-    if len(collapsed_title) > 80:
+    if len(collapsed_title) > MAX_GENERATED_TITLE_LENGTH:
         return None
 
     return collapsed_title
-
 
 
 def get_conversations_router() -> APIRouter:
@@ -161,13 +159,12 @@ def get_conversations_router() -> APIRouter:
         conversation_id: uuid.UUID,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> List[dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Return message history for a conversation.
 
         Verifies ownership first, then reads from Agno using conversation ID as
         session ID. Returns an empty list for new conversations without history.
         """
-
         conversation = await get_conversation_service(user.id, session, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -197,9 +194,9 @@ def get_conversations_router() -> APIRouter:
         conversation_id: uuid.UUID,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> Optional[ConversationResponse]:
+    ) -> ConversationResponse | None:
         """Return metadata for a single conversation."""
-        conversation: Optional[Conversation] = await get_conversation_service(
+        conversation: Conversation | None = await get_conversation_service(
             user.id, session, conversation_id
         )
         if conversation:
@@ -225,7 +222,6 @@ def get_conversations_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> str:
         """Generate and persist a short conversation title from the first message."""
-
         response = create_utility_agent(
             "Generate a title for the conversation based on the first message: "
             + first_message
@@ -260,7 +256,6 @@ def get_conversations_router() -> APIRouter:
         Accepts any combination of: title, is_archived, is_flagged, is_unread,
         and status. Only fields present in the payload are updated.
         """
-
         if payload.title is not None and not payload.title.strip():
             raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
 
@@ -293,7 +288,6 @@ def get_conversations_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a conversation owned by the authenticated user."""
-
         deleted = await delete_conversation_service(user.id, session, conversation_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -302,9 +296,9 @@ def get_conversations_router() -> APIRouter:
     async def list_conversations(
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> List[ConversationResponse]:
+    ) -> list[ConversationResponse]:
         """List all conversations for the authenticated user, most recent first."""
-        conversations: List[Conversation] = await get_conversations_for_user_service(
+        conversations: list[Conversation] = await get_conversations_for_user_service(
             user.id, session
         )
         return [
@@ -335,7 +329,6 @@ def get_conversations_router() -> APIRouter:
         Frontend generates the UUID first; this endpoint persists metadata before
         the first streamed turn.
         """
-
         creation_payload = payload or ConversationCreate()
         try:
             new_conversation: Conversation = await create_conversation_service(

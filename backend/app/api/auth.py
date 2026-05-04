@@ -6,6 +6,7 @@ from app.users import UserManager, auth_backend, get_jwt_strategy, get_user_mana
 
 
 def get_auth_router() -> APIRouter:
+    """Build the auth ``APIRouter`` exposing the dev-login helper endpoint."""
     router = APIRouter(tags=["auth"])
 
     @router.post("/auth/dev-login")

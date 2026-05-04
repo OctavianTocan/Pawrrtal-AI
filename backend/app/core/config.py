@@ -1,6 +1,4 @@
-"""
-Application settings.
-"""
+"""Application settings."""
 
 from pathlib import Path
 from typing import Literal
@@ -11,9 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application settings. This class uses Pydantic's BaseSettings to automatically read environment variables and provide type validation.
-    """
+    """Application settings. This class uses Pydantic's BaseSettings to automatically read environment variables and provide type validation."""
 
     # Load environment variables from a .env file in the current directory, with UTF-8 encoding. This allows you to define your settings in a .env file instead of setting them directly in the environment.
     model_config = SettingsConfigDict(
@@ -57,9 +53,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
-        secure = (
-            self.cookie_secure if self.cookie_secure is not None else self.is_production
-        )
+        """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."
@@ -68,9 +63,7 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        """
-        A convenience property that returns True if the application is running in production mode (i.e., if env is set to "prod").
-        """
+        """A convenience property that returns True if the application is running in production mode (i.e., if env is set to "prod")."""
         return self.env == "prod"
 
     @property
@@ -97,10 +90,10 @@ class Settings(BaseSettings):
 
     @property
     def db_url_sync(self) -> str:
-        """
-        Returns the database URL formatted for synchronous connections. PostgreSQL URLs are
-        normalized to the installed psycopg driver, while SQLite async URLs are converted
-        back to the sync sqlite dialect.
+        """Return the database URL formatted for synchronous connections.
+
+        PostgreSQL URLs are normalized to the installed psycopg driver, while
+        SQLite async URLs are converted back to the sync sqlite dialect.
         """
         url = self._normalized_database_url
         if url.startswith("postgresql://"):
@@ -111,10 +104,10 @@ class Settings(BaseSettings):
 
     @property
     def db_url_async(self) -> str:
-        """
-        Returns the database URL formatted for asynchronous connections. PostgreSQL URLs are
-        normalized to the psycopg async dialect and SQLite sync URLs are converted to the
-        aiosqlite dialect.
+        """Return the database URL formatted for asynchronous connections.
+
+        PostgreSQL URLs are normalized to the psycopg async dialect and SQLite
+        sync URLs are converted to the aiosqlite dialect.
         """
         url = self._normalized_database_url
         if url.startswith("postgresql://"):
