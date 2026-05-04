@@ -6,8 +6,8 @@ import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
 import type { AgnoMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
-import { Loader } from '../../components/ai-elements/loader';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
+import { AssistantMessage } from './components/AssistantMessage';
 import { ChatComposer } from './components/ChatComposer';
 import { ChatPromptSuggestions } from './components/ChatPromptSuggestions';
 import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
@@ -107,26 +107,33 @@ function ChatView({
 					<>
 						<Conversation className="min-h-0 flex-1 overflow-y-auto" resize="smooth">
 							<ConversationContent className="mx-auto w-full max-w-[48.75rem] px-0 py-6">
-								{chatHistory.map((chatMessage, index) => (
-									<Message
-										from={chatMessage.role}
-										key={`${chatMessage.role}-${index}`}
-									>
-										<MessageContent>
-											<MessageResponse>{chatMessage.content}</MessageResponse>
-										</MessageContent>
-									</Message>
-								))}
-								{isLoading && (
-									<Message from="assistant">
-										<MessageContent>
-											<div className="flex items-center gap-2">
-												<Loader />
-												Thinking...
-											</div>
-										</MessageContent>
-									</Message>
-								)}
+								{chatHistory.map((chatMessage, index) => {
+									const key = `${chatMessage.role}-${index}`;
+									if (chatMessage.role === 'assistant') {
+										// The assistant turn currently being streamed is the
+										// last message and gets `isStreaming` so the reasoning
+										// panel auto-opens until the answer text arrives.
+										const isLast = index === chatHistory.length - 1;
+										return (
+											<AssistantMessage
+												content={chatMessage.content}
+												isStreaming={Boolean(isLoading && isLast)}
+												key={key}
+												thinking={chatMessage.thinking}
+												toolCalls={chatMessage.tool_calls}
+											/>
+										);
+									}
+									return (
+										<Message from={chatMessage.role} key={key}>
+											<MessageContent>
+												<MessageResponse>
+													{chatMessage.content}
+												</MessageResponse>
+											</MessageContent>
+										</Message>
+									);
+								})}
 							</ConversationContent>
 							<ChatScrollAnchor track={chatHistory.length} />
 						</Conversation>

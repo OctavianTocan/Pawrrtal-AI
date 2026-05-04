@@ -22,6 +22,7 @@ import {
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
+import type { ChatStreamEvent, ChatToolCall } from './types';
 
 /** Runtime guard for persisted model IDs — older builds may have stored a now-renamed model. */
 function isChatModelId(value: unknown): value is ChatModelId {
@@ -52,20 +53,64 @@ function buildInitialConversationTitle(content: string): string {
 	return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
 }
 
-function replaceLastAssistantMessage({
-	messages,
-	content,
-}: {
-	messages: Array<AgnoMessage>;
-	content: string;
-}): Array<AgnoMessage> {
-	const updatedMessages = [...messages];
-	updatedMessages[updatedMessages.length - 1] = {
-		...updatedMessages[updatedMessages.length - 1],
-		role: 'assistant',
-		content,
-	};
-	return updatedMessages;
+/**
+ * Apply an updater to the last assistant message in `messages`, returning a
+ * new array. Used by the streaming reducer below so each SSE event produces
+ * exactly one immutable message-list update.
+ */
+function updateLastAssistantMessage(
+	messages: Array<AgnoMessage>,
+	update: (current: AgnoMessage) => AgnoMessage
+): Array<AgnoMessage> {
+	const lastIndex = messages.length - 1;
+	const last = messages[lastIndex];
+	if (!last || last.role !== 'assistant') return messages;
+
+	const updated = [...messages];
+	updated[lastIndex] = update(last);
+	return updated;
+}
+
+/**
+ * Reduce a single {@link ChatStreamEvent} into the in-flight assistant message.
+ *
+ * Pure function so it stays trivially testable and composes inside a setState
+ * updater. `error` events never reach here — the transport throws on those and
+ * the catch block in `handleSendMessage` writes the error into `content`.
+ */
+function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): AgnoMessage {
+	switch (event.type) {
+		case 'delta':
+			return { ...message, content: message.content + event.content };
+		case 'thinking':
+			return { ...message, thinking: (message.thinking ?? '') + event.content };
+		case 'tool_use': {
+			const newCall: ChatToolCall = {
+				id: event.tool_use_id,
+				name: event.name,
+				input: event.input,
+				status: 'pending',
+			};
+			return {
+				...message,
+				tool_calls: [...(message.tool_calls ?? []), newCall],
+			};
+		}
+		case 'tool_result': {
+			const calls = message.tool_calls ?? [];
+			const updated = calls.map((call) =>
+				call.id === event.tool_use_id
+					? { ...call, result: event.content, status: 'completed' as const }
+					: call
+			);
+			return { ...message, tool_calls: updated };
+		}
+		case 'error':
+			// Should be unreachable — the transport surfaces errors by throwing.
+			return { ...message, content: `Error: ${event.content}` };
+		default:
+			return message;
+	}
 }
 
 /**
@@ -152,8 +197,6 @@ export default function ChatContainer({
 			{ role: 'assistant', content: '' } as AgnoMessage,
 		]);
 
-		let assistantMessage = '';
-
 		try {
 			if (!hasNavigated.current) {
 				await createConversationMutation.mutateAsync({
@@ -170,20 +213,23 @@ export default function ChatContainer({
 				hasNavigated.current = true;
 			}
 
-			for await (const chunk of streamMessage(
+			// Drive the placeholder forward one SSE event at a time via applyChatEvent.
+			for await (const event of streamMessage(
 				newMessage.content,
 				conversationId,
 				selectedModelId
 			)) {
-				assistantMessage += chunk || '';
 				setChatHistory((prev) =>
-					replaceLastAssistantMessage({ messages: prev, content: assistantMessage })
+					updateLastAssistantMessage(prev, (msg) => applyChatEvent(msg, event))
 				);
 			}
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : 'Chat stream failed.';
 			setChatHistory((prev) =>
-				replaceLastAssistantMessage({ messages: prev, content: `Error: ${errorMessage}` })
+				updateLastAssistantMessage(prev, (msg) => ({
+					...msg,
+					content: `Error: ${errorMessage}`,
+				}))
 			);
 		} finally {
 			setIsLoading(false);

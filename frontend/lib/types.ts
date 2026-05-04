@@ -69,13 +69,17 @@ export interface Conversation {
 /**
  * Message shape used by the Agno agent / chat API.
  *
- * @property role - Sender of the message. Intentionally a subset of {@link MessageRole}
- *   (excludes `'plan'`, which is not a valid Agno API role).
- * @property content - Plain-text message body.
+ * `thinking` and `tool_calls` are optional so that history fetched from the
+ * server (which only persists `role` + `content`) hydrates unchanged; they
+ * are populated live during streaming by {@link import('@/features/chat/ChatContainer').default}.
  */
 export interface AgnoMessage {
 	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
 	role: Exclude<MessageRole, 'plan'>;
 	/** Plain-text message body. */
 	content: string;
+	/** Accumulated reasoning text from `thinking` SSE events on the assistant turn. */
+	thinking?: string;
+	/** Tool invocations and their results captured during streaming. */
+	tool_calls?: import('@/features/chat/types').ChatToolCall[];
 }

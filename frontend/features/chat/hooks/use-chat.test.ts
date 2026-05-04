@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ChatStreamEvent } from '../types';
 import { useChat } from './use-chat';
 
 const replaceMock = vi.fn();
@@ -30,14 +31,16 @@ function createStreamResponse(chunks: string[]): Response {
 	);
 }
 
-async function collectStream(stream: AsyncGenerator<string>): Promise<string[]> {
-	const chunks: string[] = [];
+async function collectStream(
+	stream: AsyncGenerator<ChatStreamEvent>
+): Promise<Array<ChatStreamEvent>> {
+	const events: Array<ChatStreamEvent> = [];
 
-	for await (const chunk of stream) {
-		chunks.push(chunk);
+	for await (const event of stream) {
+		events.push(event);
 	}
 
-	return chunks;
+	return events;
 }
 
 describe('useChat', (): void => {
@@ -46,7 +49,7 @@ describe('useChat', (): void => {
 		vi.stubGlobal('fetch', vi.fn());
 	});
 
-	it('posts to the versioned chat endpoint and yields delta chunks', async (): Promise<void> => {
+	it('posts to the versioned chat endpoint and yields delta events', async (): Promise<void> => {
 		vi.mocked(fetch).mockResolvedValue(
 			createStreamResponse([
 				'data: {"type":"delta","content":"Hel"}\n\n',
@@ -59,7 +62,10 @@ describe('useChat', (): void => {
 
 		await expect(
 			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
-		).resolves.toEqual(['Hel', 'lo', '']);
+		).resolves.toEqual([
+			{ type: 'delta', content: 'Hel' },
+			{ type: 'delta', content: 'lo' },
+		]);
 
 		expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/v1/chat', {
 			method: 'POST',
@@ -89,7 +95,30 @@ describe('useChat', (): void => {
 
 		await expect(
 			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
-		).resolves.toEqual(['Split', '']);
+		).resolves.toEqual([{ type: 'delta', content: 'Split' }]);
+	});
+
+	it('yields thinking, tool_use, and tool_result events alongside deltas', async (): Promise<void> => {
+		vi.mocked(fetch).mockResolvedValue(
+			createStreamResponse([
+				'data: {"type":"thinking","content":"Let me search…"}\n\n',
+				'data: {"type":"tool_use","tool_use_id":"t1","name":"web_search","input":{"q":"foo"}}\n\n',
+				'data: {"type":"tool_result","tool_use_id":"t1","content":"result body"}\n\n',
+				'data: {"type":"delta","content":"Done."}\n\n',
+				'data: [DONE]\n\n',
+			])
+		);
+
+		const { result } = renderHook(() => useChat());
+
+		await expect(
+			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
+		).resolves.toEqual([
+			{ type: 'thinking', content: 'Let me search…' },
+			{ type: 'tool_use', tool_use_id: 't1', name: 'web_search', input: { q: 'foo' } },
+			{ type: 'tool_result', tool_use_id: 't1', content: 'result body' },
+			{ type: 'delta', content: 'Done.' },
+		]);
 	});
 
 	it('throws backend stream error events instead of thinking forever', async (): Promise<void> => {
@@ -105,5 +134,21 @@ describe('useChat', (): void => {
 		await expect(
 			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
 		).rejects.toThrow('Claude CLI failed: missing auth');
+	});
+
+	it('ignores frames with unknown event types', async (): Promise<void> => {
+		vi.mocked(fetch).mockResolvedValue(
+			createStreamResponse([
+				'data: {"type":"unknown","content":"ignore me"}\n\n',
+				'data: {"type":"delta","content":"hi"}\n\n',
+				'data: [DONE]\n\n',
+			])
+		);
+
+		const { result } = renderHook(() => useChat());
+
+		await expect(
+			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+		).resolves.toEqual([{ type: 'delta', content: 'hi' }]);
 	});
 });

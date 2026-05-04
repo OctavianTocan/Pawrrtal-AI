@@ -1,29 +1,45 @@
 /**
- * Streaming chat transport: POST to the chat endpoint and parse SSE deltas into an async generator.
+ * Streaming chat transport: POST to the chat endpoint and parse SSE frames into typed events.
  *
- * @fileoverview Consumes server-sent events (`data: {...}` frames); yields assistant text chunks until `[DONE]`.
+ * @fileoverview Consumes the `/api/v1/chat` Server-Sent Events stream and yields a
+ * {@link ChatStreamEvent} for every well-formed `data: {...}` frame until `[DONE]`.
+ * The container collapses the event sequence into the displayed chat history.
  */
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
 import type { ChatModelId } from '../components/ModelSelectorPopover';
+import type { ChatStreamEvent } from '../types';
 
-/** Sentinel returned by {@link parseSseMessage} when the stream signals completion. */
+/** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
 const STREAM_DONE = Symbol('STREAM_DONE');
 
-/** Parsed SSE error event emitted by the backend stream. */
-type StreamError = {
-	/** Discriminator for stream error events. */
-	type: 'error';
-	/** Human-readable error message. */
-	content: string;
-};
+/** Allowed `type` field values for chat SSE events. */
+const CHAT_EVENT_TYPES = ['delta', 'thinking', 'tool_use', 'tool_result', 'error'] as const;
 
 /**
- * Parses a single SSE message and returns the delta content, a done
- * sentinel, or `null` for non-data / unparseable frames.
+ * Narrow an unknown JSON payload to a {@link ChatStreamEvent}.
+ *
+ * Returns the event if `type` is one of the known kinds; otherwise returns
+ * `null` so the caller can ignore the frame instead of crashing on unexpected
+ * payloads. Field-level validation is intentionally light — frames already
+ * passed JSON.parse and originate from our own backend contract.
  */
-function parseSseMessage(raw: string): string | StreamError | typeof STREAM_DONE | null {
+function asChatStreamEvent(value: unknown): ChatStreamEvent | null {
+	if (!value || typeof value !== 'object') return null;
+	const candidate = value as { type?: unknown };
+	if (typeof candidate.type !== 'string') return null;
+	if (!(CHAT_EVENT_TYPES as readonly string[]).includes(candidate.type)) return null;
+	return value as ChatStreamEvent;
+}
+
+/**
+ * Parse a single SSE frame.
+ *
+ * @returns the parsed event, the done sentinel, or `null` for non-data /
+ *   unparseable frames (e.g., comment lines, partial frames).
+ */
+function parseSseFrame(raw: string): ChatStreamEvent | typeof STREAM_DONE | null {
 	if (!raw.startsWith('data: ')) return null;
 
 	const data = raw.slice(6);
@@ -31,46 +47,62 @@ function parseSseMessage(raw: string): string | StreamError | typeof STREAM_DONE
 	if (data.includes('[DONE]')) return STREAM_DONE;
 
 	try {
-		const json = JSON.parse(data);
-		// Only surface delta content to the caller; gracefully ignore
-		// thinking, tool_use, tool_result, and error event types for now.
-		if (json.type === 'delta') return json.content as string;
-		if (json.type === 'error') {
-			return {
-				type: 'error',
-				content: typeof json.content === 'string' ? json.content : 'Chat stream failed.',
-			};
-		}
-		return null;
+		return asChatStreamEvent(JSON.parse(data));
 	} catch {
 		// Ignore parse errors from incomplete SSE frames.
 		return null;
 	}
 }
 
-/** Convert parsed stream frames into yielded text or throw on backend error events. */
-function resolveParsedFrame(
-	parsed: ReturnType<typeof parseSseMessage>
-): string | typeof STREAM_DONE | null {
-	if (parsed === STREAM_DONE || parsed === null || typeof parsed === 'string') {
-		return parsed;
+/**
+ * Generator yielding events from a single buffered batch of SSE frames.
+ *
+ * Returns `'done'` when a `[DONE]` sentinel was seen so the caller can break
+ * out of the read loop, otherwise `'continue'`. Throws on stream-level
+ * `error` events so the outer transport can fail the request.
+ */
+function* parseFrameBatch(frames: string[]): Generator<ChatStreamEvent, 'done' | 'continue'> {
+	for (const frame of frames) {
+		const parsed = parseSseFrame(frame);
+		if (parsed === null) continue;
+		if (parsed === STREAM_DONE) return 'done';
+		if (parsed.type === 'error') {
+			throw new Error(parsed.content || 'Chat stream failed.');
+		}
+		yield parsed;
 	}
-
-	throw new Error(parsed.content);
+	return 'continue';
 }
 
 /**
- * Hook that exposes a streaming chat API via an async generator.
+ * Release a stream reader lock without crashing on an already-errored stream.
  *
- * @returns An object with `streamMessage` — call it to send a user
- *   message and yield assistant response chunks as they arrive.
+ * `releaseLock` throws if the underlying stream entered an error state, but
+ * that's expected during exception unwind — swallow it so the original error
+ * keeps propagating.
+ */
+function safeReleaseLock(reader: { releaseLock: () => void }): void {
+	try {
+		reader.releaseLock();
+	} catch {
+		// Stream already errored — nothing to release.
+	}
+}
+
+/**
+ * Hook that exposes a streaming chat API as an async generator of typed events.
+ *
+ * @returns An object with `streamMessage` — call it to send a user message and
+ *   yield {@link ChatStreamEvent} frames as they arrive. Throws if the backend
+ *   emits a stream-level `error` event so the container can surface it as a
+ *   failed assistant message.
  */
 export function useChat(): {
 	streamMessage: (
 		message: string,
 		conversationId: string,
 		modelId: ChatModelId
-	) => AsyncGenerator<string>;
+	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
 
@@ -78,7 +110,7 @@ export function useChat(): {
 		message: string,
 		conversationId: string,
 		modelId: ChatModelId
-	): AsyncGenerator<string> {
+	): AsyncGenerator<ChatStreamEvent> {
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',
 			body: JSON.stringify({
@@ -100,30 +132,24 @@ export function useChat(): {
 		// SSE frames can arrive split across chunks — buffer partial frames here.
 		let buffer = '';
 
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
 
-			buffer += value;
+				buffer += value;
 
-			// SSE events are delimited by double newlines.
-			const frames = buffer.split('\n\n');
+				// SSE events are delimited by double newlines.
+				const frames = buffer.split('\n\n');
 
-			// The last element is either empty or a partial frame — keep it buffered.
-			buffer = frames.pop() || '';
+				// The last element is either empty or a partial frame — keep it buffered.
+				buffer = frames.pop() ?? '';
 
-			for (const frame of frames) {
-				const parsed = resolveParsedFrame(parseSseMessage(frame));
-
-				if (parsed === STREAM_DONE) {
-					yield buffer;
-					return;
-				}
-
-				if (parsed !== null) {
-					yield parsed;
-				}
+				const status = yield* parseFrameBatch(frames);
+				if (status === 'done') return;
 			}
+		} finally {
+			safeReleaseLock(reader);
 		}
 	}
 
