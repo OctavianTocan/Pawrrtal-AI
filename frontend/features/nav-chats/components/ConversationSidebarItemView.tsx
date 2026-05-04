@@ -4,9 +4,6 @@ import {
 	AppWindow,
 	Archive,
 	CheckCircle2,
-	Circle,
-	CircleDashed,
-	CircleDot,
 	Copy,
 	Files,
 	FileText,
@@ -25,8 +22,11 @@ import { EntityRow } from '@/components/ui/entity-row';
 import { useMenuComponents } from '@/components/ui/menu-context';
 import { SidebarMenuItem } from '@/components/ui/sidebar';
 import { NAV_CHATS_LABELS } from '@/features/nav-chats/constants';
+import { CONVERSATION_DRAG_MIME } from '@/features/projects/constants';
 import { TOAST_IDS, toast } from '@/lib/toast';
 import type { ConversationStatus } from '@/lib/types';
+import { ConversationStatusGlyph, STATUS_SUBMENU } from './ConversationStatusGlyph';
+import { ConversationUnreadGlyph } from './ConversationUnreadGlyph';
 
 /** Props for the conversation sidebar row presentation component. */
 export interface ConversationSidebarItemViewProps {
@@ -84,83 +84,17 @@ export interface ConversationSidebarItemViewProps {
 	isInMultiSelect?: boolean;
 	/** Called on mouse down on the row. */
 	onMouseDown?: (e: React.MouseEvent) => void;
+	/**
+	 * The conversation ID dropped onto a project drop target during DnD.
+	 * Surfaced as a separate prop so the View can populate the
+	 * dataTransfer payload without needing the full Conversation object.
+	 */
+	conversationId?: string;
 	/** Called when a menu item triggers navigation (separate from onClick). */
 	onClickMenuItem?: () => void;
 	/** Extra button props for the row's interactive element. */
 	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 }
-
-/**
- * Renders the row's left status glyph.
- *
- * Distinct lucide glyphs per state (rather than `fill="currentColor"` on a
- * single circle) so the status colors render predictably across themes —
- * filled colors blend into hover backgrounds and lose contrast.
- */
-function ConversationStatusGlyph({ status }: { status: ConversationStatus }): React.JSX.Element {
-	if (status === 'todo') {
-		return (
-			<div className="flex items-center justify-center text-info">
-				<CircleDashed aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
-			</div>
-		);
-	}
-	if (status === 'in_progress') {
-		return (
-			<div className="flex items-center justify-center text-warning">
-				<CircleDot aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
-			</div>
-		);
-	}
-	if (status === 'done') {
-		return (
-			<div className="flex items-center justify-center text-success">
-				<CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
-			</div>
-		);
-	}
-	return (
-		<div className="flex items-center justify-center text-muted-foreground/75">
-			<Circle aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.5} />
-		</div>
-	);
-}
-
-/**
- * Small filled chat-bubble glyph rendered immediately before the age string
- * when `is_unread` is true. Mirrors the reference Stitch sidebar look.
- */
-function UnreadGlyph(): React.JSX.Element {
-	return (
-		<svg
-			aria-hidden="true"
-			className="h-3 w-3 text-accent"
-			fill="currentColor"
-			viewBox="0 0 24 24"
-		>
-			<title>Unread</title>
-			<path d="M2 5.5A3.5 3.5 0 015.5 2h13A3.5 3.5 0 0122 5.5v9a3.5 3.5 0 01-3.5 3.5h-7l-4.5 3.5v-3.5h-1.5A3.5 3.5 0 012 14.5v-9z" />
-		</svg>
-	);
-}
-
-/** Status submenu options rendered under the top-level "Status" entry. */
-const STATUS_SUBMENU = [
-	{ id: 'todo' as const, label: 'Todo', Icon: CircleDashed, className: 'text-info' },
-	{
-		id: 'in_progress' as const,
-		label: 'In Progress',
-		Icon: CircleDot,
-		className: 'text-warning',
-	},
-	{ id: 'done' as const, label: 'Done', Icon: CheckCircle2, className: 'text-success' },
-	{ id: null, label: 'No status', Icon: Circle, className: 'text-muted-foreground' },
-] as const satisfies ReadonlyArray<{
-	id: ConversationStatus;
-	label: string;
-	Icon: typeof Circle;
-	className: string;
-}>;
 
 /** Props for the shared menu-content component. */
 interface ConversationMenuContentProps {
@@ -411,6 +345,7 @@ export function ConversationSidebarItemView({
 	onMouseDown,
 	onClickMenuItem,
 	buttonProps,
+	conversationId,
 }: ConversationSidebarItemViewProps): React.JSX.Element {
 	const handleMenuNavigate = (): void => {
 		if (onClickMenuItem) {
@@ -440,7 +375,7 @@ export function ConversationSidebarItemView({
 
 	const resolvedTitle = isUnread ? (
 		<span className="inline-flex min-w-0 items-center gap-1.5">
-			<UnreadGlyph />
+			<ConversationUnreadGlyph />
 			<span className="min-w-0 truncate">{title}</span>
 		</span>
 	) : (
@@ -456,6 +391,12 @@ export function ConversationSidebarItemView({
 				isInMultiSelect={isInMultiSelect}
 				onClick={onClick}
 				onMouseDown={onMouseDown}
+				draggable={Boolean(conversationId)}
+				onDragStart={(event) => {
+					if (!conversationId) return;
+					event.dataTransfer.effectAllowed = 'move';
+					event.dataTransfer.setData(CONVERSATION_DRAG_MIME, conversationId);
+				}}
 				title={resolvedTitle}
 				titleClassName={titleClassName}
 				titleTrailing={resolvedTrailing}

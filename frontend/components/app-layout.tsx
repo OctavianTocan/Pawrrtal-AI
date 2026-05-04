@@ -35,6 +35,7 @@ import {
 	OnboardingFlow,
 	OPEN_ONBOARDING_FLOW_EVENT,
 } from '@/features/onboarding/v2/OnboardingFlow';
+import { ProjectsList } from '@/features/projects/components/ProjectsList';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
@@ -385,6 +386,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
+							<ProjectsList />
 							<NavChats />
 						</SidebarContent>
 						<NavUser user={SIDEBAR_USER} />
@@ -458,6 +460,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
+							<ProjectsList />
 							<NavChats />
 						</SidebarContent>
 						<NavUser user={SIDEBAR_USER} />

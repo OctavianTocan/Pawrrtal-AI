@@ -1,0 +1,65 @@
+import { CheckCircle2, Circle, CircleDashed, CircleDot } from 'lucide-react';
+import type * as React from 'react';
+import type { ConversationStatus } from '@/lib/types';
+
+/**
+ * Renders the row's left status glyph for a sidebar conversation row.
+ *
+ * Distinct lucide glyphs per state (rather than `fill="currentColor"` on
+ * a single circle) so the status colors render predictably across themes —
+ * filled colors blend into hover backgrounds and lose contrast.
+ */
+export function ConversationStatusGlyph({
+	status,
+}: {
+	status: ConversationStatus;
+}): React.JSX.Element {
+	if (status === 'todo') {
+		return (
+			<div className="flex items-center justify-center text-info">
+				<CircleDashed aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+			</div>
+		);
+	}
+	if (status === 'in_progress') {
+		return (
+			<div className="flex items-center justify-center text-warning">
+				<CircleDot aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+			</div>
+		);
+	}
+	if (status === 'done') {
+		return (
+			<div className="flex items-center justify-center text-success">
+				<CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+			</div>
+		);
+	}
+	return (
+		<div className="flex items-center justify-center text-muted-foreground/75">
+			<Circle aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.5} />
+		</div>
+	);
+}
+
+/**
+ * Catalog of status submenu rows surfaced in the chat row's right-click /
+ * dropdown menu. Lives next to the glyph so the icon ↔ status mapping
+ * stays in one place.
+ */
+export const STATUS_SUBMENU = [
+	{ id: 'todo' as const, label: 'Todo', Icon: CircleDashed, className: 'text-info' },
+	{
+		id: 'in_progress' as const,
+		label: 'In Progress',
+		Icon: CircleDot,
+		className: 'text-warning',
+	},
+	{ id: 'done' as const, label: 'Done', Icon: CheckCircle2, className: 'text-success' },
+	{ id: null, label: 'No status', Icon: Circle, className: 'text-muted-foreground' },
+] as const satisfies ReadonlyArray<{
+	id: ConversationStatus;
+	label: string;
+	Icon: typeof Circle;
+	className: string;
+}>;

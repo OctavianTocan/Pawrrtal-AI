@@ -122,4 +122,24 @@ export const API_ENDPOINTS = {
 		 */
 		transcribe: '/api/v1/stt',
 	},
+	/** Project (sidebar grouping) endpoints. */
+	projects: {
+		/**
+		 * List every project owned by the user.
+		 * @returns `/api/v1/projects`
+		 */
+		list: '/api/v1/projects',
+		/** Create a new project. */
+		create: '/api/v1/projects',
+		/**
+		 * Update (rename) a project by ID.
+		 * @param id - Project ID
+		 */
+		update: (id: string) => `/api/v1/projects/${id}`,
+		/**
+		 * Delete a project by ID. Linked conversations are unlinked, not deleted.
+		 * @param id - Project ID
+		 */
+		delete: (id: string) => `/api/v1/projects/${id}`,
+	},
 } as const;

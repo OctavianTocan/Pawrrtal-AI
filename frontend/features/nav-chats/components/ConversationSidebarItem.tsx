@@ -144,6 +144,7 @@ export function ConversationSidebarItem({
 			onRegenerateTitle={() => onRegenerateTitle(id)}
 			onToggleLabel={(labelId) => onToggleLabel(id, labelId)}
 			onExportMarkdown={() => onExportMarkdown(id)}
+			conversationId={id}
 			buttonProps={buttonProps}
 		/>
 	);

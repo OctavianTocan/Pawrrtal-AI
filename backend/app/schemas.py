@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -96,6 +96,9 @@ class ConversationResponse(BaseModel):
     # Always serialized as a list (never null) so the frontend never has to
     # narrow with `?? []` before iterating.
     labels: list[str] = []
+    # ID of the project this conversation belongs to, or null when the
+    # conversation lives in the unattached "Chats" list.
+    project_id: uuid.UUID | None = None
 
 
 class ConversationUpdate(BaseModel):
@@ -111,6 +114,39 @@ class ConversationUpdate(BaseModel):
     # label set. Sentinel `None` means "leave labels unchanged" (matches the
     # other partial-update fields above).
     labels: list[str] | None = None
+    # Drag-and-drop assignment uses an explicit two-state sentinel so the
+    # frontend can distinguish "leave alone" (omit the field entirely) from
+    # "remove from current project" (send null). Pydantic gives us this for
+    # free via `Field(default=...)` — omission keeps the SQLAlchemy column
+    # untouched, while explicit None unsets the FK.
+    project_id: uuid.UUID | None = Field(default=None)
+    # Companion flag: explicit "treat project_id as set, even when null".
+    # Without this, JSON `{"project_id": null}` is indistinguishable from
+    # an omitted field after Pydantic coercion. The CRUD service reads this
+    # flag and only touches `project_id` when it's true.
+    project_id_set: bool = False
+
+
+class ProjectResponse(BaseModel):
+    """Response schema returned for project endpoints."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectCreate(BaseModel):
+    """Request schema for creating a new project."""
+
+    name: str
+
+
+class ProjectUpdate(BaseModel):
+    """Request schema for renaming an existing project."""
+
+    name: str | None = None
 
 
 # --- Chat schemas -------------------------------------------------------------

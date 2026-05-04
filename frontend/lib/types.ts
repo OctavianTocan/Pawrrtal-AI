@@ -73,6 +73,26 @@ export interface Conversation {
 	 *   so demo data and hand-built fixtures keep rendering.
 	 */
 	labels?: ConversationLabelLike[];
+	/**
+	 * Project this conversation belongs to, or null/undefined when it
+	 * lives in the unattached "Chats" list. Set by drag-and-drop in the
+	 * sidebar.
+	 */
+	project_id?: string | null;
+}
+
+/** A user-owned sidebar grouping that conversations can be dropped into. */
+export interface Project {
+	/** Unique project identifier. */
+	id: string;
+	/** ID of the user who owns the project. */
+	user_id: string;
+	/** Display name shown in the sidebar. */
+	name: string;
+	/** ISO timestamp of creation. */
+	created_at: string;
+	/** ISO timestamp of last update (last rename). */
+	updated_at: string;
 }
 
 /**
