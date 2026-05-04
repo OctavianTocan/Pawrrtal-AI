@@ -42,7 +42,7 @@ export function ReplyActionsRow({
 	onShare,
 	className,
 }: ReplyActionsRowProps): ReactNode {
-	const buttonClass = 'size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground';
+	const buttonClass = 'size-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground';
 
 	return (
 		<div className={cn('mt-1 flex items-center gap-0.5', className)}>
@@ -58,9 +58,9 @@ export function ReplyActionsRow({
 							variant="ghost"
 						>
 							{isCopied ? (
-								<CheckIcon className="size-3.5" />
+								<CheckIcon className="size-4" />
 							) : (
-								<CopyIcon className="size-3.5" />
+								<CopyIcon className="size-4" />
 							)}
 						</Button>
 					</TooltipTrigger>
@@ -80,7 +80,7 @@ export function ReplyActionsRow({
 							variant="ghost"
 						>
 							<RefreshCwIcon
-								className={cn('size-3.5', isRegenerating ? 'animate-spin' : null)}
+								className={cn('size-4', isRegenerating ? 'animate-spin' : null)}
 							/>
 						</Button>
 					</TooltipTrigger>
@@ -100,7 +100,7 @@ export function ReplyActionsRow({
 							type="button"
 							variant="ghost"
 						>
-							<Share2Icon className="size-3.5" />
+							<Share2Icon className="size-4" />
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent>Share</TooltipContent>

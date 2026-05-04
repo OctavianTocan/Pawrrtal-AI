@@ -43,7 +43,7 @@ export function UserMessage({ content, isCopied, onCopy }: UserMessageProps): Re
 					className={cn(
 						// Always-mounted row so the next message's position never
 						// shifts when the user hovers — only opacity transitions.
-						'mt-1 flex h-7 items-center justify-end',
+						'mt-1 flex h-8 items-center justify-end',
 						'opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100'
 					)}
 				>
@@ -51,16 +51,16 @@ export function UserMessage({ content, isCopied, onCopy }: UserMessageProps): Re
 						<TooltipTrigger asChild>
 							<Button
 								aria-label={isCopied ? 'Copied' : 'Copy message'}
-								className="size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+								className="size-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
 								onClick={onCopy}
 								size="sm"
 								type="button"
 								variant="ghost"
 							>
 								{isCopied ? (
-									<CheckIcon className="size-3.5" />
+									<CheckIcon className="size-4" />
 								) : (
-									<CopyIcon className="size-3.5" />
+									<CopyIcon className="size-4" />
 								)}
 							</Button>
 						</TooltipTrigger>
