@@ -1,11 +1,11 @@
 'use client';
 
 import {
-	GithubIcon,
+	GitBranchIcon,
 	HardDriveIcon,
+	HashIcon,
 	type LucideIcon,
 	NotebookTextIcon,
-	SlackIcon,
 	SquareKanbanIcon,
 	XIcon,
 } from 'lucide-react';
@@ -23,9 +23,9 @@ type ConnectAppEntry = {
 
 const CONNECT_APPS: ReadonlyArray<ConnectAppEntry> = [
 	{ id: 'notion', label: 'Notion', icon: NotebookTextIcon },
-	{ id: 'slack', label: 'Slack', icon: SlackIcon },
+	{ id: 'slack', label: 'Slack', icon: HashIcon },
 	{ id: 'google-drive', label: 'Google Drive', icon: HardDriveIcon },
-	{ id: 'github', label: 'GitHub', icon: GithubIcon },
+	{ id: 'github', label: 'GitHub', icon: GitBranchIcon },
 	{ id: 'linear', label: 'Linear', icon: SquareKanbanIcon },
 ];
 

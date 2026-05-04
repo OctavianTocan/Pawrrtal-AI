@@ -1,6 +1,6 @@
 'use client';
 
-import { GithubIcon, GitPullRequestIcon, WorkflowIcon, XIcon } from 'lucide-react';
+import { GitBranchIcon, GitPullRequestIcon, WorkflowIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -16,7 +16,7 @@ export const CHAT_PROMPT_SUGGESTIONS = [
 	{
 		id: 'unblock-pr',
 		label: 'Unblock my most recent open PR',
-		icon: GithubIcon,
+		icon: GitBranchIcon,
 	},
 	{
 		id: 'connect-apps',
