@@ -361,7 +361,7 @@ export function ConversationSidebarItemView({
 			{titleTrailing}
 			{badges}
 			{age ? (
-				<span className="whitespace-nowrap text-[11px] text-foreground/40">{age}</span>
+				<span className="whitespace-nowrap text-sm text-foreground/40">{age}</span>
 			) : null}
 		</div>
 	) : undefined;

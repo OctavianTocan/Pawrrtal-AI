@@ -11,6 +11,7 @@
 
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import {
 	ChevronsUpDownIcon,
 	DownloadIcon,
@@ -38,6 +39,8 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useAuthedFetch } from '@/hooks/use-authed-fetch';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 /**
@@ -94,6 +97,29 @@ function getInitials(name: string): string {
 export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element | null {
 	const { state, isMobile } = useSidebar();
 	const router = useRouter();
+	const fetcher = useAuthedFetch();
+	const queryClient = useQueryClient();
+
+	/**
+	 * Calls the FastAPI-Users logout route, clears every cached query so
+	 * the next session never sees the previous user's data, and routes to
+	 * /login. The logout endpoint clears the JWT cookie server-side; the
+	 * cache wipe is the client-side complement.
+	 */
+	const handleLogout = async (): Promise<void> => {
+		try {
+			await fetcher('/auth/jwt/logout', { method: 'POST' });
+		} catch (error) {
+			// 401 here is fine — we're logging out anyway. Anything else is
+			// surfaced once but doesn't block the local cleanup.
+			if (error instanceof Error && !error.message.includes('401')) {
+				toast.error('Logout request failed; clearing local session.');
+			}
+		} finally {
+			queryClient.clear();
+			router.replace('/login');
+		}
+	};
 
 	if (!isMobile && state === 'collapsed') return null;
 
@@ -109,7 +135,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					<button
 						aria-label="Open account menu"
 						className={cn(
-							'group flex w-full items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
+							'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
 							'transition-[background-color,color] duration-150',
 							'hover:bg-foreground/[0.07] aria-expanded:bg-foreground/[0.09]',
 							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
@@ -118,15 +144,15 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					>
 						<Avatar className="size-7 shrink-0">
 							{user.avatar ? <AvatarImage alt={user.name} src={user.avatar} /> : null}
-							<AvatarFallback className="text-[10px]">
+							<AvatarFallback className="text-xs">
 								{getInitials(user.name)}
 							</AvatarFallback>
 						</Avatar>
 						<div className="flex min-w-0 flex-1 flex-col leading-tight">
-							<span className="truncate text-[13px] font-medium text-foreground">
+							<span className="truncate text-sm font-medium text-foreground">
 								{user.name}
 							</span>
-							<span className="truncate text-[11px] text-muted-foreground">
+							<span className="truncate text-sm text-muted-foreground">
 								{user.plan}
 							</span>
 						</div>
@@ -197,7 +223,13 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 
 					<DropdownMenuSeparator />
 
-					<DropdownMenuItem>
+					<DropdownMenuItem
+						className="cursor-pointer"
+						onSelect={(event) => {
+							event.preventDefault();
+							void handleLogout();
+						}}
+					>
 						<LogOutIcon aria-hidden="true" />
 						Log out
 					</DropdownMenuItem>

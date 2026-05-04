@@ -83,48 +83,48 @@ export function ProjectsList({
 
 	return (
 		<>
-			<header className="group/projects-header mt-2 flex items-center gap-1 px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+			<header className="group/projects-header mt-2 flex items-center gap-1 px-3 py-1 text-sm font-semibold text-muted-foreground">
 				<button
 					aria-expanded={!isCollapsed}
 					aria-label={isCollapsed ? 'Expand projects' : 'Collapse projects'}
-					className="flex items-center gap-1 rounded-[4px] px-1 py-0.5 text-muted-foreground hover:text-foreground"
+					className="flex cursor-pointer items-center gap-1.5 rounded-[4px] px-1 py-0.5 text-muted-foreground hover:text-foreground"
 					onClick={() => setIsCollapsed((prev) => !prev)}
 					type="button"
 				>
 					{isCollapsed ? (
-						<ChevronRight className="size-3" />
+						<ChevronRight className="size-3.5" />
 					) : (
-						<ChevronDown className="size-3" />
+						<ChevronDown className="size-3.5" />
 					)}
 					Projects
 				</button>
 				<button
 					aria-label="Create new project"
 					className={cn(
-						'ml-auto rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground',
+						'ml-auto cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground',
 						'group-hover/projects-header:opacity-100 focus-visible:opacity-100'
 					)}
 					onClick={handleCreate}
 					type="button"
 				>
-					<FolderPlus className="size-3.5" />
+					<FolderPlus className="size-4" />
 				</button>
 			</header>
 
 			{isCollapsed ? null : (
 				<div className="flex flex-col gap-0.5 px-2 pb-1">
 					{isLoading && list.length === 0 ? (
-						<span className="px-2 py-1 text-[11px] text-muted-foreground/70">
+						<span className="px-2 py-1 text-sm text-muted-foreground/70">
 							Loading projects…
 						</span>
 					) : null}
 					{!isLoading && list.length === 0 ? (
 						<button
-							className="flex items-center gap-1.5 rounded-[6px] px-2 py-1 text-left text-[12px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
+							className="flex cursor-pointer items-center gap-1.5 rounded-[6px] px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
 							onClick={handleCreate}
 							type="button"
 						>
-							<FolderPlus className="size-3.5" />
+							<FolderPlus className="size-4" />
 							Create your first project
 						</button>
 					) : null}

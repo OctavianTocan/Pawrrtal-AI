@@ -37,11 +37,11 @@ export function CollapsibleGroupHeader({
 				<div className="absolute inset-y-0.5 left-2 right-2 rounded-[6px] group-hover/header:bg-foreground/2 transition-colors pointer-events-none" />
 				<ChevronRight
 					className={cn(
-						'h-3 w-3 text-muted-foreground/60 transition-transform relative',
+						'h-3.5 w-3.5 text-muted-foreground/60 transition-transform relative',
 						!isCollapsed && 'rotate-90'
 					)}
 				/>
-				<span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground relative">
+				<span className="text-sm font-medium text-muted-foreground relative">
 					{label}
 					{isCollapsed ? (
 						<>
