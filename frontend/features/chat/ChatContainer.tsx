@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -22,6 +22,7 @@ import {
 import { useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
 import { useChatTurns } from './hooks/use-chat-turns';
+import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
 
@@ -86,7 +87,13 @@ export default function ChatContainer({
 	const { setActiveConversation, clearActiveConversation } = useChatActivity();
 	const hasNavigated = useRef(false);
 
-	const [message, setMessage] = useState<PromptInputMessage>({ content: '', files: [] });
+	const {
+		message,
+		setMessage,
+		onUpdateMessage: handleUpdateMessage,
+		onReplaceMessageContent: handleReplaceMessageContent,
+		onSelectSuggestion: handleSelectSuggestion,
+	} = useComposerMessage();
 	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
 		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
 		defaultValue: DEFAULT_CHAT_MODEL_ID,
@@ -98,15 +105,15 @@ export default function ChatContainer({
 		validate: isChatReasoningLevel,
 	});
 
-	// Bind the transport's per-call `(prompt, conversation, model)` API down to a
-	// `(prompt)` shape so `useChatTurns` doesn't need to know about model/conv ids.
+	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
+	// so `useChatTurns` stays decoupled from routing/model concerns.
 	const stream = useCallback(
 		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
 		[conversationId, selectedModelId, streamMessage]
 	);
 
-	// First-send side effects: persist the conversation, fire title generation,
-	// and swap the URL bar to /c/:id without breaking the in-flight stream.
+	// First-send: persist the conversation, fire title gen, swap URL without
+	// interrupting the in-flight stream. Router sync happens after streaming.
 	const onFirstSend = useCallback(
 		async (prompt: string): Promise<void> => {
 			await createConversationMutation.mutateAsync({
@@ -138,27 +145,37 @@ export default function ChatContainer({
 		},
 	});
 
-	const handleSendMessage = async (sentMessage: PromptInputMessage): Promise<void> => {
-		setMessage({ content: '', files: [] });
-		beginStream(sentMessage.content);
-		try {
-			await send(sentMessage.content);
-		} finally {
-			endStream();
-			// Sync the Next.js router after streaming so sidebar router.push works.
-			if (hasNavigated.current) router.replace(`/c/${conversationId}`);
-		}
-	};
+	const handleSendMessage = useCallback(
+		async (sentMessage: PromptInputMessage): Promise<void> => {
+			setMessage({ content: '', files: [] });
+			beginStream(sentMessage.content);
+			try {
+				await send(sentMessage.content);
+			} finally {
+				endStream();
+				// Sync the Next.js router after streaming so sidebar router.push works.
+				if (hasNavigated.current) router.replace(`/c/${conversationId}`);
+			}
+		},
+		[beginStream, conversationId, endStream, router, send, setMessage]
+	);
 
-	const handleRegenerate = async (assistantIndex: number): Promise<void> => {
-		const userMessage = chatHistory[assistantIndex - 1];
-		if (userMessage?.role === 'user') beginStream(userMessage.content);
-		try {
-			await regenerate(assistantIndex);
-		} finally {
-			endStream();
-		}
-	};
+	// Read chatHistory through a ref so the callback identity doesn't churn
+	// on every streamed event — we only need the current value at click time.
+	const chatHistoryRef = useRef(chatHistory);
+	chatHistoryRef.current = chatHistory;
+	const handleRegenerate = useCallback(
+		async (assistantIndex: number): Promise<void> => {
+			const userMessage = chatHistoryRef.current[assistantIndex - 1];
+			if (userMessage?.role === 'user') beginStream(userMessage.content);
+			try {
+				await regenerate(assistantIndex);
+			} finally {
+				endStream();
+			}
+		},
+		[beginStream, endStream, regenerate]
+	);
 
 	const handleCopy = useCallback(
 		(id: string, text: string) => {
@@ -179,18 +196,6 @@ export default function ChatContainer({
 		() => () => clearActiveConversation(conversationId),
 		[clearActiveConversation, conversationId]
 	);
-
-	const handleUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-		setMessage({ ...message, content: e.currentTarget.value });
-	};
-
-	const handleReplaceMessageContent = (content: string): void => {
-		setMessage((currentMessage) => ({ ...currentMessage, content }));
-	};
-
-	const handleSelectSuggestion = (prompt: string): void => {
-		setMessage({ content: prompt, files: [] });
-	};
 
 	return (
 		<ChatView
