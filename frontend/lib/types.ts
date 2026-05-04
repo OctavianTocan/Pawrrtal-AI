@@ -69,9 +69,11 @@ export interface Conversation {
 /**
  * Message shape used by the Agno agent / chat API.
  *
- * `thinking` and `tool_calls` are optional so that history fetched from the
- * server (which only persists `role` + `content`) hydrates unchanged; they
- * are populated live during streaming by {@link import('@/features/chat/ChatContainer').default}.
+ * The streaming-only fields below (`thinking`, `tool_calls`, `timeline`,
+ * `thinking_started_at`, `thinking_duration_seconds`, `assistant_status`) are
+ * optional so that history fetched from the server (which only persists
+ * `role` + `content`) hydrates unchanged; they're populated live during
+ * streaming by {@link import('@/features/chat/ChatContainer').default}.
  */
 export interface AgnoMessage {
 	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
@@ -82,4 +84,12 @@ export interface AgnoMessage {
 	thinking?: string;
 	/** Tool invocations and their results captured during streaming. */
 	tool_calls?: import('@/features/chat/types').ChatToolCall[];
+	/** Arrival-ordered timeline of thinking bursts and tool invocations. */
+	timeline?: import('@/features/chat/types').ChatTimelineEntry[];
+	/** Wall-clock millis when the first thinking/tool/delta event landed. */
+	thinking_started_at?: number;
+	/** Total reasoning duration in whole seconds — set when streaming completes. */
+	thinking_duration_seconds?: number;
+	/** Lifecycle of the assistant turn — drives the failed-state UI. */
+	assistant_status?: import('@/features/chat/types').AssistantMessageStatus;
 }

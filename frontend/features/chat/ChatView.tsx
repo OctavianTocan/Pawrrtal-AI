@@ -38,6 +38,14 @@ type ChatProps = {
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when an empty-state prompt suggestion is selected. */
 	onSelectSuggestion: (prompt: string) => void;
+	/** Index of the assistant message currently being regenerated, if any. */
+	regeneratingIndex?: number | null;
+	/** ID of the message whose copy button should currently render its "Copied!" state. */
+	copiedMessageId?: string | null;
+	/** Copy a message body to the clipboard with feedback. */
+	onCopy?: (id: string, text: string) => void;
+	/** Re-run the assistant turn at the given history index. */
+	onRegenerate?: (assistantIndex: number) => void;
 };
 
 /**
@@ -75,6 +83,10 @@ function ChatView({
 	onSelectModel,
 	onSelectReasoning,
 	onSelectSuggestion,
+	regeneratingIndex,
+	copiedMessageId,
+	onCopy,
+	onRegenerate,
 }: ChatProps): React.JSX.Element {
 	const isEmptyConversation = chatHistory.length === 0;
 
@@ -110,16 +122,36 @@ function ChatView({
 								{chatHistory.map((chatMessage, index) => {
 									const key = `${chatMessage.role}-${index}`;
 									if (chatMessage.role === 'assistant') {
-										// The assistant turn currently being streamed is the
-										// last message and gets `isStreaming` so the reasoning
-										// panel auto-opens until the answer text arrives.
 										const isLast = index === chatHistory.length - 1;
+										const messageId = `assistant-${index}`;
+										const isCurrentlyRegenerating = regeneratingIndex === index;
 										return (
 											<AssistantMessage
 												content={chatMessage.content}
+												isCopied={copiedMessageId === messageId}
+												isFailed={chatMessage.assistant_status === 'failed'}
+												isRegenerating={isCurrentlyRegenerating}
 												isStreaming={Boolean(isLoading && isLast)}
 												key={key}
+												onCopy={
+													onCopy
+														? () =>
+																onCopy(
+																	messageId,
+																	chatMessage.content
+																)
+														: undefined
+												}
+												onRegenerate={
+													onRegenerate
+														? () => onRegenerate(index)
+														: undefined
+												}
 												thinking={chatMessage.thinking}
+												thinkingDurationSeconds={
+													chatMessage.thinking_duration_seconds
+												}
+												timeline={chatMessage.timeline}
 												toolCalls={chatMessage.tool_calls}
 											/>
 										);

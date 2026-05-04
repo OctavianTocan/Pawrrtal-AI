@@ -5,9 +5,12 @@
  * over Server-Sent Events: `delta`, `thinking`, `tool_use`, `tool_result`,
  * and `error`. The transport (`useChat`) turns each frame into a
  * {@link ChatStreamEvent}; the container collapses the stream into a
- * {@link RichChatMessage} that the UI can render — reasoning panel above
- * the body, tool rows interleaved as needed.
+ * {@link import('@/lib/types').AgnoMessage} that the UI can render —
+ * reasoning panel above the body, chronologically-ordered tool rows, source
+ * chips, and a reply-action toolbar.
  */
+
+import type { CalendarEventInfo, MemoryResultInfo, WebSourceInfo } from './tool-result-parsers';
 
 /** Plain text chunk from the assistant's main response. */
 export interface ChatDeltaEvent {
@@ -51,13 +54,14 @@ export type ChatStreamEvent =
 	| ChatErrorEvent;
 
 /** Lifecycle of a single tool invocation as observed from the SSE stream. */
-export type ChatToolCallStatus = 'pending' | 'completed';
+export type ChatToolCallStatus = 'pending' | 'completed' | 'failed';
 
 /**
  * A tool invocation captured during streaming.
  *
  * Starts as `pending` when the assistant emits a `tool_use` event and flips
- * to `completed` once the matching `tool_result` arrives.
+ * to `completed` once the matching `tool_result` arrives. Carries pre-parsed
+ * source chips so the renderer doesn't reparse on every frame.
  */
 export interface ChatToolCall {
 	/** Stable id supplied by the backend (`tool_use.id`) — used to match results. */
@@ -70,4 +74,27 @@ export interface ChatToolCall {
 	result?: string;
 	/** Whether the result has arrived yet. */
 	status: ChatToolCallStatus;
+	/** Web result chips parsed from `result` for `web_search`. */
+	webSources?: WebSourceInfo[];
+	/** Calendar event chips parsed from `result` for `calendar_search`. */
+	calendarEvents?: CalendarEventInfo[];
+	/** Memory chips parsed from `result` for memory-flavoured tools. */
+	memoryResults?: MemoryResultInfo[];
 }
+
+/**
+ * One slot in the chain-of-thought timeline.
+ *
+ * The container records every thinking burst and tool invocation in arrival
+ * order so the chain-of-thought view can render them chronologically instead
+ * of bucketing all thinking text above all tool steps.
+ */
+export type ChatTimelineEntry =
+	| { kind: 'thinking'; text: string }
+	| { kind: 'tool'; toolCallId: string };
+
+/**
+ * Whether an assistant message is currently failed (so the UI can offer a
+ * retry button) — separate from `status` on individual tool calls.
+ */
+export type AssistantMessageStatus = 'streaming' | 'complete' | 'failed';
