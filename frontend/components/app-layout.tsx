@@ -191,7 +191,7 @@ function HelpMenu(): React.JSX.Element {
  */
 function AppHeader(): React.JSX.Element {
 	return (
-		<header className="absolute inset-x-0 top-0 z-20 flex h-9 shrink-0 items-center px-3">
+		<header className="absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 px-3 pt-1 outline-none focus:outline-none focus-visible:outline-none">
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<SidebarTrigger className="cursor-pointer" />
 				<AppHistoryControls />
@@ -372,7 +372,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						</SidebarContent>
 					</SidebarFocusShell>
 				</Sidebar>
-				<div className="h-full w-full min-w-0 pt-9">
+				<div className="h-full w-full min-w-0 pt-10">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</>
@@ -420,7 +420,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           The pt-9 offsets sidebar contents so they sit below the absolute
           AppHeader; the panel itself still extends to the top of the viewport
           so the sidebar background reads as full-height behind the header. */}
-				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-9">
+				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
 					<div
 						data-state={state}
 						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-opacity duration-150 ease-out data-[state=collapsed]:pointer-events-none data-[state=collapsed]:opacity-0 data-[state=expanded]:pointer-events-auto data-[state=expanded]:opacity-100"
@@ -438,7 +438,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<ResizableHandle />
 
 			<ResizablePanel className="h-full min-w-0">
-				<div className="h-full min-w-0 pt-9">
+				<div className="h-full min-w-0 pt-10">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</ResizablePanel>

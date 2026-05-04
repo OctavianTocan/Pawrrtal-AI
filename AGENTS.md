@@ -184,7 +184,7 @@ A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` 
 <claude-mem-context>
 # Memory Context
 
-# [ai-nexus] recent context, 2026-05-03 11:00pm GMT+2
+# [ai-nexus] recent context, 2026-05-04 9:18am GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
@@ -268,4 +268,16 @@ The Notion database query revealed the complete project scope after user questio
 
 
 Access 85k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
+## Agent skills
+
+### Issue tracker
+
+Local markdown via `beans` CLI — tasks live in `.beans/` as individual markdown files with frontmatter (`status`, `type`, `priority`, `tags`). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Beans uses a flat `status` field (`todo`, `in-progress`, `completed`). No triage state machine. The five canonical triage roles are unused — issues are either tracked or done. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context. One `CONTEXT.md` at the repo root when created. ADRs live in `docs/decisions/` (not `docs/adr/`). See `docs/agents/domain.md`.
