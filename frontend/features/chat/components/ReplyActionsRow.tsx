@@ -29,8 +29,9 @@ interface ReplyActionsRowProps {
 
 /**
  * Compact row of reply actions (copy, regenerate, share) under a completed
- * assistant message. Mirrors the thirdear `ReplyActionsView` layout —
- * 28px-tall ghost buttons with icons + small labels.
+ * assistant message. Icon-only square ghost buttons — text labels live on
+ * `aria-label` and the native `title` attribute so screen readers and
+ * hover tooltips both work without crowding the chat with chrome.
  */
 export function ReplyActionsRow({
 	onCopy,
@@ -40,8 +41,7 @@ export function ReplyActionsRow({
 	onShare,
 	className,
 }: ReplyActionsRowProps): ReactNode {
-	const buttonClass =
-		'h-7 gap-1.5 px-2 text-muted-foreground text-xs hover:bg-muted hover:text-foreground';
+	const buttonClass = 'size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground';
 
 	return (
 		<div className={cn('mt-1 flex items-center gap-0.5', className)}>
@@ -51,6 +51,7 @@ export function ReplyActionsRow({
 					className={buttonClass}
 					onClick={onCopy}
 					size="sm"
+					title={isCopied ? 'Copied' : 'Copy'}
 					type="button"
 					variant="ghost"
 				>
@@ -59,7 +60,6 @@ export function ReplyActionsRow({
 					) : (
 						<CopyIcon className="size-3.5" />
 					)}
-					<span>{isCopied ? 'Copied' : 'Copy'}</span>
 				</Button>
 			) : null}
 			{onRegenerate ? (
@@ -69,13 +69,13 @@ export function ReplyActionsRow({
 					disabled={isRegenerating}
 					onClick={onRegenerate}
 					size="sm"
+					title="Regenerate"
 					type="button"
 					variant="ghost"
 				>
 					<RefreshCwIcon
 						className={cn('size-3.5', isRegenerating ? 'animate-spin' : null)}
 					/>
-					<span>{isRegenerating ? 'Regenerating' : 'Regenerate'}</span>
 				</Button>
 			) : null}
 			{onShare ? (
@@ -84,11 +84,11 @@ export function ReplyActionsRow({
 					className={buttonClass}
 					onClick={onShare}
 					size="sm"
+					title="Share"
 					type="button"
 					variant="ghost"
 				>
 					<Share2Icon className="size-3.5" />
-					<span>Share</span>
 				</Button>
 			) : null}
 		</div>

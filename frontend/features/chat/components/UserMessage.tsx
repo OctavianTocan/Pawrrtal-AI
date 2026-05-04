@@ -48,9 +48,10 @@ export function UserMessage({ content, isCopied, onCopy }: UserMessageProps): Re
 				>
 					<Button
 						aria-label={isCopied ? 'Copied' : 'Copy message'}
-						className="h-7 gap-1.5 px-2 text-muted-foreground text-xs hover:bg-muted hover:text-foreground"
+						className="size-7 p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
 						onClick={onCopy}
 						size="sm"
+						title={isCopied ? 'Copied' : 'Copy'}
 						type="button"
 						variant="ghost"
 					>
@@ -59,7 +60,6 @@ export function UserMessage({ content, isCopied, onCopy }: UserMessageProps): Re
 						) : (
 							<CopyIcon className="size-3.5" />
 						)}
-						<span>{isCopied ? 'Copied' : 'Copy'}</span>
 					</Button>
 				</div>
 			) : null}
