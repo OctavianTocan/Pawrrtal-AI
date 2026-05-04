@@ -20,6 +20,7 @@
         "@base-ui/react": "^1.1.0",
         "@hugeicons/core-free-icons": "^4.1.1",
         "@hugeicons/react": "^1.1.6",
+        "@octavian-tocan/react-overlay": "^1.7.1",
         "@radix-ui/react-use-controllable-state": "^1.2.2",
         "@tabler/icons-react": "^3.36.1",
         "@tanstack/react-query": "^5.90.21",
@@ -319,6 +320,8 @@
     "@nodelib/fs.stat": ["@nodelib/fs.stat@2.0.5", "", {}, "sha512-RkhPPp2zrqDAQA/2jNhnztcPAlv64XdhIp7a7454A5ovI7Bukxgt7MX7udwAu3zg1DcpPU0rz3VV1SeaqvY4+A=="],
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
+
+    "@octavian-tocan/react-overlay": ["@octavian-tocan/react-overlay@1.7.1", "", { "peerDependencies": { "clsx": "^2.0.0", "lucide-react": ">=0.300.0", "motion": ">=11.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0", "tailwind-merge": "^3.0.0" }, "optionalPeers": ["lucide-react"] }, "sha512-r6B/W2DFPmy3ECDLT0zpyJd0iItXjc5PNdBOIPAOG6YIMY65cE8FBzonXz3oCeyc1IFH0bM0VcmfM91r2M86fQ=="],
 
     "@open-draft/deferred-promise": ["@open-draft/deferred-promise@2.2.0", "", {}, "sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA=="],
 

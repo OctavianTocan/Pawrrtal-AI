@@ -39,6 +39,13 @@ just dev     # starts both frontend + backend
 ## Rules
 Claude Code rules live in `.claude/rules/`. They fire automatically based on file path globs. Every rule has a `Verify` question — use it before committing.
 
+## Modals & Bottom Sheets
+- All modal, dialog, and bottom-sheet UI is built on `@octavian-tocan/react-overlay`.
+- Compose through `@/components/ui/responsive-modal` (`ResponsiveModal`) — it renders `Modal` on desktop and `BottomSheet` on mobile via `useIsMobile`.
+- Reach for the raw `Modal` / `BottomSheet` / `ModalWrapper` exports only for viewport-specific surfaces.
+- shadcn `Dialog` / `AlertDialog` / `Sheet` in `components/ui/` are low-level primitives for other shadcn components — do not import them into feature code.
+- Rule: `.claude/rules/react/use-octavian-overlay-for-modals.md`.
+
 ## Stagehand browser automation (MCP + docs)
 
 - **Documentation index:** https://docs.stagehand.dev/llms.txt — fetch this first to discover doc pages before deeper exploration.
