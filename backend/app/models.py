@@ -95,6 +95,31 @@ class UserPreferences(Base):
     font_size: Mapped[int] = mapped_column()
 
 
+class UserPersonalization(Base):
+    """Personalization profile filled in by the home-page wizard.
+
+    1:1 with `user`. Every field is nullable so a partial profile (e.g.
+    user skipped the ChatGPT-context step) round-trips cleanly through
+    GET / PUT without coercing missing fields into empty strings.
+    """
+
+    __tablename__ = "user_personalization"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
+    )
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    company_website: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    linkedin: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    role: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    goals: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    connected_channels: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    chatgpt_context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    personality: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class APIKey(Base):
     """API key for a user's provider account."""
 

@@ -18,11 +18,19 @@ export interface OnboardingShellProps {
 }
 
 /**
- * Visual shell shared by every step in the v2 onboarding flow.
+ * Visual shell shared by every step in the personalization onboarding
+ * flow.
  *
- * Centers the content vertically over the existing `OnboardingBackdrop`
- * and applies the rounded-card chrome the reference screenshots use.
- * Each step's body controls its own internal scrolling.
+ * Per DESIGN.md → Components → personalization-modal, the body is
+ * wrapped in a panel that mirrors the workspace onboarding card —
+ * `bg-background/95`, `border border-border`, `rounded-xl`,
+ * `shadow-modal-small`. Field typography uses the same tokens as the
+ * workspace flow (h3-equivalent heading, body-md helper, body-sm field
+ * labels) so the two surfaces feel like one design language.
+ *
+ * The footer (Continue button etc.) sits **below** the panel so it
+ * matches the workspace modal pattern where the primary CTA is the
+ * last full-width control under the card.
  */
 export function OnboardingShell({
 	title,
@@ -34,18 +42,24 @@ export function OnboardingShell({
 	return (
 		<div
 			className={cn(
-				'mx-auto flex w-full max-w-[40rem] flex-col gap-6 px-4 text-center text-foreground',
+				'mx-auto flex w-full max-w-[37rem] flex-col gap-6 text-foreground',
 				className
 			)}
 		>
-			<header className="flex flex-col items-center gap-2">
-				<h2 className="text-3xl font-semibold tracking-tight">{title}</h2>
-				{subtitle ? (
-					<p className="max-w-md text-sm text-muted-foreground">{subtitle}</p>
-				) : null}
-			</header>
-			<div className="flex flex-col gap-4 text-left">{children}</div>
-			{footer ? <div className="flex flex-col items-center gap-2 pt-2">{footer}</div> : null}
+			<section className="popover-styled onboarding-panel flex w-full select-none flex-col gap-7 rounded-xl border border-border bg-background/95 px-7 py-8 shadow-modal-small sm:px-8 sm:py-9">
+				<header className="flex flex-col items-center gap-2 text-center">
+					<h2 className="text-2xl font-semibold tracking-tight sm:text-[1.65rem]">
+						{title}
+					</h2>
+					{subtitle ? (
+						<p className="max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">
+							{subtitle}
+						</p>
+					) : null}
+				</header>
+				<div className="flex flex-col gap-5 text-left">{children}</div>
+			</section>
+			{footer ? <div className="flex flex-col items-center gap-2">{footer}</div> : null}
 		</div>
 	);
 }

@@ -35,7 +35,12 @@ export function StepPersonality({
 	return (
 		<OnboardingShell
 			footer={
-				<Button className="w-full max-w-xs" onClick={onContinue} type="button">
+				<Button
+					className="h-11 w-full max-w-sm cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
+					onClick={onContinue}
+					size="lg"
+					type="button"
+				>
 					Continue
 				</Button>
 			}
@@ -49,7 +54,7 @@ export function StepPersonality({
 						<button
 							aria-pressed={isSelected}
 							className={cn(
-								'flex w-full flex-col gap-1.5 rounded-[12px] border px-4 py-3 text-left transition-colors',
+								'flex w-full cursor-pointer flex-col gap-1.5 rounded-[12px] border px-4 py-3 text-left transition-colors',
 								isSelected
 									? 'border-foreground bg-foreground/[0.04]'
 									: 'border-foreground/10 bg-foreground/[0.02] hover:bg-foreground/[0.04]'
@@ -76,11 +81,11 @@ export function StepPersonality({
 									) : null}
 								</span>
 							</div>
-							<p className="text-xs text-muted-foreground">{option.summary}</p>
+							<p className="text-sm text-muted-foreground">{option.summary}</p>
 							<div className="flex flex-wrap gap-1.5 pt-1">
 								{option.traits.map((trait) => (
 									<span
-										className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-[10px] text-muted-foreground"
+										className="rounded-full bg-foreground/[0.06] px-2 py-0.5 text-xs text-muted-foreground"
 										key={trait}
 									>
 										{trait}

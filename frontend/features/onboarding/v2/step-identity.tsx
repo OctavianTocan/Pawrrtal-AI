@@ -48,7 +48,12 @@ export function StepIdentity({
 	return (
 		<OnboardingShell
 			footer={
-				<Button className="w-full max-w-xs" onClick={onContinue} type="button">
+				<Button
+					className="h-11 w-full max-w-sm cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
+					onClick={onContinue}
+					size="lg"
+					type="button"
+				>
 					Continue →
 				</Button>
 			}
@@ -84,7 +89,7 @@ export function StepIdentity({
 				/>
 			</Field>
 			<div className="flex flex-col gap-2">
-				<span className="text-xs font-medium text-foreground">
+				<span className="text-sm font-medium text-foreground">
 					What do you want to accomplish?
 				</span>
 				<div className="flex flex-wrap gap-2">
@@ -93,7 +98,7 @@ export function StepIdentity({
 						return (
 							<button
 								className={cn(
-									'rounded-full border px-3 py-1 text-xs transition-colors',
+									'cursor-pointer rounded-full border px-3 py-1.5 text-sm transition-colors',
 									isOn
 										? 'border-foreground bg-foreground text-background'
 										: 'border-foreground/15 bg-foreground/[0.03] text-foreground hover:bg-foreground/[0.06]'
@@ -123,10 +128,10 @@ function Field({
 	children: React.ReactNode;
 }): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-1">
-			<span className="text-xs font-medium text-foreground">{label}</span>
+		<div className="flex flex-col gap-1.5">
+			<span className="text-sm font-medium text-foreground">{label}</span>
 			{children}
-			{helper ? <span className="text-[11px] text-muted-foreground">{helper}</span> : null}
+			{helper ? <span className="text-sm text-muted-foreground">{helper}</span> : null}
 		</div>
 	);
 }

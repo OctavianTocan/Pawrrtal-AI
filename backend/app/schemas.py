@@ -149,6 +149,30 @@ class ProjectUpdate(BaseModel):
     name: str | None = None
 
 
+# --- Personalization schemas --------------------------------------------------
+
+
+class PersonalizationProfile(BaseModel):
+    """Home-page personalization wizard profile.
+
+    Mirrors the frontend `PersonalizationProfile` interface in
+    `frontend/features/personalization/storage.ts`. Every field is
+    optional so a partially-filled wizard round-trips cleanly. Used
+    as both the GET response and the PUT request body — the endpoint
+    treats the request as a full replacement of the persisted profile.
+    """
+
+    name: str | None = None
+    company_website: str | None = None
+    linkedin: str | None = None
+    role: str | None = None
+    goals: list[str] | None = None
+    connected_channels: list[str] | None = None
+    chatgpt_context: str | None = None
+    personality: str | None = None
+    custom_instructions: str | None = None
+
+
 # --- Chat schemas -------------------------------------------------------------
 
 

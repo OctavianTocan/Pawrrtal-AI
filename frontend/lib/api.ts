@@ -122,6 +122,13 @@ export const API_ENDPOINTS = {
 		 */
 		transcribe: '/api/v1/stt',
 	},
+	/** Personalization wizard (home-page modal) endpoints. */
+	personalization: {
+		/** Read the authenticated user's personalization profile. */
+		get: '/api/v1/personalization',
+		/** Replace the authenticated user's personalization profile. */
+		put: '/api/v1/personalization',
+	},
 	/** Project (sidebar grouping) endpoints. */
 	projects: {
 		/**

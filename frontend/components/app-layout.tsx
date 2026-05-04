@@ -31,10 +31,8 @@ import React from 'react';
 import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity-context';
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
-import {
-	OnboardingFlow,
-	OPEN_ONBOARDING_FLOW_EVENT,
-} from '@/features/onboarding/v2/OnboardingFlow';
+import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
+import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
 import { ProjectsList } from '@/features/projects/components/ProjectsList';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
@@ -85,8 +83,15 @@ const HELP_LINKS = [
 	{ label: 'Messaging', icon: MessageSquareIcon },
 ] as const;
 
+/**
+ * Fired by the workspace dropdown's "Add Workspace..." item. Opens the
+ * three-step **workspace** onboarding modal (Welcome → Create workspace →
+ * Local workspace) — NOT the home-page personalization wizard. The two
+ * are distinct surfaces: workspace lives behind this dropdown, while
+ * personalization fires on every fresh page load.
+ */
 function handleOpenOnboarding(): void {
-	window.dispatchEvent(new Event(OPEN_ONBOARDING_FLOW_EVENT));
+	window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT));
 }
 
 function AppHistoryControls(): React.JSX.Element {
@@ -536,7 +541,20 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 					 * own bg-background, so the contrast stays.
 					 */}
 					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-sidebar">
-						<OnboardingFlow initialOpen={false} />
+						{/*
+						 * Personalization wizard fires on every fresh page load
+						 * while the feature is WIP — see DESIGN.md →
+						 * Components → personalization-modal. Dismissing closes
+						 * for the session only; a browser refresh re-opens it.
+						 */}
+						<OnboardingFlow initialOpen />
+						{/*
+						 * Workspace onboarding (Welcome → Create workspace →
+						 * Local workspace) is event-driven only — opens when
+						 * the user picks "Add Workspace..." in the workspace
+						 * dropdown. Never opens automatically.
+						 */}
+						<OnboardingModal initialOpen={false} listenForOpenEvent />
 						<ResizableSidebarContent>
 							<SidebarInset className="h-full min-h-0 min-w-0">
 								<div className="min-h-0 min-w-0 flex-1">{children}</div>

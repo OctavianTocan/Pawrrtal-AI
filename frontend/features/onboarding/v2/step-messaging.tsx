@@ -44,9 +44,10 @@ export function StepMessaging({
 		<OnboardingShell
 			footer={
 				<Button
-					className="w-full max-w-xs"
+					className="h-11 w-full max-w-sm cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
 					disabled={!hasOne}
 					onClick={onFinish}
+					size="lg"
 					type="button"
 				>
 					Continue
@@ -77,7 +78,7 @@ export function StepMessaging({
 							</div>
 							<Button
 								className={cn(
-									'h-9 min-w-24 px-4',
+									'h-9 min-w-24 cursor-pointer px-4',
 									isConnected && 'bg-success text-background hover:bg-success/85'
 								)}
 								onClick={() => toggleChannel(channel.id)}

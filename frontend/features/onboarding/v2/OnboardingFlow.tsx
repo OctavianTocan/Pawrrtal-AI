@@ -5,6 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import {
+	useGetPersonalization,
+	useUpsertPersonalization,
+} from '@/features/personalization/hooks/use-personalization';
+import {
 	loadPersonalizationProfile,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
@@ -47,19 +51,45 @@ export function OnboardingFlow({
 }: OnboardingFlowProps): React.JSX.Element {
 	const [open, setOpen] = useState(initialOpen);
 	const [step, setStep] = useState<StepId>('identity');
+	const remotePersonalization = useGetPersonalization();
+	const upsertPersonalization = useUpsertPersonalization();
+	// Seed from localStorage on first render so the form has data to
+	// display before the React Query GET resolves. Once the remote
+	// profile arrives, hydrate over the local copy below in an effect.
 	const [profile, setProfile] = useState<PersonalizationProfile>(() =>
 		loadPersonalizationProfile()
 	);
 
-	// Persist on every patch — no Save button; the user expects partial
-	// progress to round-trip if they back out and re-open.
-	const patchProfile = useCallback((patch: Partial<PersonalizationProfile>): void => {
-		setProfile((current) => {
-			const next = { ...current, ...patch };
-			savePersonalizationProfile(next);
-			return next;
-		});
-	}, []);
+	// Hydrate from the backend the first time it arrives + on every
+	// subsequent refetch — keeps local state aligned with persisted state
+	// after the user navigates away and comes back.
+	useEffect(() => {
+		if (remotePersonalization.data) {
+			setProfile(remotePersonalization.data);
+		}
+	}, [remotePersonalization.data]);
+
+	/**
+	 * Persist on every patch.
+	 *
+	 * Two-channel write: localStorage stays the synchronous draft buffer
+	 * (so a refresh during the session never loses the user's work even
+	 * if the backend is down) and the backend PUT is the source of truth.
+	 * Both writes are fire-and-forget — the form treats success as the
+	 * default and only surfaces backend failures as a toast through the
+	 * mutation's error path (handled in the calling component / hook).
+	 */
+	const patchProfile = useCallback(
+		(patch: Partial<PersonalizationProfile>): void => {
+			setProfile((current) => {
+				const next = { ...current, ...patch };
+				savePersonalizationProfile(next);
+				upsertPersonalization.mutate(next);
+				return next;
+			});
+		},
+		[upsertPersonalization]
+	);
 
 	const goNext = useCallback(() => {
 		const index = STEP_IDS.indexOf(step);

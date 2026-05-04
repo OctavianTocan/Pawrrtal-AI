@@ -32,12 +32,17 @@ export function StepContext({
 		<OnboardingShell
 			footer={
 				<>
-					<Button className="w-full max-w-xs" onClick={onContinue} type="button">
+					<Button
+						className="h-11 w-full max-w-sm cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
+						onClick={onContinue}
+						size="lg"
+						type="button"
+					>
 						Continue
 						<ArrowRight aria-hidden="true" className="ml-1 size-4" />
 					</Button>
 					<button
-						className="text-xs text-muted-foreground hover:text-foreground"
+						className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
 						onClick={onSkip}
 						type="button"
 					>
@@ -63,7 +68,7 @@ export function StepContext({
 				placeholder="Paste ChatGPT's response here..."
 				value={profile.chatgptContext ?? ''}
 			/>
-			<p className="text-center text-[11px] text-muted-foreground">
+			<p className="text-center text-sm text-muted-foreground">
 				Don't have ChatGPT? Skip this step — you can always add context later.
 			</p>
 		</OnboardingShell>
