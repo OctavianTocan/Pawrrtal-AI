@@ -63,10 +63,22 @@ function ToolStep({ call, chips }: { call: ChatToolCall; chips: ToolResultChips 
  */
 function ThinkingStep({ title, content }: { title: string; content: string }): ReactNode {
 	return (
-		<div className="flex flex-col gap-1 px-1.5 py-1 text-sm leading-5 text-muted-foreground">
+		<div className="flex flex-col gap-1 px-1.5 py-1 text-sm leading-snug text-muted-foreground">
 			{title ? <div className="font-medium text-foreground/85">{title}</div> : null}
 			{content ? (
-				<Streamdown className="text-sm text-muted-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+				// Streamdown renders each thinking line as its own <p>; default
+				// prose margins (~1em top + 1em bottom) made the chain of
+				// thought feel airy and disconnected. Collapse paragraph and
+				// list margins to a tight 0.25rem so consecutive lines read
+				// as one continuous reasoning block.
+				<Streamdown
+					className={cn(
+						'text-sm text-muted-foreground',
+						'[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+						'[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0',
+						'[&_p]:leading-snug'
+					)}
+				>
 					{content}
 				</Streamdown>
 			) : null}

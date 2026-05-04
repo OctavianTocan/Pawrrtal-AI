@@ -526,6 +526,22 @@ html[data-font="inter"] {
 		-moz-osx-font-smoothing: grayscale;
 	}
 
+	/*
+	 * Suppress browser focus outlines on pointer interactions while keeping
+	 * them for keyboard users. :focus-visible only matches when focus came
+	 * from the keyboard (Tab / Shift+Tab / arrow keys), so the inverted
+	 * selector cleanly catches mouse / touch clicks. Accessibility is
+	 * preserved — keyboard focus rings still render via :focus-visible
+	 * styles wherever components opt in.
+	 *
+	 * See .claude/rules/general/no-focus-ring-on-mouse-click.md for the
+	 * rationale and the lint-time check.
+	 */
+	*:focus:not(:focus-visible) {
+		outline: none;
+		box-shadow: none;
+	}
+
 	/* Scrollbar styling */
 	::-webkit-scrollbar {
 		width: 8px;
