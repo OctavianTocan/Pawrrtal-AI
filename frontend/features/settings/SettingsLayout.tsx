@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { GeneralSection } from './sections/GeneralSection';
+import { IntegrationsSection } from './sections/IntegrationsSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
 import { PlaceholderSection } from './sections/PlaceholderSection';
 import { UsageSection } from './sections/UsageSection';
@@ -23,6 +24,7 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'general') return <GeneralSection />;
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
+	if (activeId === 'integrations') return <IntegrationsSection />;
 	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
 	return <PlaceholderSection title={section?.label ?? 'Settings'} />;
@@ -81,8 +83,8 @@ export function SettingsLayout(): React.JSX.Element {
 				</nav>
 			</aside>
 
-			<main className="h-full overflow-y-auto bg-background px-12 py-8">
-				<div className="mx-auto w-full max-w-2xl">{renderActiveSection(activeId)}</div>
+			<main className="h-full overflow-y-auto bg-background px-10 py-10">
+				<div className="mx-auto w-full max-w-3xl">{renderActiveSection(activeId)}</div>
 			</main>
 		</div>
 	);

@@ -14,5 +14,24 @@ export default defineConfig({
 		exclude: ['**/.next/**', '**/node_modules/**'],
 		globals: false,
 		setupFiles: ['./test/setup.ts'],
+		coverage: {
+			provider: 'v8',
+			reporter: ['text', 'json-summary', 'html'],
+			include: [
+				'lib/**/*.{ts,tsx}',
+				'hooks/**/*.{ts,tsx}',
+				'features/**/*.{ts,tsx}',
+				'components/**/*.{ts,tsx}',
+			],
+			exclude: [
+				'**/*.test.{ts,tsx}',
+				'**/*.spec.{ts,tsx}',
+				'**/__tests__/**',
+				'**/node_modules/**',
+				'**/.next/**',
+				'components/ui/**',
+				'app/**',
+			],
+		},
 	},
 });

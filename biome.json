@@ -20,7 +20,8 @@
 			"!**/.beans",
 			"!**/.zed",
 			"!**/.vscode",
-			"!**/.sentrux"
+			"!**/.sentrux",
+			"!**/coverage"
 		]
 	},
 	"formatter": {

@@ -88,6 +88,12 @@ export type SettingsRowProps = {
  * Two-column row used by every settings section (label/description on the
  * left, control on the right). Centralised so the spacing rhythm stays
  * identical across all sections.
+ *
+ * The label column is fixed-width (240px) so labels and controls align
+ * across rows even when label text varies — matches the Codex/Claude
+ * reference layout where every value floats on the same vertical line.
+ * Override with `className` (e.g. `items-start`) when stacking taller
+ * controls like textareas.
  */
 export function SettingsRow({
 	label,
@@ -98,17 +104,19 @@ export function SettingsRow({
 	return (
 		<div
 			className={cn(
-				'flex items-center justify-between gap-6 border-b border-foreground/5 py-4 last:border-0',
+				'flex items-center justify-between gap-6 border-b border-foreground/5 py-3.5 first:pt-1 last:border-0 last:pb-1',
 				className
 			)}
 		>
-			<div className="flex min-w-0 flex-col gap-0.5">
+			<div className="flex min-w-0 max-w-[55%] flex-col gap-0.5">
 				<span className="text-sm font-medium text-foreground">{label}</span>
 				{description ? (
 					<span className="text-xs text-muted-foreground">{description}</span>
 				) : null}
 			</div>
-			<div className="flex shrink-0 items-center gap-2">{children}</div>
+			<div className="flex shrink-0 items-center justify-end gap-2 text-right">
+				{children}
+			</div>
 		</div>
 	);
 }
@@ -140,12 +148,12 @@ export function SettingsCard({
 	return (
 		<section
 			className={cn(
-				'rounded-[12px] border border-foreground/8 bg-foreground/[0.02] px-5 py-3',
+				'rounded-[12px] border border-foreground/10 bg-foreground/[0.02] px-6 py-2',
 				className
 			)}
 		>
 			{title || description ? (
-				<header className="mb-1 flex flex-col gap-0.5">
+				<header className="mb-1 flex flex-col gap-0.5 pt-3">
 					{title ? (
 						<h3 className="text-sm font-semibold text-foreground">{title}</h3>
 					) : null}

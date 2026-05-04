@@ -1033,6 +1033,23 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 }
 
 /* =============================================================================
+   WAVEFORM SCROLL — used by the dictation timeline in features/chat
+============================================================================= */
+/*
+ * Translates the doubled bar strip leftward by exactly half its width so
+ * the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
+ * the seam at -50% lands on identical content, hiding the wrap.
+ */
+@keyframes waveform-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/* =============================================================================
    SHIMMER ANIMATION FOR OPTIMISTIC UI
 ============================================================================= */
 

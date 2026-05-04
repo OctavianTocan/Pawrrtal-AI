@@ -242,9 +242,10 @@ export function ChatComposer({
 			<PromptInputFooter className="min-h-9 px-1.5 pb-1.5">
 				<div className="flex min-w-0 flex-1 items-center gap-1">
 					<AttachButton />
-					{isRecording ? (
+					{isRecording || isTranscribing ? (
 						<VoiceMeter
 							elapsedSeconds={recordingSeconds}
+							isTranscribing={isTranscribing}
 							onSend={handleSendRecording}
 							onStop={handleStopRecording}
 						/>
@@ -287,10 +288,12 @@ export function ChatComposer({
 							/>
 						</Button>
 					</ComposerTooltip>
-					<ComposerTooltip content="Send message">
+					<ComposerTooltip
+						content={isTranscribing ? 'Wait for transcription' : 'Send message'}
+					>
 						<PromptInputSubmit
 							className="size-7 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
-							disabled={!hasContent || isLoading}
+							disabled={!hasContent || isLoading || isTranscribing}
 							status={isLoading ? 'streaming' : 'ready'}
 						>
 							{isLoading ? (

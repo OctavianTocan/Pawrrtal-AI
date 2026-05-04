@@ -1,32 +1,34 @@
 'use client';
 
-import {
-	GitBranchIcon,
-	HardDriveIcon,
-	HashIcon,
-	type LucideIcon,
-	NotebookTextIcon,
-	SquareKanbanIcon,
-	XIcon,
-} from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
+import { GitHubIcon } from '@/components/brand-icons/GitHubIcon';
+import { GoogleDriveIcon } from '@/components/brand-icons/GoogleDriveIcon';
+import { LinearIcon } from '@/components/brand-icons/LinearIcon';
+import { NotionIcon } from '@/components/brand-icons/NotionIcon';
+import { SlackIcon } from '@/components/brand-icons/SlackIcon';
 import { InputGroupAddon } from '@/components/ui/input-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+type BrandIconComponent = (props: { className?: string }) => React.JSX.Element;
+
 type ConnectAppEntry = {
 	id: string;
 	label: string;
-	icon: LucideIcon;
+	/** Brand icon component — pulled from `components/brand-icons/`. */
+	Icon: BrandIconComponent;
+	/** Optional Tailwind text class to color a single-color brand glyph. */
+	colorClass?: string;
 };
 
 const CONNECT_APPS: ReadonlyArray<ConnectAppEntry> = [
-	{ id: 'notion', label: 'Notion', icon: NotebookTextIcon },
-	{ id: 'slack', label: 'Slack', icon: HashIcon },
-	{ id: 'google-drive', label: 'Google Drive', icon: HardDriveIcon },
-	{ id: 'github', label: 'GitHub', icon: GitBranchIcon },
-	{ id: 'linear', label: 'Linear', icon: SquareKanbanIcon },
+	{ id: 'notion', label: 'Notion', Icon: NotionIcon, colorClass: 'text-foreground' },
+	{ id: 'slack', label: 'Slack', Icon: SlackIcon },
+	{ id: 'google-drive', label: 'Google Drive', Icon: GoogleDriveIcon },
+	{ id: 'github', label: 'GitHub', Icon: GitHubIcon, colorClass: 'text-foreground' },
+	{ id: 'linear', label: 'Linear', Icon: LinearIcon, colorClass: 'text-[#5e6ad2]' },
 ];
 
 /** Props for the {@link ConnectAppsStrip} component. */
@@ -42,10 +44,9 @@ export type ConnectAppsStripProps = {
  * landing chat composer. Designed to be rendered as a child of `<PromptInput>`
  * so it shares the same `<InputGroup>` surface and rounded corners.
  *
- * The strip nudges the user to connect their integrations (Notion, Slack,
- * Google Drive, GitHub, Linear) for richer answers and exposes an inline
- * dismiss control. Dismissal is local-only (per-mount session state); no
- * persistence yet.
+ * Uses real brand-color icons (per AGENTS.md icon rule, each lives in its
+ * own file under `components/brand-icons/`) so the strip reads as a
+ * recognisable lineup of integrations rather than abstract Lucide glyphs.
  */
 export function ConnectAppsStrip({
 	className,
@@ -75,23 +76,23 @@ export function ConnectAppsStrip({
 				Connect your apps to get better answers
 			</p>
 			<div className="flex shrink-0 items-center gap-1">
-				{CONNECT_APPS.map((app) => {
-					const Icon = app.icon;
-					return (
-						<Tooltip key={app.id}>
-							<TooltipTrigger asChild>
-								<button
-									aria-label={`Connect ${app.label}`}
-									className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
-									type="button"
-								>
-									<Icon aria-hidden="true" className="size-3.5" />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent side="top">{app.label}</TooltipContent>
-						</Tooltip>
-					);
-				})}
+				{CONNECT_APPS.map((app) => (
+					<Tooltip key={app.id}>
+						<TooltipTrigger asChild>
+							<button
+								aria-label={`Connect ${app.label}`}
+								className={cn(
+									'flex size-6 items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
+									app.colorClass ?? 'text-foreground'
+								)}
+								type="button"
+							>
+								<app.Icon className="size-3.5" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="top">{app.label}</TooltipContent>
+					</Tooltip>
+				))}
 				<button
 					aria-label="Dismiss connect apps strip"
 					className="ml-1 flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
