@@ -284,17 +284,22 @@ export const MessageResponse = memo(
 				'size-full text-base leading-relaxed',
 				// Reset edge margins so the bubble hugs content.
 				'[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
-				// Vertical rhythm — every value comes from the Tailwind spacing /
-				// type scale (which is wired to project tokens in globals.css), no
-				// arbitrary literals.
-				'[&_p]:my-3 [&_p]:leading-relaxed',
-				'[&_ul]:my-3 [&_ol]:my-3 [&_li]:my-1.5 [&_li]:leading-relaxed',
+				// Vertical rhythm — tightened from my-3 (12px) so paragraph and
+				// list-item gaps don't read as full blank lines. Tailwind spacing
+				// scale only, all wired to project tokens in globals.css.
+				'[&_p]:my-2 [&_p]:leading-normal',
+				'[&_ul]:my-2 [&_ol]:my-2 [&_li]:my-0.5 [&_li]:leading-normal',
+				// Pull nested paragraphs (e.g. inside list items) flush so each
+				// bullet sits as one tight unit instead of acquiring my-2 again.
+				'[&_li_p]:my-0',
 				'[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6',
 				// Headings: text-lg / text-base / text-base = 17 / 15 / 15px under
 				// the project's `--font-size-base = 15px`. Weight = semibold.
-				'[&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-lg [&_h1]:font-semibold',
-				'[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold',
-				'[&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_h3]:font-semibold',
+				// Top margins are slightly larger than bottom so a heading reads
+				// as the start of a new section, not a hanging cap on the prior.
+				'[&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold',
+				'[&_h2]:mt-4 [&_h2]:mb-1.5 [&_h2]:text-base [&_h2]:font-semibold',
+				'[&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold',
 				'[&_strong]:font-semibold',
 				// Inline code: muted surface + mono font from the design-system stack.
 				'[&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm',
