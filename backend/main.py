@@ -17,6 +17,7 @@ from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.request_logging import RequestLoggingMiddleware
 from app.db import create_db_and_tables
 from app.logger_setup import (
     configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
@@ -56,6 +57,10 @@ def create_app() -> FastAPI:
         description="An AI assistant platform",
         version="0.1.0",
     )
+    # Request-logging middleware must be added before any route is registered
+    # so it wraps every endpoint. Each request gets a unique ID logged on
+    # entry and exit (see app/core/request_logging.py).
+    fastapi_app.add_middleware(RequestLoggingMiddleware)
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )
