@@ -25,8 +25,19 @@ node_modules/
 /private
 .private
 
-# testing
+# testing & coverage
 /coverage
+coverage/
+**/coverage/
+.nyc_output/
+*.lcov
+.vitest-cache/
+htmlcov/
+.coverage
+.coverage.*
+junit.xml
+test-results/
+playwright-report/
 
 # next.js
 /.next/
@@ -35,6 +46,7 @@ node_modules/
 # production
 build/
 cache/
+dist/
 
 # Next
 .next/
@@ -70,6 +82,14 @@ next-env.d.ts
 
 # Python
 __pycache__
+*.py[cod]
+*$py.class
+*.egg-info/
+.tox/
+.pyre/
+.pytype/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Database
 agno.db
