@@ -19,18 +19,30 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+/**
+ * Stable model IDs available in the local visual-first selector.
+ *
+ * Declared as a `const` tuple (rather than only a union) so callers can validate
+ * persisted strings at runtime — see {@link ChatContainer}'s storage guards.
+ */
+export const CHAT_MODEL_IDS = [
+	'gemini-3-flash-preview',
+	'gemini-3.1-flash-lite-preview',
+	'gpt-5.5',
+	'gpt-5.4',
+	'claude-sonnet-4-6',
+	'claude-opus-4-7',
+	'claude-haiku-4-5',
+] as const;
+
 /** Stable model IDs available in the local visual-first selector. */
-export type ChatModelId =
-	| 'gemini-3-flash-preview'
-	| 'gemini-3.1-flash-lite-preview'
-	| 'gpt-5.5'
-	| 'gpt-5.4'
-	| 'claude-sonnet-4-6'
-	| 'claude-opus-4-7'
-	| 'claude-haiku-4-5';
+export type ChatModelId = (typeof CHAT_MODEL_IDS)[number];
 
 /** Reasoning levels displayed next to the selected model. */
-export type ChatReasoningLevel = 'low' | 'medium' | 'high' | 'extra-high';
+export const CHAT_REASONING_LEVELS = ['low', 'medium', 'high', 'extra-high'] as const;
+
+/** Reasoning levels displayed next to the selected model. */
+export type ChatReasoningLevel = (typeof CHAT_REASONING_LEVELS)[number];
 
 type ChatModelOption = {
 	/** Backend model identifier. */

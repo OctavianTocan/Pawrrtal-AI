@@ -22,6 +22,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 
 const VOICE_METER_BARS = [8, 14, 10, 18, 12, 24, 16, 30, 18, 26, 14, 22, 10, 18, 12, 20];
 
@@ -191,10 +192,81 @@ export function PlanButton(): React.JSX.Element {
 	);
 }
 
-/** Renders the auto-review permissions selector in the composer toolbar. */
+/**
+ * Identifiers for the safety/auto-review permissions exposed in the composer toolbar.
+ *
+ * `as const` so we can derive both the {@link SafetyMode} union and a runtime
+ * validator from a single source of truth.
+ */
+export const SAFETY_MODES = [
+	'default-permissions',
+	'auto-review',
+	'full-access',
+	'custom',
+] as const;
+
+/** Available safety/auto-review permission modes. */
+export type SafetyMode = (typeof SAFETY_MODES)[number];
+
+/** localStorage key for the persisted safety/auto-review selection. */
+const SAFETY_MODE_STORAGE_KEY = 'chat-composer:safety-mode';
+
+/** Default selection — matches the previously hardcoded "Auto-review" entry. */
+const DEFAULT_SAFETY_MODE: SafetyMode = 'auto-review';
+
+interface SafetyModeMeta {
+	/** Human-readable label shown in the dropdown and trigger. */
+	label: string;
+	/** Lucide icon used as the leading affordance for this mode. */
+	Icon: typeof ShieldCheckIcon;
+}
+
+/**
+ * Static metadata for each safety mode. Indexed by {@link SafetyMode} so adding
+ * a new mode forces a TypeScript error until both the union and metadata are updated.
+ */
+const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
+	'default-permissions': { label: 'Default permissions', Icon: SlidersHorizontalIcon },
+	'auto-review': { label: 'Auto-review', Icon: ShieldCheckIcon },
+	'full-access': { label: 'Full access', Icon: ShieldCheckIcon },
+	custom: { label: 'Custom (config.toml)', Icon: SlidersHorizontalIcon },
+};
+
+/** Runtime guard so older persisted strings don't crash the selector. */
+function isSafetyMode(value: unknown): value is SafetyMode {
+	return typeof value === 'string' && (SAFETY_MODES as readonly string[]).includes(value);
+}
+
+/**
+ * Order in which the modes are listed in the dropdown. Kept separate from
+ * {@link SAFETY_MODE_META} so the visual order can change without altering the
+ * declaration order of the union (which matters for type narrowing).
+ */
+const SAFETY_MODE_ORDER: ReadonlyArray<SafetyMode> = [
+	'default-permissions',
+	'auto-review',
+	'full-access',
+	'custom',
+];
+
+/** Modes that render below the in-menu separator (advanced options). */
+const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set(['custom']);
+
+/** Renders the auto-review/safety permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [tooltipOpen, setTooltipOpen] = useState(false);
+	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
+		storageKey: SAFETY_MODE_STORAGE_KEY,
+		defaultValue: DEFAULT_SAFETY_MODE,
+		validate: isSafetyMode,
+	});
+
+	const activeMeta = SAFETY_MODE_META[safetyMode];
+	const ActiveIcon = activeMeta.Icon;
+
+	const primaryModes = SAFETY_MODE_ORDER.filter((mode) => !SAFETY_MODE_ADVANCED.has(mode));
+	const advancedModes = SAFETY_MODE_ORDER.filter((mode) => SAFETY_MODE_ADVANCED.has(mode));
 
 	return (
 		<TooltipProvider disableHoverableContent>
@@ -223,8 +295,8 @@ export function AutoReviewSelector(): React.JSX.Element {
 								type="button"
 								variant="ghost"
 							>
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-								Auto-review
+								<ActiveIcon aria-hidden="true" className="size-3.5" />
+								{activeMeta.label}
 								<ChevronDownIcon aria-hidden="true" className="size-3" />
 							</Button>
 						</DropdownMenuTrigger>
@@ -235,37 +307,55 @@ export function AutoReviewSelector(): React.JSX.Element {
 						side="top"
 						sideOffset={8}
 					>
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Default permissions
-						</DropdownMenuItem>
-						<DropdownMenuItem className="justify-between">
-							<span className="flex items-center gap-2">
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-								Auto-review
-							</span>
-							<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-						</DropdownMenuItem>
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Full access
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Custom (config.toml)
-						</DropdownMenuItem>
+						{primaryModes.map((mode) => (
+							<SafetyModeMenuItem
+								isSelected={mode === safetyMode}
+								key={mode}
+								mode={mode}
+								onSelect={setSafetyMode}
+							/>
+						))}
+						{advancedModes.length > 0 ? <DropdownMenuSeparator /> : null}
+						{advancedModes.map((mode) => (
+							<SafetyModeMenuItem
+								isSelected={mode === safetyMode}
+								key={mode}
+								mode={mode}
+								onSelect={setSafetyMode}
+							/>
+						))}
 					</DropdownMenuContent>
 				</DropdownMenu>
 				<TooltipContent side="top">Review code changes automatically</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
+	);
+}
+
+interface SafetyModeMenuItemProps {
+	mode: SafetyMode;
+	isSelected: boolean;
+	onSelect: (mode: SafetyMode) => void;
+}
+
+/** Single dropdown row for a safety mode, with a leading icon and trailing checkmark when active. */
+function SafetyModeMenuItem({
+	mode,
+	isSelected,
+	onSelect,
+}: SafetyModeMenuItemProps): React.JSX.Element {
+	const { label, Icon } = SAFETY_MODE_META[mode];
+
+	return (
+		<DropdownMenuItem className="justify-between" onSelect={() => onSelect(mode)}>
+			<span className="flex items-center gap-2">
+				<Icon aria-hidden="true" className="size-3.5" />
+				{label}
+			</span>
+			{isSelected ? (
+				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+			) : null}
+		</DropdownMenuItem>
 	);
 }
 

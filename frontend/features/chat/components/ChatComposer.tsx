@@ -13,6 +13,7 @@ import {
 	PromptInputTextarea,
 } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
 import {
 	AttachButton,
@@ -64,6 +65,29 @@ export type ChatComposerProps = {
 	/** Callback fired when the connect-apps footer band is dismissed. */
 	onDismissConnectApps?: () => void;
 };
+
+/** localStorage key for the persisted Plan-mode toggle in the composer toolbar. */
+const PLAN_MODE_STORAGE_KEY = 'chat-composer:plan-mode-visible';
+
+/** Module-level type guard so the validator reference stays stable across renders. */
+function isBoolean(value: unknown): value is boolean {
+	return typeof value === 'boolean';
+}
+
+/**
+ * Persists the Plan-mode toggle across sessions. Defaults to `false` so a fresh
+ * chat does not start in Plan mode — the user opts in once and the choice sticks.
+ */
+function usePlanModeVisible(): readonly [
+	boolean,
+	(next: boolean | ((prev: boolean) => boolean)) => void,
+] {
+	return usePersistedState<boolean>({
+		storageKey: PLAN_MODE_STORAGE_KEY,
+		defaultValue: false,
+		validate: isBoolean,
+	});
+}
 
 const EMPTY_COMPOSER_PLACEHOLDERS = [
 	'Ask AI Nexus anything. @ to mention context',
@@ -143,7 +167,7 @@ export function ChatComposer({
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	const [voiceTranscript, setVoiceTranscript] = useState('');
 	/** When false, the Plan control is hidden (toggle with Shift+Tab from the composer). */
-	const [isPlanTagVisible, setIsPlanTagVisible] = useState(true);
+	const [isPlanTagVisible, setIsPlanTagVisible] = usePlanModeVisible();
 	const hasContent = message.content.trim().length > 0;
 	const placeholder = useRotatingPlaceholder(hasContent);
 

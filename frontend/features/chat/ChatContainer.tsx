@@ -4,9 +4,15 @@ import type * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
-import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
+import {
+	CHAT_MODEL_IDS,
+	CHAT_REASONING_LEVELS,
+	type ChatModelId,
+	type ChatReasoningLevel,
+} from './components/ModelSelectorPopover';
 import { useChat } from './hooks/use-chat';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
@@ -14,6 +20,23 @@ import { useGenerateConversationTitle } from './hooks/use-generate-conversation-
 const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
 const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
 const FALLBACK_TITLE_MAX_LENGTH = 80;
+
+/** localStorage key for the user's most recently selected chat model. */
+const SELECTED_MODEL_STORAGE_KEY = 'chat-composer:selected-model-id';
+/** localStorage key for the user's most recently selected reasoning level. */
+const SELECTED_REASONING_STORAGE_KEY = 'chat-composer:selected-reasoning-level';
+
+/** Runtime guard for persisted model IDs — older builds may have stored a now-renamed model. */
+function isChatModelId(value: unknown): value is ChatModelId {
+	return typeof value === 'string' && (CHAT_MODEL_IDS as readonly string[]).includes(value);
+}
+
+/** Runtime guard for persisted reasoning levels — same rationale as {@link isChatModelId}. */
+function isChatReasoningLevel(value: unknown): value is ChatReasoningLevel {
+	return (
+		typeof value === 'string' && (CHAT_REASONING_LEVELS as readonly string[]).includes(value)
+	);
+}
 
 /**
  * Sidebar-safe fallback title before async LLM titling returns: trimmed first line, ellipsized.
@@ -92,9 +115,16 @@ export default function ChatContainer({
 	});
 	const [isLoading, setIsLoading] = useState(false);
 	const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(initialChatHistory || []);
-	const [selectedModelId, setSelectedModelId] = useState<ChatModelId>(DEFAULT_CHAT_MODEL_ID);
-	const [selectedReasoning, setSelectedReasoning] =
-		useState<ChatReasoningLevel>(DEFAULT_REASONING_LEVEL);
+	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
+		storageKey: SELECTED_MODEL_STORAGE_KEY,
+		defaultValue: DEFAULT_CHAT_MODEL_ID,
+		validate: isChatModelId,
+	});
+	const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>({
+		storageKey: SELECTED_REASONING_STORAGE_KEY,
+		defaultValue: DEFAULT_REASONING_LEVEL,
+		validate: isChatReasoningLevel,
+	});
 
 	/**
 	 * Handles sending a message from the user.
