@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Claude Code CLI subprocess. Optional — only required when a chat
     # request resolves to a Claude model. Generate with `claude setup-token`.
     claude_code_oauth_token: str = ""
+    # API key for Exa (https://exa.ai). Powers the provider-agnostic
+    # `exa_search` tool wired into both the Claude SDK and Agno agents.
+    # Leave empty to disable web search; the tool returns a clear
+    # "not configured" error rather than crashing the turn.
+    exa_api_key: str = ""
     # CORS
     cors_origins: list[str]
     cors_origin_regex: str | None = r"^https:\/\/.*\.vercel\.app$"

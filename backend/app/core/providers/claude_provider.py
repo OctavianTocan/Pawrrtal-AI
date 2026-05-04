@@ -65,6 +65,16 @@ from claude_agent_sdk import (
     query,
 )
 
+from app.core.tools.exa_search_claude import (
+    CLAUDE_TOOL_ID as EXA_CLAUDE_TOOL_ID,
+)
+from app.core.tools.exa_search_claude import (
+    MCP_SERVER_NAME as EXA_MCP_SERVER_NAME,
+)
+from app.core.tools.exa_search_claude import (
+    build_exa_mcp_server,
+)
+
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -107,10 +117,13 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 _DEFAULT_SYSTEM_PROMPT = (
     "You are the Claude assistant inside the AI Nexus chat application. "
     "You are speaking with the user via a text chat surface. Be concise, "
-    "helpful, and accurate. You do NOT have file system, web, or shell "
-    "access in this surface. Decline politely if the user asks you to "
-    "perform such actions, and suggest they enable tool access in a "
-    "different surface if they need it."
+    "helpful, and accurate. You do NOT have file system or shell access "
+    "in this surface — decline politely if the user asks you to perform "
+    "such actions.\n\n"
+    "Web search is available via the `exa_search` tool (powered by Exa). "
+    "Call it whenever the user asks for fresh information, current events, "
+    "citations, or anything beyond your training data. Always cite the "
+    "URLs returned by the tool when you use the results."
 )
 
 
@@ -147,6 +160,9 @@ class ClaudeProviderConfig:
 
     extra_env: dict[str, str] = field(default_factory=dict)
     """Additional environment variables forwarded to the CLI subprocess."""
+
+    enable_exa_search: bool = False
+    """When ``True``, mount the in-process Exa MCP server and whitelist the ``exa_search`` tool. Toggled by the factory based on whether ``EXA_API_KEY`` is configured."""
 
 
 # ---------------------------------------------------------------------------
@@ -224,15 +240,31 @@ class ClaudeProvider:
     def _build_options(self, conversation_id: uuid.UUID) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``."""
         session_id = str(conversation_id)
+
+        # Tools start as the configured whitelist (built-in CLI tools).
+        # When Exa is enabled, append the canonical mcp__<server>__<tool>
+        # identifier so the SDK actually permits invocation; the MCP
+        # server itself is mounted via mcp_servers below.
+        tools = list(self._config.tools) if self._config.tools is not None else None
+        mcp_servers: dict[str, Any] = {}
+        if self._config.enable_exa_search:
+            if tools is None:
+                tools = [EXA_CLAUDE_TOOL_ID]
+            elif EXA_CLAUDE_TOOL_ID not in tools:
+                tools.append(EXA_CLAUDE_TOOL_ID)
+            mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
+
         kwargs: dict[str, Any] = {
             "model": _resolve_sdk_model(self._model_id),
-            "tools": self._config.tools,
+            "tools": tools,
             "max_turns": self._config.max_turns,
             "permission_mode": self._config.permission_mode,
             "system_prompt": self._config.system_prompt,
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
+        if mcp_servers:
+            kwargs["mcp_servers"] = mcp_servers
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 

@@ -25,6 +25,13 @@ import {
  */
 export const KNOWN_TOOL_NAMES = {
 	WEB_SEARCH: 'web_search',
+	// Exa-powered web search wired in both providers. The Agno agent calls
+	// it directly as `exa_search`; the Claude Agent SDK addresses it via
+	// the in-process MCP server prefix `mcp__ai_nexus__exa_search`. Both
+	// names share the same label + icon so the UI is identical regardless
+	// of which provider routed the turn.
+	EXA_SEARCH: 'exa_search',
+	EXA_SEARCH_CLAUDE: 'mcp__ai_nexus__exa_search',
 	MEMORY_SEARCH: 'memory_search',
 	SUMMARY_SEARCH: 'summary_search',
 	CALENDAR_SEARCH: 'calendar_search',
@@ -54,6 +61,8 @@ export function isMemoryTool(toolName: string): boolean {
 /** Present-tense labels rendered while a tool is running. */
 const TOOL_LABELS: Record<string, string> = {
 	[KNOWN_TOOL_NAMES.WEB_SEARCH]: 'Searching the web',
+	[KNOWN_TOOL_NAMES.EXA_SEARCH]: 'Searching the web',
+	[KNOWN_TOOL_NAMES.EXA_SEARCH_CLAUDE]: 'Searching the web',
 	[KNOWN_TOOL_NAMES.MEMORY_SEARCH]: 'Searching memory',
 	[KNOWN_TOOL_NAMES.SUMMARY_SEARCH]: 'Searching memory',
 	[KNOWN_TOOL_NAMES.CALENDAR_SEARCH]: 'Checking the calendar',
@@ -65,6 +74,8 @@ const TOOL_LABELS: Record<string, string> = {
 /** Past-tense labels rendered once a tool has finished. */
 const TOOL_LABELS_PAST: Record<string, string> = {
 	[KNOWN_TOOL_NAMES.WEB_SEARCH]: 'Searched the web',
+	[KNOWN_TOOL_NAMES.EXA_SEARCH]: 'Searched the web',
+	[KNOWN_TOOL_NAMES.EXA_SEARCH_CLAUDE]: 'Searched the web',
 	[KNOWN_TOOL_NAMES.MEMORY_SEARCH]: 'Searched memory',
 	[KNOWN_TOOL_NAMES.SUMMARY_SEARCH]: 'Searched memory',
 	[KNOWN_TOOL_NAMES.CALENDAR_SEARCH]: 'Checked the calendar',
@@ -76,6 +87,8 @@ const TOOL_LABELS_PAST: Record<string, string> = {
 /** Lucide icons keyed by tool name — fall back to {@link SearchIcon}. */
 const TOOL_ICONS: Record<string, LucideIcon> = {
 	[KNOWN_TOOL_NAMES.WEB_SEARCH]: GlobeIcon,
+	[KNOWN_TOOL_NAMES.EXA_SEARCH]: GlobeIcon,
+	[KNOWN_TOOL_NAMES.EXA_SEARCH_CLAUDE]: GlobeIcon,
 	[KNOWN_TOOL_NAMES.MEMORY_SEARCH]: SearchIcon,
 	[KNOWN_TOOL_NAMES.SUMMARY_SEARCH]: BookOpenIcon,
 	[KNOWN_TOOL_NAMES.CALENDAR_SEARCH]: CalendarIcon,
