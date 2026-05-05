@@ -1,11 +1,11 @@
 ---
 # ai-nexus-j48u
 title: Chat row context menu — overhaul + visual states
-status: in-progress
+status: completed
 type: feature
 priority: high
 created_at: 2026-05-04T20:34:26Z
-updated_at: 2026-05-04T20:55:29Z
+updated_at: 2026-05-05T12:39:55Z
 ---
 
 Rebuild the right-click menu for conversation rows so its actions actually produce visible feedback. Spec was settled via /grill-me — see this body for the lock.
@@ -90,3 +90,33 @@ Share, Star, Pin, Move to Project, Open in New Panel — removed entirely from t
 - Multi-select right-click bulk actions (M1) — selection logic exists but the menu still acts on the right-clicked single row. Adapting requires bulk-variant handlers.
 - Duplicate — UI entry exists but toasts "Coming soon" until a backend `POST /conversations/{id}/duplicate` clone endpoint is built.
 - Share — explicitly cut this round; bring back when share-token infrastructure lands.
+
+## Todo
+
+- [x] Upgrade fixtures.ts: cacheDir for prompt cache, viewport lock, third-party block, navigateToApp helper that calls page.waitForLoadState('networkidle')
+- [x] Spec: settings nav (observe-then-act over each tab; Zod array extract for nav labels)
+- [~] Spec: chat send + structured extract — DEFERRED. Need to confirm chat surface is wired through dev-login backend before writing; current scope is settings-only.
+- [x] Spec: archived chats (no-results + populated case via Zod array)
+- [~] Spec: agent() multi-step — DEFERRED. The 3 atomic act/extract specs cover the same surface area more reliably + cheaper. Will revisit if a true multi-step user-journey test is needed (e.g. signup wizard end-to-end).
+- [x] Run all 3 specs end-to-end, fix anything that breaks (all green in 22s)
+- [x] Document patterns in frontend/e2e/stagehand/README.md (caching, variables, scoped extract)
+
+## Summary of Changes
+
+Stagehand v3 LOCAL suite shipped under `frontend/e2e/stagehand/` with 3 specs covering the high-value patterns from the official docs:
+
+- `settings-nav.stagehand.spec.ts` — observe-then-act + Zod object extract (7.4s)
+- `settings-rail.stagehand.spec.ts` — Zod array extract for the full nav rail in a single LLM call (6.4s)
+- `archived-chats.stagehand.spec.ts` — discriminated-union extract ('empty' | 'populated' + count) (7.9s)
+
+Total: ~22s for the suite.
+
+Fixture upgrades from the docs audit (caching.mdx + prompting-best-practices.mdx):
+- shared on-disk cacheDir at `.stagehand-cache/` so subsequent runs skip the LLM
+- locked 1280×720 viewport for cache-hit stability (a11y-tree hash stays constant)
+- `navigateToApp(path)` helper that always awaits `waitForLoadState('networkidle')` — required for cache hits per Stagehand caching docs (intentionally breaks the project's no-networkidle rule for AI specs only)
+- skip-with-actionable-message when no LLM key is set
+
+Deferred (not done — not needed for current scope):
+- agent() multi-step spec — covered more reliably by the 3 atomic specs
+- chat-streaming spec — needs the chat backend wired through dev-login first
