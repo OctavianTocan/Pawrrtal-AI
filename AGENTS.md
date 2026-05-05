@@ -93,6 +93,27 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
 - **TypeScript Rules (`.claude/rules/typescript/`)**: Explicit return types on every function, TSDoc on exports, JSDoc placement (directly above the declaration), parameter limits (max 3 positional, group into objects beyond that), literal union types for constrained string fields, and environment variable conventions.
 
+## Electron Desktop Shell
+
+The repo ships a desktop shell at `electron/` that wraps the same
+Next.js frontend without any duplication. Web behavior is unchanged;
+desktop is purely additive. See `electron/README.md` for the full
+architecture; the rules at a glance:
+
+- The frontend stays Electron-agnostic. Anywhere it needs a desktop
+  capability it goes through `frontend/lib/desktop.ts`, which detects
+  `window.aiNexus` and falls back to web equivalents on the browser.
+- Desktop-only IPC is namespaced `desktop:*` and validated on the
+  main side (see `electron/src/ipc.ts`). Renderer security is locked:
+  `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`.
+- Adding a new desktop feature touches three files in lockstep:
+  `electron/src/preload.ts` (bridge), `electron/src/ipc.ts` (handler),
+  `frontend/lib/desktop.ts` (typed wrapper + web fallback).
+- Dev: `just electron-dev` against the running `just dev`.
+  Prod-style: `just electron-prod`. Installer: `just electron-dist`.
+- Backend is not bundled; set `BACKEND_URL` to point the desktop app
+  at a remote FastAPI deployment (defaults to `http://localhost:8000`).
+
 ## How We Work On AI Nexus
 
 The session-derived working agreement lives in

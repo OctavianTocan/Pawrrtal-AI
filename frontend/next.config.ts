@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
 	turbopack: {
 		root: path.resolve(__dirname, '../'),
 	},
+	// `standalone` emits a self-contained server bundle at
+	// `.next/standalone/` plus a `node_modules/` slice with only the
+	// production deps the runtime touches. The Electron desktop shell
+	// spawns this server directly (see `electron/src/server.ts`) so the
+	// app works offline of any external Next.js host. Vercel + every
+	// other Node host ignores the standalone dir, so the web build path
+	// is unaffected.
+	output: 'standalone',
 	experimental: {
 		// https://nextjs.org/docs/app/api-reference/functions/unauthorized
 		authInterrupts: true,
