@@ -35,10 +35,24 @@ import pytest_asyncio
 from browser_use import Agent, BrowserSession
 from browser_use.llm import ChatAnthropic, ChatOpenAI
 from browser_use.llm.base import BaseChatModel
+from dotenv import load_dotenv
+
+# Load env vars from the same backend/.env the FastAPI server reads,
+# so contributors only have to set ZAI_API_KEY / OPENAI_API_KEY /
+# ANTHROPIC_API_KEY in ONE place rather than re-exporting them in the
+# shell. `override=False` so anything already in the shell environment
+# wins (CI sets keys via secrets, not files).
+_BACKEND_ENV = Path(__file__).resolve().parents[2] / "backend" / ".env"
+if _BACKEND_ENV.exists():
+    load_dotenv(_BACKEND_ENV, override=False)
 
 BACKEND_URL = os.environ.get("E2E_BACKEND_URL", "http://localhost:8000")
 FRONTEND_URL = os.environ.get("E2E_FRONTEND_URL", "http://localhost:3001")
-HEADLESS = os.environ.get("BROWSER_USE_HEADLESS", "1") not in {"0", "false", "False"}
+# Default to HEADED so the developer can watch what the agent is doing.
+# Flip to BROWSER_USE_HEADLESS=1 in CI (or just for speed) to skip the
+# window. Most macOS users actually want to see the window — that's
+# the whole point of running tests locally vs in CI.
+HEADLESS = os.environ.get("BROWSER_USE_HEADLESS", "0") not in {"0", "false", "False"}
 
 
 def _select_llm() -> BaseChatModel | None:
@@ -89,8 +103,10 @@ async def storage_state(tmp_path_factory: pytest.TempPathFactory) -> str:
     don't need to re-auth between tests.
     """
     async with httpx.AsyncClient(base_url=BACKEND_URL, timeout=10.0) as client:
+        # FastAPI-Users' cookie transport returns 204 No Content on
+        # success (the cookie is the entire payload). Accept any 2xx.
         response = await client.post("/auth/dev-login")
-        if response.status_code != 200:
+        if not (200 <= response.status_code < 300):
             raise RuntimeError(
                 f"Dev login failed ({response.status_code}). "
                 "Make sure ADMIN_EMAIL + ADMIN_PASSWORD are set in backend/.env "
@@ -100,7 +116,7 @@ async def storage_state(tmp_path_factory: pytest.TempPathFactory) -> str:
     cookie = response.cookies.get("session_token")
     if cookie is None:
         raise RuntimeError(
-            "Dev login succeeded but no session_token cookie was returned. "
+            "Dev login returned 2xx but no session_token cookie. "
             "Has the auth backend been changed to a non-cookie transport?"
         )
 
@@ -145,11 +161,29 @@ async def browser(storage_state: str) -> AsyncGenerator[BrowserSession]:
     Function-scoped (not session-scoped) so each test gets a clean
     page state — agents can mutate the DOM in arbitrary ways and we
     don't want bleed-through.
+
+    When HEADLESS is False, we pass `--start-maximized` so the Chrome
+    window pops into the foreground rather than spawning behind the
+    terminal where you'd never notice it. macOS Mission Control may
+    still send it to a different desktop the first launch — Cmd+`
+    cycles back to it.
     """
+    if not HEADLESS:
+        # Visible signal in the terminal so the developer knows the
+        # window is about to open and where to look for it.
+        print(
+            "\n[browser-use] Launching Chromium in HEADED mode — look for a "
+            "new browser window. (Set BROWSER_USE_HEADLESS=1 to suppress.)"
+        )
+
     session = BrowserSession(
         headless=HEADLESS,
         storage_state=storage_state,
         allowed_domains=["localhost"],
+        # Force the window to be visible + sized + on top in headed mode.
+        # `args` is a passthrough to the Chrome launch CLI flags.
+        args=[] if HEADLESS else ["--start-maximized", "--new-window"],
+        viewport={"width": 1280, "height": 800} if HEADLESS else None,
     )
     await session.start()
     try:
