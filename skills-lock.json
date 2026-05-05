@@ -60,6 +60,12 @@
 			"skillPath": "plugins/javascript-typescript/skills/javascript-testing-patterns/SKILL.md",
 			"computedHash": "8d0a8d7615ff343770af0218720691d56c55ae258793565936c8b3a97e188f51"
 		},
+		"logging-best-practices": {
+			"source": "boristane/agent-skills",
+			"sourceType": "github",
+			"skillPath": "skills/logging-best-practices/SKILL.md",
+			"computedHash": "b4810947c33b5356bf385c84cfe387afa9c54af652baaedb7d642a083cceaa4c"
+		},
 		"next-best-practices": {
 			"source": "vercel-labs/next-skills",
 			"sourceType": "github",
