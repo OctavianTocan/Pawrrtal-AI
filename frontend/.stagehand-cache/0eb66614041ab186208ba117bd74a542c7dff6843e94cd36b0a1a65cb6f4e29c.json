@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "instruction": "Press the Escape key on the keyboard to close any open modal",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]",
+      "description": "The body element of the page, used to capture the global Escape key press to close the modal.",
+      "method": "press",
+      "arguments": [
+        "Escape"
+      ]
+    }
+  ],
+  "actionDescription": "The body element of the page, used to capture the global Escape key press to close the modal.",
+  "message": "Action [press] performed successfully on selector: xpath=/html[1]/body[1]"
+}

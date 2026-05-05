@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "instruction": "Type %prompt% into the main chat input at the bottom of the page",
+  "url": "http://localhost:3001/c/727cb75e-ad0e-498a-89d7-173e3e2ffa9a",
+  "variableKeys": [
+    "prompt"
+  ],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[1]/div[1]/textarea[1]",
+      "description": "Main chat input textbox",
+      "method": "type",
+      "arguments": [
+        "%prompt%"
+      ]
+    }
+  ],
+  "actionDescription": "Main chat input textbox",
+  "message": "Action [type] performed successfully on selector: xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[2]/form[1]/div[1]/div[1]/textarea[1]"
+}

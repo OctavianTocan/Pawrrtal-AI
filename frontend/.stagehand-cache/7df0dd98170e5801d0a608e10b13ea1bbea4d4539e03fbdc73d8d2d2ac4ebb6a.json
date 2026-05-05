@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "Click the workspace selector at the top of the left sidebar",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[3]/div[1]/header[1]/div[1]/button[2]",
+      "description": "Select workspace button",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "Select workspace button",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[3]/div[1]/header[1]/div[1]/button[2]"
+}

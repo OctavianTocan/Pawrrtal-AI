@@ -21,7 +21,10 @@
 			"!**/.zed",
 			"!**/.vscode",
 			"!**/.sentrux",
-			"!**/coverage"
+			"!**/coverage",
+			"!**/.stagehand-cache",
+			"!**/playwright-report",
+			"!**/test-results"
 		]
 	},
 	"formatter": {

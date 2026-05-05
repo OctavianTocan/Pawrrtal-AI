@@ -126,15 +126,16 @@ electron-prod: electron-frontend-build electron-build
 electron-dist: electron-frontend-build
     cd electron && bun run dist
 
-# --- Browser-use E2E (LLM-driven) -------------------------------------------
+# --- Stagehand E2E (LLM-driven, lives under frontend/e2e/stagehand) --------
 
-# Run the browser-use end-to-end suite. Requires `just dev` already running
-# (frontend + backend) and one of OPENAI_API_KEY / ANTHROPIC_API_KEY set so
-# the agent has an LLM to drive each step. Tests are slow (10–60s each)
-# and cost real money — keep them out of `just check`; run on demand.
-browser-use-e2e:
-    cd e2e-browser-use && uv sync
-    cd e2e-browser-use && uv run pytest -v -m browser_use
+# Run the Stagehand AI-driven end-to-end suite. Requires `just dev` already
+# running (frontend + backend) and one of OPENAI_API_KEY / ANTHROPIC_API_KEY
+# / GOOGLE_API_KEY set so Stagehand has an LLM to drive `act` / `extract`.
+# Tests are slow (10–60s each) and cost real money — keep them out of
+# `just check`; run on demand.
+stagehand-e2e:
+    cd frontend && bunx --bun playwright install --with-deps chromium
+    cd frontend && bun run e2e:stagehand
 
 # Install all dependencies (frontend + backend) and git hooks
 install:
