@@ -149,4 +149,13 @@ export const API_ENDPOINTS = {
 		 */
 		delete: (id: string) => `/api/v1/projects/${id}`,
 	},
+	/** Third-party messaging channels (Telegram today; more later). */
+	channels: {
+		/** List every channel binding owned by the authenticated user. */
+		list: '/api/v1/channels',
+		/** Issue a fresh one-time Telegram link code. */
+		telegramLink: '/api/v1/channels/telegram/link',
+		/** Drop the user's Telegram binding (idempotent). */
+		telegramUnlink: '/api/v1/channels/telegram/link',
+	},
 } as const;
