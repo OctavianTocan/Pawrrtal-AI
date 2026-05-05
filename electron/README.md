@@ -81,6 +81,63 @@ is its own beast). Two ways to point at one:
    it into the spawned Next.js server's env so `frontend/lib/api.ts`
    resolves it correctly.
 
+## Privileged operations (file + shell)
+
+The desktop shell exposes file + shell capabilities the web build can't
+have. Architecture follows the *client-tool* pattern documented in
+[ADR 2026-05-05](../docs/decisions/2026-05-05-electron-privileged-ops-in-main.md):
+
+- The agent loop stays in FastAPI.
+- Tool *definitions* are registered server-side; tool *execution* for
+  desktop tools tunnels through the renderer to Electron main via the
+  `aiNexus.fs.*` / `aiNexus.shell.*` bridges.
+- Web users get the server-tool subset; desktop users get the full
+  toolset. Same UI, no per-shell branches in the renderer.
+
+### Workspace allowlist
+
+`electron/src/workspace.ts` keeps a persistent list of directories the
+agent is allowed to touch. The default is `~/AI-Nexus-Workspace/`,
+auto-created on first launch. Add more from the FE via
+`addWorkspaceRoot()` (calls the native folder picker if no path given).
+
+Every `fs:*` and `shell:*` handler runs `validateFilePath()` before
+acting; paths outside every root are rejected, including symlinks
+inside a root that point outside.
+
+### Permission ladder
+
+`electron/src/permissions.ts` mirrors Claude Code's permission model:
+
+| Mode | Behaviour |
+| --- | --- |
+| `default` | prompt per `<op>:<command>:<root>` until the user picks "Always allow" |
+| `accept-edits` | auto-allow `fs:write`; still prompt for shell |
+| `yolo` | auto-allow everything |
+| `plan` | deny every write/exec; reads still work |
+
+Per-decision scopes:
+
+- `once` — allow this single op
+- `session` — allow until the app restarts
+- `always` — persist via `electron-store`
+
+### IPC channel reference
+
+| Channel | Use |
+| --- | --- |
+| `fs:read-file(path)` | Read text file inside a root |
+| `fs:write-file(path, content)` | Write text file (gated by perms) |
+| `fs:list-directory(path)` | List entries |
+| `fs:watch-directory(path)` → `fs:watch-event` | Subscribe via chokidar |
+| `fs:unwatch(id)` | Tear down |
+| `shell:run({ command, args, cwd, env, timeoutMs })` | One-shot exec |
+| `shell:spawn-streaming(...)` → `shell:stream` / `shell:stream-end` | Long-running |
+| `shell:kill(jobId)` | Cancel streaming job |
+| `workspace:list-roots` / `workspace:add-root` / `workspace:remove-root` | Manage allowlist |
+| `permissions:get-mode` / `permissions:set-mode` | Toggle the ladder |
+| `permissions:prompt` (push) / `permissions:respond` (pull) | Renderer-driven prompts |
+
 ## Adding desktop-only features
 
 Three files always change together:

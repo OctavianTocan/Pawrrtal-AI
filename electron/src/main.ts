@@ -17,10 +17,14 @@
 
 import path from 'node:path';
 import { app, BrowserWindow, shell } from 'electron';
-import Store from 'electron-store';
+
+import { disposeFsWatchers } from './handlers/fs';
+import { disposeShellJobs } from './handlers/shell';
 import { registerIpcHandlers } from './ipc';
+import { createStore } from './lib/typed-store';
 import { buildApplicationMenu } from './menu';
 import { type StartedServer, startNextServer } from './server';
+import { ensureDefaultWorkspaceRoot } from './workspace';
 
 interface WindowState {
 	width: number;
@@ -31,7 +35,7 @@ interface WindowState {
 }
 
 /** Small persistent store for window geometry. */
-const windowStore = new Store<{ window: WindowState }>({
+const windowStore = createStore<{ window: WindowState }>({
 	defaults: {
 		window: { width: 1280, height: 820, maximized: false },
 	},
@@ -111,6 +115,9 @@ function createWindow(targetUrl: string): BrowserWindow {
 }
 
 async function bootstrap(): Promise<void> {
+	// Auto-create the default workspace root before any privileged op
+	// can run (every fs/shell handler validates against the allowlist).
+	ensureDefaultWorkspaceRoot();
 	server = await startNextServer({ isDev });
 	mainWindow = createWindow(server.url);
 	buildApplicationMenu({ getWindow: () => mainWindow });
@@ -149,6 +156,10 @@ if (!gotLock) {
 	});
 
 	app.on('before-quit', () => {
+		// Tear down privileged-op resources before the Next.js server,
+		// so a slow watcher close doesn't hold the quit hostage.
+		disposeShellJobs();
+		void disposeFsWatchers();
 		void server?.stop();
 	});
 }
