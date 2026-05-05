@@ -3,7 +3,7 @@
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { SettingsCard, SettingsRow } from '../primitives';
+import { SettingsCard, SettingsPage, SettingsRow, SettingsSectionHeader } from '../primitives';
 
 /** A single usage limit row with a horizontal "amount left" bar. */
 function UsageLimitRow({
@@ -46,66 +46,66 @@ function UsageLimitRow({
  */
 export function UsageSection(): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-6">
-			<header>
-				<h2 className="text-lg font-semibold text-foreground">Usage</h2>
-			</header>
+		<SettingsPage
+			description="Track your active limits, per-model usage, and credit balance."
+			title="Usage"
+		>
+			<SettingsCard>
+				<SettingsSectionHeader
+					description="Usage limits applied across every model."
+					title="General usage limits"
+				/>
+				<UsageLimitRow
+					label="5 hour usage limit"
+					percentLeft={100}
+					resetLabel="Resets 4:15 AM"
+				/>
+				<UsageLimitRow
+					label="Weekly usage limit"
+					percentLeft={38}
+					resetLabel="Resets 7:51 AM"
+				/>
+			</SettingsCard>
 
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">General usage limits</h3>
-				<SettingsCard>
-					<UsageLimitRow
-						label="5 hour usage limit"
-						percentLeft={100}
-						resetLabel="Resets 4:15 AM"
-					/>
-					<UsageLimitRow
-						label="Weekly usage limit"
-						percentLeft={38}
-						resetLabel="Resets 7:51 AM"
-					/>
-				</SettingsCard>
-			</section>
+			<SettingsCard>
+				<SettingsSectionHeader
+					description="Limits scoped to the model you're currently using."
+					title="Claude Opus 4.7 usage limits"
+				/>
+				<UsageLimitRow
+					label="5 hour usage limit"
+					percentLeft={100}
+					resetLabel="Resets 4:15 AM"
+				/>
+				<UsageLimitRow
+					label="Weekly usage limit"
+					percentLeft={96}
+					resetLabel="Resets May 10"
+				/>
+			</SettingsCard>
 
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">
-					Claude Opus 4.7 usage limits
-				</h3>
-				<SettingsCard>
-					<UsageLimitRow
-						label="5 hour usage limit"
-						percentLeft={100}
-						resetLabel="Resets 4:15 AM"
-					/>
-					<UsageLimitRow
-						label="Weekly usage limit"
-						percentLeft={96}
-						resetLabel="Resets May 10"
-					/>
-				</SettingsCard>
-			</section>
-
-			<section className="flex flex-col gap-2">
-				<h3 className="text-sm font-semibold text-foreground">Credit</h3>
-				<SettingsCard>
-					<SettingsRow
-						description="Use credit to send messages when you reach usage limits."
-						label="0 credit remaining"
-					>
-						<Button size="sm" type="button" variant="secondary">
-							Purchase
-						</Button>
-					</SettingsRow>
-					<SettingsRow
-						description="Automatically add credit when you reach your minimum balance."
-						label="Auto-reload credit"
-					>
-						<Button size="sm" type="button" variant="secondary">
-							Settings
-						</Button>
-					</SettingsRow>
-				</SettingsCard>
-			</section>
-		</div>
+			<SettingsCard>
+				<SettingsSectionHeader
+					description="Top up to keep messaging when usage limits are reached."
+					title="Credit"
+				/>
+				<SettingsRow
+					description="Use credit to send messages when you reach usage limits."
+					label="0 credit remaining"
+				>
+					<Button size="sm" type="button" variant="secondary">
+						Purchase
+					</Button>
+				</SettingsRow>
+				<SettingsRow
+					description="Automatically add credit when you reach your minimum balance."
+					label="Auto-reload credit"
+				>
+					<Button size="sm" type="button" variant="secondary">
+						Settings
+					</Button>
+				</SettingsRow>
+			</SettingsCard>
+		</SettingsPage>
 	);
 }

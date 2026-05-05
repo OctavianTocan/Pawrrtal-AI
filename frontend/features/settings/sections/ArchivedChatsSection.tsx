@@ -7,6 +7,7 @@ import { useUpdateConversationMetadata } from '@/features/nav-chats/hooks/use-co
 import useGetConversations from '@/hooks/get-conversations';
 import { toast } from '@/lib/toast';
 import type { Conversation } from '@/lib/types';
+import { SettingsPage } from '../primitives';
 
 /**
  * Settings → Archived chats. Lists every conversation with `is_archived=true`
@@ -38,13 +39,10 @@ export function ArchivedChatsSection(): React.JSX.Element {
 	};
 
 	return (
-		<div className="flex flex-col gap-10">
-			<header>
-				<h1 className="text-2xl font-semibold tracking-tight text-foreground">
-					Archived chats
-				</h1>
-			</header>
-
+		<SettingsPage
+			description="Conversations you've archived. Unarchive any to bring it back into your active chat list."
+			title="Archived chats"
+		>
 			{isLoading ? (
 				<p className="text-sm text-muted-foreground">Loading archived chats…</p>
 			) : null}
@@ -65,7 +63,7 @@ export function ArchivedChatsSection(): React.JSX.Element {
 					))}
 				</section>
 			) : null}
-		</div>
+		</SettingsPage>
 	);
 }
 

@@ -2,23 +2,24 @@
 
 import { Construction } from 'lucide-react';
 import type * as React from 'react';
+import { SettingsPage } from '../primitives';
 
 /**
  * Placeholder body rendered for settings sections that aren't yet built
- * (Configuration, MCP servers, Git, Environments, Worktrees, Browser use,
- * Archived chats, Usage). Keeps the nav rail interactive without
- * promising features that don't exist.
+ * (Configuration, MCP servers, Git, Environments, Worktrees, Browser
+ * use, …). Wraps the standard `SettingsPage` so the title row matches
+ * every other section's vertical rhythm — only the body differs.
  */
 export function PlaceholderSection({ title }: { title: string }): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-3">
-			<header>
-				<h2 className="text-lg font-semibold text-foreground">{title}</h2>
-			</header>
+		<SettingsPage
+			description="This section is on the roadmap but not yet implemented."
+			title={title}
+		>
 			<div className="flex items-center gap-3 rounded-[10px] border border-dashed border-foreground/15 bg-foreground/[0.02] px-5 py-8 text-sm text-muted-foreground">
 				<Construction aria-hidden="true" className="size-4" />
 				<span>This section is coming soon.</span>
 			</div>
-		</div>
+		</SettingsPage>
 	);
 }

@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { IntegrationsSection } from './IntegrationsSection';
 
 describe('IntegrationsSection', () => {
-	it('renders Your Integrations heading + every Your Integrations row', () => {
-		const { getByRole, getAllByText } = render(<IntegrationsSection />);
-		expect(getByRole('heading', { name: 'Your Integrations' })).toBeTruthy();
+	it('renders the Integrations page heading + every Your Integrations row', () => {
+		const { getByRole, getAllByText, getByText } = render(<IntegrationsSection />);
+		// Page-level h1 set by SettingsPage
+		expect(getByRole('heading', { name: 'Integrations' })).toBeTruthy();
+		// Section header inside the card (rendered as a span, not heading)
+		expect(getByText('Your integrations')).toBeTruthy();
 		// Apple Calendar appears in YOUR_INTEGRATIONS
 		expect(getAllByText('Apple Calendar').length).toBeGreaterThan(0);
 	});

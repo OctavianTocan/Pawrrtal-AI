@@ -47,7 +47,14 @@ import {
 	useUpdateAppearance,
 } from '@/features/appearance';
 import { cn } from '@/lib/utils';
-import { SettingsCard, SettingsRow, SettingsSectionHeader, Slider, Switch } from '../primitives';
+import {
+	SettingsCard,
+	SettingsPage,
+	SettingsRow,
+	SettingsSectionHeader,
+	Slider,
+	Switch,
+} from '../primitives';
 
 /** Debounce window for color hex / font family inputs. Tuned to feel
  *  responsive (under the Doherty 400ms threshold) while not flooding
@@ -223,25 +230,42 @@ function ColorRow({
 		setDraft(event.target.value);
 	}, []);
 
-	const pickerValue = toHex(draft || resolvedValue);
+	// Native `<input type="color">` is left UNCONTROLLED — every drag-pixel
+	// would otherwise fire `onChange` → mutate cache → re-render with a
+	// new `value` prop → OS picker snaps back, producing the "lurping"
+	// the user reported. The picker owns its own internal state for
+	// the duration of a drag; we only re-seed it via a `key` that flips
+	// when the resolved value changes from outside (e.g. preset apply).
+	const pickerSeed = toHex(overrideValue ?? resolvedValue);
 
+	// RAF-batched commit so a 60fps drag produces ≤60 PUTs/s instead of
+	// hundreds. The provider re-renders the swatch border via the
+	// resolved CSS variable, so the user still sees live preview.
+	const pickerRafRef = useRef<number | null>(null);
 	const handlePickerChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-		// The native picker emits `#rrggbb` instantly per drag pixel;
-		// commit immediately (no debounce) because every change is a
-		// fully-formed value, and skipping debounce gives the user the
-		// "live preview while dragging" feel of Mistral / Raycast.
 		const next = event.target.value;
 		setDraft(next);
-		commitRef.current(next);
+		if (pickerRafRef.current !== null) cancelAnimationFrame(pickerRafRef.current);
+		pickerRafRef.current = requestAnimationFrame(() => {
+			pickerRafRef.current = null;
+			commitRef.current(next);
+		});
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (pickerRafRef.current !== null) cancelAnimationFrame(pickerRafRef.current);
+		};
 	}, []);
 
 	return (
 		<SettingsRow label={label}>
 			<div className="flex items-center gap-2 rounded-[6px] border border-foreground/10 bg-foreground/[0.03] px-1.5 py-1">
-				{/* Native color picker — clicking the swatch opens the OS dialog;
-				 *  dragging inside it commits per-pixel without debounce so the
-				 *  preview is live. The label-wrap makes the entire swatch the
-				 *  click target (Fitts's Law) without an extra DOM node. */}
+				{/* Native color picker — clicking the swatch opens the OS
+				 *  dialog. Uncontrolled `defaultValue`, re-seeded via `key`
+				 *  only on external resets (preset apply, server refetch).
+				 *  See the `pickerSeed` comment above for why this is NOT
+				 *  a controlled input. */}
 				<label
 					aria-label={`${label} color picker`}
 					className="relative flex size-5 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-foreground/15"
@@ -249,9 +273,10 @@ function ColorRow({
 				>
 					<input
 						className="absolute inset-0 size-full cursor-pointer opacity-0"
+						defaultValue={pickerSeed}
+						key={pickerSeed}
 						onChange={handlePickerChange}
 						type="color"
-						value={pickerValue}
 					/>
 				</label>
 				<input
@@ -491,17 +516,10 @@ export function AppearanceSection(): React.JSX.Element {
 	);
 
 	return (
-		<div className="flex flex-col gap-10">
-			{/* Outer page title — matches the GeneralSection / UsageSection
-			 *  pattern so every Settings panel opens with the same vertical
-			 *  rhythm. h1 carries the section name; the SettingsCard
-			 *  beneath uses SettingsSectionHeader for sub-headings. */}
-			<header>
-				<h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
-					Appearance
-				</h1>
-			</header>
-
+		<SettingsPage
+			description="Customize colors, typography, and behavior. Pick a preset or fine-tune individual slots — your overrides apply across the entire app."
+			title="Appearance"
+		>
 			<SettingsCard>
 				<SettingsSectionHeader
 					actions={
@@ -613,6 +631,6 @@ export function AppearanceSection(): React.JSX.Element {
 					</div>
 				</SettingsRow>
 			</SettingsCard>
-		</div>
+		</SettingsPage>
 	);
 }

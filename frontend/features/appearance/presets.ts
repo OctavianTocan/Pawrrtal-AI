@@ -62,9 +62,13 @@ const SYSTEM_MONO =
 const MISTRAL_PRESET: ThemePreset = {
 	id: 'mistral',
 	name: 'Mistral AI',
-	description: 'White canvas, saturated orange CTAs, editorial display serif.',
+	description: 'Cream canvas, saturated orange CTAs, editorial display serif.',
+	// Live values pulled from `mistral.ai` via Chrome DevTools:
+	//   body  → rgb(255, 250, 235) → #fffaeb (cream-light)
+	//   text  → near-#1f1f1f
+	//   CTAs  → #fa520f Mistral orange
 	light: {
-		background: '#ffffff',
+		background: '#fffaeb',
 		foreground: '#1f1f1f',
 		accent: '#fa520f',
 		info: '#ff8105',
@@ -88,40 +92,39 @@ const MISTRAL_PRESET: ThemePreset = {
 };
 
 /**
- * Cursor preset — distinctly cooler / greyer canvas than Mistral's
- * warm yellow cream, paired with Cursor's signature electric blue
- * CTA (the IDE accent, not the marketing-orange). Geist sans for
- * everything. Dark mode mirrors Cursor's IDE — true dark background
- * with the same blue anchor.
+ * Cursor preset — cool warm-grey canvas + warm-ink ink + Cursor-orange
+ * CTA. Sans-only typography (Cursor's site uses CursorGothic; we ship
+ * the closest free equivalent, Geist).
  *
- * The `background` is shifted toward neutral grey-white (vs Mistral's
- * warm yellow cream) and the accent is shifted to blue (vs Mistral's
- * orange) so the two presets read as immediately different at a
- * glance — even when applied to the same screen.
+ * Live values pulled from `cursor.com` via Chrome DevTools:
+ *   body  → rgb(247, 247, 244) → #f7f7f4 (cool warm-grey)
+ *   text  → rgb(38, 37, 30)   → #26251e (warm near-black)
+ *   CTAs  → #f54e00 (Cursor Orange — distinct from Mistral's #fa520f)
  */
 const CURSOR_PRESET: ThemePreset = {
 	id: 'cursor',
 	name: 'Cursor',
-	description: 'Cool slate canvas with electric blue CTAs and Geist sans typography.',
+	description: 'Cool warm-grey canvas, Cursor-orange CTAs, Geist sans typography.',
 	light: {
-		background: '#fafbfc',
-		foreground: '#0d1117',
-		accent: '#1f6feb',
-		info: '#0969da',
-		success: '#1a7f37',
-		destructive: '#cf222e',
+		background: '#f7f7f4',
+		foreground: '#26251e',
+		accent: '#f54e00',
+		info: '#a06a3a',
+		success: '#2f7d51',
+		destructive: '#d04200',
 	},
 	dark: {
-		background: '#0d1117',
-		foreground: '#e6edf3',
-		accent: '#388bfd',
-		info: '#58a6ff',
-		success: '#3fb950',
-		destructive: '#f85149',
+		background: '#0d0d0c',
+		foreground: '#ededea',
+		accent: '#ff7a3a',
+		info: '#d6a468',
+		success: '#5fbb84',
+		destructive: '#ff5b30',
 	},
 	fonts: {
-		// Geist ships as a free Google Font; the fallback chain ends in
-		// system-ui so something legible always renders.
+		// Geist ships as a free Google Font (loaded via next/font in
+		// app/layout.tsx). Fallback ends in system-ui so something
+		// legible always renders even before the variable font arrives.
 		display: '"Geist", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
 		sans: '"Geist", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
 		mono: '"Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace',

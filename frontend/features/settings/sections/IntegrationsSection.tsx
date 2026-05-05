@@ -7,6 +7,7 @@ import { AddCustomMcpModal } from '../integrations/AddCustomMcpModal';
 import { AddIntegrationModal } from '../integrations/AddIntegrationModal';
 import { YOUR_INTEGRATIONS } from '../integrations/catalog';
 import { IntegrationRow } from '../integrations/IntegrationRow';
+import { SettingsCard, SettingsPage, SettingsSectionHeader } from '../primitives';
 
 /**
  * Visual-only Integrations settings section.
@@ -21,24 +22,31 @@ export function IntegrationsSection(): React.JSX.Element {
 	const [showCustomMcp, setShowCustomMcp] = useState(false);
 
 	return (
-		<div className="flex flex-col gap-6">
-			<header className="flex items-center justify-between">
-				<h2 className="text-lg font-semibold text-foreground">Your Integrations</h2>
-				<button
-					className="flex items-center gap-1.5 rounded-[8px] border border-foreground/15 bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-foreground/[0.08]"
-					onClick={() => setShowCatalog(true)}
-					type="button"
-				>
-					<Plus className="size-3.5" />
-					Add integration
-				</button>
-			</header>
-
-			<div className="flex flex-col gap-2">
-				{YOUR_INTEGRATIONS.map((integration) => (
-					<IntegrationRow integration={integration} key={integration.id} />
-				))}
-			</div>
+		<SettingsPage
+			description="Connect AI Nexus to your tools so it can read context and run actions."
+			title="Integrations"
+		>
+			<SettingsCard>
+				<SettingsSectionHeader
+					actions={
+						<button
+							className="flex cursor-pointer items-center gap-1.5 rounded-[8px] border border-foreground/15 bg-foreground/[0.04] px-3 py-1.5 text-xs font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.08]"
+							onClick={() => setShowCatalog(true)}
+							type="button"
+						>
+							<Plus className="size-3.5" />
+							Add integration
+						</button>
+					}
+					description="Apps and services AI Nexus is currently connected to."
+					title="Your integrations"
+				/>
+				<div className="flex flex-col gap-2 pt-3">
+					{YOUR_INTEGRATIONS.map((integration) => (
+						<IntegrationRow integration={integration} key={integration.id} />
+					))}
+				</div>
+			</SettingsCard>
 
 			<AddIntegrationModal
 				onAddCustom={() => {
@@ -53,6 +61,6 @@ export function IntegrationsSection(): React.JSX.Element {
 				onDismiss={() => setShowCustomMcp(false)}
 				open={showCustomMcp}
 			/>
-		</div>
+		</SettingsPage>
 	);
 }

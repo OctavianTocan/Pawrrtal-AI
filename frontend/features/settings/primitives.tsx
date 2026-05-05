@@ -169,6 +169,48 @@ export function SettingsCard({
 	);
 }
 
+/** Props for the page-level shell wrapping every Settings section. */
+export type SettingsPageProps = {
+	/** Page title rendered as `<h1>` at the top. */
+	title: React.ReactNode;
+	/** Optional sub-line beneath the title (text-pretty, muted). */
+	description?: React.ReactNode;
+	/** Page body — typically a stack of `SettingsCard`s. */
+	children: React.ReactNode;
+	/** Override classes on the page root. */
+	className?: string;
+};
+
+/**
+ * Page-level shell EVERY Settings section MUST wrap itself in.
+ *
+ * Standardises the outer rhythm — same `<h1>` size, same gap below the
+ * title, same gap between sections, same `text-pretty` description.
+ * Bespoke `<header><h1>` blocks per section are a consistency bug; use
+ * this instead. Documented in `DESIGN.md` →
+ * `Components` → `settings-page-shell`.
+ */
+export function SettingsPage({
+	title,
+	description,
+	children,
+	className,
+}: SettingsPageProps): React.JSX.Element {
+	return (
+		<div className={cn('flex flex-col gap-8', className)}>
+			<header className="flex flex-col gap-1.5">
+				<h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
+					{title}
+				</h1>
+				{description ? (
+					<p className="text-pretty text-sm text-muted-foreground">{description}</p>
+				) : null}
+			</header>
+			<div className="flex flex-col gap-6">{children}</div>
+		</div>
+	);
+}
+
 /** Props for the consistent settings-section header. */
 export type SettingsSectionHeaderProps = {
 	/** Section heading rendered on the left. */

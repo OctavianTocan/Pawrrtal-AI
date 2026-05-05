@@ -42,8 +42,13 @@ describe('PersonalizationSection', () => {
 	});
 
 	it('renders the personality select with a default value', () => {
-		const { getByText } = render(<PersonalizationSection />);
-		expect(getByText('Personality')).toBeTruthy();
+		const { getAllByText, container } = render(<PersonalizationSection />);
+		// "Personality" appears twice: once as the section header and
+		// once as the row label. Both should be present.
+		expect(getAllByText('Personality').length).toBeGreaterThanOrEqual(2);
+		// The native select is the meaningful semantic element.
+		const select = container.querySelector('select');
+		expect(select).toBeTruthy();
 	});
 
 	it('renders the memory toggles + reset button', () => {
