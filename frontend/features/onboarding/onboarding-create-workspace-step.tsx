@@ -39,7 +39,7 @@ export function OnboardingCreateWorkspaceStep({
 		<section className="popover-styled onboarding-panel flex w-full max-w-[34rem] select-none flex-col gap-6 rounded-surface-lg border border-border bg-background/95 px-7 py-8 text-foreground shadow-modal-small sm:px-8 sm:py-9">
 			<DialogHeader className="items-center gap-2 text-center">
 				<div
-					className="text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]"
+					className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]"
 					aria-hidden="true"
 				>
 					Add Workspace...

@@ -1,11 +1,14 @@
 /**
- * Tiny typed wrapper around electron-store v10.
+ * Tiny typed wrapper around electron-store v8.
  *
- * `electron-store@10` extends `conf` whose class has a `#private`
- * field; TypeScript drops the inherited `get`/`set`/`delete`/`clear`
- * methods through that extension, so direct calls on the constructed
- * store fail to type-check. This wrapper re-declares the surface we
- * actually use, validated at runtime by the underlying instance.
+ * Pinned to `electron-store@^8.2.0` — v9 went ESM-only (`Error
+ * [ERR_REQUIRE_ESM]: require() of ES Module … not supported`) and the
+ * Electron main bundle is CommonJS. v8 stays fully typed and emits
+ * CJS, so `require()` from the compiled `electron/dist/**` works.
+ *
+ * The wrapper still re-declares the surface we use because the
+ * exported `Store` class has a few overloaded methods that don't
+ * narrow well from generic types alone.
  */
 
 import { app } from 'electron';
@@ -21,21 +24,17 @@ export interface TypedStore<T extends Record<string, unknown>> {
 /**
  * Construct a typed electron-store instance.
  *
- * `projectName` is normally derived from the running app's
- * package.json by `conf` (electron-store's underlying lib). Under a
- * packaged build that works; under Vitest with a mocked Electron
- * `app` it does not. Setting it explicitly from `app.getName()` makes
- * the same code path run in both environments.
+ * `electron-store` normally derives `cwd` from a synchronous IPC
+ * roundtrip with the main process (so renderer-instantiated stores
+ * land in the same dir). Under Vitest there's no IPC, so we set
+ * `cwd` ourselves from `app.getPath('userData')` — which the test
+ * mock points at a temp dir per case. v8's `Options` type does not
+ * expose `projectName` (it's auto-derived from the host app), so the
+ * forwarded options are limited to the `cwd` override + caller opts.
  */
 export function createStore<T extends Record<string, unknown>>(options: Options<T>): TypedStore<T> {
-	// `electron-store` normally derives `cwd` from a synchronous IPC
-	// roundtrip with the main process (so renderer-instantiated stores
-	// land in the same dir). Under Vitest there's no IPC, so we set
-	// `cwd` ourselves from `app.getPath('userData')` — which the test
-	// mock points at a temp dir per case.
 	const cwd = app.getPath('userData');
 	const finalOptions: Options<T> = {
-		projectName: app.getName(),
 		cwd,
 		...options,
 	};

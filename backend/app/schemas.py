@@ -173,6 +173,68 @@ class PersonalizationProfile(BaseModel):
     custom_instructions: str | None = None
 
 
+# --- Appearance schemas -------------------------------------------------------
+
+
+class ThemeColors(BaseModel):
+    """Per-mode color overrides for the AI Nexus design system.
+
+    All fields optional — a missing key means "use the system default"
+    (the Mistral-inspired tokens in ``frontend/app/globals.css``). Each
+    value is a raw CSS color string and lands directly on the
+    corresponding ``--<role>`` CSS custom property at runtime.
+    """
+
+    background: str | None = None
+    foreground: str | None = None
+    accent: str | None = None
+    info: str | None = None
+    success: str | None = None
+    destructive: str | None = None
+
+
+class AppearanceFonts(BaseModel):
+    """Font family overrides applied to the type system."""
+
+    display: str | None = None
+    sans: str | None = None
+    mono: str | None = None
+
+
+class AppearanceOptions(BaseModel):
+    """Mode + behavioral tweaks for the appearance system.
+
+    ``theme_mode`` controls which palette is active (light/dark/system).
+    ``contrast`` and ``ui_font_size`` are numeric so the frontend can
+    drive sliders / number inputs without re-coercing. ``translucent_sidebar``
+    and ``pointer_cursors`` are boolean toggles shown in the panel.
+    """
+
+    theme_mode: str | None = None
+    translucent_sidebar: bool | None = None
+    contrast: int | None = None
+    pointer_cursors: bool | None = None
+    ui_font_size: int | None = None
+
+
+class AppearanceSettings(BaseModel):
+    """Per-user theme overrides for the Settings → Appearance panel.
+
+    Mirrors the frontend ``AppearanceSettings`` type in
+    ``frontend/features/appearance/types.ts``. Used as both the GET
+    response and the PUT request body — the endpoint treats the
+    request as a full replacement of the persisted settings, so partial
+    customizations (e.g. only changing the accent color) round-trip
+    cleanly. Missing keys fall back to the Mistral-inspired defaults
+    baked into the frontend.
+    """
+
+    light: ThemeColors = ThemeColors()
+    dark: ThemeColors = ThemeColors()
+    fonts: AppearanceFonts = AppearanceFonts()
+    options: AppearanceOptions = AppearanceOptions()
+
+
 # --- Chat schemas -------------------------------------------------------------
 
 

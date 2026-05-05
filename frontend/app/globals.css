@@ -13,25 +13,29 @@
 @property --background {
 	syntax: "<color>";
 	inherits: true;
-	initial-value: oklch(0.972 0.006 85);
+	/* Mistral cream surface — `#fff8e0` territory. */
+	initial-value: oklch(0.985 0.026 92);
 }
 
 @property --foreground {
 	syntax: "<color>";
 	inherits: true;
-	initial-value: oklch(0.165 0.012 265);
+	/* Deep ink ~#1f1f1f — Mistral primary text. */
+	initial-value: oklch(0.21 0.005 285);
 }
 
 @property --accent {
 	syntax: "<color>";
 	inherits: true;
-	initial-value: oklch(0.62 0.13 293);
+	/* Mistral orange ~#fa520f — saturated brand CTA. */
+	initial-value: oklch(0.66 0.21 38);
 }
 
 @property --info {
 	syntax: "<color>";
 	inherits: true;
-	initial-value: oklch(0.65 0.16 70);
+	/* Mistral sunshine ~#ff8105 — warm sunlight for "Ask" / warnings. */
+	initial-value: oklch(0.74 0.18 55);
 }
 
 @property --success {
@@ -43,7 +47,8 @@
 @property --destructive {
 	syntax: "<color>";
 	inherits: true;
-	initial-value: oklch(0.55 0.22 27);
+	/* Mistral deep red ~#cc3a05 — errors / destructive actions. */
+	initial-value: oklch(0.55 0.22 32);
 }
 
 /* =============================================================================
@@ -66,8 +71,9 @@
 
 /* Light Mode */
 :root {
-	/* === 6 BASE COLORS === */
-	--background: oklch(0.972 0.006 85);
+	/* === 6 BASE COLORS — Mistral defaults === */
+	/* Warm cream surface (~#fff8e0). High luminance, warm chroma, sunset hue. */
+	--background: oklch(0.985 0.026 92);
 	--background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
@@ -77,19 +83,23 @@
 			transparent 40%
 		),
 		linear-gradient(180deg, var(--background), var(--foreground-3));
-	--foreground: oklch(0.165 0.012 265);
+	/* Deep ink ~#1f1f1f — Mistral primary text. */
+	--foreground: oklch(0.21 0.005 285);
 	--foreground-dimmed: color-mix(in srgb, var(--foreground) 80%, var(--background));
-	--foreground-rgb: 29, 29, 36;
+	--foreground-rgb: 31, 31, 31;
 	--user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
 	--user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
-	--accent: oklch(0.62 0.13 293);
-	--accent-rgb: 104, 78, 133;
-	--info: oklch(0.75 0.16 70);
-	--info-rgb: 180, 120, 40;
+	/* Mistral orange ~#fa520f — saturated brand CTA + active states. */
+	--accent: oklch(0.66 0.21 38);
+	--accent-rgb: 250, 82, 15;
+	/* Mistral sunshine ~#ff8105 — warm sunlight for "Ask" / warnings. */
+	--info: oklch(0.74 0.18 55);
+	--info-rgb: 255, 129, 5;
 	--success: oklch(0.55 0.17 145);
 	--success-rgb: 34, 120, 60;
-	--destructive: oklch(0.58 0.24 28);
-	--destructive-rgb: 180, 60, 50;
+	/* Mistral deep red ~#cc3a05 — errors / destructive actions. */
+	--destructive: oklch(0.55 0.22 32);
+	--destructive-rgb: 204, 58, 5;
 
 	/* === SHADOW OPACITY (light mode = subtle, dark mode = stronger) === */
 	--shadow-border-opacity: 0.08;
@@ -155,7 +165,10 @@
 
 	/* === SHADCN COMPATIBILITY (derived from 6 base colors) === */
 	--primary: var(--accent);
-	--primary-foreground: var(--background);
+	/* Pure white on saturated orange — clears WCAG AA (4.5:1) where the
+	 * cream background does not (~3.15:1). Mistral's `on-primary` is the
+	 * same #ffffff for the same reason. */
+	--primary-foreground: oklch(1 0 0);
 	--secondary: oklch(from var(--foreground) l c h / 0.05);
 	--secondary-foreground: var(--foreground);
 	--muted: oklch(from var(--foreground) l c h / 0.05);
@@ -199,11 +212,20 @@
 	--font-sans-stack:
 		system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
 		sans-serif;
+	/* Editorial display family — Mistral-inspired near-serif voice for hero
+	 * displays and large headings. Newsreader (variable Google Font) is the
+	 * canonical face; falls back to a system serif chain so the editorial
+	 * character reads even before the web font loads. Loaded by next/font
+	 * in `app/layout.tsx`, exposed as `--font-display-loaded`. */
+	--font-display-stack:
+		var(--font-display-loaded, "Newsreader"), "Iowan Old Style", "Charter", Georgia,
+		"Times New Roman", serif;
 	--font-serif-stack:
 		"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 	--font-mono-stack:
 		"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 	--font-sans: var(--font-sans-stack);
+	--font-display: var(--font-display-stack);
 	--font-serif: var(--font-serif-stack);
 	--font-mono: var(--font-mono-stack);
 	--font-default: var(--font-sans);
@@ -463,6 +485,7 @@ html[data-font="inter"] {
 	--color-md-counters: var(--md-counters);
 
 	--font-sans: var(--font-sans-stack);
+	--font-display: var(--font-display-stack);
 	--font-mono: var(--font-mono-stack);
 	--font-serif: var(--font-serif-stack);
 

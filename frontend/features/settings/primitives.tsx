@@ -27,7 +27,7 @@ export function Switch({
 	return (
 		<SwitchPrimitive.Root
 			className={cn(
-				'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full',
+				'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full',
 				'border border-foreground/10 bg-foreground/10 transition-colors',
 				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
 				'data-[state=checked]:border-accent data-[state=checked]:bg-accent',
@@ -38,8 +38,8 @@ export function Switch({
 		>
 			<SwitchPrimitive.Thumb
 				className={cn(
-					'pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0',
-					'transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0.5'
+					'pointer-events-none block size-5 rounded-full bg-background shadow-sm ring-0',
+					'transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0.5'
 				)}
 			/>
 		</SwitchPrimitive.Root>
@@ -109,9 +109,11 @@ export function SettingsRow({
 			)}
 		>
 			<div className="flex min-w-0 max-w-[55%] flex-col gap-1">
-				<span className="text-sm font-medium text-foreground">{label}</span>
+				<span className="text-sm font-medium text-foreground tabular-nums">{label}</span>
 				{description ? (
-					<span className="text-sm text-muted-foreground">{description}</span>
+					<span className="text-pretty text-sm text-muted-foreground tabular-nums">
+						{description}
+					</span>
 				) : null}
 			</div>
 			<div className="flex shrink-0 items-center justify-end gap-2 text-right">

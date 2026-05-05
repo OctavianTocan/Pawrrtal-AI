@@ -275,7 +275,7 @@ export function ChatComposer({
 						<Button
 							aria-label="Start voice input"
 							aria-pressed={isRecording}
-							className="size-7 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+							className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
 							disabled={isTranscribing}
 							onClick={startRecording}
 							size="icon-sm"
@@ -292,7 +292,7 @@ export function ChatComposer({
 						content={isTranscribing ? 'Wait for transcription' : 'Send message'}
 					>
 						<PromptInputSubmit
-							className="size-7 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
+							className="size-9 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
 							disabled={!hasContent || isLoading || isTranscribing}
 							status={isLoading ? 'streaming' : 'ready'}
 						>

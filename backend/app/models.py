@@ -120,6 +120,42 @@ class UserPersonalization(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class UserAppearance(Base):
+    """Per-user theme overrides for the Settings → Appearance panel.
+
+    1:1 with `user`. All fields are JSON blobs so the schema can grow
+    (new color slots, new font slots, new behavioral toggles) without a
+    migration per addition. Missing keys at the application layer fall
+    back to the Mistral-inspired defaults baked into
+    ``frontend/app/globals.css`` and mirrored in
+    ``frontend/features/appearance/defaults.ts``. A fully empty row
+    means "use the system defaults everywhere."
+
+    Light and dark mode are tracked separately because dark mode is
+    Codex/GitHub-adjacent in the AI Nexus design system, not just
+    inverted from light.
+    """
+
+    __tablename__ = "user_appearance"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
+    )
+    # Per-mode color overrides: { background, foreground, accent, info,
+    # success, destructive }. Each value is a CSS color string (hex,
+    # `oklch(...)`, etc.) that replaces the corresponding `--<role>` CSS
+    # variable on `<html>` for that theme.
+    light: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    dark: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Font family overrides: { display, sans, mono }. Each is a raw CSS
+    # font-family value (e.g. "Newsreader, Georgia, serif").
+    fonts: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Mode + global tweaks. See the Pydantic `AppearanceOptions` schema
+    # for the canonical shape.
+    options: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class APIKey(Base):
     """API key for a user's provider account."""
 

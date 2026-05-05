@@ -11,7 +11,8 @@
 		"lint:file-lines": "node scripts/check-file-lines.mjs",
 		"design:lint": "bunx @google/design.md lint DESIGN.md",
 		"design:diff": "bunx @google/design.md diff",
-		"design:export:css": "bunx @google/design.md export --format css-tailwind DESIGN.md"
+		"design:export:css": "bunx @google/design.md export --format css-tailwind DESIGN.md",
+		"themes:build": "bun run scripts/build-themes.ts"
 	},
 	"devDependencies": {
 		"@google/design.md": "^0.1.1",

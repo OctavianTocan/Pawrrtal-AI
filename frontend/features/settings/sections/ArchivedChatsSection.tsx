@@ -137,7 +137,7 @@ function formatRowDate(date: Date): string {
 function ArchivedEmptyState(): React.JSX.Element {
 	return (
 		<div className="flex flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-foreground/10 bg-foreground/[0.02] px-6 py-16 text-center">
-			<div className="flex size-10 items-center justify-center rounded-[10px] bg-foreground/[0.05] text-muted-foreground">
+			<div className="flex size-10 items-center justify-center rounded-[6px] bg-foreground/[0.05] text-muted-foreground">
 				<Archive aria-hidden="true" className="size-5" />
 			</div>
 			<h3 className="text-sm font-medium text-foreground">No archived chats</h3>

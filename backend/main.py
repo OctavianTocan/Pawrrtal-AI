@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp
 
+from app.api.appearance import get_appearance_router
 from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
@@ -97,6 +98,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_personalization_router(),
+    )
+    fastapi_app.include_router(
+        get_appearance_router(),
     )
     fastapi_app.include_router(
         get_oauth_router(),

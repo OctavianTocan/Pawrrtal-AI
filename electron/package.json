@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"chokidar": "^4.0.3",
-		"electron-store": "^10.1.0",
+		"electron-store": "^8.2.0",
 		"wait-on": "^9.0.1"
 	},
 	"devDependencies": {

@@ -6,43 +6,45 @@ description: >
   semantic colors, neutral interpolation variants, and a 16px-rooted Tailwind v4
   scale. Dual-theme (light + dark, Codex/GitHub-adjacent in dark).
 colors:
-  primary: "#684E85"
-  background: "#F7F4ED"
-  foreground: "#1D1D24"
-  accent: "#684E85"
-  info: "#B47828"
+  primary: "#FA520F"
+  on-primary: "#FFFFFF"
+  background: "#FFF8E0"
+  foreground: "#1F1F1F"
+  accent: "#FA520F"
+  info: "#FF8105"
   success: "#22783C"
-  destructive: "#B43C32"
-  border: "#E8E5DE"
+  destructive: "#CC3A05"
+  border: "#E8E0C9"
   muted-foreground: "#8A8888"
-  user-message-bubble: "#ECE9E3"
-  info-text: "#684A26"
+  user-message-bubble: "#F5EDD0"
+  info-text: "#6F4419"
   success-text: "#1F4A30"
   destructive-text: "#682C2B"
 typography:
   display:
-    fontFamily: system-ui
+    fontFamily: Newsreader
     fontSize: 3rem
-    fontWeight: 600
+    fontWeight: 500
+    lineHeight: 1.05
+    letterSpacing: -0.025em
+  h1:
+    fontFamily: Newsreader
+    fontSize: 2.25rem
+    fontWeight: 500
     lineHeight: 1.1
     letterSpacing: -0.02em
-  h1:
-    fontFamily: system-ui
-    fontSize: 2.25rem
-    fontWeight: 600
-    lineHeight: 1.15
-    letterSpacing: -0.015em
   h2:
     fontFamily: system-ui
     fontSize: 1.875rem
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: -0.01em
+    letterSpacing: -0.015em
   h3:
     fontFamily: system-ui
     fontSize: 1.5rem
     fontWeight: 600
     lineHeight: 1.25
+    letterSpacing: -0.01em
   h4:
     fontFamily: system-ui
     fontSize: 1.25rem
@@ -133,7 +135,7 @@ components:
     size: 64px
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "{colors.background}"
+    textColor: "{colors.on-primary}"
     rounded: "{rounded.none}"
     padding: 12px
   button-secondary:
@@ -208,6 +210,29 @@ approximations the linter expects.
 - **Success** — green. Connected states, checkmarks, positive confirmations.
 - **Destructive** — red. Errors, failed states, dangerous actions.
 
+### Per-User Overrides
+
+Every one of the six color slots, plus the three font slots
+(`display`, `sans`, `mono`) and the global behavioral options
+(theme mode, contrast, UI font size, pointer cursors, translucent
+sidebar) is **fully customizable per user** through the Settings →
+Appearance panel. The `AppearanceProvider` mounted in
+`app/providers.tsx` reads the persisted overrides via TanStack Query
+from `GET /api/v1/appearance`, merges them on top of the
+Mistral-inspired defaults in
+`frontend/features/appearance/defaults.ts`, and writes the resolved
+values onto `<html>` as CSS custom properties. Every surface that
+references `--background` / `--foreground` / `--accent` / etc.
+inherits the user's overrides automatically — sidebar, chat, modals,
+popovers, the lot.
+
+The defaults documented in this file are the values the user gets
+when they have never customized anything (or pressed "Reset to
+defaults" in the panel). When you change a default here, change it
+in `frontend/features/appearance/defaults.ts` AND
+`frontend/app/globals.css` in the same commit so the overlay layer,
+the cascade defaults, and this spec all agree.
+
 ### Neutral Interpolation (Mix Variants)
 
 The system avoids defining gray steps. Instead, `--foreground-N` solid mixes
@@ -230,12 +255,20 @@ or overlays where the layer underneath should bleed through.
 
 | Role        | Hex (approx) | Canonical                    |
 | ----------- | ------------ | ---------------------------- |
-| background  | `#F7F4ED`    | `oklch(0.972 0.006 85)`      |
-| foreground  | `#1D1D24`    | `oklch(0.165 0.012 265)`     |
-| accent      | `#684E85`    | `oklch(0.62 0.13 293)`       |
-| info        | `#B47828`    | `oklch(0.75 0.16 70)`        |
+| background  | `#FFF8E0`    | `oklch(0.985 0.026 92)`      |
+| foreground  | `#1F1F1F`    | `oklch(0.21 0.005 285)`      |
+| accent      | `#FA520F`    | `oklch(0.66 0.21 38)`        |
+| info        | `#FF8105`    | `oklch(0.74 0.18 55)`        |
 | success     | `#22783C`    | `oklch(0.55 0.17 145)`       |
-| destructive | `#B43C32`    | `oklch(0.58 0.24 28)`        |
+| destructive | `#CC3A05`    | `oklch(0.55 0.22 32)`        |
+
+The **background** is Mistral cream (~#fff8e0) — warm, sunlit, high
+luminance. **Accent** is Mistral orange (~#fa520f), the saturated CTA
+voltage that carries every primary action across the app. **Info** is
+Mistral sunshine (~#ff8105) for "Ask" mode and warnings, **destructive**
+is Mistral deep red (~#cc3a05). **Foreground** stays near-black ink
+(~#1f1f1f) so the cream surface reads as a magazine page rather than
+washed out.
 
 ### Dark Mode Anchors
 
@@ -253,14 +286,26 @@ anchors** referenced in `globals.css`:
 
 ## Typography
 
-The default font is **system-ui** (the platform sans), with **Inter** as an
-opt-in via `<html data-font="inter">`. When Inter is active, OpenType
-features `cv01`–`cv04` and `case` are enabled for slightly more
-geometric letterforms.
+Three families anchor the system:
 
-Monospace is **JetBrains Mono** for code, terminals, and serif slots
-(the system aliases serif → mono on purpose; this is a chat surface,
-not a long-form reading surface).
+- **Newsreader** (`--font-display`) — editorial near-serif, Mistral-inspired,
+  used for `display` and `h1` only. Loaded via `next/font/google` in
+  `frontend/app/layout.tsx` and exposed as `--font-display-loaded`. The
+  display token chain (`--font-display-stack`) falls back to Iowan Old
+  Style → Charter → Georgia → Times so the editorial character still reads
+  before the web font arrives.
+- **system-ui** (`--font-sans`) — platform sans for everything from `h2`
+  down through body, captions, and sidebar rows. **Inter** is an opt-in
+  upgrade via `<html data-font="inter">`; with Inter active, OpenType
+  features `cv01`–`cv04` and `case` switch on for slightly more geometric
+  letterforms.
+- **JetBrains Mono** (`--font-mono`) — code, terminals, and the system's
+  aliased serif slot. This is a chat surface, not long-form reading; mono
+  doubles as serif on purpose.
+
+The contrast — editorial display + geometric sans + monospace — IS the
+brand voice. Hero headings carry near-classical character; everything below
+the page-title level relaxes to system sans for density and legibility.
 
 The root font size is **16px** — `<html>` reads `--font-size-base`, so every
 `rem`-denominated value scales off 16. Tailwind v4 utilities (`text-xs`,
@@ -269,22 +314,25 @@ clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, …).
 
 ### Scale
 
-| Token     | Size      | px @ 16 base | Common use                        |
-| --------- | --------- | ------------ | --------------------------------- |
-| display   | 3rem      | 48px         | Hero headings, marketing splash   |
-| h1        | 2.25rem   | 36px         | Page titles                       |
-| h2        | 1.875rem  | 30px         | Section heads                     |
-| h3        | 1.5rem    | 24px         | Subsection / onboarding step      |
-| h4        | 1.25rem   | 20px         | Card titles                       |
-| body-lg   | 1.125rem  | 18px         | Lead paragraph, prominent body    |
-| body-md   | 1rem      | 16px         | Default body, chat messages       |
-| body-sm   | 0.875rem  | 14px         | Secondary body, metadata          |
-| caption   | 0.875rem  | 14px         | Labels, dense UI, group metadata  |
-| code      | 0.875rem  | 14px         | Inline code, pre blocks           |
+| Token     | Size      | px @ 16 base | Family      | Common use                        |
+| --------- | --------- | ------------ | ----------- | --------------------------------- |
+| display   | 3rem      | 48px         | Newsreader  | Hero headings, marketing splash   |
+| h1        | 2.25rem   | 36px         | Newsreader  | Page titles                       |
+| h2        | 1.875rem  | 30px         | system-ui   | Section heads                     |
+| h3        | 1.5rem    | 24px         | system-ui   | Subsection / onboarding step      |
+| h4        | 1.25rem   | 20px         | system-ui   | Card titles                       |
+| body-lg   | 1.125rem  | 18px         | system-ui   | Lead paragraph, prominent body    |
+| body-md   | 1rem      | 16px         | system-ui   | Default body, chat messages       |
+| body-sm   | 0.875rem  | 14px         | system-ui   | Secondary body, metadata          |
+| caption   | 0.875rem  | 14px         | system-ui   | Labels, dense UI, group metadata  |
+| code      | 0.875rem  | 14px         | JetBrains Mono | Inline code, pre blocks       |
 
-Headings use **negative letter-spacing** (`-0.01em` to `-0.02em`) to compensate
-for system-ui's default tracking. Body uses default tracking. Caption uses
-slightly **positive tracking** (`+0.01em`) for legibility.
+Display sizes use **tighter line-height** (1.05 / 1.10) and **stronger
+negative letter-spacing** (-0.025em / -0.02em) to give hero type magazine-
+grade tightness. Sub-display headings (`h2`–`h3`) keep negative tracking
+(-0.015em / -0.01em) but ease leading to 1.20–1.25. Body uses default
+tracking. Caption uses slightly **positive tracking** (`+0.01em`) for
+legibility at small sizes.
 
 ### Sidebar Type Baseline
 
@@ -467,6 +515,11 @@ fall back to the prose below for behavioral notes.
 - **`button-primary`** / **`button-secondary`** — Buttons follow the flat
   default (`rounded.none`). Primary fills with accent; secondary inherits
   the page background and relies on `shadow-thin` for definition.
+  **Note on contrast:** white-on-Mistral-orange is 3.34:1, which clears
+  WCAG AA *Large Text* (3:1) but not *Normal Text* (4.5:1). Primary CTAs
+  always render with `font-medium` body-md (16px+) so they qualify as
+  large text; the lint warning here is acknowledged, not a bug. Use a
+  darker `--accent` if you ever drop the weight or size.
 - **`personalization-modal`** — The home-page personalization surface
   (fires on every load while the feature is WIP). Sits over the same
   scenic dotted backdrop used by the workspace onboarding, with a

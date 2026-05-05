@@ -110,7 +110,7 @@ export function ConnectAppsStrip({
 							<button
 								aria-label={`Connect ${app.label}`}
 								className={cn(
-									'flex size-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
+									'flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
 									app.colorClass ?? 'text-foreground'
 								)}
 								onClick={(event) => {
@@ -127,7 +127,7 @@ export function ConnectAppsStrip({
 				))}
 				<button
 					aria-label="Dismiss connect apps strip"
-					className="ml-1 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+					className="ml-1 flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 					onClick={handleDismiss}
 					type="button"
 				>
