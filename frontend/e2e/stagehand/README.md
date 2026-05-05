@@ -12,7 +12,7 @@ For the full design rationale and the (failed) browser-use experiment that prece
 
 1. `just dev` running in another terminal (Next on `:3001`, FastAPI on `:8000`).
 2. One of these env vars set in `backend/.env` (Google takes priority, then OpenAI, then Anthropic):
-   - `GOOGLE_API_KEY` → `google/gemini-3.1-pro-preview` (default — strongest at observe/extract)
+   - `GOOGLE_API_KEY` → `google/gemini-3-flash-preview` (default — Tier 1 caps Pro Preview at 250 RPD, Flash Preview is ~10k RPD + ~2-3× faster). Override with `GOOGLE_MODEL=gemini-3.1-pro-preview` if you've upgraded billing.
    - `OPENAI_API_KEY` → `openai/gpt-5.4` (override with `OPENAI_MODEL=gpt-5.4-mini` for the smaller fallback)
    - `ANTHROPIC_API_KEY` → `anthropic/claude-haiku-4-5`
 3. `ffmpeg` on PATH (optional, only for GIF artifact generation): `brew install ffmpeg`.

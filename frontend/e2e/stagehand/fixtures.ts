@@ -85,12 +85,21 @@ const GIF_FRAME_INTERVAL_MS = 500;
 /**
  * Pick the LLM model string Stagehand should use.
  *
- * Stagehand expects `provider/model-id` strings. Order matches the
- * project's "Google first" preference — Gemini 3.1 Pro Preview is the
- * strongest at the observe/extract patterns this suite uses.
+ * Stagehand expects `provider/model-id` strings. Order: Google → OpenAI
+ * → Anthropic.
+ *
+ * Default Google model is `gemini-3-flash-preview` (NOT Pro Preview).
+ * Tier 1 capped Pro Preview at 250 requests/day, which a single full
+ * suite run blew past in minutes. Flash Preview is ~10,000 RPD on the
+ * same tier, ~2-3× faster, and much cheaper per call — and it's still
+ * very capable at observe/extract for this suite. Override at the
+ * command line via `GOOGLE_MODEL=gemini-3.1-pro-preview` if you've
+ * upgraded billing or want the bigger model for a specific run.
  */
 function _selectModel(): string | null {
-	if (process.env.GOOGLE_API_KEY) return 'google/gemini-3.1-pro-preview';
+	if (process.env.GOOGLE_API_KEY) {
+		return `google/${process.env.GOOGLE_MODEL ?? 'gemini-3-flash-preview'}`;
+	}
 	if (process.env.OPENAI_API_KEY) {
 		return `openai/${process.env.OPENAI_MODEL ?? 'gpt-5.4'}`;
 	}
