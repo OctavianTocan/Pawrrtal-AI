@@ -19,8 +19,11 @@ interface ConversationPageProps {
  * TODO: Handle the case where a conversation was just created but has no messages yet.
  */
 export default async function ConversationPage({ params }: ConversationPageProps) {
-	const { conversationId } = await params;
-	const cookieStore = await cookies();
+	// `params` and `cookies()` are independent — resolve in parallel rather
+	// than awaiting sequentially. `Promise.all` collapses two ~µs awaits
+	// into one but the pattern is the right shape for when either grows
+	// (e.g., switching to a database-backed session).
+	const [{ conversationId }, cookieStore] = await Promise.all([params, cookies()]);
 	const sessionToken = cookieStore.get('session_token');
 
 	const response = await fetch(

@@ -25,8 +25,28 @@ node_modules/
 /private
 .private
 
-# testing
+# testing & coverage
 /coverage
+coverage/
+**/coverage/
+.nyc_output/
+*.lcov
+.vitest-cache/
+htmlcov/
+.coverage
+.coverage.*
+junit.xml
+test-results/
+playwright-report/
+# Stagehand E2E auxiliary artifacts:
+#   - `.trace-extract/` is the temp dir created by the GIF afterEach
+#     hook in `frontend/e2e/stagehand/fixtures.ts` to unzip trace.zip.
+#   - `**/run.gif` is the per-test GIF artifact (also lives under
+#     test-results/, but pattern protects against stragglers).
+#   - `.stagehand-cache/` is NOT ignored — it's committed so CI shares
+#     the warm Stagehand action cache (per the suite's README).
+**/.trace-extract/
+**/run.gif
 
 # next.js
 /.next/
@@ -35,13 +55,26 @@ node_modules/
 # production
 build/
 cache/
+dist/
 
 # Next
 .next/
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+# IDEs / editors that aren't already covered above
+.idea/
+*.swp
+*.swo
+*~
+# uv tool cache (per-developer; not the project lockfile, which IS tracked)
+.uv-cache/
+# Stagehand fixture's per-test screenshot dir used to feed ffmpeg.
+# Lives under test-results/<spec>/.frames/ so it's transitively ignored
+# by the test-results/ pattern, but explicit is better than implicit.
+**/.frames/
 
 # debug
 npm-debug.log*
@@ -49,8 +82,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# logs
+# logs (including rotated logs like app.log.1, app.log.2.gz, etc.)
 *.log
+*.log.[0-9]*
+*.log.[0-9]*.gz
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -68,6 +103,14 @@ next-env.d.ts
 
 # Python
 __pycache__
+*.py[cod]
+*$py.class
+*.egg-info/
+.tox/
+.pyre/
+.pytype/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Database
 agno.db

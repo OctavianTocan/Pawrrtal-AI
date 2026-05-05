@@ -118,6 +118,20 @@
 		rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 12px 12px 0px,
 		rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 24px 24px 0px;
 
+	/*
+	 * Floating panel shadow used by surfaces that sit on top of another
+	 * panel (e.g. the chat panel above the sidebar). Stronger than
+	 * --shadow-modal-small so the surface visibly separates on all four
+	 * sides — top/right/bottom drop AND a left-edge cast that lands on
+	 * whatever sits behind it.
+	 */
+	--shadow-panel-floating:
+		rgba(var(--foreground-rgb), 0.1) 0px 0px 0px 1px,
+		rgba(0, 0, 0, 0.04) 0px 1px 2px 0px,
+		rgba(0, 0, 0, 0.06) 0px 4px 8px -2px,
+		rgba(0, 0, 0, 0.08) 0px 12px 24px -6px,
+		rgba(0, 0, 0, 0.06) 0px 24px 48px -12px;
+
 	/* === MIX VARIANTS (solid interpolation toward background) === */
 	--foreground-1\.5: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
 	--foreground-2: color-mix(in srgb, var(--foreground) 2%, var(--background));
@@ -195,10 +209,22 @@
 	--font-default: var(--font-sans);
 
 	/* Layout */
-	--font-size-base: 15px;
+	--font-size-base: 16px;
 	--radius: 0rem;
 	--spacing: 0.25rem;
 	--tracking-normal: 0em;
+
+	/* Chat bubble radii — separate token because the global `--radius` is 0
+	 * (flat aesthetic) but message bubbles need a fully-pill silhouette. The
+	 * "tail" radius is kept around in case a future variant wants asymmetric
+	 * corners; today it equals the main radius so the bubble reads as a pill. */
+	--radius-bubble: 1.25rem; /* 20px */
+	--radius-bubble-tail: 1.25rem; /* 20px — match for symmetric pill */
+
+	/* Thinking-gradient endpoints — sourced from project semantic colors so
+	 * theme switches propagate to the streaming-state shimmer text. */
+	--thinking-gradient-from: var(--accent);
+	--thinking-gradient-to: var(--info);
 
 	/* === Z-INDEX SCALE === */
 	--z-base: 0;
@@ -445,6 +471,14 @@ html[data-font="inter"] {
 	--radius-md: max(0px, calc(var(--radius) - 2px));
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	/* DESIGN.md `rounded.lg` — panels, chat shell, composer chrome */
+	--radius-surface-lg: 14px;
+	/* DESIGN.md `rounded.md` — sidebar header row (New Session, search): softer than control */
+	--radius-soft: 8px;
+	/* Tight controls — text inputs, chips, onboarding primary CTAs */
+	--radius-control: 6px;
+	--radius-bubble: var(--radius-bubble);
+	--radius-bubble-tail: var(--radius-bubble-tail);
 
 	/* === Z-INDEX SCALE === */
 	--z-index-base: var(--z-base);
@@ -472,6 +506,19 @@ html[data-font="inter"] {
 	--shadow-lg: var(--shadow-modal-small);
 	--shadow-xl: var(--shadow-modal-small);
 	--shadow-2xl: var(--shadow-modal-small);
+
+	/* === ANIMATION TOKENS (v4 generates `animate-*` utilities from these) ===
+	 * Keyframes are defined below the @theme block; v4 picks them up by name
+	 * when `--animate-*` references them. */
+	--animate-shimmer: shimmer 1.5s ease-in-out infinite;
+	--animate-shimmer-loading: shimmer-loading 1.2s linear infinite;
+	--animate-shimmer-text: shimmer-text 1.2s ease-in-out infinite;
+	--animate-shake: shake 0.4s ease-in-out;
+	--animate-toast-in: toast-in 0.2s ease-out;
+	--animate-thinking-gradient: thinking-gradient-flow 5s linear infinite;
+	--animate-onboarding-panel: onboarding-panel-enter 260ms cubic-bezier(0.25, 1, 0.5, 1) both;
+	--animate-composer-placeholder: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1)
+		both;
 }
 
 /* Global styles */
@@ -498,6 +545,22 @@ html[data-font="inter"] {
 		color: var(--foreground);
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/*
+	 * Suppress browser focus outlines on pointer interactions while keeping
+	 * them for keyboard users. :focus-visible only matches when focus came
+	 * from the keyboard (Tab / Shift+Tab / arrow keys), so the inverted
+	 * selector cleanly catches mouse / touch clicks. Accessibility is
+	 * preserved — keyboard focus rings still render via :focus-visible
+	 * styles wherever components opt in.
+	 *
+	 * See .claude/rules/general/no-focus-ring-on-mouse-click.md for the
+	 * rationale and the lint-time check.
+	 */
+	*:focus:not(:focus-visible) {
+		outline: none;
+		box-shadow: none;
 	}
 
 	/* Scrollbar styling */
@@ -694,6 +757,10 @@ html[data-font="inter"] {
 
 	.shadow-modal-small {
 		box-shadow: var(--shadow-modal-small);
+	}
+
+	.shadow-panel-floating {
+		box-shadow: var(--shadow-panel-floating);
 	}
 
 	/* Unified popover styling */
@@ -972,6 +1039,23 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 }
 
 /* =============================================================================
+   WAVEFORM SCROLL — used by the dictation timeline in features/chat
+============================================================================= */
+/*
+ * Translates the doubled bar strip leftward by exactly half its width so
+ * the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
+ * the seam at -50% lands on identical content, hiding the wrap.
+ */
+@keyframes waveform-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/* =============================================================================
    SHIMMER ANIMATION FOR OPTIMISTIC UI
 ============================================================================= */
 
@@ -1003,6 +1087,47 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: shimmer 1.5s ease-in-out infinite;
 	pointer-events: none;
 	border-radius: inherit;
+}
+
+/* =============================================================================
+   THINKING GRADIENT - flowing-color text used for the chain-of-thought
+   header while the assistant is still streaming. Endpoints are pulled from
+   `--thinking-gradient-from` / `--thinking-gradient-to` so theme overrides
+   carry through automatically.
+============================================================================= */
+
+@keyframes thinking-gradient-flow {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+.thinking-gradient-text {
+	background: linear-gradient(
+		90deg,
+		var(--thinking-gradient-from) 0%,
+		var(--thinking-gradient-to) 25%,
+		var(--thinking-gradient-from) 50%,
+		var(--thinking-gradient-to) 75%,
+		var(--thinking-gradient-from) 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+	animation: thinking-gradient-flow 5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.thinking-gradient-text {
+		animation: none;
+		color: var(--thinking-gradient-from);
+		-webkit-text-fill-color: var(--thinking-gradient-from);
+	}
 }
 
 @keyframes shimmer-loading {
@@ -1291,23 +1416,9 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 
 /* =============================================================================
    Popover Styling (matches Craft menu containers)
+   Base `.popover-styled` lives in @layer utilities above so it benefits from
+   theme-aware shadow tokens. Variants below extend it.
 ============================================================================= */
-
-.popover-styled {
-	background: var(--background);
-	color: var(--foreground);
-	border-radius: 8px;
-	border: none;
-	box-shadow:
-		rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-		rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-		rgba(0, 0, 0, 0.06) 0px 0px 0px 1px,
-		rgba(0, 0, 0, 0.04) 0px 1px 1px -0.5px,
-		rgba(0, 0, 0, 0.04) 0px 3px 3px 0px,
-		rgba(0, 0, 0, 0.02) 0px 6px 6px 0px,
-		rgba(0, 0, 0, 0.02) 0px 12px 12px 0px,
-		rgba(0, 0, 0, 0.02) 0px 24px 24px 0px;
-}
 
 .popover-styled.onboarding-panel {
 	background: oklch(from var(--background) l c h / 0.95);
@@ -1327,7 +1438,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 .chat-composer-dropdown-menu.popover-styled {
 	background: var(--foreground-5);
 	color: var(--foreground);
-	border-radius: 14px;
+	border-radius: var(--radius-surface-lg);
 	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
 	box-shadow: var(--shadow-minimal);
 }

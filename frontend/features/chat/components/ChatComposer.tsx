@@ -2,7 +2,7 @@
 
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
 	PromptInput,
 	PromptInputAttachment,
@@ -16,16 +16,13 @@ import { Button } from '@/components/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
 import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
+import { useVoiceTranscribe } from '../hooks/use-voice-transcribe';
 import {
 	AttachButton,
 	AutoReviewSelector,
-	type BrowserSpeechRecognition,
 	buildTranscriptContent,
 	ComposerTooltip,
-	fallbackTranscript,
-	getSpeechRecognition,
 	PlanButton,
-	readSpeechTranscript,
 	VoiceMeter,
 } from './ChatComposerControls';
 import { ConnectAppsStrip } from './ConnectAppsStrip';
@@ -161,10 +158,10 @@ export function ChatComposer({
 	onSelectReasoning,
 	onDismissConnectApps,
 }: ChatComposerProps): React.JSX.Element {
-	const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
-	const [isRecording, setIsRecording] = useState(false);
+	const voice = useVoiceTranscribe();
+	const isRecording = voice.status === 'recording' || voice.status === 'requesting-permission';
+	const isTranscribing = voice.status === 'transcribing';
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
-	const [voiceTranscript, setVoiceTranscript] = useState('');
 	/** When false, the Plan control is hidden (toggle with Shift+Tab from the composer). */
 	const [isPlanTagVisible, setIsPlanTagVisible] = usePlanModeVisible();
 	const hasContent = message.content.trim().length > 0;
@@ -182,62 +179,35 @@ export function ChatComposer({
 		return () => window.clearInterval(intervalId);
 	}, [isRecording]);
 
-	useEffect(
-		() => () => {
-			recognitionRef.current?.abort?.();
-		},
-		[]
-	);
-
 	const startRecording = (): void => {
-		const recognition = getSpeechRecognition();
-		recognitionRef.current = recognition;
-		setVoiceTranscript('');
 		setRecordingSeconds(0);
-		setIsRecording(true);
+		void voice.startRecording();
+	};
 
-		if (!recognition) {
+	const finishRecording = async ({ shouldSend }: { shouldSend: boolean }): Promise<void> => {
+		const transcript = await voice.stopRecording();
+		if (!transcript) {
 			return;
 		}
 
-		recognition.onresult = (event) => {
-			setVoiceTranscript(readSpeechTranscript(event));
-		};
-		recognition.onerror = () => {
-			recognitionRef.current = null;
-		};
-		recognition.onend = () => {
-			recognitionRef.current = null;
-		};
-		recognition.start();
-	};
-
-	const finishRecording = ({ shouldSend }: { shouldSend: boolean }): void => {
-		const transcript = voiceTranscript.trim() || fallbackTranscript(recordingSeconds);
 		const nextContent = buildTranscriptContent({
 			currentContent: message.content,
 			transcript,
 		});
 
-		recognitionRef.current?.stop();
-		recognitionRef.current = null;
-		setIsRecording(false);
-		setVoiceTranscript('');
-
 		if (shouldSend) {
 			onSendMessage({ ...message, content: nextContent });
 			return;
 		}
-
 		onReplaceMessageContent(nextContent);
 	};
 
 	const handleStopRecording = (): void => {
-		finishRecording({ shouldSend: false });
+		void finishRecording({ shouldSend: false });
 	};
 
 	const handleSendRecording = (): void => {
-		finishRecording({ shouldSend: true });
+		void finishRecording({ shouldSend: true });
 	};
 
 	const handleComposerKeyDown = (event: React.KeyboardEvent<HTMLFormElement>): void => {
@@ -251,7 +221,7 @@ export function ChatComposer({
 	return (
 		<PromptInput
 			className={cn('w-full max-w-[48.75rem]', className)}
-			inputGroupClassName="chat-composer-input-group rounded-[14px] border-transparent bg-foreground-5 shadow-minimal"
+			inputGroupClassName="chat-composer-input-group rounded-surface-lg border-transparent bg-foreground-5 shadow-minimal"
 			multiple={true}
 			onKeyDown={handleComposerKeyDown}
 			onSubmit={onSendMessage}
@@ -272,9 +242,10 @@ export function ChatComposer({
 			<PromptInputFooter className="min-h-9 px-1.5 pb-1.5">
 				<div className="flex min-w-0 flex-1 items-center gap-1">
 					<AttachButton />
-					{isRecording ? (
+					{isRecording || isTranscribing ? (
 						<VoiceMeter
 							elapsedSeconds={recordingSeconds}
+							isTranscribing={isTranscribing}
 							onSend={handleSendRecording}
 							onStop={handleStopRecording}
 						/>
@@ -298,23 +269,31 @@ export function ChatComposer({
 						onSelectModel={onSelectModel}
 						onSelectReasoning={onSelectReasoning}
 					/>
-					<ComposerTooltip content="Click to dictate or hold ^M">
+					<ComposerTooltip
+						content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+					>
 						<Button
 							aria-label="Start voice input"
 							aria-pressed={isRecording}
 							className="size-7 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+							disabled={isTranscribing}
 							onClick={startRecording}
 							size="icon-sm"
 							type="button"
 							variant="ghost"
 						>
-							<MicIcon aria-hidden="true" className="size-3.5" />
+							<MicIcon
+								aria-hidden="true"
+								className={cn('size-3.5', isTranscribing && 'animate-pulse')}
+							/>
 						</Button>
 					</ComposerTooltip>
-					<ComposerTooltip content="Send message">
+					<ComposerTooltip
+						content={isTranscribing ? 'Wait for transcription' : 'Send message'}
+					>
 						<PromptInputSubmit
 							className="size-7 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
-							disabled={!hasContent || isLoading}
+							disabled={!hasContent || isLoading || isTranscribing}
 							status={isLoading ? 'streaming' : 'ready'}
 						>
 							{isLoading ? (

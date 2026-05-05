@@ -150,3 +150,4 @@ See [self-hosting.md](./self-hosting.md) for:
 See [debug-tricks.md](./debug-tricks.md) for:
 - MCP endpoint for AI-assisted debugging
 - Rebuild specific routes with `--debug-build-paths`
+

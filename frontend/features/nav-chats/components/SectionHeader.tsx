@@ -10,9 +10,7 @@ interface SectionHeaderProps {
 export function SectionHeader({ label }: SectionHeaderProps): React.JSX.Element {
 	return (
 		<li className="px-4 py-2">
-			<span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-				{label}
-			</span>
+			<span className="text-sm font-medium text-muted-foreground">{label}</span>
 		</li>
 	);
 }

@@ -1,0 +1,89 @@
+name: DESIGN.md Lint
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - DESIGN.md
+      - package.json
+      - bun.lock
+      - .github/workflows/design-lint.yml
+  push:
+    branches: [development, main]
+    paths:
+      - DESIGN.md
+      - package.json
+      - bun.lock
+      - .github/workflows/design-lint.yml
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: design-lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: design.md lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify DESIGN.md exists
+        run: |
+          if [ ! -f DESIGN.md ]; then
+            echo "DESIGN.md not found at repo root."
+            exit 1
+          fi
+
+      - name: Run design:lint
+        id: lint
+        run: |
+          set +e
+          bun run design:lint | tee design-lint-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat design-lint-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          DESIGN_LINT_OUTPUT: ${{ steps.lint.outputs.output }}
+        with:
+          script: |
+            const output = process.env.DESIGN_LINT_OUTPUT || '';
+            const body = [
+              '### DESIGN.md lint failed',
+              '',
+              '`bun run design:lint` reported errors against the [google-labs-code/design.md](https://github.com/google-labs-code/design.md) spec. Fix the findings in `DESIGN.md` (and the canonical token values in `frontend/app/globals.css` if they\'ve drifted).',
+              '',
+              '<details><summary>linter output</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

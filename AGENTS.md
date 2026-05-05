@@ -10,13 +10,14 @@
 
 - **Frontend (`frontend/`)**: Next.js App Router, TypeScript, Tailwind CSS v4, and shadcn-style UI. Routes live in `frontend/app/`, UI components in `frontend/components/`, feature modules in `frontend/features/`.
 - **Backend (`backend/`)**: Python FastAPI application. API routes in `backend/app/api/`, database models in `backend/app/models/`, CRUD operations in `backend/app/crud/`.
+- **Design system (`DESIGN.md`)**: Repo-root [DESIGN.md](https://github.com/google-labs-code/design.md)-format spec describing the Craft Agents-inspired visual identity — colors, typography, spacing, shapes, elevation, and component bindings. Canonical token values live in `frontend/app/globals.css`; `DESIGN.md` mirrors them as machine-readable YAML front matter so coding agents have a persistent, structured understanding of the system. Lint with `bun run design:lint`.
 - **Docs (`docs/`)**: Project documentation, migration plans, and design specs.
 - **Tasks (`.beans/`)**: Markdown-based task tracking. Update the status of `.beans` files as work is completed.
 - **Rule**: Always use the `beans` CLI (e.g. `beans create`, `beans update`) to manage `.beans` files. Never create or edit them manually.
 - **AI Rules (`.claude/rules/`)**: Most rules are vendored from [github.com/OctavianTocan/claude-rules](https://github.com/OctavianTocan/claude-rules) into `.claude/rules/`; each file uses YAML frontmatter with `paths` globs so rules apply only for matching files. This repo also keeps project-specific rule sets under `.claude/rules/clean-code/` and `.claude/rules/github-actions/`.
 - **Stagehand + browser MCP (Cursor / Claude Code)**: Project MCP servers in `.cursor/mcp.json`, `.mcp.json`, and `config/mcporter.json`: **stagehand-docs** (`https://docs.stagehand.dev/mcp`), **context7** (`@upstash/context7-mcp`, [GitHub](https://github.com/upstash/context7)), **deepwiki** (`https://mcp.deepwiki.com/mcp`, [DeepWiki](https://mcp.deepwiki.com/)). **Documentation index** for Stagehand (discover all pages before drilling in): https://docs.stagehand.dev/llms.txt — agents should fetch this (or query **stagehand-docs** MCP) before asserting Stagehand V3 APIs. **Cursor:** `.cursor/rules/stagehand-v3-typescript.mdc` (always-on patterns + MCP workflow). **Claude Code:** `.claude/rules/stagehand/stagehand-documentation-and-mcp.md` and path-scoped `.claude/rules/stagehand/stagehand-v3-typescript-patterns.md`; see `.claude/CLAUDE.md` § Stagehand.
 - **Rule**: Frontend code must only communicate with the backend via the established API endpoints (using `useAuthedFetch` or TanStack Query mutations). Do not mix frontend and backend responsibilities.
-- **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching).
+- **Rule**: UI components should follow the established Craft Agents design language (e.g., `popover-styled` classes, exact radius matching). `DESIGN.md` at the repo root is the source of truth for tokens; do not introduce literal Tailwind colors (`text-gray-*`, `bg-blue-500`, etc.) or new `--radius-*` tokens — use the existing scale or `0`.
 - **Rule**: Ensure PascalCase is used for components inside `frontend/features/`.
 
 ## Build, Test, and Development Commands
@@ -27,6 +28,8 @@ We rely on `just` as our primary task runner for the repository.
 - **Check (Lint/Format read-only)**: `just check` (runs Biome).
 - **Lint & Auto-fix**: `just lint-fix` (runs Biome check with writes).
 - **Format**: `just format` (runs Biome format).
+- **Design system lint**: `bun run design:lint` (validates `DESIGN.md` against the spec; CI runs the same gate).
+- **Design system diff**: `bun run design:diff -- DESIGN.md DESIGN-v2.md` (compare two design system snapshots).
 - **Install All Dependencies**: `just install` (runs `bun install` for frontend and `uv sync` for backend).
 - **Auto-commit**: `just commit` (auto-generates conventional commit).
 - **Push**: `just push` (runs push with auth switching).
@@ -53,6 +56,8 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - Keep files concise; extract helpers instead of "V2" copies. Aim to keep files under ~700 LOC. Split/refactor when it improves clarity or testability.
 - **Written English**: Use American spelling and grammar in code, comments, docs, and UI strings (e.g. "color" not "colour", "behavior" not "behaviour", "analyze" not "analyse").
 - **Preserve Documentation**: NEVER remove existing docstrings, JSDoc comments, or explanatory comments when modifying code. Only remove documentation if the code it documents is being deleted, or update it if your changes make it inaccurate. See `.claude/rules/clean-code/preserve-documentation.md` for detailed rules.
+- **Icons + SVGs live in their own files**: Never inline SVG markup or icon definitions inside a component file. Every glyph, logo, status icon, or decorative SVG must live in a dedicated file (e.g. `frontend/features/nav-chats/components/ConversationIndicators.tsx` for the row-status glyphs, `frontend/features/onboarding/OnboardingBackdrop.tsx` for the backdrop). Components import + render the icon, never define it. This keeps feature files focused, lets tree-shaking work, and stops icon swaps from re-flowing unrelated code. Lucide / Tabler imports already follow the rule because they're external packages.
+- **File-line budget**: 500 lines hard ceiling for any `.ts`/`.tsx`/`.py` source file. `node scripts/check-file-lines.mjs` enforces it; CI fails on overflow. Split into smaller modules rather than asking for an exemption.
 
 ## Commit & Pull Request Guidelines
 
@@ -87,6 +92,39 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **Clean Code Rules (`.claude/rules/clean-code/`)**: Universal rules for function design, naming conventions, named constants, Python logging/exception narrowing, and code structure. Your generated code must adhere to these principles (KISS, DRY, single-responsibility, meaningful naming).
 - **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
 - **TypeScript Rules (`.claude/rules/typescript/`)**: Explicit return types on every function, TSDoc on exports, JSDoc placement (directly above the declaration), parameter limits (max 3 positional, group into objects beyond that), literal union types for constrained string fields, and environment variable conventions.
+
+## Electron Desktop Shell
+
+The repo ships a desktop shell at `electron/` that wraps the same
+Next.js frontend without any duplication. Web behavior is unchanged;
+desktop is purely additive. See `electron/README.md` for the full
+architecture; the rules at a glance:
+
+- The frontend stays Electron-agnostic. Anywhere it needs a desktop
+  capability it goes through `frontend/lib/desktop.ts`, which detects
+  `window.aiNexus` and falls back to web equivalents on the browser.
+- Desktop-only IPC is namespaced `desktop:*` and validated on the
+  main side (see `electron/src/ipc.ts`). Renderer security is locked:
+  `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`.
+- Adding a new desktop feature touches three files in lockstep:
+  `electron/src/preload.ts` (bridge), `electron/src/ipc.ts` (handler),
+  `frontend/lib/desktop.ts` (typed wrapper + web fallback).
+- Dev: `just electron-dev` against the running `just dev`.
+  Prod-style: `just electron-prod`. Installer: `just electron-dist`.
+- Backend is not bundled; set `BACKEND_URL` to point the desktop app
+  at a remote FastAPI deployment (defaults to `http://localhost:8000`).
+
+## How We Work On AI Nexus
+
+The session-derived working agreement lives in
+`.claude/rules/general/how-we-work-on-ai-nexus.md`. It encodes nine rules
+the team keeps re-discovering: read implementations before changing them,
+trace cause before fixing, update `DESIGN.md` when tokens change in code,
+reuse established patterns instead of inventing parallel ones, declare
+every interactive element with `cursor-pointer`, run the toolchain after
+every file write, ship tests in the same commit as new features, commit
+one concern at a time, and ask before destructive or scope-bending work.
+Apply on every session.
 
 ## Curated Claude rules (AI Nexus)
 

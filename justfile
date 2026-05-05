@@ -89,6 +89,54 @@ sentrux:
 test:
     uv run --project backend pytest backend/tests
 
+# Playwright E2E suite (frontend/e2e/). Requires backend + frontend dev
+# servers to be already running on the standard ports — start them with
+# `just dev` in another terminal first. Uses the dev-admin login fixture
+# (no UI signup), per the project's API-setup-not-UI rule.
+e2e:
+    cd frontend && bunx --bun playwright install --with-deps chromium
+    cd frontend && bunx --bun playwright test
+
+# --- Electron desktop shell -------------------------------------------------
+
+# Compile the Electron main + preload TypeScript once.
+electron-build:
+    cd electron && bun run build
+
+# Run the Electron shell against the running Next.js dev server.
+# Requires `just dev` in another terminal so the FE is already on :3001.
+# The shell waits for the dev server before opening the BrowserWindow,
+# so order doesn't matter beyond eventually being up.
+electron-dev: electron-build
+    cd electron && bun run start:dev
+
+# Build the Next.js standalone bundle the desktop app spawns at runtime.
+electron-frontend-build:
+    cd frontend && bun run build
+
+# Full production-style run inside Electron (no external dev server):
+# build the FE, build the shell, launch it pointing at the spawned
+# Next.js standalone server.
+electron-prod: electron-frontend-build electron-build
+    cd electron && bun run start
+
+# Package the desktop app via electron-builder. Outputs to electron/dist-app/.
+# Defaults to the host platform; pass --mac/--win/--linux via electron-builder
+# directly if you need a cross-target build.
+electron-dist: electron-frontend-build
+    cd electron && bun run dist
+
+# --- Stagehand E2E (LLM-driven, lives under frontend/e2e/stagehand) --------
+
+# Run the Stagehand AI-driven end-to-end suite. Requires `just dev` already
+# running (frontend + backend) and one of OPENAI_API_KEY / ANTHROPIC_API_KEY
+# / GOOGLE_API_KEY set so Stagehand has an LLM to drive `act` / `extract`.
+# Tests are slow (10–60s each) and cost real money — keep them out of
+# `just check`; run on demand.
+stagehand-e2e:
+    cd frontend && bunx --bun playwright install --with-deps chromium
+    cd frontend && bun run e2e:stagehand
+
 # Install all dependencies (frontend + backend) and git hooks
 install:
     bun install

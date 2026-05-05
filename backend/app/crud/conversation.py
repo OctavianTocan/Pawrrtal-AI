@@ -174,6 +174,17 @@ async def update_conversation_service(
         conversation.status = payload.status
     if payload.model_id is not None:
         conversation.model_id = payload.model_id
+    if payload.labels is not None:
+        # Full replacement — the frontend sends the desired final set,
+        # so we don't merge here. `list(...)` detaches from the request
+        # object so cleanup of the Pydantic model can't mutate ours.
+        conversation.labels = list(payload.labels)
+    if payload.project_id_set:
+        # Explicit set (even to None) — drag-and-drop into a project sets
+        # project_id, dragging out clears it. The companion flag lets us
+        # distinguish "set to null" from "leave unchanged" since the JSON
+        # body collapses them otherwise.
+        conversation.project_id = payload.project_id
 
     conversation.updated_at = datetime.now()
     session.add(conversation)

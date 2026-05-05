@@ -3,23 +3,30 @@
 import {
 	AppWindow,
 	Archive,
-	Circle,
-	CloudUpload,
-	Columns2,
+	CheckCircle2,
 	Copy,
+	Files,
+	FileText,
 	Flag,
 	FolderOpen,
 	MailOpen,
+	MoreHorizontal,
 	Pencil,
 	RefreshCw,
 	Tag,
 	Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { DropdownMenuShortcut } from '@/components/ui/dropdown-menu';
 import { EntityRow } from '@/components/ui/entity-row';
 import { useMenuComponents } from '@/components/ui/menu-context';
 import { SidebarMenuItem } from '@/components/ui/sidebar';
+import { NAV_CHATS_LABELS } from '@/features/nav-chats/constants';
+import { CONVERSATION_DRAG_MIME } from '@/features/projects/constants';
+import { TOAST_IDS, toast } from '@/lib/toast';
 import type { ConversationStatus } from '@/lib/types';
+import { ConversationStatusGlyph, STATUS_SUBMENU } from './ConversationStatusGlyph';
+import { ConversationUnreadGlyph } from './ConversationUnreadGlyph';
 
 /** Props for the conversation sidebar row presentation component. */
 export interface ConversationSidebarItemViewProps {
@@ -43,6 +50,8 @@ export interface ConversationSidebarItemViewProps {
 	isUnread: boolean;
 	/** Current workflow status tag. */
 	status: ConversationStatus;
+	/** String label IDs currently applied (resolved against NAV_CHATS_LABELS). */
+	appliedLabelIds: readonly string[];
 	/** Called when the row is clicked. */
 	onClick?: () => void;
 	/** Called to navigate in a menu item. */
@@ -61,7 +70,11 @@ export interface ConversationSidebarItemViewProps {
 	onMarkUnread: () => void;
 	/** Triggers LLM title regeneration for this conversation. */
 	onRegenerateTitle: () => void;
-	/** Icon shown before the title (e.g. processing spinner, unread dot). */
+	/** Toggles a single label ID on/off for this conversation. */
+	onToggleLabel: (labelId: string) => void;
+	/** Triggers a Markdown download for this conversation. */
+	onExportMarkdown: () => void;
+	/** Optional override for the row's left icon (e.g. processing spinner). */
 	icon?: ReactNode;
 	/** Label badges shown after the title. */
 	badges?: ReactNode;
@@ -71,56 +84,47 @@ export interface ConversationSidebarItemViewProps {
 	isInMultiSelect?: boolean;
 	/** Called on mouse down on the row. */
 	onMouseDown?: (e: React.MouseEvent) => void;
+	/**
+	 * The conversation ID dropped onto a project drop target during DnD.
+	 * Surfaced as a separate prop so the View can populate the
+	 * dataTransfer payload without needing the full Conversation object.
+	 */
+	conversationId?: string;
 	/** Called when a menu item triggers navigation (separate from onClick). */
 	onClickMenuItem?: () => void;
 	/** Extra button props for the row's interactive element. */
 	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 }
 
-/** Placeholder status icon for a conversation row (empty circle). */
-function ConversationStatusIcon(): React.JSX.Element {
-	return (
-		<div className="flex items-center justify-center text-muted-foreground/75">
-			<Circle aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.5} />
-		</div>
-	);
-}
-
-/** Props for shared conversation menu content. */
+/** Props for the shared menu-content component. */
 interface ConversationMenuContentProps {
-	/** The full URL path for this conversation. */
 	href: string;
-	/** Absolute URL for clipboard copy. */
 	absoluteHref: string;
-	/** Whether the conversation is archived. */
 	isArchived: boolean;
-	/** Whether the conversation is flagged. */
 	isFlagged: boolean;
-	/** Whether the conversation has an unread indicator. */
 	isUnread: boolean;
-	/** Current workflow status tag. */
 	status: ConversationStatus;
-	/** Called to navigate to this conversation. */
+	appliedLabelIds: readonly string[];
 	onNavigate: () => void;
-	/** Opens the rename flow for this conversation. */
 	onRename: () => void;
-	/** Opens the delete confirmation for this conversation. */
 	onDelete: () => void;
-	/** Toggles archived state for this conversation. */
 	onArchive: () => void;
-	/** Toggles flagged state for this conversation. */
 	onFlag: () => void;
-	/** Sets the status tag for this conversation. */
 	onSetStatus: (status: ConversationStatus) => void;
-	/** Toggles the unread indicator for this conversation. */
 	onMarkUnread: () => void;
-	/** Triggers LLM title regeneration for this conversation. */
 	onRegenerateTitle: () => void;
+	onToggleLabel: (labelId: string) => void;
+	onExportMarkdown: () => void;
 }
 
 /**
- * Shared menu content rendered in both the dropdown and context menu
- * for a conversation row.
+ * Two-tier menu content shared by both the dropdown and right-click menu.
+ *
+ * Tier 1 (top): high-frequency actions — Open, Status, Labels, Flag, Mark
+ * Unread, Rename, Archive, then a "More" submenu and Delete.
+ *
+ * Tier 2 ("More" submenu): Regenerate Title, Open in New Window, Copy Link,
+ * Export as Markdown, Duplicate.
  */
 function ConversationMenuContent({
 	href,
@@ -129,6 +133,7 @@ function ConversationMenuContent({
 	isFlagged,
 	isUnread,
 	status,
+	appliedLabelIds,
 	onNavigate,
 	onRename,
 	onDelete,
@@ -137,64 +142,70 @@ function ConversationMenuContent({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 }: ConversationMenuContentProps): React.JSX.Element {
 	const { MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuSubContent } =
 		useMenuComponents();
 
+	const handleCopyLink = (): void => {
+		if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+		void navigator.clipboard.writeText(absoluteHref).then(() => {
+			toast.success('Link copied to clipboard', { id: TOAST_IDS.conversationCopyLink });
+		});
+	};
+
+	const handleOpenNewWindow = (): void => {
+		if (typeof window === 'undefined') return;
+		window.open(href, '_blank', 'noopener,noreferrer');
+	};
+
+	const handleDuplicate = (): void => {
+		// Backend clone endpoint is not yet shipped — see follow-up bean. The
+		// toast confirms the menu wiring without pretending the feature exists.
+		toast.info('Duplicate is coming soon', {
+			id: TOAST_IDS.conversationDuplicate,
+		});
+	};
+
 	return (
 		<>
-			<MenuItem disabled>
-				<CloudUpload aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Share</span>
+			<MenuItem onSelect={onNavigate}>
+				<FolderOpen aria-hidden="true" className="h-3.5 w-3.5" />
+				<span className="flex-1">Open</span>
+				<DropdownMenuShortcut>↵</DropdownMenuShortcut>
 			</MenuItem>
 
 			<MenuSeparator />
 
 			<MenuSub>
 				<MenuSubTrigger>
-					<Circle
-						aria-hidden="true"
-						className="h-3.5 w-3.5 text-muted-foreground"
-						strokeWidth={2.5}
-					/>
+					<ConversationStatusGlyph status={status} />
 					<span className="flex-1">Status</span>
 				</MenuSubTrigger>
 				<MenuSubContent>
-					<MenuItem onSelect={() => onSetStatus('todo')}>
-						<Circle
-							aria-hidden="true"
-							className="h-3.5 w-3.5 text-blue-500"
-							fill={status === 'todo' ? 'currentColor' : 'none'}
-							strokeWidth={2.5}
-						/>
-						<span className="flex-1">Todo</span>
-					</MenuItem>
-					<MenuItem onSelect={() => onSetStatus('in_progress')}>
-						<Circle
-							aria-hidden="true"
-							className="h-3.5 w-3.5 text-yellow-500"
-							fill={status === 'in_progress' ? 'currentColor' : 'none'}
-							strokeWidth={2.5}
-						/>
-						<span className="flex-1">In Progress</span>
-					</MenuItem>
-					<MenuItem onSelect={() => onSetStatus('done')}>
-						<Circle
-							aria-hidden="true"
-							className="h-3.5 w-3.5 text-green-500"
-							fill={status === 'done' ? 'currentColor' : 'none'}
-							strokeWidth={2.5}
-						/>
-						<span className="flex-1">Done</span>
-					</MenuItem>
-					<MenuItem onSelect={() => onSetStatus(null)}>
-						<Circle
-							aria-hidden="true"
-							className="h-3.5 w-3.5 text-muted-foreground"
-							strokeWidth={1.5}
-						/>
-						<span className="flex-1">No Status</span>
-					</MenuItem>
+					{STATUS_SUBMENU.map((option) => {
+						const isActive = status === option.id;
+						return (
+							<MenuItem
+								key={option.id ?? 'none'}
+								onSelect={() => onSetStatus(option.id)}
+							>
+								<option.Icon
+									aria-hidden="true"
+									className={`h-3.5 w-3.5 ${option.className}`}
+									strokeWidth={2}
+								/>
+								<span className="flex-1">{option.label}</span>
+								{isActive ? (
+									<CheckCircle2
+										aria-hidden="true"
+										className="h-3 w-3 text-foreground"
+									/>
+								) : null}
+							</MenuItem>
+						);
+					})}
 				</MenuSubContent>
 			</MenuSub>
 
@@ -204,9 +215,25 @@ function ConversationMenuContent({
 					<span className="flex-1">Labels</span>
 				</MenuSubTrigger>
 				<MenuSubContent>
-					<MenuItem disabled>
-						<span className="text-muted-foreground text-xs">No labels configured</span>
-					</MenuItem>
+					{NAV_CHATS_LABELS.map((label) => {
+						const isApplied = appliedLabelIds.includes(label.id);
+						return (
+							<MenuItem key={label.id} onSelect={() => onToggleLabel(label.id)}>
+								<span
+									aria-hidden="true"
+									className="inline-block h-2 w-2 rounded-full"
+									style={{ backgroundColor: label.color }}
+								/>
+								<span className="flex-1">{label.name}</span>
+								{isApplied ? (
+									<CheckCircle2
+										aria-hidden="true"
+										className="h-3 w-3 text-foreground"
+									/>
+								) : null}
+							</MenuItem>
+						);
+					})}
 				</MenuSubContent>
 			</MenuSub>
 
@@ -217,16 +244,13 @@ function ConversationMenuContent({
 					fill={isFlagged ? 'currentColor' : 'none'}
 				/>
 				<span className="flex-1">{isFlagged ? 'Unflag' : 'Flag'}</span>
-			</MenuItem>
-
-			<MenuItem onSelect={onArchive}>
-				<Archive aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">{isArchived ? 'Unarchive' : 'Archive'}</span>
+				<DropdownMenuShortcut>⇧F</DropdownMenuShortcut>
 			</MenuItem>
 
 			<MenuItem onSelect={onMarkUnread}>
 				<MailOpen aria-hidden="true" className="h-3.5 w-3.5" />
 				<span className="flex-1">{isUnread ? 'Mark as Read' : 'Mark as Unread'}</span>
+				<DropdownMenuShortcut>⇧U</DropdownMenuShortcut>
 			</MenuItem>
 
 			<MenuSeparator />
@@ -234,52 +258,50 @@ function ConversationMenuContent({
 			<MenuItem onSelect={onRename}>
 				<Pencil aria-hidden="true" className="h-3.5 w-3.5" />
 				<span className="flex-1">Rename</span>
+				<DropdownMenuShortcut>F2</DropdownMenuShortcut>
 			</MenuItem>
 
-			<MenuItem onSelect={onRegenerateTitle}>
-				<RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Regenerate Title</span>
+			<MenuItem onSelect={onArchive}>
+				<Archive aria-hidden="true" className="h-3.5 w-3.5" />
+				<span className="flex-1">{isArchived ? 'Unarchive' : 'Archive'}</span>
+				<DropdownMenuShortcut>E</DropdownMenuShortcut>
 			</MenuItem>
+
+			<MenuSub>
+				<MenuSubTrigger>
+					<MoreHorizontal aria-hidden="true" className="h-3.5 w-3.5" />
+					<span className="flex-1">More</span>
+				</MenuSubTrigger>
+				<MenuSubContent>
+					<MenuItem onSelect={onRegenerateTitle}>
+						<RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
+						<span className="flex-1">Regenerate Title</span>
+					</MenuItem>
+					<MenuItem onSelect={handleOpenNewWindow}>
+						<AppWindow aria-hidden="true" className="h-3.5 w-3.5" />
+						<span className="flex-1">Open in New Window</span>
+					</MenuItem>
+					<MenuItem onSelect={handleCopyLink}>
+						<Copy aria-hidden="true" className="h-3.5 w-3.5" />
+						<span className="flex-1">Copy Link</span>
+					</MenuItem>
+					<MenuItem onSelect={onExportMarkdown}>
+						<FileText aria-hidden="true" className="h-3.5 w-3.5" />
+						<span className="flex-1">Export as Markdown</span>
+					</MenuItem>
+					<MenuItem onSelect={handleDuplicate}>
+						<Files aria-hidden="true" className="h-3.5 w-3.5" />
+						<span className="flex-1">Duplicate</span>
+					</MenuItem>
+				</MenuSubContent>
+			</MenuSub>
 
 			<MenuSeparator />
 
-			<MenuItem disabled>
-				<Columns2 aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Open in New Panel</span>
-			</MenuItem>
-
-			<MenuItem
-				onSelect={() => {
-					if (typeof window !== 'undefined') {
-						window.open(href, '_blank', 'noopener,noreferrer');
-					}
-				}}
-			>
-				<AppWindow aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Open in New Window</span>
-			</MenuItem>
-
-			<MenuItem onSelect={onNavigate}>
-				<FolderOpen aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Open</span>
-			</MenuItem>
-
-			<MenuItem
-				onSelect={() => {
-					if (typeof navigator !== 'undefined' && navigator.clipboard) {
-						void navigator.clipboard.writeText(absoluteHref);
-					}
-				}}
-			>
-				<Copy aria-hidden="true" className="h-3.5 w-3.5" />
-				<span className="flex-1">Copy Link</span>
-			</MenuItem>
-
-			<MenuSeparator />
-
-			<MenuItem variant="destructive" onSelect={onDelete}>
+			<MenuItem onSelect={onDelete} variant="destructive">
 				<Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
 				<span className="flex-1">Delete</span>
+				<DropdownMenuShortcut>⌫</DropdownMenuShortcut>
 			</MenuItem>
 		</>
 	);
@@ -288,8 +310,9 @@ function ConversationMenuContent({
 /**
  * Pure presentation layer for a single conversation sidebar row.
  *
- * Renders an `EntityRow` with a status icon, the conversation title,
- * a relative-time age badge, and a full context/dropdown menu.
+ * Renders an `EntityRow` with a status glyph (filled, colored when set), the
+ * conversation title (bolder when unread), the optional unread chat-bubble
+ * glyph + age in the trailing area, and the two-tier dropdown / context menu.
  * All route-derived state (isSelected, href) comes from the container.
  */
 export function ConversationSidebarItemView({
@@ -303,6 +326,7 @@ export function ConversationSidebarItemView({
 	isFlagged,
 	isUnread,
 	status,
+	appliedLabelIds,
 	onClick,
 	onNavigate,
 	onRename,
@@ -312,6 +336,8 @@ export function ConversationSidebarItemView({
 	onSetStatus,
 	onMarkUnread,
 	onRegenerateTitle,
+	onToggleLabel,
+	onExportMarkdown,
 	icon,
 	badges,
 	titleTrailing,
@@ -319,6 +345,7 @@ export function ConversationSidebarItemView({
 	onMouseDown,
 	onClickMenuItem,
 	buttonProps,
+	conversationId,
 }: ConversationSidebarItemViewProps): React.JSX.Element {
 	const handleMenuNavigate = (): void => {
 		if (onClickMenuItem) {
@@ -328,30 +355,51 @@ export function ConversationSidebarItemView({
 		onNavigate(href);
 	};
 
+	const hasTrailing = Boolean(titleTrailing) || Boolean(badges) || Boolean(age);
+	const resolvedTrailing = hasTrailing ? (
+		<div className="flex items-center gap-1.5">
+			{titleTrailing}
+			{badges}
+			{age ? (
+				<span className="whitespace-nowrap text-sm text-foreground/40">{age}</span>
+			) : null}
+		</div>
+	) : undefined;
+
+	// Unread = bolder title weight. The unread glyph itself is hoisted to the
+	// LEFT of the title (see the `title` prop below) instead of the trailing
+	// area so it pushes the title rightward — matches the requested Stitch
+	// reference. EntityRow only takes a single class for the title, so the
+	// weight modifier is merged here rather than added as a separate prop.
+	const titleClassName = isUnread ? 'text-[14px] font-semibold text-foreground' : 'text-[14px]';
+
+	const resolvedTitle = isUnread ? (
+		<span className="inline-flex min-w-0 items-center gap-1.5">
+			<ConversationUnreadGlyph />
+			<span className="min-w-0 truncate">{title}</span>
+		</span>
+	) : (
+		title
+	);
+
 	return (
 		<SidebarMenuItem>
 			<EntityRow
-				icon={icon ?? <ConversationStatusIcon />}
+				icon={icon ?? <ConversationStatusGlyph status={status} />}
 				showSeparator={showSeparator}
 				isSelected={isSelected}
 				isInMultiSelect={isInMultiSelect}
 				onClick={onClick}
 				onMouseDown={onMouseDown}
-				title={title}
-				titleClassName="text-[13px]"
-				titleTrailing={
-					titleTrailing || badges || age ? (
-						<div className="flex items-center gap-1">
-							{titleTrailing}
-							{badges}
-							{age ? (
-								<span className="text-[11px] text-foreground/40 whitespace-nowrap">
-									{age}
-								</span>
-							) : undefined}
-						</div>
-					) : undefined
-				}
+				draggable={Boolean(conversationId)}
+				onDragStart={(event) => {
+					if (!conversationId) return;
+					event.dataTransfer.effectAllowed = 'move';
+					event.dataTransfer.setData(CONVERSATION_DRAG_MIME, conversationId);
+				}}
+				title={resolvedTitle}
+				titleClassName={titleClassName}
+				titleTrailing={resolvedTrailing}
 				menuContent={
 					<ConversationMenuContent
 						href={href}
@@ -360,6 +408,7 @@ export function ConversationSidebarItemView({
 						isFlagged={isFlagged}
 						isUnread={isUnread}
 						status={status}
+						appliedLabelIds={appliedLabelIds}
 						onNavigate={handleMenuNavigate}
 						onRename={onRename}
 						onDelete={onDelete}
@@ -368,6 +417,8 @@ export function ConversationSidebarItemView({
 						onSetStatus={onSetStatus}
 						onMarkUnread={onMarkUnread}
 						onRegenerateTitle={onRegenerateTitle}
+						onToggleLabel={onToggleLabel}
+						onExportMarkdown={onExportMarkdown}
 					/>
 				}
 				buttonProps={buttonProps}

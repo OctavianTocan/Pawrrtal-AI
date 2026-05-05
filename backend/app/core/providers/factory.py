@@ -33,6 +33,7 @@ def resolve_provider(model_id: str | None) -> AIProvider:
     if resolved.startswith("claude-"):
         config = ClaudeProviderConfig(
             oauth_token=settings.claude_code_oauth_token or None,
+            enable_exa_search=bool(settings.exa_api_key),
         )
         return ClaudeProvider(resolved, config=config)
     return AgnoProvider(resolved)

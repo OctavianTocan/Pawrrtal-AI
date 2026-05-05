@@ -24,6 +24,13 @@ export interface UpdateConversationMetadataVariables {
 	is_flagged?: boolean;
 	is_unread?: boolean;
 	status?: ConversationStatus;
+	/**
+	 * Full replacement of the conversation's label set. Callers (the toggle
+	 * handler in `use-conversation-metadata-actions`) build this from the
+	 * current row's labels plus/minus the toggled label ID; the server does
+	 * not merge — it overwrites.
+	 */
+	labels?: string[];
 }
 
 /** Variables required to regenerate a conversation title. */

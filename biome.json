@@ -20,7 +20,11 @@
 			"!**/.beans",
 			"!**/.zed",
 			"!**/.vscode",
-			"!**/.sentrux"
+			"!**/.sentrux",
+			"!**/coverage",
+			"!**/.stagehand-cache",
+			"!**/playwright-report",
+			"!**/test-results"
 		]
 	},
 	"formatter": {

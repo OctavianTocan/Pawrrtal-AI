@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "instruction": "Type %prompt% into the main chat input at the bottom of the page",
+  "url": "http://localhost:3001/",
+  "variableKeys": [
+    "prompt"
+  ],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/form[1]/div[1]/div[1]/textarea[1]",
+      "description": "textbox: Ask AI Nexus anything. @ to mention context",
+      "method": "type",
+      "arguments": [
+        "%prompt%"
+      ]
+    }
+  ],
+  "actionDescription": "textbox: Ask AI Nexus anything. @ to mention context",
+  "message": "Action [type] performed successfully on selector: xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/form[1]/div[1]/div[1]/textarea[1]"
+}

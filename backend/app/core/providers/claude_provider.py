@@ -65,6 +65,16 @@ from claude_agent_sdk import (
     query,
 )
 
+from app.core.tools.exa_search_claude import (
+    CLAUDE_TOOL_ID as EXA_CLAUDE_TOOL_ID,
+)
+from app.core.tools.exa_search_claude import (
+    MCP_SERVER_NAME as EXA_MCP_SERVER_NAME,
+)
+from app.core.tools.exa_search_claude import (
+    build_exa_mcp_server,
+)
+
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -96,6 +106,15 @@ _DEFAULT_TOOLS: list[str] = []
 # response; the SDK closes the subprocess after that turn.
 _DEFAULT_MAX_TURNS = 1
 
+# When tool use is enabled (e.g. ``exa_search``), the agent needs at
+# least one extra turn to read the tool result and respond. We budget a
+# few more so the model can plan → call tool → read result → maybe
+# refine with a follow-up call → respond. ``error_max_turns`` surfaces
+# as a ``ResultMessage(is_error=True)`` and is the symptom users see when
+# this number is too low (the chat shows an error panel after a
+# successful "Searched the web" indicator).
+_TOOL_ENABLED_MAX_TURNS = 6
+
 # With ``tools=[]`` no tool ever runs, so the choice here is mostly
 # cosmetic. We pick "default" rather than "bypassPermissions" so that
 # enabling a tool in the future fails closed instead of open.
@@ -107,10 +126,13 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 _DEFAULT_SYSTEM_PROMPT = (
     "You are the Claude assistant inside the AI Nexus chat application. "
     "You are speaking with the user via a text chat surface. Be concise, "
-    "helpful, and accurate. You do NOT have file system, web, or shell "
-    "access in this surface. Decline politely if the user asks you to "
-    "perform such actions, and suggest they enable tool access in a "
-    "different surface if they need it."
+    "helpful, and accurate. You do NOT have file system or shell access "
+    "in this surface — decline politely if the user asks you to perform "
+    "such actions.\n\n"
+    "Web search is available via the `exa_search` tool (powered by Exa). "
+    "Call it whenever the user asks for fresh information, current events, "
+    "citations, or anything beyond your training data. Always cite the "
+    "URLs returned by the tool when you use the results."
 )
 
 
@@ -147,6 +169,9 @@ class ClaudeProviderConfig:
 
     extra_env: dict[str, str] = field(default_factory=dict)
     """Additional environment variables forwarded to the CLI subprocess."""
+
+    enable_exa_search: bool = False
+    """When ``True``, mount the in-process Exa MCP server and whitelist the ``exa_search`` tool. Toggled by the factory based on whether ``EXA_API_KEY`` is configured."""
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +219,10 @@ class ClaudeProvider:
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
+            # `exception` (not `error`) gives us the stacktrace in the
+            # log — required by ruff TRY400 and useful for diagnosing
+            # PATH issues that vary across machines.
+            logger.exception("Claude CLI binary not found")
             yield _error_event(
                 "Claude Code CLI binary is not installed in this environment. "
                 "Install it with `npm i -g @anthropic-ai/claude-code` and ensure "
@@ -201,22 +230,31 @@ class ClaudeProvider:
                 f"Underlying error: {error}",
             )
         except CLIConnectionError as error:
+            logger.warning("Claude CLI subprocess connection lost: %s", error)
             yield _error_event(
                 f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
             )
         except ProcessError as error:
+            exit_code = getattr(error, "exit_code", "n/a")
+            stderr = getattr(error, "stderr", "")
+            logger.exception(
+                "Claude CLI subprocess exited: exit_code=%s stderr=%r",
+                exit_code,
+                stderr,
+            )
             yield _error_event(
                 "Claude Code CLI exited with an error. Verify CLAUDE_CODE_OAUTH_TOKEN "
                 "is configured and your account has access to the requested model. "
-                f"Exit code: {getattr(error, 'exit_code', 'n/a')}. "
-                f"stderr: {getattr(error, 'stderr', '')!r}",
+                f"Exit code: {exit_code}. stderr: {stderr!r}",
             )
-        except CLIJSONDecodeError as error:
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI. "
-                f"Underlying error: {error}",
-            )
+        except CLIJSONDecodeError:
+            logger.exception("Claude CLI returned non-JSON message")
+            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
         except ClaudeSDKError as error:
+            # `exception` (not `error`) so the traceback lands in the log
+            # — broad SDK errors are the bucket where new failure modes
+            # show up, and a stacktrace is the only way to attribute them.
+            logger.exception("Claude SDK error during stream")
             yield _error_event(f"Claude SDK error: {error}")
 
     # -- internal --------------------------------------------------------
@@ -224,15 +262,42 @@ class ClaudeProvider:
     def _build_options(self, conversation_id: uuid.UUID) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``."""
         session_id = str(conversation_id)
+
+        # Tools start as the configured whitelist (built-in CLI tools).
+        # When Exa is enabled, append the canonical mcp__<server>__<tool>
+        # identifier so the SDK actually permits invocation; the MCP
+        # server itself is mounted via mcp_servers below.
+        tools = list(self._config.tools) if self._config.tools is not None else None
+        mcp_servers: dict[str, Any] = {}
+        if self._config.enable_exa_search:
+            if tools is None:
+                tools = [EXA_CLAUDE_TOOL_ID]
+            elif EXA_CLAUDE_TOOL_ID not in tools:
+                tools.append(EXA_CLAUDE_TOOL_ID)
+            mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
+
+        # If tool use is enabled but the caller didn't override
+        # ``max_turns``, automatically widen the turn budget so the agent
+        # can read its own tool result. Without this the very first
+        # tool invocation hits the SDK's ``error_max_turns`` and surfaces
+        # in chat as a "Claude SDK result reported an error" panel
+        # immediately after the "Searched the web" indicator.
+        effective_max_turns = self._config.max_turns
+        tool_use_enabled = bool(tools) or bool(mcp_servers)
+        if tool_use_enabled and effective_max_turns <= _DEFAULT_MAX_TURNS:
+            effective_max_turns = _TOOL_ENABLED_MAX_TURNS
+
         kwargs: dict[str, Any] = {
             "model": _resolve_sdk_model(self._model_id),
-            "tools": self._config.tools,
-            "max_turns": self._config.max_turns,
+            "tools": tools,
+            "max_turns": effective_max_turns,
             "permission_mode": self._config.permission_mode,
             "system_prompt": self._config.system_prompt,
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
+        if mcp_servers:
+            kwargs["mcp_servers"] = mcp_servers
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 
@@ -308,6 +373,21 @@ def _events_from_message(message: Any) -> Iterator[StreamEvent]:
         return
     if isinstance(message, ResultMessage):
         if message.is_error:
+            # Log alongside yielding so the failure shows up in
+            # `backend/app.log` too. Previously the only signal was the
+            # SSE error panel in the browser, which made tool failures
+            # like ``error_max_turns`` invisible to anyone reading
+            # backend logs to debug. Logged at WARNING because the
+            # connection is still alive — the chat surface recovers and
+            # the user can retry.
+            logger.warning(
+                "Claude SDK ResultMessage reported error: "
+                "stop_reason=%r subtype=%r duration_ms=%s num_turns=%s",
+                message.stop_reason,
+                message.subtype,
+                getattr(message, "duration_ms", None),
+                getattr(message, "num_turns", None),
+            )
             yield _error_event(
                 "Claude SDK result reported an error. "
                 f"stop_reason={message.stop_reason!r} subtype={message.subtype!r}"

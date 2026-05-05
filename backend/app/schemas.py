@@ -6,10 +6,10 @@ through the API layer.
 
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -93,6 +93,12 @@ class ConversationResponse(BaseModel):
     is_unread: bool = False
     status: str | None = None
     model_id: str | None = None
+    # Always serialized as a list (never null) so the frontend never has to
+    # narrow with `?? []` before iterating.
+    labels: list[str] = []
+    # ID of the project this conversation belongs to, or null when the
+    # conversation lives in the unattached "Chats" list.
+    project_id: uuid.UUID | None = None
 
 
 class ConversationUpdate(BaseModel):
@@ -104,6 +110,67 @@ class ConversationUpdate(BaseModel):
     is_unread: bool | None = None
     status: str | None = None
     model_id: str | None = None  # optional — only set when changing model
+    # Optional in the PATCH body — when provided, fully replaces the row's
+    # label set. Sentinel `None` means "leave labels unchanged" (matches the
+    # other partial-update fields above).
+    labels: list[str] | None = None
+    # Drag-and-drop assignment uses an explicit two-state sentinel so the
+    # frontend can distinguish "leave alone" (omit the field entirely) from
+    # "remove from current project" (send null). Pydantic gives us this for
+    # free via `Field(default=...)` — omission keeps the SQLAlchemy column
+    # untouched, while explicit None unsets the FK.
+    project_id: uuid.UUID | None = Field(default=None)
+    # Companion flag: explicit "treat project_id as set, even when null".
+    # Without this, JSON `{"project_id": null}` is indistinguishable from
+    # an omitted field after Pydantic coercion. The CRUD service reads this
+    # flag and only touches `project_id` when it's true.
+    project_id_set: bool = False
+
+
+class ProjectResponse(BaseModel):
+    """Response schema returned for project endpoints."""
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectCreate(BaseModel):
+    """Request schema for creating a new project."""
+
+    name: str
+
+
+class ProjectUpdate(BaseModel):
+    """Request schema for renaming an existing project."""
+
+    name: str | None = None
+
+
+# --- Personalization schemas --------------------------------------------------
+
+
+class PersonalizationProfile(BaseModel):
+    """Home-page personalization wizard profile.
+
+    Mirrors the frontend `PersonalizationProfile` interface in
+    `frontend/features/personalization/storage.ts`. Every field is
+    optional so a partially-filled wizard round-trips cleanly. Used
+    as both the GET response and the PUT request body — the endpoint
+    treats the request as a full replacement of the persisted profile.
+    """
+
+    name: str | None = None
+    company_website: str | None = None
+    linkedin: str | None = None
+    role: str | None = None
+    goals: list[str] | None = None
+    connected_channels: list[str] | None = None
+    chatgpt_context: str | None = None
+    personality: str | None = None
+    custom_instructions: str | None = None
 
 
 # --- Chat schemas -------------------------------------------------------------
@@ -131,3 +198,25 @@ class ChatResponse(BaseModel):
     """
 
     response: str
+
+
+# --- Chat history schemas -----------------------------------------------------
+
+
+class ChatMessageRead(BaseModel):
+    """Single rehydrated chat message returned by ``GET /conversations/:id/messages``.
+
+    Mirrors the `AgnoMessage` shape consumed by the frontend so the chat UI
+    can render past turns with the same chain-of-thought, tool steps, source
+    chips, and reasoning duration as the live stream produced.
+    """
+
+    role: Literal["user", "assistant"]
+    content: str
+    thinking: str | None = None
+    # The frontend expects the snake_case field names below; matching them here
+    # avoids a serializer alias dance on the read path.
+    tool_calls: list[dict[str, Any]] | None = None
+    timeline: list[dict[str, Any]] | None = None
+    thinking_duration_seconds: int | None = None
+    assistant_status: Literal["streaming", "complete", "failed"] | None = None

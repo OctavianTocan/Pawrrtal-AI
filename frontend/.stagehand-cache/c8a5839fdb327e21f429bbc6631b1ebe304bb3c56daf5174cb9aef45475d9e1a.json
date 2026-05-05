@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "Click the button that finishes onboarding (typically labeled 'Done', 'Finish', or 'Continue')",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[2]/button[1]",
+      "description": "The 'Continue →' button to finish the onboarding process.",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "The 'Continue →' button to finish the onboarding process.",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[2]/button[1]"
+}

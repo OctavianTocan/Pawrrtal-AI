@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "Click the 'Continue' button at the bottom of the modal",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[2]/button[1]",
+      "description": "The 'Continue' button to proceed to the next step in the onboarding modal.",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "The 'Continue' button to proceed to the next step in the onboarding modal.",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[2]/button[1]"
+}

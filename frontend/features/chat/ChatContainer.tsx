@@ -1,7 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -20,6 +20,9 @@ import {
 	FALLBACK_TITLE_MAX_LENGTH,
 } from './constants';
 import { useChat } from './hooks/use-chat';
+import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
+import { useChatTurns } from './hooks/use-chat-turns';
+import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
 
@@ -52,22 +55,6 @@ function buildInitialConversationTitle(content: string): string {
 	return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
 }
 
-function replaceLastAssistantMessage({
-	messages,
-	content,
-}: {
-	messages: Array<AgnoMessage>;
-	content: string;
-}): Array<AgnoMessage> {
-	const updatedMessages = [...messages];
-	updatedMessages[updatedMessages.length - 1] = {
-		...updatedMessages[updatedMessages.length - 1],
-		role: 'assistant',
-		content,
-	};
-	return updatedMessages;
-}
-
 /**
  * Props for the {@link ChatContainer} component.
  */
@@ -84,7 +71,7 @@ interface ChatContainerProps {
  * Responsibilities:
  * - Creates a new conversation on first message (via {@link useCreateConversation}).
  * - Fires LLM title generation (via {@link useGenerateConversationTitle}).
- * - Streams assistant responses and accumulates chat history.
+ * - Streams assistant responses and accumulates chat history (via {@link useChatTurns}).
  * - Keeps the browser URL and the Next.js router in sync.
  *
  * Render logic is delegated to the presentational {@link ChatView}.
@@ -98,20 +85,15 @@ export default function ChatContainer({
 	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
 	const router = useRouter();
 	const { setActiveConversation, clearActiveConversation } = useChatActivity();
-
-	/**
-	 * Tracks whether we've already updated the URL to `/c/:id`.
-	 * Ensures the conversation is only created once (on the first message).
-	 */
 	const hasNavigated = useRef(false);
-	const isSendingRef = useRef(false);
 
-	const [message, setMessage] = useState<PromptInputMessage>({
-		content: '',
-		files: [],
-	});
-	const [isLoading, setIsLoading] = useState(false);
-	const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(initialChatHistory || []);
+	const {
+		message,
+		setMessage,
+		onUpdateMessage: handleUpdateMessage,
+		onReplaceMessageContent: handleReplaceMessageContent,
+		onSelectSuggestion: handleSelectSuggestion,
+	} = useComposerMessage();
 	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
 		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
 		defaultValue: DEFAULT_CHAT_MODEL_ID,
@@ -123,90 +105,89 @@ export default function ChatContainer({
 		validate: isChatReasoningLevel,
 	});
 
-	/**
-	 * Handles sending a message from the user.
-	 *
-	 * On the first message in a new conversation this will:
-	 * 1. Persist the conversation to the backend.
-	 * 2. Kick off async title generation.
-	 * 3. Swap the URL bar to `/c/:id` via `replaceState` (avoiding a re-render mid-stream).
-	 *
-	 * Then it streams the assistant's response chunk-by-chunk and appends to chat history.
-	 * After streaming completes, it syncs the Next.js router so future client-side
-	 * navigations (e.g. "New Conversation") work correctly.
-	 */
-	const handleSendMessage = async (message: PromptInputMessage): Promise<void> => {
-		if (isSendingRef.current || isLoading) {
-			return;
-		}
+	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
+	// so `useChatTurns` stays decoupled from routing/model concerns.
+	const stream = useCallback(
+		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
+		[conversationId, selectedModelId, streamMessage]
+	);
 
-		isSendingRef.current = true;
-		const newMessage = message;
-		setMessage({ content: '', files: [] });
-		setIsLoading(true);
+	// First-send: persist the conversation, fire title gen, swap URL without
+	// interrupting the in-flight stream. Router sync happens after streaming.
+	const onFirstSend = useCallback(
+		async (prompt: string): Promise<void> => {
+			await createConversationMutation.mutateAsync({
+				title: buildInitialConversationTitle(prompt),
+			});
+			generateConversationTitleMutation.mutateAsync(prompt).catch(() => undefined);
+			window.history.replaceState(null, '', `/c/${conversationId}`);
+			hasNavigated.current = true;
+		},
+		[conversationId, createConversationMutation, generateConversationTitleMutation]
+	);
 
-		// Optimistically append the user message and an empty assistant placeholder.
-		setChatHistory((prev) => [
-			...prev,
-			{ role: 'user', content: newMessage.content } as AgnoMessage,
-			{ role: 'assistant', content: '' } as AgnoMessage,
-		]);
-
-		let assistantMessage = '';
-
-		try {
-			if (!hasNavigated.current) {
-				await createConversationMutation.mutateAsync({
-					title: buildInitialConversationTitle(newMessage.content),
-				});
-				// Fire-and-forget: title generation shouldn't block the conversation flow.
-				generateConversationTitleMutation
-					.mutateAsync(newMessage.content)
-					.catch(() => undefined);
-
-				// Use replaceState for an instant URL swap without interrupting the stream.
-				// The Next.js router is synced after streaming finishes (see below).
-				window.history.replaceState(null, '', `/c/${conversationId}`);
-				hasNavigated.current = true;
-			}
-
-			for await (const chunk of streamMessage(
-				newMessage.content,
-				conversationId,
-				selectedModelId
-			)) {
-				assistantMessage += chunk || '';
-				setChatHistory((prev) =>
-					replaceLastAssistantMessage({ messages: prev, content: assistantMessage })
-				);
-			}
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : 'Chat stream failed.';
-			setChatHistory((prev) =>
-				replaceLastAssistantMessage({ messages: prev, content: `Error: ${errorMessage}` })
-			);
-		} finally {
-			setIsLoading(false);
-			isSendingRef.current = false;
-
-			// Sync the Next.js router now that streaming is done.
-			// replaceState earlier left the router desynced — this call aligns its
-			// internal state so that router.push("/") in the sidebar works correctly.
-			if (hasNavigated.current) {
-				router.replace(`/c/${conversationId}`);
-			}
-		}
-	};
-
-	// Keep the sidebar's chat-activity context in sync with this chat's state.
-	// Fires on every history/loading change so the sidebar can show spinners,
-	// unread badges, and content-search matches for the active conversation.
-	useEffect(() => {
-		setActiveConversation({
-			conversationId,
-			chatHistory,
-			isLoading,
+	const initialHistory = useMemo(() => initialChatHistory ?? [], [initialChatHistory]);
+	const { chatHistory, isLoading, regeneratingIndex, copiedId, send, regenerate, copy } =
+		useChatTurns({
+			initialHistory,
+			streamMessage: stream,
+			onFirstSend,
 		});
+
+	// Detect interrupted assistant turns left behind by a previous mount and
+	// resume them when the user reloads / navigates back to the conversation.
+	const { beginStream, endStream } = useChatBackgroundRecovery({
+		chatHistory,
+		conversationId,
+		isLoading,
+		onRecover: (prompt) => {
+			void send(prompt);
+		},
+	});
+
+	const handleSendMessage = useCallback(
+		async (sentMessage: PromptInputMessage): Promise<void> => {
+			setMessage({ content: '', files: [] });
+			beginStream(sentMessage.content);
+			try {
+				await send(sentMessage.content);
+			} finally {
+				endStream();
+				// Sync the Next.js router after streaming so sidebar router.push works.
+				if (hasNavigated.current) router.replace(`/c/${conversationId}`);
+			}
+		},
+		[beginStream, conversationId, endStream, router, send, setMessage]
+	);
+
+	// Read chatHistory through a ref so the callback identity doesn't churn
+	// on every streamed event — we only need the current value at click time.
+	const chatHistoryRef = useRef(chatHistory);
+	chatHistoryRef.current = chatHistory;
+	const handleRegenerate = useCallback(
+		async (assistantIndex: number): Promise<void> => {
+			const userMessage = chatHistoryRef.current[assistantIndex - 1];
+			if (userMessage?.role === 'user') beginStream(userMessage.content);
+			try {
+				await regenerate(assistantIndex);
+			} finally {
+				endStream();
+			}
+		},
+		[beginStream, endStream, regenerate]
+	);
+
+	const handleCopy = useCallback(
+		(id: string, text: string) => {
+			void copy(id, text);
+		},
+		[copy]
+	);
+
+	// Keep the sidebar's chat-activity context in sync. Fires on every change so
+	// the sidebar can show spinners, unread badges, and content-search matches.
+	useEffect(() => {
+		setActiveConversation({ conversationId, chatHistory, isLoading });
 	}, [chatHistory, conversationId, isLoading, setActiveConversation]);
 
 	// Clear activity state on unmount, guarded by conversationId so a stale
@@ -216,34 +197,23 @@ export default function ChatContainer({
 		[clearActiveConversation, conversationId]
 	);
 
-	/** Updates the controlled message state as the user types. */
-	const handleUpdateMessage = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-		setMessage({ ...message, content: e.currentTarget.value });
-	};
-
-	/** Replaces the controlled message content while preserving attachments. */
-	const handleReplaceMessageContent = (content: string): void => {
-		setMessage((currentMessage) => ({ ...currentMessage, content }));
-	};
-
-	/** Fills the composer with a suggested prompt without sending it. */
-	const handleSelectSuggestion = (prompt: string): void => {
-		setMessage({ content: prompt, files: [] });
-	};
-
 	return (
 		<ChatView
-			message={message}
-			isLoading={isLoading}
 			chatHistory={chatHistory}
-			selectedModelId={selectedModelId}
-			selectedReasoning={selectedReasoning}
-			onSendMessage={handleSendMessage}
+			copiedMessageId={copiedId}
+			isLoading={isLoading}
+			message={message}
+			onCopy={handleCopy}
+			onRegenerate={handleRegenerate}
 			onReplaceMessageContent={handleReplaceMessageContent}
 			onSelectModel={setSelectedModelId}
 			onSelectReasoning={setSelectedReasoning}
 			onSelectSuggestion={handleSelectSuggestion}
+			onSendMessage={handleSendMessage}
 			onUpdateMessage={handleUpdateMessage}
+			regeneratingIndex={regeneratingIndex}
+			selectedModelId={selectedModelId}
+			selectedReasoning={selectedReasoning}
 		/>
 	);
 }

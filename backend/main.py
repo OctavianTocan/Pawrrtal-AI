@@ -14,6 +14,10 @@ from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.api.oauth import get_oauth_router
+from app.api.personalization import get_personalization_router
+from app.api.projects import get_projects_router
+from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.core.request_logging import RequestLoggingMiddleware
@@ -84,6 +88,18 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_models_router(),
+    )
+    fastapi_app.include_router(
+        get_stt_router(),
+    )
+    fastapi_app.include_router(
+        get_projects_router(),
+    )
+    fastapi_app.include_router(
+        get_personalization_router(),
+    )
+    fastapi_app.include_router(
+        get_oauth_router(),
     )
 
     return fastapi_app

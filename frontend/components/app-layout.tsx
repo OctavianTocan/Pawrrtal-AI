@@ -32,6 +32,8 @@ import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
+import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
+import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
 import {
@@ -58,6 +60,19 @@ import {
 /** Duration of the sidebar collapse/expand CSS transition in ms. */
 const COLLAPSE_ANIMATION_DURATION_MS = 250;
 
+/**
+ * Placeholder identity rendered in the sidebar footer.
+ *
+ * The frontend has no client-side auth context yet — once a `useCurrentUser`
+ * (or equivalent) hook lands, replace this with the resolved value. Keeping
+ * the shape declared here means swapping the source is a one-line change.
+ */
+const SIDEBAR_USER: NavUserIdentity = {
+	name: 'Octavian Tocan',
+	email: 'tocanoctavian@gmail.com',
+	plan: 'Studio plan',
+};
+
 const HELP_LINKS = [
 	{ label: 'Sources', icon: DatabaseIcon },
 	{ label: 'Skills', icon: ZapIcon },
@@ -67,6 +82,13 @@ const HELP_LINKS = [
 	{ label: 'Messaging', icon: MessageSquareIcon },
 ] as const;
 
+/**
+ * Fired by the workspace dropdown's "Add Workspace..." item. Opens the
+ * three-step **workspace** onboarding modal (Welcome → Create workspace →
+ * Local workspace) — NOT the home-page personalization wizard. The two
+ * are distinct surfaces: workspace lives behind this dropdown, while
+ * personalization fires on every fresh page load.
+ */
 function handleOpenOnboarding(): void {
 	window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT));
 }
@@ -364,12 +386,13 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<>
 				<Sidebar>
 					<SidebarFocusShell className="flex h-full flex-col">
-						<SidebarHeader className="px-2 pb-2 shrink-0">
+						<SidebarHeader className="px-2 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
 							<NavChats />
 						</SidebarContent>
+						<NavUser user={SIDEBAR_USER} />
 					</SidebarFocusShell>
 				</Sidebar>
 				<div className="h-full w-full min-w-0 pt-10">
@@ -414,31 +437,81 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				}}
 			>
 				{/* Content keeps min-width so layout never reflows during collapse —
-          the panel clips via overflow:hidden and the content fades out.
-          Pointer events disabled when invisible to prevent click-dead-zones
-          per the hidden-overlay-pointer-events rule.
-          The pt-9 offsets sidebar contents so they sit below the absolute
+          the panel clips via overflow:hidden and the content slides out
+          of view (no fade) as the chat panel pushes leftward to fill the
+          space. Pointer events are disabled while collapsed so the
+          clipped content can't capture clicks bleeding past the
+          panel boundary.
+          The pt-10 offsets sidebar contents so they sit below the absolute
           AppHeader; the panel itself still extends to the top of the viewport
           so the sidebar background reads as full-height behind the header. */}
 				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
+					{/*
+					 * Inner panel content keeps its full min-w-[240px] width
+					 * and stays anchored to the LEFT edge of the parent
+					 * react-resizable-panel. As the parent shrinks during a
+					 * collapse, content clips from the RIGHT (the side closest
+					 * to the chat panel). This matches the "the whole panel
+					 * with its full size moves left and disappears off-screen"
+					 * behavior described in DESIGN.md → Motion → "Sidebar Open
+					 * / Close": titles stay put for the duration of the slide
+					 * and only the right-side metadata gets clipped first.
+					 *
+					 * Pointer events are disabled while collapsed so the
+					 * (clipped to 0px) panel can't capture stray clicks. We
+					 * intentionally do NOT translate-x on this inner div —
+					 * a translate makes the LEFT-aligned content slide off-
+					 * screen first, leaving right-aligned metadata visible
+					 * during the slide. That created the "chat panel
+					 * approaches the row titles" creeping effect.
+					 */}
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden transition-opacity duration-150 ease-out data-[state=collapsed]:pointer-events-none data-[state=collapsed]:opacity-0 data-[state=expanded]:pointer-events-auto data-[state=expanded]:opacity-100"
+						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
-						<SidebarHeader className="px-2 pb-2 shrink-0">
+						<SidebarHeader className="px-2 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
 							<NavChats />
 						</SidebarContent>
+						<NavUser user={SIDEBAR_USER} />
 					</div>
 				</SidebarFocusShell>
 			</ResizablePanel>
 
-			<ResizableHandle />
+			{/*
+			 * Constrain the handle height to match the chat panel's visible
+			 * area: mt-10 aligns the top with the chat panel below the
+			 * AppHeader (pt-10), mb-2 aligns the bottom with the chat
+			 * panel's pb-2 gap. The flex-row Group's align:stretch default
+			 * subtracts these cross-axis margins from the handle's height,
+			 * so the drag affordance + ::after hit area only cover the
+			 * panel boundary — not the header strip or the bottom margin.
+			 */}
+			<ResizableHandle className="mt-10 mb-2" />
 
-			<ResizablePanel className="h-full min-w-0">
-				<div className="h-full min-w-0 pt-10">
+			{/*
+			 * Chat panel stacks above the sidebar via z-index so its left-edge
+			 * shadow visibly casts onto the sidebar — this is what makes the
+			 * panel feel like it "closes over" the sidebar when collapsing.
+			 * overflow:visible lets the shadow escape the panel container
+			 * (react-resizable-panels otherwise clips children to the panel
+			 * box, swallowing the shadow).
+			 */}
+			<ResizablePanel
+				className="relative z-10 h-full min-w-0"
+				style={{ overflow: 'visible' }}
+			>
+				{/*
+				 * pr-2 + pb-2 leave breathing room so the floating chat
+				 * panel's right and bottom shadow layers actually paint —
+				 * without this, the panel hugs the viewport edges and the
+				 * shadow gets clipped against them. The left edge still
+				 * butts up against the sidebar so the leftward shadow
+				 * casts onto it.
+				 */}
+				<div className="h-full min-w-0 pt-10 pr-2 pb-2">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</ResizablePanel>
@@ -456,8 +529,29 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 		<SidebarProvider>
 			<SidebarFocusProvider>
 				<ChatActivityProvider>
-					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-background">
-						<OnboardingModal initialOpen={false} />
+					{/*
+					 * Root chrome uses the sidebar surface color so the area
+					 * around the floating chat panel — the AppHeader strip
+					 * across the top, plus the pr-2/pb-2 gap framing the
+					 * panel — visually reads as one continuous "outside"
+					 * surface with the sidebar. The chat panel keeps its
+					 * own bg-background, so the contrast stays.
+					 */}
+					<div className="relative flex h-svh min-h-0 w-full min-w-0 overflow-hidden bg-sidebar">
+						{/*
+						 * Personalization wizard fires on every fresh page load
+						 * while the feature is WIP — see DESIGN.md →
+						 * Components → personalization-modal. Dismissing closes
+						 * for the session only; a browser refresh re-opens it.
+						 */}
+						<OnboardingFlow initialOpen />
+						{/*
+						 * Workspace onboarding (Welcome → Create workspace →
+						 * Local workspace) is event-driven only — opens when
+						 * the user picks "Add Workspace..." in the workspace
+						 * dropdown. Never opens automatically.
+						 */}
+						<OnboardingModal initialOpen={false} listenForOpenEvent />
 						<ResizableSidebarContent>
 							<SidebarInset className="h-full min-h-0 min-w-0">
 								<div className="min-h-0 min-w-0 flex-1">{children}</div>

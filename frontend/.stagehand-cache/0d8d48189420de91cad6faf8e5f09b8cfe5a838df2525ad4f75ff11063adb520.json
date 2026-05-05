@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "Click the 'Personal Assistant' goal chip",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[1]/div[5]/div[1]/button[6]",
+      "description": "The 'Personal Assistant' goal chip button.",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "The 'Personal Assistant' goal chip button.",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[1]/div[5]/div[1]/button[6]"
+}

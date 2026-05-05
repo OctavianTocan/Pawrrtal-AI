@@ -1,10 +1,19 @@
 import type React from 'react';
+import { AppleIcon } from '@/components/brand-icons/AppleIcon';
+import { GoogleIcon } from '@/components/brand-icons/GoogleIcon';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+/** Backend OAuth start URLs the SSO buttons navigate to. */
+const OAUTH_START_URLS = {
+	google: `${API_BASE_URL}/api/v1/auth/oauth/google/start`,
+	apple: `${API_BASE_URL}/api/v1/auth/oauth/apple/start`,
+} as const;
 
 export interface LoginFormViewProps extends Omit<React.ComponentProps<'div'>, 'onSubmit'> {
 	/** Unique ID prefix for form field elements. */
@@ -107,12 +116,17 @@ export function LoginFormView({
 							</Field>
 							{/* -- Actions -- */}
 							<Field>
-								<Button type="submit" disabled={isLoading}>
+								<Button
+									className="cursor-pointer"
+									type="submit"
+									disabled={isLoading}
+								>
 									Login
 								</Button>
 								{canUseDevAdminLogin && (
 									<>
 										<Button
+											className="cursor-pointer"
 											variant="outline"
 											type="button"
 											onClick={onDevAdminLogin}
@@ -120,14 +134,41 @@ export function LoginFormView({
 										>
 											Dev Admin
 										</Button>
-										<FieldDescription className="text-center text-xs">
+										<FieldDescription className="text-center text-sm">
 											Dev-only shortcut for the seeded admin account.
 										</FieldDescription>
 									</>
 								)}
-								{/* TODO: Link to login with Google. */}
-								<Button variant="outline" type="button" disabled={isLoading}>
-									Login with Google
+								{/*
+								 * SSO buttons navigate to backend start endpoints. The
+								 * backend redirects to Google/Apple consent (when env
+								 * vars are configured) or returns 503 with a clear
+								 * "not configured" message otherwise — see
+								 * backend/app/api/oauth.py.
+								 */}
+								<Button
+									className="cursor-pointer gap-2"
+									disabled={isLoading}
+									onClick={() => {
+										window.location.href = OAUTH_START_URLS.google;
+									}}
+									type="button"
+									variant="outline"
+								>
+									<GoogleIcon className="size-4" />
+									Continue with Google
+								</Button>
+								<Button
+									className="cursor-pointer gap-2"
+									disabled={isLoading}
+									onClick={() => {
+										window.location.href = OAUTH_START_URLS.apple;
+									}}
+									type="button"
+									variant="outline"
+								>
+									<AppleIcon className="size-4" />
+									Continue with Apple
 								</Button>
 								<FieldDescription className="text-center">
 									Don&apos;t have an account? <a href="/signup">Sign up</a>

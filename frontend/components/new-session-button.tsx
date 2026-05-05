@@ -16,6 +16,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 /**
  * "New Session" header button with context menu and tooltip.
  *
+ * Uses theme `rounded-soft` (8px) — rounder than form `rounded-control` (6px),
+ * tighter than card `rounded-surface-lg` (14px).
+ *
  * Left-click navigates to the root page (creating a fresh conversation).
  * Right-click opens a context menu with an "Open in New Window" option.
  * Hover shows a ⌘N keyboard shortcut hint via tooltip.
@@ -44,7 +47,7 @@ export function NewSessionButton(): React.JSX.Element {
 							variant="ghost"
 							type="button"
 							onClick={handleNewConversation}
-							className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-[6px] shadow-minimal bg-background"
+							className="w-full justify-start gap-2 py-[7px] px-2 text-[13px] font-normal rounded-soft shadow-minimal bg-background"
 							aria-label="New Session"
 						>
 							<SquarePenRounded className="h-3.5 w-3.5 shrink-0" />
