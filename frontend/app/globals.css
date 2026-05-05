@@ -323,23 +323,52 @@
 	--destructive-text: color-mix(in oklab, var(--destructive) 50%, var(--foreground));
 	--info-text: color-mix(in oklab, var(--info) 50%, var(--foreground));
 
-	/* === SHADCN COMPATIBILITY (derived from 6 base colors) === */
+	/* === SHADCN COMPATIBILITY (derived from 6 base colors) ===
+	 *
+	 * Every token below derives from `--background` / `--foreground` /
+	 * `--accent` so a preset swap (Mistral → Cursor) re-tints the
+	 * entire dark surface stack instead of only the page background.
+	 *
+	 * Why derived (not literal): the previous version pinned cards,
+	 * popovers, sidebars, borders, and muted text to fixed oklch
+	 * literals. Switching presets in dark mode visibly only changed
+	 * `--background` + `--accent`, while every other surface stayed at
+	 * the AI Nexus default — making distinct presets look basically
+	 * the same in dark mode (E2E preset-comparison report on
+	 * 2026-05-05 confirmed 6/7 derived slots collapsed to identical
+	 * literal values across presets).
+	 *
+	 * Lightening cards/popovers via `calc(l + 0.04)` mirrors the
+	 * "elevated surface" look the literal palette had (~oklch 0.248
+	 * on top of an oklch 0.205 background = ~+0.043 lightness),
+	 * preserving the visual rhythm while inheriting the preset's
+	 * underlying hue and chroma.
+	 */
 	--primary: var(--accent);
-	/* Light text on blue primary surfaces */
-	--primary-foreground: oklch(0.99 0.004 252);
-	--secondary: oklch(0.268 0.01 264);
+	/* Light text on accent primary surfaces — derived from accent so
+	 * a colored CTA always renders readable text regardless of preset. */
+	--primary-foreground: oklch(from var(--accent) calc(1 - l + 0.05) calc(c * 0.05) h);
+	/* Subtly elevated muted/secondary surfaces — pull from the user's
+	 * background and lift it +0.04 lightness so cards stand off the
+	 * page. Chroma + hue inherit from `--background` so warm-cream
+	 * presets get warm cards, cool-grey presets get cool cards. */
+	--secondary: oklch(from var(--background) calc(l + 0.04) c h);
 	--secondary-foreground: var(--foreground);
-	/* Muted panels ~#222222-adjacent */
-	--muted: oklch(0.268 0.01 264);
-	/* Secondary/muted copy ~#8B949E */
-	--muted-foreground: oklch(0.662 0.018 252);
-	--card: oklch(0.248 0.011 264);
+	--muted: oklch(from var(--background) calc(l + 0.04) c h);
+	/* Mid-tone copy — interpolates 60% toward foreground for a
+	 * proper secondary-text feel. */
+	--muted-foreground: var(--foreground-60);
+	/* Card / popover surfaces — same +0.04 lightness lift, kept
+	 * separate from `--secondary` so they can be tuned independently
+	 * if a future spec asks for it. */
+	--card: oklch(from var(--background) calc(l + 0.04) c h);
 	--card-foreground: var(--foreground);
-	--popover: oklch(0.248 0.011 264);
+	--popover: oklch(from var(--background) calc(l + 0.05) c h);
 	--popover-foreground: var(--foreground);
-	/* Border ~#30363D */
-	--border: oklch(0.345 0.015 262);
-	--input: oklch(0.268 0.01 264);
+	/* Borders + inputs — foreground at low opacity, so they tint
+	 * with whatever ink color the preset uses. */
+	--border: oklch(from var(--foreground) l c h / 0.14);
+	--input: oklch(from var(--foreground) l c h / 0.1);
 	--ring: oklch(from var(--accent) l c h / 0.45);
 
 	/* Sidebar tokens */
