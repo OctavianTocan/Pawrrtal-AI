@@ -62,6 +62,31 @@ class Settings(BaseSettings):
     admin_email: str | None = None
     admin_password: str | None = None
 
+    # --- OAuth: Google ---
+    # Set both to enable the "Continue with Google" button on the login
+    # page. When either is empty the start endpoint returns 503 with a
+    # clear "not configured" message. Get these from the Google Cloud
+    # Console: https://console.cloud.google.com/apis/credentials
+    google_oauth_client_id: str = ""
+    google_oauth_client_secret: str = ""
+    # Where Google redirects back to after auth. Must be an authorized
+    # redirect URI on the OAuth client. Default targets local dev.
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
+
+    # --- OAuth: Apple ---
+    # Apple Sign In requires four pieces: services ID (acts as client_id),
+    # team ID, key ID, and the .p8 private key contents. Set all four to
+    # enable the "Continue with Apple" button.
+    apple_oauth_client_id: str = ""
+    apple_oauth_team_id: str = ""
+    apple_oauth_key_id: str = ""
+    apple_oauth_private_key: str = ""
+    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
+
+    # Where to send the user after a successful OAuth sign-in. Override in
+    # production to point at the deployed frontend (e.g. https://app/...).
+    oauth_post_login_redirect: str = "http://localhost:3001/"
+
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
