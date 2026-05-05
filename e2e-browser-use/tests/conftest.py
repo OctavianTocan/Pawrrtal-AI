@@ -42,12 +42,31 @@ HEADLESS = os.environ.get("BROWSER_USE_HEADLESS", "1") not in {"0", "false", "Fa
 
 
 def _select_llm() -> BaseChatModel | None:
-    """Pick the cheapest available LLM based on configured env keys.
+    """Pick an LLM based on configured env keys.
 
-    Returns ``None`` when neither key is set, which fixtures use to
-    skip the whole suite with an actionable message rather than
-    failing in a confusing way mid-test.
+    Resolution order (first match wins):
+      1. ``ZAI_API_KEY`` -> GLM-5V-Turbo via Z.AI's OpenAI-compatible
+         endpoint. Multimodal coding/agent foundation model designed
+         for UI-driving workflows; cheap + has a free tier.
+         Vision-capable so browser-use's screenshot loop works without
+         ``use_vision=False``.
+      2. ``OPENAI_API_KEY``    -> gpt-4o-mini.
+      3. ``ANTHROPIC_API_KEY`` -> claude-haiku-4-5.
+
+    Returns ``None`` when no key is set so fixtures can skip the whole
+    suite with an actionable message rather than failing in a confusing
+    way mid-test.
     """
+    if os.environ.get("ZAI_API_KEY"):
+        # Z.AI exposes an OpenAI-compatible REST surface; ChatOpenAI's
+        # ``base_url`` + ``api_key`` kwargs let us reuse it without a
+        # new client class. Endpoint per
+        # https://docs.z.ai/api-reference/llm/chat-completion.
+        return ChatOpenAI(
+            model="glm-5v-turbo",
+            base_url="https://api.z.ai/api/paas/v4/",
+            api_key=os.environ["ZAI_API_KEY"],
+        )
     if os.environ.get("OPENAI_API_KEY"):
         return ChatOpenAI(model="gpt-4o-mini")
     if os.environ.get("ANTHROPIC_API_KEY"):
@@ -110,8 +129,10 @@ def llm() -> BaseChatModel:
     model = _select_llm()
     if model is None:
         pytest.skip(
-            "browser-use tests need an LLM. "
-            "Set OPENAI_API_KEY (cheapest) or ANTHROPIC_API_KEY in your environment.",
+            "browser-use tests need an LLM. Set one of: "
+            "ZAI_API_KEY (recommended -> GLM-5V-Turbo, has a free tier), "
+            "OPENAI_API_KEY (-> gpt-4o-mini), or "
+            "ANTHROPIC_API_KEY (-> claude-haiku-4-5).",
             allow_module_level=False,
         )
     return model

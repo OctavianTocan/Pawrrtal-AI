@@ -21,13 +21,20 @@ Playwright suite — different tools for different jobs:
    just dev   # starts FastAPI on :8000 + Next.js on :3001
    ```
 
-2. Set an LLM key in your shell or `.env`:
+2. Set an LLM key in your shell or `.env`. Recommended → Z.AI's
+   GLM-5V-Turbo: free tier, vision-capable, agent/coding-tuned,
+   OpenAI-compatible. Get a key at [docs.z.ai](https://docs.z.ai/).
 
    ```bash
-   export OPENAI_API_KEY=sk-…       # cheapest (gpt-4o-mini)
+   export ZAI_API_KEY=…             # recommended → GLM-5V-Turbo
    # or
-   export ANTHROPIC_API_KEY=sk-ant-… # fallback (claude-haiku-4-5)
+   export OPENAI_API_KEY=sk-…       # → gpt-4o-mini
+   # or
+   export ANTHROPIC_API_KEY=sk-ant-… # → claude-haiku-4-5
    ```
+
+   Resolution order is `ZAI_API_KEY` → `OPENAI_API_KEY` →
+   `ANTHROPIC_API_KEY`; first match wins.
 
 3. Run the suite:
 
