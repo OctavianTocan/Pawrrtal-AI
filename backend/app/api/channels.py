@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -120,8 +120,43 @@ def get_channels_router() -> APIRouter:
         """
         await delete_binding(user_id=user.id, provider=_TELEGRAM, session=session)
 
-    # BEAN: webhook receiver lives in app/integrations/telegram/bot.py once
-    # that module lands; it will register a route here only when
-    # settings.telegram_mode == "webhook".
+    @router.post(
+        "/telegram/webhook",
+        status_code=status.HTTP_204_NO_CONTENT,
+        include_in_schema=False,
+    )
+    async def telegram_webhook(
+        request: Request,
+        x_telegram_bot_api_secret_token: str | None = Header(default=None),
+    ) -> None:
+        """Receive a single update from Telegram in webhook mode.
+
+        Skipped entirely when the deployment runs in polling mode (the
+        ``app.state.telegram_service`` slot will be ``None`` because the
+        lifespan never wired one up). Also rejects any request whose
+        ``X-Telegram-Bot-Api-Secret-Token`` header doesn't match the
+        configured secret — standard Telegram webhook hardening.
+        """
+        service = getattr(request.app.state, "telegram_service", None)
+        if service is None or settings.telegram_mode != "webhook":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Telegram webhook is not enabled on this deployment.",
+            )
+        if (
+            settings.telegram_webhook_secret
+            and x_telegram_bot_api_secret_token != settings.telegram_webhook_secret
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Bad webhook secret.",
+            )
+        # Local import keeps aiogram out of the import graph for
+        # deployments that don't run the channel.
+        from aiogram.types import Update  # noqa: PLC0415
+
+        body = await request.json()
+        update = Update.model_validate(body)
+        await service.feed_webhook_update(update)
 
     return router
