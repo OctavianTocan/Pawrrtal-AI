@@ -21,9 +21,51 @@ import { StepPersonality } from './step-personality';
 /** Browser event used by app chrome to open the onboarding flow. */
 export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
 
+/**
+ * Localstorage flag + query-string param that suppress the auto-open
+ * onboarding modal entirely. Used by the E2E suite so Stagehand-driven
+ * specs can land directly on `/` without first having to walk through
+ * the 4-step wizard. The wizard is mounted at app-layout level with
+ * `initialOpen=true`, has no Escape close, and burns ~3 minutes + a lot
+ * of LLM tokens to traverse — gating it here keeps the chat / sidebar /
+ * tool E2Es fast and deterministic.
+ *
+ * Triggered by either:
+ *   - `localStorage.setItem('ai-nexus:e2e-skip-onboarding', '1')` (set
+ *     by `fixtures.ts` via an `addInitScript` before navigation), OR
+ *   - visiting any URL with `?e2e_skip_onboarding=1` (manual debugging).
+ *
+ * The wizard remains usable in production: nothing fires unless one of
+ * those signals is present, and the workspace selector's "Add Workspace"
+ * dropdown still opens the (separate) `OnboardingModal` either way.
+ */
+export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'ai-nexus:e2e-skip-onboarding';
+export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
+
 /** Wizard step IDs in render order. */
 const STEP_IDS = ['identity', 'context', 'personality', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
+
+/**
+ * Returns true when the current page should suppress the auto-open
+ * onboarding wizard (E2E test mode). Safe to call on the server — the
+ * `window` guard returns false during SSR so React hydrates with the
+ * production-default state and we flip to "skip" on first client paint
+ * (which then runs before any user interaction is possible).
+ */
+function shouldSkipOnboardingForE2E(): boolean {
+	if (typeof window === 'undefined') return false;
+	try {
+		if (window.localStorage.getItem(E2E_SKIP_ONBOARDING_STORAGE_KEY) === '1') {
+			return true;
+		}
+	} catch {
+		// localStorage may throw in private browsing — fall through to
+		// the URL check rather than crashing the whole app.
+	}
+	const searchParams = new URLSearchParams(window.location.search);
+	return searchParams.get(E2E_SKIP_ONBOARDING_QUERY_PARAM) === '1';
+}
 
 /** Props for {@link OnboardingFlow}. */
 export interface OnboardingFlowProps {
@@ -49,7 +91,16 @@ export function OnboardingFlow({
 	initialOpen = false,
 	listenForOpenEvent = true,
 }: OnboardingFlowProps): React.JSX.Element {
-	const [open, setOpen] = useState(initialOpen);
+	// Lazy initializer: read the E2E skip flag exactly once on mount.
+	// During SSR `shouldSkipOnboardingForE2E` returns false so the dialog
+	// hydrates closed (no flash); on the client we re-check synchronously
+	// before the first paint so the modal never visibly appears in test
+	// mode. Production users' `initialOpen=true` survives unchanged
+	// because the skip helper short-circuits to false without the flag.
+	const [open, setOpen] = useState<boolean>(() => {
+		if (initialOpen && shouldSkipOnboardingForE2E()) return false;
+		return initialOpen;
+	});
 	const [step, setStep] = useState<StepId>('identity');
 	const remotePersonalization = useGetPersonalization();
 	const upsertPersonalization = useUpsertPersonalization();
@@ -107,6 +158,11 @@ export function OnboardingFlow({
 
 	useEffect(() => {
 		if (!listenForOpenEvent) return;
+		// Honor the same E2E skip flag for the event-driven open path so
+		// a stray "Add Workspace" click during a test can't accidentally
+		// re-open the wizard. The legacy workspace OnboardingModal lives
+		// in a separate component and is unaffected.
+		if (shouldSkipOnboardingForE2E()) return;
 		const handler = (): void => {
 			setStep('identity');
 			setProfile(loadPersonalizationProfile());

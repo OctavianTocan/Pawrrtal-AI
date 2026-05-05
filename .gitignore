@@ -38,6 +38,15 @@ htmlcov/
 junit.xml
 test-results/
 playwright-report/
+# Stagehand E2E auxiliary artifacts:
+#   - `.trace-extract/` is the temp dir created by the GIF afterEach
+#     hook in `frontend/e2e/stagehand/fixtures.ts` to unzip trace.zip.
+#   - `**/run.gif` is the per-test GIF artifact (also lives under
+#     test-results/, but pattern protects against stragglers).
+#   - `.stagehand-cache/` is NOT ignored — it's committed so CI shares
+#     the warm Stagehand action cache (per the suite's README).
+**/.trace-extract/
+**/run.gif
 
 # next.js
 /.next/
