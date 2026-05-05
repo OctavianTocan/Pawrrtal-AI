@@ -5,7 +5,7 @@
  */
 
 import type { Metadata } from 'next';
-import { Newsreader } from 'next/font/google';
+import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
@@ -25,6 +25,24 @@ const newsreader = Newsreader({
 	display: 'swap',
 });
 
+/**
+ * Geist + Geist Mono — preloaded so the Cursor preset's typography
+ * actually renders the moment the user picks it. The fonts cite
+ * themselves by name (`"Geist"`, `"Geist Mono"`) inside the preset's
+ * font stack, so as long as the families are resident in the DOM, the
+ * preset paints correctly.
+ */
+const geist = Geist({
+	subsets: ['latin'],
+	variable: '--font-geist-loaded',
+	display: 'swap',
+});
+const geistMono = Geist_Mono({
+	subsets: ['latin'],
+	variable: '--font-geist-mono-loaded',
+	display: 'swap',
+});
+
 export const metadata: Metadata = {
 	title: 'AI Nexus',
 	description:
@@ -40,7 +58,11 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning className={newsreader.variable}>
+		<html
+			lang="en"
+			suppressHydrationWarning
+			className={`${newsreader.variable} ${geist.variable} ${geistMono.variable}`}
+		>
 			{/*
 				suppressHydrationWarning is required because the blocking theme script
 				below may add the 'dark' class to <html> before React hydration, causing

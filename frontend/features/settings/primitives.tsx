@@ -160,11 +160,51 @@ export function SettingsCard({
 						<h3 className="text-sm font-semibold text-foreground">{title}</h3>
 					) : null}
 					{description ? (
-						<p className="text-sm text-muted-foreground">{description}</p>
+						<p className="text-pretty text-sm text-muted-foreground">{description}</p>
 					) : null}
 				</header>
 			) : null}
 			<div className="flex flex-col">{children}</div>
 		</section>
+	);
+}
+
+/** Props for the consistent settings-section header. */
+export type SettingsSectionHeaderProps = {
+	/** Section heading rendered on the left. */
+	title: React.ReactNode;
+	/** Sub-line under the title (small, muted, `text-pretty`). */
+	description?: React.ReactNode;
+	/** Right-aligned actions / pickers (e.g. preset selector, mode toggle). */
+	actions?: React.ReactNode;
+};
+
+/**
+ * Standard top-of-card header used by every section / sub-section
+ * across Settings — title (`text-sm font-semibold`), description
+ * (`text-xs text-muted-foreground text-pretty`), and an optional
+ * right-aligned actions slot. Centralised so every section shares the
+ * exact same vertical rhythm and type rules — no more bespoke
+ * one-off headers.
+ *
+ * Use INSIDE a `SettingsCard` (not as a replacement for it). The
+ * `SettingsCard` handles the rounded surface; this primitive renders
+ * the header row with its bottom hairline.
+ */
+export function SettingsSectionHeader({
+	title,
+	description,
+	actions,
+}: SettingsSectionHeaderProps): React.JSX.Element {
+	return (
+		<header className="flex items-start justify-between gap-3 border-b border-foreground/5 pt-1 pb-3">
+			<div className="flex min-w-0 flex-col gap-0.5">
+				<span className="text-sm font-semibold text-foreground">{title}</span>
+				{description ? (
+					<span className="text-pretty text-xs text-muted-foreground">{description}</span>
+				) : null}
+			</div>
+			{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+		</header>
 	);
 }

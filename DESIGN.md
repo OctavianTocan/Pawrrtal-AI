@@ -512,6 +512,22 @@ fall back to the prose below for behavioral notes.
   styling for long-form output.
 - **`step-icon`** — Onboarding step iconography. 64px square, 16px radius,
   inverse fill (foreground on background-inverse). Inner glyph is 32px.
+- **`select-button`** — Project-internal compact picker (see
+  `frontend/components/ui/select-button.tsx`). Trigger is a `Button`
+  with `bg-foreground/[0.04]` ghost styling, `rounded-[7px]`,
+  `h-8`, chevron right. Popover reuses `chat-composer-dropdown-menu`
+  so the model picker, theme preset picker, and any future picker
+  share visual chrome. **Use this instead of native `<select>`** for
+  every dropdown across the app.
+- **`settings-section-header`** — Standard top-of-card header used by
+  every Settings section (see
+  `frontend/features/settings/primitives.tsx`). Title is
+  `text-sm font-semibold text-foreground`, description is
+  `text-xs text-muted-foreground text-pretty`, optional right-aligned
+  actions slot. Bottom hairline, `pb-3`. **Every Settings section MUST
+  use this** — bespoke headers are a consistency bug. Apply inside a
+  `SettingsCard`; the card handles the rounded surface and the header
+  handles the layout.
 - **`button-primary`** / **`button-secondary`** — Buttons follow the flat
   default (`rounded.none`). Primary fills with accent; secondary inherits
   the page background and relies on `shadow-thin` for definition.

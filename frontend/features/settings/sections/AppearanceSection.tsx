@@ -28,6 +28,7 @@ import {
 	useState,
 } from 'react';
 import { Input } from '@/components/ui/input';
+import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
 import {
 	type AppearanceFonts,
 	type AppearanceOptions,
@@ -41,11 +42,12 @@ import {
 	THEME_PRESETS,
 	type ThemeColors,
 	type ThemeMode,
+	type ThemePreset,
 	useAppearance,
 	useUpdateAppearance,
 } from '@/features/appearance';
 import { cn } from '@/lib/utils';
-import { SettingsCard, SettingsRow, Slider, Switch } from '../primitives';
+import { SettingsCard, SettingsRow, SettingsSectionHeader, Slider, Switch } from '../primitives';
 
 /** Debounce window for color hex / font family inputs. Tuned to feel
  *  responsive (under the Doherty 400ms threshold) while not flooding
@@ -318,81 +320,71 @@ function FontRow({
 
 interface ThemeColorCardProps {
 	heading: string;
+	description: string;
 	overrides: ThemeColors;
 	resolvedColors: Record<ColorSlot, string>;
 	defaults: Record<ColorSlot, string>;
+	mode: 'light' | 'dark';
 	onSlotCommit: (slot: ColorSlot, next: string | null) => void;
-	onPresetSelect: (presetId: string) => void;
-	onResetMode: () => void;
+	onPresetApply: (preset: ThemePreset) => void;
 	footer?: ReactNode;
 }
 
-/** Sentinel ids the preset dropdown ships with. Real presets get their
- *  own slug-based ids from `themes:build`. */
-const PRESET_RESET_VALUE = '__reset__';
-const PRESET_PLACEHOLDER_VALUE = '__placeholder__';
-
-/** Renders one of the two themed cards (Light / Dark) with its 6 color
- *  rows + a `<select>` to apply a preset (or reset all six slots). */
+/**
+ * Renders one of the two themed cards (Light / Dark) with its 6 color
+ * rows + a header-level preset picker that swaps THIS mode's palette
+ * (independent from the other mode's). Picking "Mistral" in Light
+ * leaves Dark untouched, so the user can mix-and-match.
+ */
 function ThemeColorCard({
 	heading,
+	description,
 	overrides,
 	resolvedColors,
 	defaults,
+	mode,
 	onSlotCommit,
-	onPresetSelect,
-	onResetMode,
+	onPresetApply,
 	footer,
 }: ThemeColorCardProps): React.JSX.Element {
-	const handleSelectChange = useCallback(
-		(event: ChangeEvent<HTMLSelectElement>) => {
-			const next = event.target.value;
-			if (next === PRESET_PLACEHOLDER_VALUE) return;
-			if (next === PRESET_RESET_VALUE) {
-				onResetMode();
-				return;
-			}
-			onPresetSelect(next);
+	const options = useMemo<SelectButtonOption[]>(
+		() =>
+			THEME_PRESETS.map((preset) => ({
+				id: preset.id,
+				label: preset.name,
+				description: preset.description,
+				leading: (
+					<span
+						aria-hidden="true"
+						className="size-3 rounded-full border border-foreground/15"
+						style={{ backgroundColor: preset[mode].accent }}
+					/>
+				),
+			})),
+		[mode]
+	);
+	const handleSelect = useCallback(
+		(presetId: string) => {
+			const preset = THEME_PRESETS.find((entry) => entry.id === presetId);
+			if (preset) onPresetApply(preset);
 		},
-		[onPresetSelect, onResetMode]
+		[onPresetApply]
 	);
 
 	return (
 		<SettingsCard>
-			<header className="flex items-center justify-between gap-3 border-b border-foreground/5 pb-2">
-				<span className="text-sm font-semibold text-foreground">{heading}</span>
-				<div className="relative">
-					{/* Native <select> — keyboard-friendly, themable via the
-					 *  cascade, and the OS-native picker UI. The visible
-					 *  text shows the active preset id; the selected option
-					 *  resets to the placeholder after each apply so the
-					 *  user can re-apply the same preset to wipe edits. */}
-					<select
-						aria-label={`${heading} preset`}
-						className={cn(
-							'cursor-pointer appearance-none rounded-[6px] border border-foreground/10 bg-foreground/[0.03] py-1 pr-7 pl-2 text-xs text-foreground',
-							'transition-colors duration-150 ease-out hover:border-foreground/20 hover:bg-foreground/[0.05]',
-							'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
-						)}
-						defaultValue={PRESET_PLACEHOLDER_VALUE}
-						onChange={handleSelectChange}
-					>
-						<option value={PRESET_PLACEHOLDER_VALUE}>Apply preset…</option>
-						{THEME_PRESETS.map((preset) => (
-							<option key={preset.id} value={preset.id}>
-								{preset.name}
-							</option>
-						))}
-						<option value={PRESET_RESET_VALUE}>Reset to defaults</option>
-					</select>
-					<span
-						aria-hidden="true"
-						className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground"
-					>
-						▾
-					</span>
-				</div>
-			</header>
+			<SettingsSectionHeader
+				actions={
+					<SelectButton
+						ariaLabel={`${heading} preset`}
+						onSelect={handleSelect}
+						options={options}
+						triggerLabel="Apply preset"
+					/>
+				}
+				description={description}
+				title={heading}
+			/>
 			{COLOR_SLOTS.map((slot) => (
 				<ColorRow
 					defaultValue={defaults[slot]}
@@ -480,77 +472,75 @@ export function AppearanceSection(): React.JSX.Element {
 	const pointerCursors = resolved.options.pointer_cursors;
 	const translucentSidebar = resolved.options.translucent_sidebar;
 
-	const applyPresetByIdToMode = useCallback(
-		(mode: 'light' | 'dark', presetId: string) => {
-			const preset = THEME_PRESETS.find((entry) => entry.id === presetId);
-			if (!preset) return;
-			if (mode === 'light') {
-				const nextLight: ThemeColors = { ...overrides.light, ...preset.colors };
-				const nextFonts: AppearanceFonts = { ...overrides.fonts, ...preset.fonts };
-				updateAppearance(
-					buildPayload(nextLight, overrides.dark, nextFonts, overrides.options)
-				);
-			} else {
-				const nextDark: ThemeColors = { ...overrides.dark, ...preset.colors };
-				const nextFonts: AppearanceFonts = { ...overrides.fonts, ...preset.fonts };
-				updateAppearance(
-					buildPayload(overrides.light, nextDark, nextFonts, overrides.options)
-				);
-			}
+	const applyLightPreset = useCallback(
+		(preset: ThemePreset) => {
+			updateAppearance(
+				buildPayload(preset.light, overrides.dark, preset.fonts, overrides.options)
+			);
 		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
+		[overrides.dark, overrides.options, updateAppearance]
 	);
 
-	const resetMode = useCallback(
-		(mode: 'light' | 'dark') => {
-			const nextLight: ThemeColors = mode === 'light' ? {} : overrides.light;
-			const nextDark: ThemeColors = mode === 'dark' ? {} : overrides.dark;
-			updateAppearance(buildPayload(nextLight, nextDark, overrides.fonts, overrides.options));
+	const applyDarkPreset = useCallback(
+		(preset: ThemePreset) => {
+			updateAppearance(
+				buildPayload(overrides.light, preset.dark, preset.fonts, overrides.options)
+			);
 		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
+		[overrides.light, overrides.options, updateAppearance]
 	);
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-10">
+			{/* Outer page title — matches the GeneralSection / UsageSection
+			 *  pattern so every Settings panel opens with the same vertical
+			 *  rhythm. h1 carries the section name; the SettingsCard
+			 *  beneath uses SettingsSectionHeader for sub-headings. */}
+			<header>
+				<h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
+					Appearance
+				</h1>
+			</header>
+
 			<SettingsCard>
-				<header className="flex items-center justify-between border-b border-foreground/5 pb-2">
-					<div className="flex flex-col">
-						<span className="text-sm font-semibold text-foreground">Theme</span>
-						<span className="text-xs text-muted-foreground">
-							Use light, dark, or match your system. Defaults to the AI Nexus sunset
-							palette.
-						</span>
-					</div>
-					<ThemeModeToggle
-						onChange={(mode) => setOption('theme_mode', mode)}
-						value={themeMode}
-					/>
-				</header>
+				<SettingsSectionHeader
+					actions={
+						<ThemeModeToggle
+							onChange={(mode) => setOption('theme_mode', mode)}
+							value={themeMode}
+						/>
+					}
+					description="Use light, dark, or match your system. Light and dark themes can be picked from different presets independently."
+					title="Theme"
+				/>
 			</SettingsCard>
 
 			<ThemeColorCard
 				defaults={DEFAULT_APPEARANCE.light}
+				description="Palette applied when the active theme is light. Pick a preset or fine-tune any of the six semantic slots."
 				heading="Light theme"
-				onPresetSelect={(id) => applyPresetByIdToMode('light', id)}
-				onResetMode={() => resetMode('light')}
+				mode="light"
+				onPresetApply={applyLightPreset}
 				onSlotCommit={setLightSlot}
 				overrides={overrides.light}
 				resolvedColors={resolved.light}
 			/>
 			<ThemeColorCard
 				defaults={DEFAULT_APPEARANCE.dark}
+				description="Palette applied when the active theme is dark. Pick a preset or fine-tune any of the six semantic slots."
 				heading="Dark theme"
-				onPresetSelect={(id) => applyPresetByIdToMode('dark', id)}
-				onResetMode={() => resetMode('dark')}
+				mode="dark"
+				onPresetApply={applyDarkPreset}
 				onSlotCommit={setDarkSlot}
 				overrides={overrides.dark}
 				resolvedColors={resolved.dark}
 			/>
 
 			<SettingsCard>
-				<header className="flex items-center justify-between border-b border-foreground/5 pb-2">
-					<span className="text-sm font-semibold text-foreground">Typography</span>
-				</header>
+				<SettingsSectionHeader
+					description="Font families and base size that drive the type system across the app."
+					title="Typography"
+				/>
 				{FONT_SLOTS.map((slot) => (
 					<FontRow
 						defaultValue={DEFAULT_APPEARANCE.fonts[slot]}
@@ -561,7 +551,7 @@ export function AppearanceSection(): React.JSX.Element {
 					/>
 				))}
 				<SettingsRow
-					description="Adjust the base size used for the AI Nexus UI. Drives every rem-denominated value."
+					description="Drives every rem-denominated value across the app."
 					label="UI font size"
 				>
 					<div className="flex items-center gap-2">
@@ -583,9 +573,10 @@ export function AppearanceSection(): React.JSX.Element {
 			</SettingsCard>
 
 			<SettingsCard>
-				<header className="flex items-center justify-between border-b border-foreground/5 pb-2">
-					<span className="text-sm font-semibold text-foreground">Behavior</span>
-				</header>
+				<SettingsSectionHeader
+					description="Interaction defaults that aren't tied to a specific palette or font."
+					title="Behavior"
+				/>
 				<SettingsRow
 					description="Change the cursor to a pointer when hovering over interactive elements"
 					label="Use pointer cursors"

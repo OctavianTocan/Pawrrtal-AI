@@ -15,8 +15,8 @@ export {
 	DEFAULT_OPTIONS,
 } from './defaults';
 export { resolveAppearance } from './merge';
-export type { ThemePreset } from './presets.generated';
-export { THEME_PRESETS } from './presets.generated';
+export type { ThemePreset } from './presets';
+export { findPreset, THEME_PRESETS } from './presets';
 export {
 	APPEARANCE_QUERY_KEY,
 	useAppearance,

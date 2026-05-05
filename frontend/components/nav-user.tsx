@@ -38,7 +38,6 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -88,14 +87,15 @@ function getInitials(name: string): string {
 /**
  * Sidebar profile button + account dropdown.
  *
- * Renders nothing while the desktop sidebar is collapsed — the trigger row
- * relies on having horizontal room for the name + plan label, and the
- * collapsed shell clips down to an icon rail width.
+ * Stays mounted while the sidebar is collapsing so the user chip rides
+ * the slide animation out to the left along with the rest of the
+ * sidebar contents. The previous early-return-on-collapse caused the
+ * chip to vanish the instant the user clicked the toggle, before the
+ * 200ms slide had even started — visually jarring.
  *
  * @param user - Identity rendered in the trigger and dropdown header.
  */
-export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element | null {
-	const { state, isMobile } = useSidebar();
+export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element {
 	const router = useRouter();
 	const fetcher = useAuthedFetch();
 	const queryClient = useQueryClient();
@@ -121,7 +121,10 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 		}
 	};
 
-	if (!isMobile && state === 'collapsed') return null;
+	// Desktop relies on the parent `<ResizablePanel>`'s `overflow:hidden`
+	// to clip the chip out as the panel slides to zero width — keeping
+	// the component mounted lets it participate in the slide animation
+	// instead of disappearing instantly.
 
 	return (
 		// Top border = the requested separator above the profile row.

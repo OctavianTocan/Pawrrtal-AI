@@ -77,10 +77,12 @@ describe('AppearanceSection', () => {
 		render(<AppearanceSection />, { wrapper: Wrapper });
 
 		await waitFor(() => {
-			expect(screen.getByRole('button', { name: /Light/ })).toBeTruthy();
+			// Mode toggles use aria-pressed; preset triggers don't, so this
+			// scopes us to just the mode switcher.
+			expect(screen.getByRole('button', { pressed: false, name: /^Light$/ })).toBeTruthy();
 		});
-		expect(screen.getByRole('button', { name: /Dark/ })).toBeTruthy();
-		expect(screen.getByRole('button', { name: /System/ })).toBeTruthy();
+		expect(screen.getByRole('button', { pressed: false, name: /^Dark$/ })).toBeTruthy();
+		expect(screen.getByRole('button', { pressed: true, name: /^System$/ })).toBeTruthy();
 	});
 
 	it('dispatches a PUT mutation when a different theme mode is selected', async () => {
@@ -89,11 +91,11 @@ describe('AppearanceSection', () => {
 		render(<AppearanceSection />, { wrapper: Wrapper });
 
 		await waitFor(() => {
-			expect(screen.getByRole('button', { name: /Dark/ })).toBeTruthy();
+			expect(screen.getByRole('button', { pressed: false, name: /^Dark$/ })).toBeTruthy();
 		});
 
 		mockResponse(EMPTY_SETTINGS);
-		fireEvent.click(screen.getByRole('button', { name: /Dark/ }));
+		fireEvent.click(screen.getByRole('button', { pressed: false, name: /^Dark$/ }));
 
 		await waitFor(() => {
 			expect(mockAuthedFetch).toHaveBeenCalledWith(
@@ -102,8 +104,6 @@ describe('AppearanceSection', () => {
 			);
 		});
 
-		// Find the PUT call specifically — the mutation's invalidate-on-
-		// settle triggers a follow-up GET that lands at `mock.calls.at(-1)`.
 		const putCall = mockAuthedFetch.mock.calls.find(
 			(call) => (call[1] as RequestInit | undefined)?.method === 'PUT'
 		);
@@ -128,37 +128,14 @@ describe('AppearanceSection', () => {
 		expect(screen.getByDisplayValue('16')).toBeTruthy();
 	});
 
-	it('exposes a per-mode preset picker that PUTs an empty colors payload on reset', async () => {
+	it('exposes a per-mode preset picker for both Light and Dark cards', async () => {
 		mockResponse(EMPTY_SETTINGS);
 		const Wrapper = createWrapper();
 		render(<AppearanceSection />, { wrapper: Wrapper });
 
-		// Two preset selects (one per theme card). Wait for them to mount.
 		await waitFor(() => {
-			expect(screen.getAllByRole('combobox', { name: /preset/ }).length).toBe(2);
+			expect(screen.getByRole('button', { name: 'Light theme preset' })).toBeTruthy();
 		});
-
-		mockResponse(EMPTY_SETTINGS);
-		const lightSelect = screen.getAllByRole('combobox', { name: /preset/ })[0];
-		expect(lightSelect).toBeDefined();
-		fireEvent.change(lightSelect as HTMLSelectElement, {
-			target: { value: '__reset__' },
-		});
-
-		await waitFor(() => {
-			const putCall = mockAuthedFetch.mock.calls.find(
-				(call) => (call[1] as RequestInit | undefined)?.method === 'PUT'
-			);
-			expect(putCall).toBeDefined();
-		});
-
-		const putCall = mockAuthedFetch.mock.calls.find(
-			(call) => (call[1] as RequestInit | undefined)?.method === 'PUT'
-		);
-		const body = (putCall?.[1] as RequestInit | undefined)?.body as string | undefined;
-		expect(body).toBeDefined();
-		const parsed = JSON.parse(body ?? '{}') as { light: Record<string, unknown> };
-		// Reset clears the light mode's overrides (light should be {}).
-		expect(parsed.light).toEqual({});
+		expect(screen.getByRole('button', { name: 'Dark theme preset' })).toBeTruthy();
 	});
 });
