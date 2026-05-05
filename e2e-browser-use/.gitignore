@@ -1,7 +1,0 @@
-.venv/
-.pytest_cache/
-__pycache__/
-*.pyc
-storage_state*.json
-.browser-use/
-agent_history/

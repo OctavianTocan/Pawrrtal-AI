@@ -62,7 +62,19 @@ dist/
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+# IDEs / editors that aren't already covered above
+.idea/
+*.swp
+*.swo
+*~
+# uv tool cache (per-developer; not the project lockfile, which IS tracked)
+.uv-cache/
+# Stagehand fixture's per-test screenshot dir used to feed ffmpeg.
+# Lives under test-results/<spec>/.frames/ so it's transitively ignored
+# by the test-results/ pattern, but explicit is better than implicit.
+**/.frames/
 
 # debug
 npm-debug.log*
