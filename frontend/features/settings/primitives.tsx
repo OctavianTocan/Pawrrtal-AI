@@ -21,8 +21,55 @@
  */
 
 import { Slider as SliderPrimitive, Switch as SwitchPrimitive } from 'radix-ui';
-import { type ChangeEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
+import { type ChangeEvent, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
+
+/**
+ * Pick a near-black or near-white foreground that contrasts against
+ * `background`.
+ *
+ * Why luminance over `mix-blend-mode: difference`: difference inverts
+ * each channel (255 - bg), so a mid-tone pill (e.g. `#3fa760` —
+ * Success green) maps to roughly `(192, 88, 159)` against white-with-
+ * difference, which lands as a muddy mid-tone instead of a readable
+ * label. Real luminance (BT.709) tells us whether the surface is
+ * "light" or "dark" and we pick a strong contrasting flat color
+ * instead — predictable on every preset, including warm greens and
+ * oranges.
+ *
+ * Falls back to `#fafafa` when the canvas can't parse `background`
+ * (SSR, exotic color spaces) so the pill still has a legible label.
+ *
+ * @param background - Any CSS color string the pill is filled with.
+ * @returns `#0b0b0b` for light backgrounds, `#fafafa` for dark.
+ */
+function pickContrastForeground(background: string): string {
+	if (typeof document === 'undefined') return '#fafafa';
+	const ctx = document.createElement('canvas').getContext('2d');
+	if (!ctx) return '#fafafa';
+	try {
+		ctx.fillStyle = '#000';
+		ctx.fillStyle = background;
+		const computed = ctx.fillStyle;
+		// Canvas normalises every parseable CSS color to `#rrggbb` (or
+		// `rgba(...)`). Hex is the common case for our pills.
+		const hex = typeof computed === 'string' ? computed : '';
+		const match = /^#([0-9a-f]{6})$/i.exec(hex);
+		const channels = match?.[1];
+		if (!channels) return '#fafafa';
+		const value = Number.parseInt(channels, 16);
+		const r = (value >> 16) & 0xff;
+		const g = (value >> 8) & 0xff;
+		const b = value & 0xff;
+		// BT.709 relative luminance against the 0-255 channel range.
+		// We don't bother sRGB-linearising for this binary decision —
+		// the threshold is well-clear of any preset slot.
+		const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+		return luminance > 0.6 ? '#0b0b0b' : '#fafafa';
+	} catch {
+		return '#fafafa';
+	}
+}
 
 /**
  * Compact accent-tinted toggle.
@@ -272,13 +319,17 @@ export function SettingsSectionHeader({
 	return (
 		<header className="flex items-start justify-between gap-3 border-b border-border/40 pt-1 pb-3">
 			<div className="flex min-w-0 flex-col gap-1">
-				<span className="text-base font-semibold tracking-tight text-foreground">
-					{title}
-				</span>
+				{/* Semantic `<h3>` so this matches `SettingsCard`'s standalone
+				   title path (also `<h3>`). Using a `<span>` previously meant
+				   the two header surfaces shared classes but rendered as
+				   different elements, which subtly nudged user-agent line-
+				   heights and broke the assumption that both render
+				   identically. */}
+				<h3 className="text-base font-semibold tracking-tight text-foreground">{title}</h3>
 				{description ? (
-					<span className="text-pretty text-sm leading-snug text-muted-foreground">
+					<p className="text-pretty text-sm leading-snug text-muted-foreground">
 						{description}
-					</span>
+					</p>
 				) : null}
 			</div>
 			{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
@@ -349,22 +400,25 @@ export function ColorPill({
 		}
 	}, [pickerSeed]);
 
+	// Compute a flat contrast color so mid-tone pills (warm greens,
+	// oranges, browns) get a readable label. `mix-blend-mode: difference`
+	// fails on those — it folds (255 - bg) per channel and a green like
+	// `#3fa760` ends up rendering the label as a muddy mid-tone instead
+	// of crisp on/off-white. See `pickContrastForeground` above.
+	const foregroundColor = useMemo(() => pickContrastForeground(resolvedColor), [resolvedColor]);
+
 	return (
 		<label
 			aria-label={ariaLabel}
 			className="group relative flex h-7 min-w-36 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border/50 px-3 transition-shadow duration-150 hover:shadow-sm focus-within:ring-2 focus-within:ring-ring/40"
 			style={{ backgroundColor: resolvedColor }}
 		>
-			{/* `color: white` + `mix-blend-mode: difference` gives auto-
-			   contrast text on any pill background — it renders as
-			   (255,255,255) − background, so light pills get black text
-			   and dark pills get white text without us picking either. */}
 			<input
 				aria-label={`${ariaLabel} value`}
 				className="w-full bg-transparent text-center font-mono text-xs tabular-nums outline-none placeholder:text-current/60"
 				onChange={handleValueChange}
 				placeholder={placeholder}
-				style={{ color: '#ffffff', mixBlendMode: 'difference' }}
+				style={{ color: foregroundColor }}
 				type="text"
 				value={displayValue}
 			/>

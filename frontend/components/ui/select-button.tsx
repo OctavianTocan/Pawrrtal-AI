@@ -16,7 +16,7 @@
  * theme overrides land via the shared cascade.
  */
 
-import { ChevronDownIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -95,34 +95,52 @@ export function SelectButton({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="chat-composer-dropdown-menu min-w-56"
+				className="chat-composer-dropdown-menu min-w-56 p-1.5"
 				side="bottom"
-				sideOffset={6}
+				sideOffset={4}
 			>
-				{options.map((option) => (
-					<DropdownMenuItem
-						className="gap-2.5 py-2"
-						key={option.id}
-						onSelect={() => onSelect(option.id)}
-					>
-						{option.leading ? (
-							<span aria-hidden="true" className="flex items-center">
-								{option.leading}
-							</span>
-						) : null}
-						<div className="flex min-w-0 flex-1 flex-col">
-							<span className="truncate text-sm text-foreground">{option.label}</span>
-							{option.description ? (
-								<span className="truncate text-pretty text-xs text-muted-foreground">
-									{option.description}
+				{options.map((option) => {
+					const isActive = activeId === option.id;
+					return (
+						<DropdownMenuItem
+							className={cn(
+								// Compact-but-readable Codex rhythm: ~36px tall rows
+								// (py-2 + line-height) with a slightly chunkier corner
+								// radius so the hover/active fill reads as its own pill
+								// rather than a thin highlight strip.
+								'gap-2.5 rounded-[8px] px-3 py-2',
+								// Active row gets a tinted background — replaces the
+								// previous tiny right-edge dot, which was easy to miss
+								// against the muted chrome.
+								isActive && 'bg-foreground/[0.06]'
+							)}
+							key={option.id}
+							onSelect={() => onSelect(option.id)}
+						>
+							{option.leading ? (
+								<span aria-hidden="true" className="flex items-center">
+									{option.leading}
 								</span>
 							) : null}
-						</div>
-						{activeId === option.id ? (
-							<span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
-						) : null}
-					</DropdownMenuItem>
-				))}
+							<div className="flex min-w-0 flex-1 flex-col">
+								<span className="truncate text-sm text-foreground">
+									{option.label}
+								</span>
+								{option.description ? (
+									<span className="truncate text-pretty text-xs text-muted-foreground">
+										{option.description}
+									</span>
+								) : null}
+							</div>
+							{isActive ? (
+								<CheckIcon
+									aria-hidden="true"
+									className="size-3.5 shrink-0 text-foreground"
+								/>
+							) : null}
+						</DropdownMenuItem>
+					);
+				})}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
