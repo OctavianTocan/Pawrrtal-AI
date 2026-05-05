@@ -6,19 +6,31 @@
  * Lives in-feature rather than `components/ui` because today these are not
  * shared anywhere else — promote them out if a second feature needs them.
  *
- * @fileoverview Switch, Slider, and labelled-row helpers for the settings UI.
+ * Visual rhythm derived from the Codex settings reference:
+ * - Page heading: text-3xl, tight tracking, balanced wrap
+ * - Section heading inside a card: text-base, semibold, paired with a
+ *   muted text-pretty description
+ * - Row vertical padding: py-4 (default) — descriptions wrap on the left,
+ *   control sits hard-right with tabular-nums for hex/value alignment
+ * - Surfaces use `border-border` + `bg-card` (theme tokens) rather than
+ *   raw `foreground/[0.0X]` so a switch to the dark theme inherits the
+ *   right tint instead of stamping a black-on-black wash
+ *
+ * @fileoverview Switch, Slider, ColorPill, and labelled-row helpers
+ *               for the settings UI.
  */
 
 import { Slider as SliderPrimitive, Switch as SwitchPrimitive } from 'radix-ui';
-import type * as React from 'react';
+import { type ChangeEvent, type ReactNode, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
  * Compact accent-tinted toggle.
  *
- * Renders a small radix Switch with the project's accent + border tokens so
- * it visually matches the toggle in the reference screenshots without
- * reaching for a full shadcn-style component file.
+ * Renders a Radix Switch with the project's accent + border tokens so it
+ * visually matches the toggle in the reference screenshots without a full
+ * shadcn-style component file. Sized at h-6 w-11 / thumb size-5 — Fitts-
+ * compliant for trackpad use without crowding the row.
  */
 export function Switch({
 	className,
@@ -28,7 +40,7 @@ export function Switch({
 		<SwitchPrimitive.Root
 			className={cn(
 				'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full',
-				'border border-foreground/10 bg-foreground/10 transition-colors',
+				'border border-border bg-foreground/10 transition-colors duration-150',
 				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
 				'data-[state=checked]:border-accent data-[state=checked]:bg-accent',
 				'disabled:cursor-not-allowed disabled:opacity-50',
@@ -39,7 +51,8 @@ export function Switch({
 			<SwitchPrimitive.Thumb
 				className={cn(
 					'pointer-events-none block size-5 rounded-full bg-background shadow-sm ring-0',
-					'transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0.5'
+					'transition-transform duration-150 ease-out',
+					'data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0.5'
 				)}
 			/>
 		</SwitchPrimitive.Root>
@@ -58,7 +71,10 @@ export function Slider({
 }: React.ComponentProps<typeof SliderPrimitive.Root>): React.JSX.Element {
 	return (
 		<SliderPrimitive.Root
-			className={cn('relative flex w-full touch-none select-none items-center', className)}
+			className={cn(
+				'relative flex w-full cursor-pointer touch-none select-none items-center',
+				className
+			)}
 			{...props}
 		>
 			<SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-foreground/10">
@@ -75,23 +91,24 @@ export function Slider({
 /** Props for the labelled row used throughout the settings sections. */
 export type SettingsRowProps = {
 	/** Bold label rendered on the left. */
-	label: React.ReactNode;
+	label: ReactNode;
 	/** Optional secondary helper text under the label. */
-	description?: React.ReactNode;
+	description?: ReactNode;
 	/** The control / value rendered on the right. */
-	children: React.ReactNode;
+	children: ReactNode;
 	/** Override classes on the outer row. */
 	className?: string;
 };
 
 /**
  * Two-column row used by every settings section (label/description on the
- * left, control on the right). Centralised so the spacing rhythm stays
- * identical across all sections.
+ * left, control on the right).
  *
- * The label column is fixed-width (240px) so labels and controls align
- * across rows even when label text varies — matches the Codex/Claude
- * reference layout where every value floats on the same vertical line.
+ * Mirrors the Codex settings layout — label/description column on the
+ * left (capped at 60% so descriptions wrap before crowding the control),
+ * control column right-aligned. Hairline divider uses `--border` so it
+ * inherits the active theme rather than a hard-coded foreground tint.
+ *
  * Override with `className` (e.g. `items-start`) when stacking taller
  * controls like textareas.
  */
@@ -104,14 +121,16 @@ export function SettingsRow({
 	return (
 		<div
 			className={cn(
-				'flex items-center justify-between gap-6 border-b border-foreground/5 py-3.5 first:pt-1 last:border-0 last:pb-1',
+				'flex items-center justify-between gap-6 border-b border-border/40 py-4 first:pt-2 last:border-0 last:pb-2',
 				className
 			)}
 		>
-			<div className="flex min-w-0 max-w-[55%] flex-col gap-1">
-				<span className="text-sm font-medium text-foreground tabular-nums">{label}</span>
+			<div className="flex min-w-0 max-w-[60%] flex-col gap-1">
+				<span className="text-pretty text-sm font-medium text-foreground tabular-nums">
+					{label}
+				</span>
 				{description ? (
-					<span className="text-pretty text-sm text-muted-foreground tabular-nums">
+					<span className="text-pretty text-sm leading-snug text-muted-foreground tabular-nums">
 						{description}
 					</span>
 				) : null}
@@ -126,11 +145,11 @@ export function SettingsRow({
 /** Props for the section card wrapper. */
 export type SettingsCardProps = {
 	/** Section heading rendered above the card body. */
-	title?: React.ReactNode;
+	title?: ReactNode;
 	/** Optional helper line under the title. */
-	description?: React.ReactNode;
+	description?: ReactNode;
 	/** Card body — typically a stack of `SettingsRow`s. */
-	children: React.ReactNode;
+	children: ReactNode;
 	/** Override classes on the card root. */
 	className?: string;
 };
@@ -138,8 +157,10 @@ export type SettingsCardProps = {
 /**
  * Card surface used to group related rows in a settings section.
  *
- * Visual equivalent of the rounded panels in the reference screenshots —
- * border + subtle inset background, padded content.
+ * Uses theme-aware tokens (`bg-card`, `border-border/60`) so the card
+ * tints itself correctly under either light or dark mode without a
+ * hard-coded `foreground/[0.0X]` overlay. Matches the elevated-panel
+ * shape in the Codex Appearance and Personalization screens.
  */
 export function SettingsCard({
 	title,
@@ -150,17 +171,21 @@ export function SettingsCard({
 	return (
 		<section
 			className={cn(
-				'rounded-[12px] border border-foreground/10 bg-foreground/[0.02] px-6 py-2',
+				'rounded-[14px] border border-border/60 bg-card px-6 pt-3 pb-3 shadow-[0_1px_0_0_var(--border-subtle,transparent)]',
 				className
 			)}
 		>
 			{title || description ? (
-				<header className="mb-1 flex flex-col gap-0.5 pt-3">
+				<header className="mb-1 flex flex-col gap-1 pt-2">
 					{title ? (
-						<h3 className="text-sm font-semibold text-foreground">{title}</h3>
+						<h3 className="text-base font-semibold tracking-tight text-foreground">
+							{title}
+						</h3>
 					) : null}
 					{description ? (
-						<p className="text-pretty text-sm text-muted-foreground">{description}</p>
+						<p className="text-pretty text-sm leading-snug text-muted-foreground">
+							{description}
+						</p>
 					) : null}
 				</header>
 			) : null}
@@ -172,11 +197,11 @@ export function SettingsCard({
 /** Props for the page-level shell wrapping every Settings section. */
 export type SettingsPageProps = {
 	/** Page title rendered as `<h1>` at the top. */
-	title: React.ReactNode;
+	title: ReactNode;
 	/** Optional sub-line beneath the title (text-pretty, muted). */
-	description?: React.ReactNode;
+	description?: ReactNode;
 	/** Page body — typically a stack of `SettingsCard`s. */
-	children: React.ReactNode;
+	children: ReactNode;
 	/** Override classes on the page root. */
 	className?: string;
 };
@@ -189,6 +214,10 @@ export type SettingsPageProps = {
  * Bespoke `<header><h1>` blocks per section are a consistency bug; use
  * this instead. Documented in `DESIGN.md` →
  * `Components` → `settings-page-shell`.
+ *
+ * Heading bumped to `text-3xl` to match the Codex page-level title
+ * (was `text-2xl`); kerning stays `tracking-tight` so long words like
+ * "Personalization" don't drift.
  */
 export function SettingsPage({
 	title,
@@ -198,12 +227,14 @@ export function SettingsPage({
 }: SettingsPageProps): React.JSX.Element {
 	return (
 		<div className={cn('flex flex-col gap-8', className)}>
-			<header className="flex flex-col gap-1.5">
-				<h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
+			<header className="flex flex-col gap-2">
+				<h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground">
 					{title}
 				</h1>
 				{description ? (
-					<p className="text-pretty text-sm text-muted-foreground">{description}</p>
+					<p className="max-w-[60ch] text-pretty text-sm leading-relaxed text-muted-foreground">
+						{description}
+					</p>
 				) : null}
 			</header>
 			<div className="flex flex-col gap-6">{children}</div>
@@ -214,20 +245,20 @@ export function SettingsPage({
 /** Props for the consistent settings-section header. */
 export type SettingsSectionHeaderProps = {
 	/** Section heading rendered on the left. */
-	title: React.ReactNode;
+	title: ReactNode;
 	/** Sub-line under the title (small, muted, `text-pretty`). */
-	description?: React.ReactNode;
+	description?: ReactNode;
 	/** Right-aligned actions / pickers (e.g. preset selector, mode toggle). */
-	actions?: React.ReactNode;
+	actions?: ReactNode;
 };
 
 /**
  * Standard top-of-card header used by every section / sub-section
- * across Settings — title (`text-sm font-semibold`), description
- * (`text-xs text-muted-foreground text-pretty`), and an optional
- * right-aligned actions slot. Centralised so every section shares the
- * exact same vertical rhythm and type rules — no more bespoke
- * one-off headers.
+ * across Settings — title (`text-base font-semibold tracking-tight`),
+ * description (`text-sm text-muted-foreground text-pretty`), and an
+ * optional right-aligned actions slot. Centralised so every section
+ * shares the exact same vertical rhythm and type rules — no more
+ * bespoke one-off headers.
  *
  * Use INSIDE a `SettingsCard` (not as a replacement for it). The
  * `SettingsCard` handles the rounded surface; this primitive renders
@@ -239,14 +270,115 @@ export function SettingsSectionHeader({
 	actions,
 }: SettingsSectionHeaderProps): React.JSX.Element {
 	return (
-		<header className="flex items-start justify-between gap-3 border-b border-foreground/5 pt-1 pb-3">
-			<div className="flex min-w-0 flex-col gap-0.5">
-				<span className="text-sm font-semibold text-foreground">{title}</span>
+		<header className="flex items-start justify-between gap-3 border-b border-border/40 pt-1 pb-3">
+			<div className="flex min-w-0 flex-col gap-1">
+				<span className="text-base font-semibold tracking-tight text-foreground">
+					{title}
+				</span>
 				{description ? (
-					<span className="text-pretty text-xs text-muted-foreground">{description}</span>
+					<span className="text-pretty text-sm leading-snug text-muted-foreground">
+						{description}
+					</span>
 				) : null}
 			</div>
 			{actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
 		</header>
+	);
+}
+
+/** Props for the {@link ColorPill} primitive. */
+export interface ColorPillProps {
+	/** Accessible label for the picker (e.g. "Accent color picker"). */
+	ariaLabel: string;
+	/** The fully-resolved color the pill should render. Any CSS color works. */
+	resolvedColor: string;
+	/** The hex literal used to seed `<input type="color">`. */
+	pickerSeed: string;
+	/** Display value (typically the typed override; falls back to defaultValue). */
+	displayValue: string;
+	/** Placeholder when {@link displayValue} is empty (e.g. the slot's default hex). */
+	placeholder: string;
+	/** Fired when the user types into the value field. */
+	onValueChange: (value: string) => void;
+	/** Fired when the native color picker emits a new value (RAF-batched upstream). */
+	onPickerChange: (value: string) => void;
+}
+
+/**
+ * Codex-style filled color pill.
+ *
+ * The entire pill background renders as the resolved color; the hex /
+ * literal value floats on top in tabular-nums with a contrast-adaptive
+ * foreground. Clicking anywhere on the pill opens the OS color picker
+ * via an invisible `<input type="color">` overlay — same trick the
+ * Appearance section used before, but the swatch is now the *whole*
+ * affordance rather than a 20px circle next to a bare text input.
+ *
+ * The native picker is left UNCONTROLLED (`defaultValue` + `key`) so
+ * that mid-drag re-renders triggered by upstream state updates don't
+ * snap the OS picker back to a stale value (the "lurping" bug). The
+ * commit handler should RAF-batch upstream updates so a 60fps drag
+ * produces ≤60 PUTs/s instead of hundreds.
+ */
+export function ColorPill({
+	ariaLabel,
+	resolvedColor,
+	pickerSeed,
+	displayValue,
+	placeholder,
+	onValueChange,
+	onPickerChange,
+}: ColorPillProps): React.JSX.Element {
+	const handleValueChange = useCallback(
+		(event: ChangeEvent<HTMLInputElement>) => onValueChange(event.target.value),
+		[onValueChange]
+	);
+	const handlePickerChange = useCallback(
+		(event: ChangeEvent<HTMLInputElement>) => onPickerChange(event.target.value),
+		[onPickerChange]
+	);
+
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	useEffect(() => {
+		// Re-seed the uncontrolled picker on external resets (preset apply,
+		// server refetch). Using `defaultValue + key` would re-mount the
+		// node mid-drag and steal focus; setting `value` here only fires
+		// when the seed changes outside the picker's own onChange loop.
+		if (inputRef.current && inputRef.current.value !== pickerSeed) {
+			inputRef.current.value = pickerSeed;
+		}
+	}, [pickerSeed]);
+
+	return (
+		<label
+			aria-label={ariaLabel}
+			className="group relative flex h-7 min-w-36 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border/50 px-3 transition-shadow duration-150 hover:shadow-sm focus-within:ring-2 focus-within:ring-ring/40"
+			style={{ backgroundColor: resolvedColor }}
+		>
+			{/* `color: white` + `mix-blend-mode: difference` gives auto-
+			   contrast text on any pill background — it renders as
+			   (255,255,255) − background, so light pills get black text
+			   and dark pills get white text without us picking either. */}
+			<input
+				aria-label={`${ariaLabel} value`}
+				className="w-full bg-transparent text-center font-mono text-xs tabular-nums outline-none placeholder:text-current/60"
+				onChange={handleValueChange}
+				placeholder={placeholder}
+				style={{ color: '#ffffff', mixBlendMode: 'difference' }}
+				type="text"
+				value={displayValue}
+			/>
+			{/* Native color picker — clicking the pill opens the OS dialog.
+			    Uncontrolled via `defaultValue` + ref-driven re-seed, see
+			    the `pickerSeed` effect above for why this is NOT
+			    controlled. */}
+			<input
+				className="absolute inset-0 size-full cursor-pointer opacity-0"
+				defaultValue={pickerSeed}
+				onChange={handlePickerChange}
+				ref={inputRef}
+				type="color"
+			/>
+		</label>
 	);
 }

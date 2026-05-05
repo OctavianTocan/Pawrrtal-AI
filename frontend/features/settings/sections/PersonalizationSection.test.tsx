@@ -41,14 +41,17 @@ describe('PersonalizationSection', () => {
 		expect(getByText(/Memory \(experimental\)/)).toBeTruthy();
 	});
 
-	it('renders the personality select with a default value', () => {
-		const { getAllByText, container } = render(<PersonalizationSection />);
+	it('renders the personality picker with a default value', () => {
+		const { getAllByText, getByRole } = render(<PersonalizationSection />);
 		// "Personality" appears twice: once as the section header and
 		// once as the row label. Both should be present.
 		expect(getAllByText('Personality').length).toBeGreaterThanOrEqual(2);
-		// The native select is the meaningful semantic element.
-		const select = container.querySelector('select');
-		expect(select).toBeTruthy();
+		// The picker is now a `SelectButton` (Radix DropdownMenu trigger)
+		// — assert on the button labeled "Personality" rather than a
+		// native `<select>` so we test the semantic affordance the
+		// user actually sees + tabs to.
+		const trigger = getByRole('button', { name: 'Personality' });
+		expect(trigger).toBeTruthy();
 	});
 
 	it('renders the memory toggles + reset button', () => {

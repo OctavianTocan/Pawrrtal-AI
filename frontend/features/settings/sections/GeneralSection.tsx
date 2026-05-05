@@ -68,23 +68,29 @@ export function GeneralSection(): React.JSX.Element {
 				>
 					<div
 						aria-label="Quick theme mode"
-						className="flex items-center gap-1 rounded-[7px] border border-foreground/10 p-0.5"
+						className="flex items-center gap-1 rounded-[8px] border border-border/50 bg-foreground/[0.03] p-0.5"
 						role="toolbar"
 					>
+						{/* The active pill uses `bg-background + shadow-sm` instead
+						   of a foreground/10 wash so it lifts cleanly off the
+						   muted track — same recipe as the Appearance section's
+						   ThemeModeToggle. Visual-only mock today; the live
+						   wiring lives under the Appearance section. */}
 						<button
-							className="cursor-pointer rounded-[5px] bg-foreground/10 px-2.5 py-1 text-sm"
+							aria-pressed="true"
+							className="cursor-pointer rounded-[6px] bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-sm transition-colors duration-150 ease-out"
 							type="button"
 						>
 							System
 						</button>
 						<button
-							className="cursor-pointer rounded-[5px] px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"
+							className="cursor-pointer rounded-[6px] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.05] hover:text-foreground"
 							type="button"
 						>
 							Light
 						</button>
 						<button
-							className="cursor-pointer rounded-[5px] px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"
+							className="cursor-pointer rounded-[6px] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.05] hover:text-foreground"
 							type="button"
 						>
 							Dark

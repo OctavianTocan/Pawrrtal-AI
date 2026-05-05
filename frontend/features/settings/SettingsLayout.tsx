@@ -46,9 +46,14 @@ export function SettingsLayout(): React.JSX.Element {
 
 	return (
 		<div className="grid h-svh w-full grid-cols-[260px_1fr] bg-sidebar">
-			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-foreground/8 px-3 py-4">
+			{/* Left rail — slightly looser vertical rhythm than the chat
+			    sidebar (gap-4 vs gap-2) so the section list reads like a
+			    settings nav, not a project list. The rail divider uses
+			    `border-border/60` so it tints itself per active theme
+			    instead of stamping a hard `foreground/8` line. */}
+			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 py-4">
 				<button
-					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground"
+					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground"
 					onClick={() => router.push('/')}
 					type="button"
 				>
@@ -62,9 +67,9 @@ export function SettingsLayout(): React.JSX.Element {
 							<button
 								aria-current={isActive ? 'page' : undefined}
 								className={cn(
-									'group flex cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-left text-sm transition-colors',
+									'group flex cursor-pointer items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-left text-sm transition-colors duration-150',
 									isActive
-										? 'bg-foreground/[0.07] text-foreground'
+										? 'bg-foreground/[0.08] font-medium text-foreground'
 										: 'text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground'
 								)}
 								key={section.id}

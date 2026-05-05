@@ -12,27 +12,17 @@
  * `--foreground` / `--accent` slots.
  *
  * Defaults are the Mistral-inspired sunlit-cream palette baked into
- * `frontend/features/appearance/defaults.ts`; "Reset to defaults"
- * deletes the persisted row server-side so the user falls all the way
- * back to those values.
+ * `frontend/features/appearance/defaults.ts`. The pill picker (entire
+ * pill background = the resolved color, hex literal floats on top
+ * with auto-contrasting text) follows the Codex settings reference.
  */
 
-import { LaptopMinimal, Moon, Sun } from 'lucide-react';
-import {
-	type ChangeEvent,
-	type ReactNode,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react';
+import { type ReactNode, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
 import {
 	type AppearanceFonts,
 	type AppearanceOptions,
-	type AppearanceSettings,
 	COLOR_SLOTS,
 	type ColorSlot,
 	DEFAULT_APPEARANCE,
@@ -55,78 +45,8 @@ import {
 	Slider,
 	Switch,
 } from '../primitives';
-
-/** Debounce window for color hex / font family inputs. Tuned to feel
- *  responsive (under the Doherty 400ms threshold) while not flooding
- *  the API with one PUT per keystroke. */
-const TEXT_INPUT_DEBOUNCE_MS = 250;
-
-/**
- * Resolve any CSS color string (hex, rgb, oklch, named) into a `#rrggbb`
- * literal that `<input type="color">` accepts. Uses an offscreen canvas
- * because the native input doesn't speak `oklch()`. Returns the input
- * unchanged when it's already 7-char hex (fast path).
- *
- * Falls back to a sensible default (`#888888`) on SSR or if the runtime
- * can't parse the string — the picker still shows *something* the user
- * can drag, and the typed input retains the original value untouched.
- */
-function toHex(value: string | undefined | null): string {
-	if (!value) return '#888888';
-	const trimmed = value.trim();
-	if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed.toLowerCase();
-	if (typeof document === 'undefined') return '#888888';
-	const ctx = document.createElement('canvas').getContext('2d');
-	if (!ctx) return '#888888';
-	try {
-		ctx.fillStyle = '#000';
-		ctx.fillStyle = trimmed;
-		const computed = ctx.fillStyle;
-		if (typeof computed === 'string' && /^#[0-9a-f]{6}$/i.test(computed)) {
-			return computed.toLowerCase();
-		}
-	} catch {
-		/* fall through */
-	}
-	return '#888888';
-}
-
-/** Human-readable labels for each color slot, shown next to the swatch. */
-const COLOR_LABELS: Record<ColorSlot, string> = {
-	background: 'Background',
-	foreground: 'Foreground',
-	accent: 'Accent',
-	info: 'Info',
-	success: 'Success',
-	destructive: 'Destructive',
-};
-
-/** Human-readable labels for each font slot. */
-const FONT_LABELS: Record<FontSlot, string> = {
-	display: 'Display font',
-	sans: 'UI font',
-	mono: 'Code font',
-};
-
-/** Theme mode options shown in the top-of-card switcher. */
-const THEME_MODE_OPTIONS = [
-	{ id: 'light', label: 'Light', Icon: Sun },
-	{ id: 'dark', label: 'Dark', Icon: Moon },
-	{ id: 'system', label: 'System', Icon: LaptopMinimal },
-] as const satisfies ReadonlyArray<{ id: ThemeMode; label: string; Icon: typeof Sun }>;
-
-/**
- * Compose a full `AppearanceSettings` payload from the four sub-records.
- * Centralized so every mutation path uses the exact same shape.
- */
-function buildPayload(
-	light: ThemeColors,
-	dark: ThemeColors,
-	fonts: AppearanceFonts,
-	options: AppearanceOptions
-): AppearanceSettings {
-	return { light, dark, fonts, options };
-}
+import { ColorRow, FontRow } from './AppearanceRows';
+import { buildPayload, COLOR_LABELS, FONT_LABELS, THEME_MODE_OPTIONS } from './appearance-helpers';
 
 /**
  * Top-of-card theme-mode switcher.
@@ -145,7 +65,7 @@ function ThemeModeToggle({
 	return (
 		<div
 			aria-label="Theme mode"
-			className="flex items-center gap-1 rounded-[8px] border border-foreground/10 bg-foreground/[0.03] p-0.5"
+			className="flex items-center gap-1 rounded-[8px] border border-border/50 bg-foreground/[0.03] p-0.5"
 			role="toolbar"
 		>
 			{THEME_MODE_OPTIONS.map((option) => {
@@ -154,10 +74,10 @@ function ThemeModeToggle({
 					<button
 						aria-pressed={isActive}
 						className={cn(
-							'flex cursor-pointer items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs',
+							'flex cursor-pointer items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs font-medium',
 							'transition-colors duration-150 ease-out',
 							isActive
-								? 'bg-foreground/10 text-foreground'
+								? 'bg-background text-foreground shadow-sm'
 								: 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground'
 						)}
 						key={option.id}
@@ -173,176 +93,7 @@ function ThemeModeToggle({
 	);
 }
 
-/**
- * A single colored swatch + value input row.
- *
- * Holds local draft state so typing into the field doesn't lag — a
- * debounced commit fires `onCommit` once the user stops typing. The
- * placeholder always shows the *default* value for that slot so
- * resetting an override is as simple as clearing the field. Tabular
- * nums on the value field keep aligned columns when the user types
- * hex codes that mix digits + letters.
- */
-function ColorRow({
-	label,
-	resolvedValue,
-	overrideValue,
-	defaultValue,
-	onCommit,
-}: {
-	label: string;
-	resolvedValue: string;
-	overrideValue: string | null | undefined;
-	defaultValue: string;
-	onCommit: (next: string | null) => void;
-}): React.JSX.Element {
-	const [draft, setDraft] = useState(overrideValue ?? '');
-	const draftRef = useRef(draft);
-	const commitRef = useRef(onCommit);
-
-	// Keep refs current so the debounced timeout reads the latest
-	// values without re-creating the timer (per `react/state-safety`
-	// rule on stale closures inside debounced callbacks).
-	useEffect(() => {
-		draftRef.current = draft;
-	}, [draft]);
-	useEffect(() => {
-		commitRef.current = onCommit;
-	}, [onCommit]);
-
-	// External `overrideValue` changes (e.g. reset to defaults from a
-	// different surface) reset the local draft so the field doesn't
-	// show stale text after a server-side wipe.
-	useEffect(() => {
-		setDraft(overrideValue ?? '');
-	}, [overrideValue]);
-
-	useEffect(() => {
-		if (draft === (overrideValue ?? '')) return;
-		const handle = setTimeout(() => {
-			const next = draftRef.current.trim();
-			commitRef.current(next.length === 0 ? null : next);
-		}, TEXT_INPUT_DEBOUNCE_MS);
-		return () => clearTimeout(handle);
-	}, [draft, overrideValue]);
-
-	const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-		setDraft(event.target.value);
-	}, []);
-
-	// Native `<input type="color">` is left UNCONTROLLED — every drag-pixel
-	// would otherwise fire `onChange` → mutate cache → re-render with a
-	// new `value` prop → OS picker snaps back, producing the "lurping"
-	// the user reported. The picker owns its own internal state for
-	// the duration of a drag; we only re-seed it via a `key` that flips
-	// when the resolved value changes from outside (e.g. preset apply).
-	const pickerSeed = toHex(overrideValue ?? resolvedValue);
-
-	// RAF-batched commit so a 60fps drag produces ≤60 PUTs/s instead of
-	// hundreds. The provider re-renders the swatch border via the
-	// resolved CSS variable, so the user still sees live preview.
-	const pickerRafRef = useRef<number | null>(null);
-	const handlePickerChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-		const next = event.target.value;
-		setDraft(next);
-		if (pickerRafRef.current !== null) cancelAnimationFrame(pickerRafRef.current);
-		pickerRafRef.current = requestAnimationFrame(() => {
-			pickerRafRef.current = null;
-			commitRef.current(next);
-		});
-	}, []);
-
-	useEffect(() => {
-		return () => {
-			if (pickerRafRef.current !== null) cancelAnimationFrame(pickerRafRef.current);
-		};
-	}, []);
-
-	return (
-		<SettingsRow label={label}>
-			<div className="flex items-center gap-2 rounded-[6px] border border-foreground/10 bg-foreground/[0.03] px-1.5 py-1">
-				{/* Native color picker — clicking the swatch opens the OS
-				 *  dialog. Uncontrolled `defaultValue`, re-seeded via `key`
-				 *  only on external resets (preset apply, server refetch).
-				 *  See the `pickerSeed` comment above for why this is NOT
-				 *  a controlled input. */}
-				<label
-					aria-label={`${label} color picker`}
-					className="relative flex size-5 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-foreground/15"
-					style={{ backgroundColor: resolvedValue }}
-				>
-					<input
-						className="absolute inset-0 size-full cursor-pointer opacity-0"
-						defaultValue={pickerSeed}
-						key={pickerSeed}
-						onChange={handlePickerChange}
-						type="color"
-					/>
-				</label>
-				<input
-					aria-label={`${label} color value`}
-					className="w-40 bg-transparent font-mono text-xs tabular-nums outline-none placeholder:text-muted-foreground/70"
-					onChange={handleChange}
-					placeholder={defaultValue}
-					value={draft}
-				/>
-			</div>
-		</SettingsRow>
-	);
-}
-
-/** Single font-family input row with the same debounce + placeholder behavior. */
-function FontRow({
-	label,
-	overrideValue,
-	defaultValue,
-	onCommit,
-}: {
-	label: string;
-	overrideValue: string | null | undefined;
-	defaultValue: string;
-	onCommit: (next: string | null) => void;
-}): React.JSX.Element {
-	const [draft, setDraft] = useState(overrideValue ?? '');
-	const draftRef = useRef(draft);
-	const commitRef = useRef(onCommit);
-
-	useEffect(() => {
-		draftRef.current = draft;
-	}, [draft]);
-	useEffect(() => {
-		commitRef.current = onCommit;
-	}, [onCommit]);
-	useEffect(() => {
-		setDraft(overrideValue ?? '');
-	}, [overrideValue]);
-
-	useEffect(() => {
-		if (draft === (overrideValue ?? '')) return;
-		const handle = setTimeout(() => {
-			const next = draftRef.current.trim();
-			commitRef.current(next.length === 0 ? null : next);
-		}, TEXT_INPUT_DEBOUNCE_MS);
-		return () => clearTimeout(handle);
-	}, [draft, overrideValue]);
-
-	const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-		setDraft(event.target.value);
-	}, []);
-
-	return (
-		<SettingsRow label={label}>
-			<Input
-				aria-label={`${label} family`}
-				className="w-72 text-xs"
-				onChange={handleChange}
-				placeholder={defaultValue}
-				value={draft}
-			/>
-		</SettingsRow>
-	);
-}
-
+/** Props for the per-mode theme card. */
 interface ThemeColorCardProps {
 	heading: string;
 	description: string;
@@ -357,9 +108,14 @@ interface ThemeColorCardProps {
 
 /**
  * Renders one of the two themed cards (Light / Dark) with its 6 color
- * rows + a header-level preset picker that swaps THIS mode's palette
- * (independent from the other mode's). Picking "Mistral" in Light
- * leaves Dark untouched, so the user can mix-and-match.
+ * rows and a header-level preset picker.
+ *
+ * The preset picker is per-mode by design — picking "Mistral" in Light
+ * leaves Dark untouched, so the user can mix-and-match (e.g. Mistral
+ * Light + Cursor Dark). Each option in the dropdown shows a small
+ * `Aa` glyph rendered in that preset's display font, mirroring the
+ * Codex Appearance reference where each row previews the theme's
+ * typography in-line.
  */
 function ThemeColorCard({
 	heading,
@@ -367,7 +123,7 @@ function ThemeColorCard({
 	overrides,
 	resolvedColors,
 	defaults,
-	mode,
+	mode: _mode,
 	onSlotCommit,
 	onPresetApply,
 	footer,
@@ -381,12 +137,14 @@ function ThemeColorCard({
 				leading: (
 					<span
 						aria-hidden="true"
-						className="size-3 rounded-full border border-foreground/15"
-						style={{ backgroundColor: preset[mode].accent }}
-					/>
+						className="flex size-5 items-center justify-center rounded-[5px] border border-border/40 bg-background text-[11px] font-medium leading-none text-foreground"
+						style={{ fontFamily: preset.fonts.display }}
+					>
+						Aa
+					</span>
 				),
 			})),
-		[mode]
+		[]
 	);
 	const handleSelect = useCallback(
 		(presetId: string) => {
@@ -439,7 +197,7 @@ export function AppearanceSection(): React.JSX.Element {
 	const { mutate: updateAppearance } = useUpdateAppearance();
 
 	// Resolve once per render so both the swatches and the underlying
-	// CSS variables agree on what's "active". `data` may be `undefined`
+	// CSS variables agree on what's "active". `data` may be undefined
 	// during the first request — `resolveAppearance` handles that and
 	// hands back the Mistral defaults.
 	const resolved = useMemo(() => resolveAppearance(data), [data]);
@@ -596,7 +354,7 @@ export function AppearanceSection(): React.JSX.Element {
 					title="Behavior"
 				/>
 				<SettingsRow
-					description="Change the cursor to a pointer when hovering over interactive elements"
+					description="Change the cursor to a pointer when hovering over interactive elements."
 					label="Use pointer cursors"
 				>
 					<Switch
@@ -605,7 +363,7 @@ export function AppearanceSection(): React.JSX.Element {
 					/>
 				</SettingsRow>
 				<SettingsRow
-					description="Use a glass-style backdrop on the sidebar when scenic mode is enabled"
+					description="Use a glass-style backdrop on the sidebar when scenic mode is enabled."
 					label="Translucent sidebar"
 				>
 					<Switch
@@ -613,7 +371,10 @@ export function AppearanceSection(): React.JSX.Element {
 						onCheckedChange={(checked) => setOption('translucent_sidebar', checked)}
 					/>
 				</SettingsRow>
-				<SettingsRow label="Contrast">
+				<SettingsRow
+					description="Boosts mid-tone separation across the entire UI. Higher values render bolder borders and stronger contrast on hover states."
+					label="Contrast"
+				>
 					<div className="flex w-56 items-center gap-3">
 						<Slider
 							max={100}

@@ -1,8 +1,9 @@
 'use client';
 
 import type * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
 import { Textarea } from '@/components/ui/textarea';
 import {
 	loadPersonalizationProfile,
@@ -50,6 +51,22 @@ export function PersonalizationSection(): React.JSX.Element {
 
 	const personality: PersonalityId = profile.personality ?? PERSONALITY_OPTIONS[0].id;
 
+	// Map the storage `PERSONALITY_OPTIONS` tuple to the SelectButton's
+	// `SelectButtonOption[]` shape once per render. Each personality's
+	// one-line `summary` becomes the muted sub-line in the dropdown row,
+	// mirroring the Codex pattern of "label + secondary explanation"
+	// for picker entries.
+	const personalityOptions = useMemo<SelectButtonOption[]>(
+		() =>
+			PERSONALITY_OPTIONS.map((option) => ({
+				id: option.id,
+				label: option.label,
+				description: option.summary,
+			})),
+		[]
+	);
+	const activePersonality = PERSONALITY_OPTIONS.find((option) => option.id === personality);
+
 	return (
 		<SettingsPage
 			description="Tune how AI Nexus addresses you, what context it carries between chats, and how it builds memory."
@@ -64,19 +81,13 @@ export function PersonalizationSection(): React.JSX.Element {
 					description="Choose a default tone for your agent's responses."
 					label="Personality"
 				>
-					<select
-						className="cursor-pointer rounded-[7px] border border-foreground/10 bg-foreground/[0.03] px-2.5 py-1 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-						onChange={(event) =>
-							patchProfile({ personality: event.target.value as PersonalityId })
-						}
-						value={personality}
-					>
-						{PERSONALITY_OPTIONS.map((option) => (
-							<option key={option.id} value={option.id}>
-								{option.label}
-							</option>
-						))}
-					</select>
+					<SelectButton
+						activeId={personality}
+						ariaLabel="Personality"
+						onSelect={(id) => patchProfile({ personality: id as PersonalityId })}
+						options={personalityOptions}
+						triggerLabel={activePersonality?.label ?? 'Choose'}
+					/>
 				</SettingsRow>
 			</SettingsCard>
 

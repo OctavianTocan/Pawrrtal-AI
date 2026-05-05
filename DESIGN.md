@@ -522,12 +522,37 @@ fall back to the prose below for behavioral notes.
 - **`settings-section-header`** — Standard top-of-card header used by
   every Settings section (see
   `frontend/features/settings/primitives.tsx`). Title is
-  `text-sm font-semibold text-foreground`, description is
-  `text-xs text-muted-foreground text-pretty`, optional right-aligned
-  actions slot. Bottom hairline, `pb-3`. **Every Settings section MUST
-  use this** — bespoke headers are a consistency bug. Apply inside a
-  `SettingsCard`; the card handles the rounded surface and the header
-  handles the layout.
+  `text-base font-semibold tracking-tight text-foreground`, description
+  is `text-sm text-muted-foreground leading-snug text-pretty`, optional
+  right-aligned actions slot. Bottom hairline (`border-border/40`),
+  `pb-3`. **Every Settings section MUST use this** — bespoke headers
+  are a consistency bug. Apply inside a `SettingsCard`; the card
+  handles the rounded surface and the header handles the layout.
+- **`settings-page-shell`** — Page-level wrapper rendered by
+  `SettingsPage` in `frontend/features/settings/primitives.tsx`. Title
+  is `text-3xl font-semibold tracking-tight text-foreground` (balanced
+  wrap), optional description is `text-sm leading-relaxed
+  text-muted-foreground` capped at `60ch`. Children stack with
+  `gap-6`. **Every Settings section MUST wrap itself in this** —
+  per-section `<header><h1>` blocks are a consistency bug.
+- **`settings-card`** — Rounded surface used to group related rows in
+  a Settings section. Uses theme-aware tokens (`bg-card`,
+  `border-border/60`) so the card tints itself correctly under either
+  light or dark mode. `rounded-[14px]`, `px-6 pt-3 pb-3`. Header
+  rendered via `settings-section-header`; body is a vertical stack of
+  `SettingsRow`s separated by `border-border/40` hairlines.
+- **`color-pill`** — Codex-style filled color picker used by the
+  Appearance section (see
+  `frontend/features/settings/primitives.tsx`). The entire pill
+  background renders as the resolved color; the hex literal floats on
+  top in `font-mono tabular-nums` with `mix-blend-mode: difference`
+  for auto-contrast against any color (no manual fg/bg picking).
+  Clicking anywhere on the pill opens the OS color picker via an
+  invisible `<input type="color">` overlay. **The native picker is
+  uncontrolled** (`defaultValue` + ref-driven re-seed) so mid-drag
+  re-renders triggered by upstream state updates don't snap the OS
+  picker back to a stale value (the lurping bug). Picker commits are
+  RAF-batched upstream so a 60fps drag yields ≤60 PUTs/s.
 - **`button-primary`** / **`button-secondary`** — Buttons follow the flat
   default (`rounded.none`). Primary fills with accent; secondary inherits
   the page background and relies on `shadow-thin` for definition.

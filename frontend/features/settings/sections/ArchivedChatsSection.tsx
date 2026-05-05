@@ -50,7 +50,7 @@ export function ArchivedChatsSection(): React.JSX.Element {
 			{!isLoading && archived.length === 0 ? <ArchivedEmptyState /> : null}
 
 			{archived.length > 0 ? (
-				<section className="flex flex-col rounded-[12px] border border-foreground/10 bg-foreground/[0.02]">
+				<section className="flex flex-col rounded-[12px] border border-border/60 bg-foreground/[0.02]">
 					{archived.map((conversation, index) => (
 						<ArchivedChatRow
 							conversation={conversation}
@@ -95,7 +95,7 @@ function ArchivedChatRow({
 			className={
 				isLast
 					? 'flex items-center justify-between gap-6 px-5 py-4'
-					: 'flex items-center justify-between gap-6 border-b border-foreground/5 px-5 py-4'
+					: 'flex items-center justify-between gap-6 border-b border-border/40 px-5 py-4'
 			}
 		>
 			<div className="flex min-w-0 flex-col gap-1">
@@ -134,7 +134,7 @@ function formatRowDate(date: Date): string {
 /** Empty state shown when the user has no archived conversations. */
 function ArchivedEmptyState(): React.JSX.Element {
 	return (
-		<div className="flex flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-foreground/10 bg-foreground/[0.02] px-6 py-16 text-center">
+		<div className="flex flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-border/60 bg-foreground/[0.02] px-6 py-16 text-center">
 			<div className="flex size-10 items-center justify-center rounded-[6px] bg-foreground/[0.05] text-muted-foreground">
 				<Archive aria-hidden="true" className="size-5" />
 			</div>
