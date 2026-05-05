@@ -371,8 +371,14 @@
 	--input: oklch(from var(--foreground) l c h / 0.1);
 	--ring: oklch(from var(--accent) l c h / 0.45);
 
-	/* Sidebar tokens */
-	--sidebar: var(--background-elevated);
+	/* Sidebar tokens — derive from `--background` directly instead of
+	 * the shared `--background-elevated` token (which is defined in
+	 * `:root` and stays light-mode-shaped in the dark cascade), so the
+	 * sidebar surface re-tints with each preset's dark hue + chroma
+	 * just like `--card` and `--popover` do above. Lift +0.03 lightness
+	 * so it sits one notch below the cards (visual hierarchy:
+	 * background < sidebar < card < popover). */
+	--sidebar: oklch(from var(--background) calc(l + 0.03) c h);
 	--sidebar-foreground: var(--foreground);
 	--sidebar-primary: var(--accent);
 	--sidebar-primary-foreground: var(--primary-foreground);
