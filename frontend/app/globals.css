@@ -471,6 +471,12 @@ html[data-font="inter"] {
 	--radius-md: max(0px, calc(var(--radius) - 2px));
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	/* DESIGN.md `rounded.lg` — panels, chat shell, composer chrome */
+	--radius-surface-lg: 14px;
+	/* DESIGN.md `rounded.md` — sidebar header row (New Session, search): softer than control */
+	--radius-soft: 8px;
+	/* Tight controls — text inputs, chips, onboarding primary CTAs */
+	--radius-control: 6px;
 	--radius-bubble: var(--radius-bubble);
 	--radius-bubble-tail: var(--radius-bubble-tail);
 
@@ -1432,7 +1438,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 .chat-composer-dropdown-menu.popover-styled {
 	background: var(--foreground-5);
 	color: var(--foreground);
-	border-radius: 14px;
+	border-radius: var(--radius-surface-lg);
 	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
 	box-shadow: var(--shadow-minimal);
 }

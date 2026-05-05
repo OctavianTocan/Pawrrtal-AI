@@ -43,7 +43,7 @@ export function OnboardingWelcomeStep({
 	onContinue,
 }: OnboardingWelcomeStepProps): React.JSX.Element {
 	return (
-		<section className="popover-styled onboarding-panel flex w-full max-w-[37rem] select-none flex-col gap-7 rounded-xl border border-border bg-background/95 px-7 py-8 text-foreground shadow-modal-small sm:px-8 sm:py-9">
+		<section className="popover-styled onboarding-panel flex w-full max-w-[37rem] select-none flex-col gap-7 rounded-surface-lg border border-border bg-background/95 px-7 py-8 text-foreground shadow-modal-small sm:px-8 sm:py-9">
 			<div className="flex flex-col gap-4 text-left">
 				<DialogHeader className="gap-2 text-left">
 					<div
@@ -65,10 +65,10 @@ export function OnboardingWelcomeStep({
 					return (
 						<div
 							key={item.title}
-							className="flex min-h-[6rem] items-start gap-3 rounded-xl bg-foreground/[0.025] p-4 ring-1 ring-border transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.04] hover:shadow-minimal"
+							className="flex min-h-[6rem] items-start gap-3 rounded-surface-lg bg-foreground/[0.025] p-4 ring-1 ring-border transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.04] hover:shadow-minimal"
 						>
 							<span
-								className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-foreground/[0.045] text-muted-foreground ring-1 ring-border"
+								className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface-lg bg-foreground/[0.045] text-muted-foreground ring-1 ring-border"
 								aria-hidden="true"
 							>
 								<HugeiconsIcon
@@ -94,7 +94,7 @@ export function OnboardingWelcomeStep({
 			<Button
 				type="button"
 				size="lg"
-				className="h-11 w-full cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80"
+				className="h-11 w-full cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80"
 				onClick={onContinue}
 			>
 				Get started

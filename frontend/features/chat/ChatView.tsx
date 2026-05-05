@@ -70,6 +70,10 @@ function ChatScrollAnchor({ track: _track }: { track: number }): React.JSX.Eleme
  * Renders the conversation history, a loading indicator while the assistant
  * is thinking, and the message composer. All state management is handled by
  * the parent {@link ChatContainer}.
+ *
+ * The outer panel uses `rounded-surface-lg` (`--radius-surface-lg` in `globals.css`,
+ * DESIGN.md `rounded.lg`) so its corners match {@link ChatComposer} and composer
+ * dropdown chrome. Avoid `rounded-xl` here: with `--radius: 0`, `rounded-xl` is only ~4px.
  */
 function ChatView({
 	message,
@@ -91,7 +95,7 @@ function ChatView({
 	const isEmptyConversation = chatHistory.length === 0;
 
 	return (
-		<div className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-xl bg-background px-4 shadow-panel-floating">
+		<div className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-surface-lg bg-background px-4 shadow-panel-floating">
 			{isEmptyConversation ? (
 				<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">

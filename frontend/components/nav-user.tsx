@@ -55,7 +55,7 @@ export type NavUserIdentity = {
 	name: string;
 	/** Account email shown as the dropdown's top label. */
 	email: string;
-	/** Subscription tier copy ("Free", "Max plan", "Team", etc.). */
+	/** Subscription tier copy ("Free", "Studio plan", "Team", etc.). */
 	plan: string;
 	/** Optional avatar image URL; falls back to initials when missing. */
 	avatar?: string;

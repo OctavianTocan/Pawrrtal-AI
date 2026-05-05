@@ -221,7 +221,7 @@ export function ChatComposer({
 	return (
 		<PromptInput
 			className={cn('w-full max-w-[48.75rem]', className)}
-			inputGroupClassName="chat-composer-input-group rounded-[14px] border-transparent bg-foreground-5 shadow-minimal"
+			inputGroupClassName="chat-composer-input-group rounded-surface-lg border-transparent bg-foreground-5 shadow-minimal"
 			multiple={true}
 			onKeyDown={handleComposerKeyDown}
 			onSubmit={onSendMessage}

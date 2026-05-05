@@ -33,7 +33,7 @@ export function StepContext({
 			footer={
 				<>
 					<Button
-						className="h-11 w-full max-w-sm cursor-pointer rounded-xl bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
+						className="h-11 w-full max-w-sm cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal"
 						onClick={onContinue}
 						size="lg"
 						type="button"

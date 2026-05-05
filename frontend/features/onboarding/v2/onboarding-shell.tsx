@@ -23,14 +23,14 @@ export interface OnboardingShellProps {
  *
  * Per DESIGN.md → Components → personalization-modal, the body is
  * wrapped in a panel that mirrors the workspace onboarding card —
- * `bg-background/95`, `border border-border`, `rounded-xl`,
+ * `bg-background/95`, `border border-border`, `rounded-surface-lg`,
  * `shadow-modal-small`. Field typography uses the same tokens as the
  * workspace flow (h3-equivalent heading, body-md helper, body-sm field
  * labels) so the two surfaces feel like one design language.
  *
- * The footer (Continue button etc.) sits **below** the panel so it
- * matches the workspace modal pattern where the primary CTA is the
- * last full-width control under the card.
+ * The footer (Continue button etc.) is the last block **inside** the
+ * panel so the primary CTA shares the same card chrome as the step
+ * content.
  */
 export function OnboardingShell({
 	title,
@@ -41,12 +41,9 @@ export function OnboardingShell({
 }: OnboardingShellProps): React.JSX.Element {
 	return (
 		<div
-			className={cn(
-				'mx-auto flex w-full max-w-[37rem] flex-col gap-6 text-foreground',
-				className
-			)}
+			className={cn('mx-auto flex w-full max-w-[37rem] flex-col text-foreground', className)}
 		>
-			<section className="popover-styled onboarding-panel flex w-full select-none flex-col gap-7 rounded-xl border border-border bg-background/95 px-7 py-8 shadow-modal-small sm:px-8 sm:py-9">
+			<section className="popover-styled onboarding-panel flex w-full select-none flex-col gap-7 rounded-surface-lg border border-border bg-background/95 px-7 py-8 shadow-modal-small sm:px-8 sm:py-9">
 				<header className="flex flex-col items-center gap-2 text-center">
 					<h2 className="text-2xl font-semibold tracking-tight sm:text-[1.65rem]">
 						{title}
@@ -58,8 +55,8 @@ export function OnboardingShell({
 					) : null}
 				</header>
 				<div className="flex flex-col gap-5 text-left">{children}</div>
+				{footer ? <div className="flex flex-col items-center gap-2">{footer}</div> : null}
 			</section>
-			{footer ? <div className="flex flex-col items-center gap-2">{footer}</div> : null}
 		</div>
 	);
 }

@@ -33,7 +33,6 @@ import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
-import { ProjectsList } from '@/features/projects/components/ProjectsList';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
@@ -71,7 +70,7 @@ const COLLAPSE_ANIMATION_DURATION_MS = 250;
 const SIDEBAR_USER: NavUserIdentity = {
 	name: 'Octavian Tocan',
 	email: 'tocanoctavian@gmail.com',
-	plan: 'Max plan',
+	plan: 'Studio plan',
 };
 
 const HELP_LINKS = [
@@ -387,11 +386,10 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<>
 				<Sidebar>
 					<SidebarFocusShell className="flex h-full flex-col">
-						<SidebarHeader className="px-2 pb-2 shrink-0">
+						<SidebarHeader className="px-2 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
-							<ProjectsList />
 							<NavChats />
 						</SidebarContent>
 						<NavUser user={SIDEBAR_USER} />
@@ -471,11 +469,10 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						data-state={state}
 						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
-						<SidebarHeader className="px-2 pb-2 shrink-0">
+						<SidebarHeader className="px-2 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
-							<ProjectsList />
 							<NavChats />
 						</SidebarContent>
 						<NavUser user={SIDEBAR_USER} />

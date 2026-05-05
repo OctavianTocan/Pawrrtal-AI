@@ -5,6 +5,7 @@ import type {
 	RefObject,
 } from 'react';
 import { Fragment } from 'react';
+import { ProjectsList } from '@/features/projects/components/ProjectsList';
 import type { ConversationGroup } from '@/lib/conversation-groups';
 import { highlightMatch } from '@/lib/highlight-match';
 import type { Conversation, ConversationStatus } from '@/lib/types';
@@ -346,7 +347,7 @@ function NavChatsContent({
 	return (
 		<div
 			ref={navigatorRef}
-			className="pt-1 outline-none"
+			className="min-h-0 flex-1 overflow-y-auto pt-1 outline-none"
 			role="listbox"
 			aria-label="Sessions"
 			aria-multiselectable="true"
@@ -410,8 +411,9 @@ function NavChatsContent({
 /**
  * Pure presentation layer for the sidebar conversation list.
  *
- * Renders the search header, empty states, and grouped conversation items.
- * All data and callbacks are received via props — no hooks.
+ * Renders the search bar (directly under the New Session control in the
+ * layout), the projects section, empty states, and grouped conversation
+ * items. All data and callbacks are received via props — no hooks.
  */
 export function NavChatsView({
 	searchQuery,
@@ -456,6 +458,9 @@ export function NavChatsView({
 				onSearchClose={onSearchClose}
 				resultCount={resultCount}
 			/>
+			<div className="shrink-0">
+				<ProjectsList />
+			</div>
 			<NavChatsContent
 				isLoading={isLoading}
 				isEmpty={isEmpty}

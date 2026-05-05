@@ -39,7 +39,7 @@ export function OnboardingLocalWorkspaceStep({
 	const isFolderSelected = Boolean(folderLabel);
 
 	return (
-		<section className="popover-styled onboarding-panel flex w-full max-w-[32rem] select-none flex-col gap-6 rounded-xl border border-border bg-background/95 p-6 text-foreground shadow-modal-small sm:p-7">
+		<section className="popover-styled onboarding-panel flex w-full max-w-[32rem] select-none flex-col gap-6 rounded-surface-lg border border-border bg-background/95 p-6 text-foreground shadow-modal-small sm:p-7">
 			<button
 				type="button"
 				className="-ml-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-lg px-2 text-sm text-muted-foreground transition-[background-color,color] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.045] hover:text-foreground active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45"
