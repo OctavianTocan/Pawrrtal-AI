@@ -137,6 +137,16 @@
 			}
 		},
 		{
+			"includes": ["frontend/e2e/**", "frontend/scripts/**", "scripts/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": [".agents/**"],
 			"linter": {
 				"enabled": false

@@ -183,6 +183,132 @@ function ThemeColorCard({
 	);
 }
 
+/** Props for the {@link TypographyCard}. */
+interface TypographyCardProps {
+	overrides: AppearanceFonts;
+	uiFontSize: number;
+	onFontCommit: (slot: FontSlot, next: string | null) => void;
+	onUiFontSize: (next: number) => void;
+}
+
+/**
+ * Typography card — font-family rows for each slot plus the UI base
+ * font-size input. Extracted from {@link AppearanceSection} so the
+ * outer component stays under the project's per-function line budget.
+ */
+function TypographyCard({
+	overrides,
+	uiFontSize,
+	onFontCommit,
+	onUiFontSize,
+}: TypographyCardProps): React.JSX.Element {
+	return (
+		<SettingsCard>
+			<SettingsSectionHeader
+				description="Font families and base size that drive the type system across the app."
+				title="Typography"
+			/>
+			{FONT_SLOTS.map((slot) => (
+				<FontRow
+					defaultValue={DEFAULT_APPEARANCE.fonts[slot]}
+					key={slot}
+					label={FONT_LABELS[slot]}
+					onCommit={(next) => onFontCommit(slot, next)}
+					overrideValue={overrides[slot]}
+				/>
+			))}
+			<SettingsRow
+				description="Drives every rem-denominated value across the app."
+				label="UI font size"
+			>
+				<div className="flex items-center gap-2">
+					<Input
+						aria-label="UI font size in pixels"
+						className="w-16 text-right text-sm tabular-nums"
+						max={32}
+						min={10}
+						onChange={(event) => {
+							const next = Number.parseInt(event.target.value, 10);
+							if (Number.isFinite(next)) onUiFontSize(next);
+						}}
+						type="number"
+						value={uiFontSize}
+					/>
+					<span className="text-xs text-muted-foreground">px</span>
+				</div>
+			</SettingsRow>
+		</SettingsCard>
+	);
+}
+
+/** Props for the {@link BehaviorCard}. */
+interface BehaviorCardProps {
+	pointerCursors: boolean;
+	translucentSidebar: boolean;
+	contrast: number;
+	onOptionChange: <K extends keyof AppearanceOptions>(key: K, next: AppearanceOptions[K]) => void;
+}
+
+/**
+ * Behavior card — cross-mode interaction toggles + the global
+ * contrast slider. Extracted alongside {@link TypographyCard} so the
+ * outer {@link AppearanceSection} body fits comfortably under the
+ * 120-line per-function ceiling.
+ */
+function BehaviorCard({
+	pointerCursors,
+	translucentSidebar,
+	contrast,
+	onOptionChange,
+}: BehaviorCardProps): React.JSX.Element {
+	return (
+		<SettingsCard>
+			<SettingsSectionHeader
+				description="Interaction defaults that aren't tied to a specific palette or font."
+				title="Behavior"
+			/>
+			<SettingsRow
+				description="Change the cursor to a pointer when hovering over interactive elements."
+				label="Use pointer cursors"
+			>
+				<Switch
+					checked={pointerCursors}
+					onCheckedChange={(checked) => onOptionChange('pointer_cursors', checked)}
+				/>
+			</SettingsRow>
+			<SettingsRow
+				description="Use a glass-style backdrop on the sidebar when scenic mode is enabled."
+				label="Translucent sidebar"
+			>
+				<Switch
+					checked={translucentSidebar}
+					onCheckedChange={(checked) => onOptionChange('translucent_sidebar', checked)}
+				/>
+			</SettingsRow>
+			<SettingsRow
+				description="Boosts mid-tone separation across the entire UI. Higher values render bolder borders and stronger contrast on hover states."
+				label="Contrast"
+			>
+				<div className="flex w-56 items-center gap-3">
+					<Slider
+						max={100}
+						min={0}
+						onValueChange={(values) => {
+							const next = values[0];
+							if (typeof next === 'number') onOptionChange('contrast', next);
+						}}
+						step={1}
+						value={[contrast]}
+					/>
+					<span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
+						{contrast}
+					</span>
+				</div>
+			</SettingsRow>
+		</SettingsCard>
+	);
+}
+
 /**
  * Live, persisted Appearance settings section.
  *
@@ -312,86 +438,19 @@ export function AppearanceSection(): React.JSX.Element {
 				resolvedColors={resolved.dark}
 			/>
 
-			<SettingsCard>
-				<SettingsSectionHeader
-					description="Font families and base size that drive the type system across the app."
-					title="Typography"
-				/>
-				{FONT_SLOTS.map((slot) => (
-					<FontRow
-						defaultValue={DEFAULT_APPEARANCE.fonts[slot]}
-						key={slot}
-						label={FONT_LABELS[slot]}
-						onCommit={(next) => setFontSlot(slot, next)}
-						overrideValue={overrides.fonts[slot]}
-					/>
-				))}
-				<SettingsRow
-					description="Drives every rem-denominated value across the app."
-					label="UI font size"
-				>
-					<div className="flex items-center gap-2">
-						<Input
-							aria-label="UI font size in pixels"
-							className="w-16 text-right text-sm tabular-nums"
-							max={32}
-							min={10}
-							onChange={(event) => {
-								const next = Number.parseInt(event.target.value, 10);
-								if (Number.isFinite(next)) setOption('ui_font_size', next);
-							}}
-							type="number"
-							value={uiFontSize}
-						/>
-						<span className="text-xs text-muted-foreground">px</span>
-					</div>
-				</SettingsRow>
-			</SettingsCard>
+			<TypographyCard
+				onFontCommit={setFontSlot}
+				onUiFontSize={(next) => setOption('ui_font_size', next)}
+				overrides={overrides.fonts}
+				uiFontSize={uiFontSize}
+			/>
 
-			<SettingsCard>
-				<SettingsSectionHeader
-					description="Interaction defaults that aren't tied to a specific palette or font."
-					title="Behavior"
-				/>
-				<SettingsRow
-					description="Change the cursor to a pointer when hovering over interactive elements."
-					label="Use pointer cursors"
-				>
-					<Switch
-						checked={pointerCursors}
-						onCheckedChange={(checked) => setOption('pointer_cursors', checked)}
-					/>
-				</SettingsRow>
-				<SettingsRow
-					description="Use a glass-style backdrop on the sidebar when scenic mode is enabled."
-					label="Translucent sidebar"
-				>
-					<Switch
-						checked={translucentSidebar}
-						onCheckedChange={(checked) => setOption('translucent_sidebar', checked)}
-					/>
-				</SettingsRow>
-				<SettingsRow
-					description="Boosts mid-tone separation across the entire UI. Higher values render bolder borders and stronger contrast on hover states."
-					label="Contrast"
-				>
-					<div className="flex w-56 items-center gap-3">
-						<Slider
-							max={100}
-							min={0}
-							onValueChange={(values) => {
-								const next = values[0];
-								if (typeof next === 'number') setOption('contrast', next);
-							}}
-							step={1}
-							value={[contrast]}
-						/>
-						<span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
-							{contrast}
-						</span>
-					</div>
-				</SettingsRow>
-			</SettingsCard>
+			<BehaviorCard
+				contrast={contrast}
+				onOptionChange={setOption}
+				pointerCursors={pointerCursors}
+				translucentSidebar={translucentSidebar}
+			/>
 		</SettingsPage>
 	);
 }
