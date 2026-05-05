@@ -1,11 +1,11 @@
 ---
 # ai-nexus-hq07
 title: Browser-Use E2E test suite (next branch after Electron)
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-05-05T07:06:09Z
-updated_at: 2026-05-05T07:06:09Z
+updated_at: 2026-05-05T08:13:33Z
 ---
 
 The user wants a substantial new E2E suite using **browser-use** (https://github.com/browser-use/browser-use), an LLM-driven browser automation framework. This replaces or supplements the Playwright suite at frontend/e2e/ for tests where a natural-language step description is more useful than fine-grained selectors.
@@ -42,3 +42,16 @@ The user wants a substantial new E2E suite using **browser-use** (https://github
 - [ ] Add \`just browser-use-e2e\` recipe
 - [ ] CI workflow: nightly run on main + on label
 - [ ] Document env vars (LLM key, BROWSER_USE_HEADLESS, etc) in .env.example
+
+## Outcome
+
+Implemented on branch `feat/browser-use-e2e`:
+- e2e-browser-use/ workspace with uv pyproject (deps: browser-use, pytest, pytest-asyncio, httpx).
+- conftest.py: dev-login fixture (POST /auth/dev-login → Playwright storage_state.json), LLM gating (OPENAI_API_KEY → gpt-4o-mini, ANTHROPIC_API_KEY → claude-haiku-4-5, skip whole suite if neither), agent_factory fixture.
+- 7 specs: chat streaming, create project, settings navigation, archived chats, onboarding personalization, search, logout.
+- Specs that need fixture data (existing chats) skip cleanly via pytest.skip rather than fail.
+- justfile: `just browser-use-e2e` recipe (uv sync + pytest -m browser_use).
+- backend/.env.example documents OPENAI_API_KEY / ANTHROPIC_API_KEY / BROWSER_USE_HEADLESS / E2E_*_URL.
+- e2e-browser-use/README.md documents the architecture, the test catalogue, and the rule for adding new specs.
+
+Coexists with frontend/e2e/ Playwright suite (different jobs).

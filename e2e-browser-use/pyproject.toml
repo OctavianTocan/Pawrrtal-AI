@@ -1,0 +1,27 @@
+[project]
+name = "ai-nexus-e2e-browser-use"
+version = "0.1.0"
+description = "End-to-end test suite for AI Nexus driven by browser-use (LLM-controlled browser)."
+requires-python = ">=3.11"
+dependencies = [
+    "browser-use>=0.12.6",
+    "httpx>=0.27.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "browser_use: tests that drive the app via the browser-use Agent (slow, needs an LLM key)",
+]
