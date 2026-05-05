@@ -381,22 +381,35 @@ export function AppearanceSection(): React.JSX.Element {
 	const pointerCursors = resolved.options.pointer_cursors;
 	const translucentSidebar = resolved.options.translucent_sidebar;
 
+	// Per-mode preset apply: only swaps the *colors* for the chosen
+	// mode. Fonts are intentionally NOT touched here even though
+	// presets carry a `fonts` field — `fonts` is a single global
+	// record (one stack per slot, applied to both modes), so writing
+	// a preset's fonts when the user picks a Light preset would
+	// surface-replace the Dark UI's typography mid-session and vice
+	// versa. The cross-mode font bleed was caught by
+	// `frontend/e2e/preset-mode-isolation.spec.ts`. Users who want a
+	// preset's typography can still get it by editing the Typography
+	// rows directly, or by picking the same preset for both modes
+	// (light + dark cards) — picking Cursor in *both* cards yields a
+	// consistent intent that's safe to translate to global fonts in a
+	// follow-up if we ever add a unified-preset surface.
 	const applyLightPreset = useCallback(
 		(preset: ThemePreset) => {
 			updateAppearance(
-				buildPayload(preset.light, overrides.dark, preset.fonts, overrides.options)
+				buildPayload(preset.light, overrides.dark, overrides.fonts, overrides.options)
 			);
 		},
-		[overrides.dark, overrides.options, updateAppearance]
+		[overrides.dark, overrides.fonts, overrides.options, updateAppearance]
 	);
 
 	const applyDarkPreset = useCallback(
 		(preset: ThemePreset) => {
 			updateAppearance(
-				buildPayload(overrides.light, preset.dark, preset.fonts, overrides.options)
+				buildPayload(overrides.light, preset.dark, overrides.fonts, overrides.options)
 			);
 		},
-		[overrides.light, overrides.options, updateAppearance]
+		[overrides.fonts, overrides.light, overrides.options, updateAppearance]
 	);
 
 	return (
