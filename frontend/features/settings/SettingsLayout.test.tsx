@@ -20,7 +20,7 @@ describe('SettingsLayout', () => {
 
 	it('defaults to the General section', () => {
 		const { getByRole } = render(<SettingsLayout />);
-		expect(getByRole('heading', { name: 'Settings' })).toBeTruthy();
+		expect(getByRole('heading', { name: 'General' })).toBeTruthy();
 	});
 
 	it('switches the right pane to Appearance when the rail item is clicked', () => {

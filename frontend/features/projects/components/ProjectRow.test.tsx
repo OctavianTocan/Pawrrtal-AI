@@ -36,7 +36,12 @@ describe('ProjectRow', () => {
 
 	it('extracts the conversation ID from dataTransfer on drop', () => {
 		const { container, props } = renderRow();
-		const wrapper = container.querySelector(`[data-project-id="proj-1"]`);
+		// Drop handlers now live on the inner button (the row click target),
+		// not the outer positioning wrapper — fires per the redesigned hit
+		// area in DESIGN.md → Hit Targets.
+		const wrapper = container.querySelector(
+			`[data-project-id="proj-1"] button[aria-current], [data-project-id="proj-1"] button:not([aria-label*="Rename"])`
+		);
 		if (!wrapper) throw new Error('drop target not found');
 
 		const types: string[] = [CONVERSATION_DRAG_MIME];
@@ -61,7 +66,12 @@ describe('ProjectRow', () => {
 
 	it('ignores drops that do not carry a conversation payload', () => {
 		const { container, props } = renderRow();
-		const wrapper = container.querySelector(`[data-project-id="proj-1"]`);
+		// Drop handlers now live on the inner button (the row click target),
+		// not the outer positioning wrapper — fires per the redesigned hit
+		// area in DESIGN.md → Hit Targets.
+		const wrapper = container.querySelector(
+			`[data-project-id="proj-1"] button[aria-current], [data-project-id="proj-1"] button:not([aria-label*="Rename"])`
+		);
 		if (!wrapper) throw new Error('drop target not found');
 
 		const dataTransfer = {

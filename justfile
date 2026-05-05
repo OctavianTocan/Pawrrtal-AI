@@ -89,6 +89,14 @@ sentrux:
 test:
     uv run --project backend pytest backend/tests
 
+# Playwright E2E suite (frontend/e2e/). Requires backend + frontend dev
+# servers to be already running on the standard ports — start them with
+# `just dev` in another terminal first. Uses the dev-admin login fixture
+# (no UI signup), per the project's API-setup-not-UI rule.
+e2e:
+    cd frontend && bunx --bun playwright install --with-deps chromium
+    cd frontend && bunx --bun playwright test
+
 # Install all dependencies (frontend + backend) and git hooks
 install:
     bun install

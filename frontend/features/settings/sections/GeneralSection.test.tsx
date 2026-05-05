@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { GeneralSection } from './GeneralSection';
 
 describe('GeneralSection', () => {
-	it('renders the Settings header + every section heading', () => {
+	it('renders the General page heading + every section heading', () => {
 		const { getByRole } = render(<GeneralSection />);
-		expect(getByRole('heading', { name: 'Settings' })).toBeTruthy();
+		expect(getByRole('heading', { name: 'General' })).toBeTruthy();
 		expect(getByRole('heading', { name: 'Profile' })).toBeTruthy();
 		expect(getByRole('heading', { name: 'Preferences' })).toBeTruthy();
 		expect(getByRole('heading', { name: 'Notifications' })).toBeTruthy();

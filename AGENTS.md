@@ -93,6 +93,18 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
 - **TypeScript Rules (`.claude/rules/typescript/`)**: Explicit return types on every function, TSDoc on exports, JSDoc placement (directly above the declaration), parameter limits (max 3 positional, group into objects beyond that), literal union types for constrained string fields, and environment variable conventions.
 
+## How We Work On AI Nexus
+
+The session-derived working agreement lives in
+`.claude/rules/general/how-we-work-on-ai-nexus.md`. It encodes nine rules
+the team keeps re-discovering: read implementations before changing them,
+trace cause before fixing, update `DESIGN.md` when tokens change in code,
+reuse established patterns instead of inventing parallel ones, declare
+every interactive element with `cursor-pointer`, run the toolchain after
+every file write, ship tests in the same commit as new features, commit
+one concern at a time, and ask before destructive or scope-bending work.
+Apply on every session.
+
 ## Curated Claude rules (AI Nexus)
 
 Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full `.claude/rules/` tree has additional coverage.
