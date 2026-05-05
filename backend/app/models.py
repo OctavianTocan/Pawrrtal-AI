@@ -170,6 +170,63 @@ class APIKey(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
 
 
+class ChannelBinding(Base):
+    """Persistent map from a third-party messaging identity to a Nexus user.
+
+    One row per (provider, external_user_id) — enforced by a unique
+    constraint so a Telegram account can never silently move between
+    Nexus users. Created when a user successfully redeems a one-time
+    code via the bot's `/start <code>` (or manual paste) flow.
+
+    The `provider` column is open-ended on purpose: today only
+    `"telegram"` is wired up, but the same table will host Slack,
+    WhatsApp, iMessage, etc. as those adapters land.
+    """
+
+    __tablename__ = "channel_bindings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+    # Provider identities can be ints (Telegram user_id) or strings
+    # (Slack user IDs, WhatsApp phone numbers). Normalize to text so
+    # the column shape stays the same across providers.
+    external_user_id: Mapped[str] = mapped_column(String(128))
+    # Default chat to push to. For Telegram direct chats this matches
+    # external_user_id; for groups it's the chat where the bind happened.
+    external_chat_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Display handle captured at bind time. Stored for admin/debug only,
+    # never used for authentication.
+    display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ChannelLinkCode(Base):
+    """Short-lived one-time-use code that brokers a channel bind.
+
+    The web app issues a code (server-side; user only sees the plaintext
+    once), the user sends it to the bot, and the bot consumes the row to
+    create the matching `ChannelBinding`. We persist an HMAC of the code
+    rather than the plaintext so a DB leak cannot be replayed against
+    the bot. Lookups are always by `code_hash`, which is therefore the
+    primary key.
+    """
+
+    __tablename__ = "channel_link_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    # NULL while the code is unredeemed; populated once the bot consumes it.
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class ChatMessage(Base):
     """A single chat message within a conversation, including reasoning state.
 
