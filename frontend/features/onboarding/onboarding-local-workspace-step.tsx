@@ -57,7 +57,7 @@ export function OnboardingLocalWorkspaceStep({
 
 			<DialogHeader className="gap-2 text-left">
 				<div
-					className="text-[1.375rem] font-semibold leading-tight tracking-tight text-foreground"
+					className="text-balance text-[1.375rem] font-semibold leading-tight tracking-tight text-foreground"
 					aria-hidden="true"
 				>
 					Choose folder

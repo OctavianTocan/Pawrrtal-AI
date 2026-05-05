@@ -292,7 +292,7 @@ export function ChatComposer({
 						content={isTranscribing ? 'Wait for transcription' : 'Send message'}
 					>
 						<PromptInputSubmit
-							className="size-9 cursor-pointer rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:bg-foreground/20 disabled:text-background/60"
+							className="size-9 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
 							disabled={!hasContent || isLoading || isTranscribing}
 							status={isLoading ? 'streaming' : 'ready'}
 						>

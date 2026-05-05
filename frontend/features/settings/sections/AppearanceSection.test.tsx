@@ -128,34 +128,37 @@ describe('AppearanceSection', () => {
 		expect(screen.getByDisplayValue('16')).toBeTruthy();
 	});
 
-	it('hits DELETE /api/v1/appearance when Reset is pressed', async () => {
+	it('exposes a per-mode preset picker that PUTs an empty colors payload on reset', async () => {
 		mockResponse(EMPTY_SETTINGS);
 		const Wrapper = createWrapper();
 		render(<AppearanceSection />, { wrapper: Wrapper });
 
-		// Wait for the GET to settle so the Reset button is no longer
-		// disabled by `isLoading`. fireEvent.click on a disabled button
-		// silently does nothing, so this guard is load-bearing.
+		// Two preset selects (one per theme card). Wait for them to mount.
 		await waitFor(() => {
-			expect(
-				screen.getByRole('button', { name: /Reset appearance to defaults/ })
-			).not.toBeDisabled();
+			expect(screen.getAllByRole('combobox', { name: /preset/ }).length).toBe(2);
 		});
 
-		mockAuthedFetch.mockResolvedValueOnce({
-			ok: true,
-			status: 204,
-			json: async () => null,
-			text: async () => '',
+		mockResponse(EMPTY_SETTINGS);
+		const lightSelect = screen.getAllByRole('combobox', { name: /preset/ })[0];
+		expect(lightSelect).toBeDefined();
+		fireEvent.change(lightSelect as HTMLSelectElement, {
+			target: { value: '__reset__' },
 		});
 
-		fireEvent.click(screen.getByRole('button', { name: /Reset appearance to defaults/ }));
-
 		await waitFor(() => {
-			expect(mockAuthedFetch).toHaveBeenCalledWith(
-				'/api/v1/appearance',
-				expect.objectContaining({ method: 'DELETE' })
+			const putCall = mockAuthedFetch.mock.calls.find(
+				(call) => (call[1] as RequestInit | undefined)?.method === 'PUT'
 			);
+			expect(putCall).toBeDefined();
 		});
+
+		const putCall = mockAuthedFetch.mock.calls.find(
+			(call) => (call[1] as RequestInit | undefined)?.method === 'PUT'
+		);
+		const body = (putCall?.[1] as RequestInit | undefined)?.body as string | undefined;
+		expect(body).toBeDefined();
+		const parsed = JSON.parse(body ?? '{}') as { light: Record<string, unknown> };
+		// Reset clears the light mode's overrides (light should be {}).
+		expect(parsed.light).toEqual({});
 	});
 });

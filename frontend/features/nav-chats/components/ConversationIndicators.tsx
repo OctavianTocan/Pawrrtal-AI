@@ -27,7 +27,7 @@ export function ConversationIndicators({
 			</div>
 			<div
 				className={cn(
-					'flex items-center justify-center gap-1 overflow-hidden transition-all duration-200 ease-out',
+					'flex items-center justify-center gap-1 overflow-hidden transition-[margin,opacity] duration-200 ease-out',
 					isProcessing || hasUnreadMeta || hasPlan || hasPendingPrompt
 						? 'ml-0 opacity-100'
 						: '!w-0 -ml-[10px] opacity-0'

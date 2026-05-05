@@ -110,6 +110,13 @@ electron-build:
 electron-dev: electron-build
     cd electron && bun run start:dev
 
+# One-shot dev: spin up the Next.js dev server AND launch Electron in
+# a single terminal. Best for desktop-only iteration where you don't
+# need the backend running. For full-stack dev, run `just dev` and
+# `just electron-dev` in two terminals instead.
+electron-dev-all: electron-build
+    cd electron && bun run dev:all
+
 # Build the Next.js standalone bundle the desktop app spawns at runtime.
 electron-frontend-build:
     cd frontend && bun run build

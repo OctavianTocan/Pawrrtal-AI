@@ -122,7 +122,10 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
 	return (
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
-			className={cn('text-base leading-none font-medium', className)}
+			// `text-balance` per the userinterface-wiki rule on heading wrap —
+			// dialog titles are short headings that benefit from balanced
+			// line breaks. Caller can override via `className`.
+			className={cn('text-balance text-base leading-none font-medium', className)}
 			{...props}
 		/>
 	);
@@ -135,8 +138,11 @@ function DialogDescription({
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"
+			// `text-pretty` per the userinterface-wiki rule on body wrap —
+			// dialog descriptions are short prose that benefits from
+			// orphan-suppression at the wrap.
 			className={cn(
-				'text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
+				'text-pretty text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
 				className
 			)}
 			{...props}

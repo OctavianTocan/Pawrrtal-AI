@@ -430,7 +430,7 @@ export function VoiceMeter({
 			>
 				<Button
 					aria-label="Transcribe and send"
-					className="size-8 rounded-full bg-foreground text-background hover:bg-foreground/85 disabled:cursor-not-allowed disabled:opacity-50"
+					className="size-8 rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={isTranscribing}
 					onClick={onSend}
 					size="icon-sm"

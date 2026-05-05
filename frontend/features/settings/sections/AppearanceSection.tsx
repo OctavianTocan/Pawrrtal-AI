@@ -17,7 +17,7 @@
  * back to those values.
  */
 
-import { LaptopMinimal, Moon, RotateCcw, Sun } from 'lucide-react';
+import { LaptopMinimal, Moon, Sun } from 'lucide-react';
 import {
 	type ChangeEvent,
 	type ReactNode,
@@ -41,9 +41,7 @@ import {
 	THEME_PRESETS,
 	type ThemeColors,
 	type ThemeMode,
-	type ThemePreset,
 	useAppearance,
-	useResetAppearance,
 	useUpdateAppearance,
 } from '@/features/appearance';
 import { cn } from '@/lib/utils';
@@ -53,6 +51,36 @@ import { SettingsCard, SettingsRow, Slider, Switch } from '../primitives';
  *  responsive (under the Doherty 400ms threshold) while not flooding
  *  the API with one PUT per keystroke. */
 const TEXT_INPUT_DEBOUNCE_MS = 250;
+
+/**
+ * Resolve any CSS color string (hex, rgb, oklch, named) into a `#rrggbb`
+ * literal that `<input type="color">` accepts. Uses an offscreen canvas
+ * because the native input doesn't speak `oklch()`. Returns the input
+ * unchanged when it's already 7-char hex (fast path).
+ *
+ * Falls back to a sensible default (`#888888`) on SSR or if the runtime
+ * can't parse the string — the picker still shows *something* the user
+ * can drag, and the typed input retains the original value untouched.
+ */
+function toHex(value: string | undefined | null): string {
+	if (!value) return '#888888';
+	const trimmed = value.trim();
+	if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed.toLowerCase();
+	if (typeof document === 'undefined') return '#888888';
+	const ctx = document.createElement('canvas').getContext('2d');
+	if (!ctx) return '#888888';
+	try {
+		ctx.fillStyle = '#000';
+		ctx.fillStyle = trimmed;
+		const computed = ctx.fillStyle;
+		if (typeof computed === 'string' && /^#[0-9a-f]{6}$/i.test(computed)) {
+			return computed.toLowerCase();
+		}
+	} catch {
+		/* fall through */
+	}
+	return '#888888';
+}
 
 /** Human-readable labels for each color slot, shown next to the swatch. */
 const COLOR_LABELS: Record<ColorSlot, string> = {
@@ -89,67 +117,6 @@ function buildPayload(
 	options: AppearanceOptions
 ): AppearanceSettings {
 	return { light, dark, fonts, options };
-}
-
-/**
- * Apply a `themes/*.md`-derived preset on top of the user's current
- * overrides, then dispatch the mutation. Only the preset's non-empty
- * color and font slots are merged so a partial preset (e.g. accent-
- * only) leaves unrelated fields untouched.
- */
-function applyPreset(
-	preset: ThemePreset,
-	current: AppearanceSettings,
-	updateAppearance: (next: AppearanceSettings) => void
-): void {
-	const nextLight: ThemeColors = { ...current.light, ...preset.colors };
-	const nextFonts: AppearanceFonts = { ...current.fonts, ...preset.fonts };
-	updateAppearance(buildPayload(nextLight, current.dark, nextFonts, current.options));
-}
-
-interface PresetTileProps {
-	preset: ThemePreset;
-	onApply: () => void;
-}
-
-/**
- * Single preset row — name + description + a 5-swatch strip that
- * previews the preset's most prominent color slots. The whole tile
- * is the click target (Fitts) and the description uses `text-pretty`
- * to avoid orphan words.
- */
-function PresetTile({ preset, onApply }: PresetTileProps): React.JSX.Element {
-	const previewSlots: ColorSlot[] = ['background', 'foreground', 'accent', 'info', 'destructive'];
-	return (
-		<button
-			className={cn(
-				'group flex min-w-[16rem] flex-1 cursor-pointer flex-col gap-2 rounded-[8px] border border-foreground/10 bg-foreground/[0.02] px-3 py-2.5',
-				'text-left transition-colors duration-150 ease-out hover:border-foreground/20 hover:bg-foreground/[0.05]'
-			)}
-			onClick={onApply}
-			type="button"
-		>
-			<div className="flex items-center justify-between gap-2">
-				<span className="text-sm font-medium text-foreground">{preset.name}</span>
-				<span className="text-xs text-muted-foreground tabular-nums">{preset.id}</span>
-			</div>
-			<span className="line-clamp-2 text-pretty text-xs text-muted-foreground">
-				{preset.description}
-			</span>
-			<div aria-hidden="true" className="flex items-center gap-1 pt-1">
-				{previewSlots.map((slot) => {
-					const value = preset.colors[slot] ?? DEFAULT_APPEARANCE.light[slot];
-					return (
-						<span
-							className="size-4 rounded-[4px] border border-foreground/10"
-							key={slot}
-							style={{ backgroundColor: value }}
-						/>
-					);
-				})}
-			</div>
-		</button>
-	);
 }
 
 /**
@@ -254,17 +221,40 @@ function ColorRow({
 		setDraft(event.target.value);
 	}, []);
 
+	const pickerValue = toHex(draft || resolvedValue);
+
+	const handlePickerChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+		// The native picker emits `#rrggbb` instantly per drag pixel;
+		// commit immediately (no debounce) because every change is a
+		// fully-formed value, and skipping debounce gives the user the
+		// "live preview while dragging" feel of Mistral / Raycast.
+		const next = event.target.value;
+		setDraft(next);
+		commitRef.current(next);
+	}, []);
+
 	return (
 		<SettingsRow label={label}>
 			<div className="flex items-center gap-2 rounded-[6px] border border-foreground/10 bg-foreground/[0.03] px-1.5 py-1">
-				<span
-					aria-hidden="true"
-					className="size-3.5 rounded-full border border-foreground/10"
+				{/* Native color picker — clicking the swatch opens the OS dialog;
+				 *  dragging inside it commits per-pixel without debounce so the
+				 *  preview is live. The label-wrap makes the entire swatch the
+				 *  click target (Fitts's Law) without an extra DOM node. */}
+				<label
+					aria-label={`${label} color picker`}
+					className="relative flex size-5 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-foreground/15"
 					style={{ backgroundColor: resolvedValue }}
-				/>
+				>
+					<input
+						className="absolute inset-0 size-full cursor-pointer opacity-0"
+						onChange={handlePickerChange}
+						type="color"
+						value={pickerValue}
+					/>
+				</label>
 				<input
 					aria-label={`${label} color value`}
-					className="w-44 bg-transparent font-mono text-xs tabular-nums outline-none placeholder:text-muted-foreground/70"
+					className="w-40 bg-transparent font-mono text-xs tabular-nums outline-none placeholder:text-muted-foreground/70"
 					onChange={handleChange}
 					placeholder={defaultValue}
 					value={draft}
@@ -328,31 +318,80 @@ function FontRow({
 
 interface ThemeColorCardProps {
 	heading: string;
-	mode: 'light' | 'dark';
 	overrides: ThemeColors;
 	resolvedColors: Record<ColorSlot, string>;
 	defaults: Record<ColorSlot, string>;
 	onSlotCommit: (slot: ColorSlot, next: string | null) => void;
+	onPresetSelect: (presetId: string) => void;
+	onResetMode: () => void;
 	footer?: ReactNode;
 }
 
-/** Renders one of the two themed cards (Light / Dark) with its 6 color rows. */
+/** Sentinel ids the preset dropdown ships with. Real presets get their
+ *  own slug-based ids from `themes:build`. */
+const PRESET_RESET_VALUE = '__reset__';
+const PRESET_PLACEHOLDER_VALUE = '__placeholder__';
+
+/** Renders one of the two themed cards (Light / Dark) with its 6 color
+ *  rows + a `<select>` to apply a preset (or reset all six slots). */
 function ThemeColorCard({
 	heading,
-	mode,
 	overrides,
 	resolvedColors,
 	defaults,
 	onSlotCommit,
+	onPresetSelect,
+	onResetMode,
 	footer,
 }: ThemeColorCardProps): React.JSX.Element {
+	const handleSelectChange = useCallback(
+		(event: ChangeEvent<HTMLSelectElement>) => {
+			const next = event.target.value;
+			if (next === PRESET_PLACEHOLDER_VALUE) return;
+			if (next === PRESET_RESET_VALUE) {
+				onResetMode();
+				return;
+			}
+			onPresetSelect(next);
+		},
+		[onPresetSelect, onResetMode]
+	);
+
 	return (
 		<SettingsCard>
-			<header className="flex items-center justify-between border-b border-foreground/5 pb-2">
+			<header className="flex items-center justify-between gap-3 border-b border-foreground/5 pb-2">
 				<span className="text-sm font-semibold text-foreground">{heading}</span>
-				<span className="rounded-[6px] border border-foreground/10 bg-foreground/[0.03] px-2 py-1 text-xs text-foreground">
-					{mode === 'light' ? 'Mistral cream' : 'GitHub dark'}
-				</span>
+				<div className="relative">
+					{/* Native <select> — keyboard-friendly, themable via the
+					 *  cascade, and the OS-native picker UI. The visible
+					 *  text shows the active preset id; the selected option
+					 *  resets to the placeholder after each apply so the
+					 *  user can re-apply the same preset to wipe edits. */}
+					<select
+						aria-label={`${heading} preset`}
+						className={cn(
+							'cursor-pointer appearance-none rounded-[6px] border border-foreground/10 bg-foreground/[0.03] py-1 pr-7 pl-2 text-xs text-foreground',
+							'transition-colors duration-150 ease-out hover:border-foreground/20 hover:bg-foreground/[0.05]',
+							'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
+						)}
+						defaultValue={PRESET_PLACEHOLDER_VALUE}
+						onChange={handleSelectChange}
+					>
+						<option value={PRESET_PLACEHOLDER_VALUE}>Apply preset…</option>
+						{THEME_PRESETS.map((preset) => (
+							<option key={preset.id} value={preset.id}>
+								{preset.name}
+							</option>
+						))}
+						<option value={PRESET_RESET_VALUE}>Reset to defaults</option>
+					</select>
+					<span
+						aria-hidden="true"
+						className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-xs text-muted-foreground"
+					>
+						▾
+					</span>
+				</div>
 			</header>
 			{COLOR_SLOTS.map((slot) => (
 				<ColorRow
@@ -379,9 +418,8 @@ function ThemeColorCard({
  * preview is the live app.
  */
 export function AppearanceSection(): React.JSX.Element {
-	const { data, isLoading } = useAppearance();
+	const { data } = useAppearance();
 	const { mutate: updateAppearance } = useUpdateAppearance();
-	const { mutate: resetAppearance, isPending: isResetting } = useResetAppearance();
 
 	// Resolve once per render so both the swatches and the underlying
 	// CSS variables agree on what's "active". `data` may be `undefined`
@@ -442,6 +480,36 @@ export function AppearanceSection(): React.JSX.Element {
 	const pointerCursors = resolved.options.pointer_cursors;
 	const translucentSidebar = resolved.options.translucent_sidebar;
 
+	const applyPresetByIdToMode = useCallback(
+		(mode: 'light' | 'dark', presetId: string) => {
+			const preset = THEME_PRESETS.find((entry) => entry.id === presetId);
+			if (!preset) return;
+			if (mode === 'light') {
+				const nextLight: ThemeColors = { ...overrides.light, ...preset.colors };
+				const nextFonts: AppearanceFonts = { ...overrides.fonts, ...preset.fonts };
+				updateAppearance(
+					buildPayload(nextLight, overrides.dark, nextFonts, overrides.options)
+				);
+			} else {
+				const nextDark: ThemeColors = { ...overrides.dark, ...preset.colors };
+				const nextFonts: AppearanceFonts = { ...overrides.fonts, ...preset.fonts };
+				updateAppearance(
+					buildPayload(overrides.light, nextDark, nextFonts, overrides.options)
+				);
+			}
+		},
+		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
+	);
+
+	const resetMode = useCallback(
+		(mode: 'light' | 'dark') => {
+			const nextLight: ThemeColors = mode === 'light' ? {} : overrides.light;
+			const nextDark: ThemeColors = mode === 'dark' ? {} : overrides.dark;
+			updateAppearance(buildPayload(nextLight, nextDark, overrides.fonts, overrides.options));
+		},
+		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
+	);
+
 	return (
 		<div className="flex flex-col gap-6">
 			<SettingsCard>
@@ -453,55 +521,18 @@ export function AppearanceSection(): React.JSX.Element {
 							palette.
 						</span>
 					</div>
-					<div className="flex items-center gap-3">
-						<button
-							aria-label="Reset appearance to defaults"
-							className={cn(
-								'flex cursor-pointer items-center gap-1.5 rounded-[6px] border border-foreground/10 bg-background px-2.5 py-1 text-xs',
-								'text-muted-foreground transition-colors duration-150 ease-out hover:text-foreground',
-								'disabled:cursor-not-allowed disabled:opacity-60'
-							)}
-							disabled={isResetting || isLoading}
-							onClick={() => resetAppearance()}
-							type="button"
-						>
-							<RotateCcw aria-hidden="true" className="size-3.5" />
-							<span>Reset</span>
-						</button>
-						<ThemeModeToggle
-							onChange={(mode) => setOption('theme_mode', mode)}
-							value={themeMode}
-						/>
-					</div>
+					<ThemeModeToggle
+						onChange={(mode) => setOption('theme_mode', mode)}
+						value={themeMode}
+					/>
 				</header>
 			</SettingsCard>
-
-			{THEME_PRESETS.length > 0 ? (
-				<SettingsCard>
-					<header className="flex flex-col gap-1 border-b border-foreground/5 pb-2">
-						<span className="text-sm font-semibold text-foreground">Theme presets</span>
-						<span className="text-pretty text-xs text-muted-foreground">
-							Apply a curated palette as the starting point — drop more{' '}
-							<code>themes/*.md</code> files and run <code>bun run themes:build</code>{' '}
-							to add new presets.
-						</span>
-					</header>
-					<div className="flex flex-wrap gap-2 pt-3">
-						{THEME_PRESETS.map((preset) => (
-							<PresetTile
-								key={preset.id}
-								onApply={() => applyPreset(preset, overrides, updateAppearance)}
-								preset={preset}
-							/>
-						))}
-					</div>
-				</SettingsCard>
-			) : null}
 
 			<ThemeColorCard
 				defaults={DEFAULT_APPEARANCE.light}
 				heading="Light theme"
-				mode="light"
+				onPresetSelect={(id) => applyPresetByIdToMode('light', id)}
+				onResetMode={() => resetMode('light')}
 				onSlotCommit={setLightSlot}
 				overrides={overrides.light}
 				resolvedColors={resolved.light}
@@ -509,7 +540,8 @@ export function AppearanceSection(): React.JSX.Element {
 			<ThemeColorCard
 				defaults={DEFAULT_APPEARANCE.dark}
 				heading="Dark theme"
-				mode="dark"
+				onPresetSelect={(id) => applyPresetByIdToMode('dark', id)}
+				onResetMode={() => resetMode('dark')}
 				onSlotCommit={setDarkSlot}
 				overrides={overrides.dark}
 				resolvedColors={resolved.dark}

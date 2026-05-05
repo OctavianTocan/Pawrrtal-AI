@@ -121,14 +121,46 @@ async function startProductionServer(): Promise<StartedServer> {
  * In dev, wait for the user-managed Next.js dev server to come up,
  * then return its URL. We never spawn it ourselves in dev — that
  * would conflict with `just dev` and cost the user their HMR session.
+ *
+ * If the dev server isn't running after 60s, surface an actionable
+ * message instead of letting wait-on's stack trace dump as an
+ * unhandled rejection — the most common cause is the user forgetting
+ * to start `just dev` in another terminal before launching Electron.
  */
 async function attachToDevServer(): Promise<StartedServer> {
 	const url = `http://localhost:${DEV_FRONTEND_PORT}`;
-	await waitOn({
-		resources: [`tcp:localhost:${DEV_FRONTEND_PORT}`],
-		timeout: 60_000,
-		interval: 500,
-	});
+	try {
+		await waitOn({
+			resources: [`tcp:localhost:${DEV_FRONTEND_PORT}`],
+			timeout: 60_000,
+			interval: 500,
+		});
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		const banner = [
+			'',
+			'═══════════════════════════════════════════════════════════════',
+			'  Electron could not reach the Next.js dev server on :3001',
+			'═══════════════════════════════════════════════════════════════',
+			'',
+			'  The desktop shell expects the frontend dev server to be',
+			'  running before Electron launches. Start it in another',
+			'  terminal first, then re-run electron-dev:',
+			'',
+			'    just dev                # both frontend + backend',
+			'    bun --filter app.nexus-ai dev   # frontend only',
+			'',
+			'  Or run the combined recipe that orchestrates both for you:',
+			'',
+			'    just electron-dev-all',
+			'',
+			`  (waited 60s, underlying error: ${reason})`,
+			'═══════════════════════════════════════════════════════════════',
+			'',
+		].join('\n');
+		process.stderr.write(banner);
+		throw new Error(`Dev server on :${DEV_FRONTEND_PORT} did not come up within 60s`);
+	}
 	return {
 		url,
 		stop: async (): Promise<void> => {

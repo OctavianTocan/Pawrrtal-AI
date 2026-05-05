@@ -112,7 +112,7 @@ export function ThinkingHeader({
 			<ChevronRightIcon
 				aria-hidden="true"
 				className={cn(
-					'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+					'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out',
 					isOpen ? 'rotate-90' : 'rotate-0'
 				)}
 			/>

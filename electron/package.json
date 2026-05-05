@@ -6,6 +6,7 @@
 	"main": "dist/main.js",
 	"scripts": {
 		"dev": "tsc --watch --preserveWatchOutput",
+		"dev:all": "bun run dev-all.ts",
 		"build": "tsc",
 		"start": "electron .",
 		"start:dev": "ELECTRON_DEV=1 electron .",
