@@ -14,7 +14,7 @@ import {
 	SquareIcon,
 } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
 import {
@@ -274,6 +274,13 @@ function isSafetyMode(value: unknown): value is SafetyMode {
 export function AutoReviewSelector(): React.JSX.Element {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [tooltipOpen, setTooltipOpen] = useState(false);
+	// Prevents tooltip from reopening when the dropdown closes and focus
+	// returns to the trigger — Radix fires onOpenChange(true) on focus but
+	// menuOpen is already false by then, so a plain state guard misses it.
+	const isMenuClosingRef = useRef(false);
+	// Timer ref so we can cancel a pending guard clear if the dropdown
+	// reopens before the 150 ms window expires (avoids ref state leaks).
+	const closingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
 		storageKey: CHAT_STORAGE_KEYS.safetyMode,
 		defaultValue: DEFAULT_SAFETY_MODE,
@@ -291,9 +298,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 			<Tooltip
 				delayDuration={300}
 				onOpenChange={(open) => {
-					if (menuOpen) {
-						return;
-					}
+					if (menuOpen || isMenuClosingRef.current) return;
 					setTooltipOpen(open);
 				}}
 				open={menuOpen ? false : tooltipOpen}
@@ -302,7 +307,16 @@ export function AutoReviewSelector(): React.JSX.Element {
 					onOpenChange={(open) => {
 						setMenuOpen(open);
 						if (!open) {
+							isMenuClosingRef.current = true;
 							setTooltipOpen(false);
+							// Radix restores focus to the trigger in a useEffect cleanup,
+							// which fires after browser paint — well after rAF. A 150 ms
+							// setTimeout keeps the guard active long enough to absorb the
+							// focus-triggered onOpenChange(true) before clearing.
+							clearTimeout(closingTimerRef.current);
+							closingTimerRef.current = setTimeout(() => {
+								isMenuClosingRef.current = false;
+							}, 150);
 						}
 					}}
 				>
