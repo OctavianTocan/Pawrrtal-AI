@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "instruction": "Send the message in the chat composer (click Send or press Enter)",
+  "url": "http://localhost:3001/",
+  "variableKeys": [],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/form[1]/div[1]/div[2]/div[2]/span[2]/button[1]",
+      "description": "The Submit button to send the message in the chat composer",
+      "method": "click",
+      "arguments": []
+    }
+  ],
+  "actionDescription": "The Submit button to send the message in the chat composer",
+  "message": "Action [click] performed successfully on selector: xpath=/html[1]/body[1]/div[3]/div[1]/div[1]/div[3]/div[1]/div[1]/div[1]/main[1]/div[1]/div[1]/div[1]/div[1]/form[1]/div[1]/div[2]/div[2]/span[2]/button[1]"
+}

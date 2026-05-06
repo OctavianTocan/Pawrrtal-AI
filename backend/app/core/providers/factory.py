@@ -4,6 +4,7 @@ The factory layer is the only place that reads :mod:`app.core.config`,
 keeping the providers themselves config-agnostic and trivially testable
 by passing :class:`ClaudeProviderConfig` directly.
 """
+
 from __future__ import annotations
 
 from app.core.config import settings
@@ -32,6 +33,7 @@ def resolve_provider(model_id: str | None) -> AIProvider:
     if resolved.startswith("claude-"):
         config = ClaudeProviderConfig(
             oauth_token=settings.claude_code_oauth_token or None,
+            enable_exa_search=bool(settings.exa_api_key),
         )
         return ClaudeProvider(resolved, config=config)
     return AgnoProvider(resolved)

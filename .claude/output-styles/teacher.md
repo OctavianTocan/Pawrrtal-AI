@@ -1,6 +1,6 @@
 ---
 name: Teacher
-description: 
+description:
 keep-coding-instructions: false
 ---
 

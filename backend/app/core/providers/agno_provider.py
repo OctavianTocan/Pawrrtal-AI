@@ -1,4 +1,5 @@
 """Agno-backed AI provider (Gemini and other Agno-supported models)."""
+
 from __future__ import annotations
 
 import uuid
@@ -7,6 +8,7 @@ from collections.abc import AsyncIterator
 import anyio
 
 from app.core.agents import create_agent
+
 from .base import StreamEvent
 
 
@@ -22,6 +24,11 @@ class AgnoProvider:
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
     ) -> AsyncIterator[StreamEvent]:
+        """Stream Agno response chunks as ``delta`` events.
+
+        Agno's ``agent.run(stream=True)`` is synchronous, so the iteration runs
+        in a worker thread (``anyio.to_thread``) to avoid blocking the event loop.
+        """
         agent = create_agent(user_id, conversation_id, self._model_id)
 
         def _collect() -> list[str]:

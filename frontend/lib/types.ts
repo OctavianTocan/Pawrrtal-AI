@@ -62,20 +62,63 @@ export interface Conversation {
 	last_message_role?: MessageRole | null;
 	/** Number of queued prompts awaiting processing. */
 	pending_prompt_count?: number;
-	/** Tags or categories assigned to the conversation. */
+	/**
+	 * Tags or categories assigned to the conversation.
+	 *
+	 * Two shapes coexist:
+	 * - Server-issued: array of pre-defined label IDs (strings) from
+	 *   `NAV_CHATS_LABELS`. The badge renderer resolves each ID to its
+	 *   colored display metadata via `getLabelById`.
+	 * - Legacy / hand-rolled: structured `ConversationLabel` objects. Kept
+	 *   so demo data and hand-built fixtures keep rendering.
+	 */
 	labels?: ConversationLabelLike[];
+	/**
+	 * Project this conversation belongs to, or null/undefined when it
+	 * lives in the unattached "Chats" list. Set by drag-and-drop in the
+	 * sidebar.
+	 */
+	project_id?: string | null;
+}
+
+/** A user-owned sidebar grouping that conversations can be dropped into. */
+export interface Project {
+	/** Unique project identifier. */
+	id: string;
+	/** ID of the user who owns the project. */
+	user_id: string;
+	/** Display name shown in the sidebar. */
+	name: string;
+	/** ISO timestamp of creation. */
+	created_at: string;
+	/** ISO timestamp of last update (last rename). */
+	updated_at: string;
 }
 
 /**
  * Message shape used by the Agno agent / chat API.
  *
- * @property role - Sender of the message. Intentionally a subset of {@link MessageRole}
- *   (excludes `'plan'`, which is not a valid Agno API role).
- * @property content - Plain-text message body.
+ * The streaming-only fields below (`thinking`, `tool_calls`, `timeline`,
+ * `thinking_started_at`, `thinking_duration_seconds`, `assistant_status`) are
+ * optional so that history fetched from the server (which only persists
+ * `role` + `content`) hydrates unchanged; they're populated live during
+ * streaming by {@link import('@/features/chat/ChatContainer').default}.
  */
 export interface AgnoMessage {
 	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
 	role: Exclude<MessageRole, 'plan'>;
 	/** Plain-text message body. */
 	content: string;
+	/** Accumulated reasoning text from `thinking` SSE events on the assistant turn. */
+	thinking?: string;
+	/** Tool invocations and their results captured during streaming. */
+	tool_calls?: import('@/features/chat/types').ChatToolCall[];
+	/** Arrival-ordered timeline of thinking bursts and tool invocations. */
+	timeline?: import('@/features/chat/types').ChatTimelineEntry[];
+	/** Wall-clock millis when the first thinking/tool/delta event landed. */
+	thinking_started_at?: number;
+	/** Total reasoning duration in whole seconds — set when streaming completes. */
+	thinking_duration_seconds?: number;
+	/** Lifecycle of the assistant turn — drives the failed-state UI. */
+	assistant_status?: import('@/features/chat/types').AssistantMessageStatus;
 }

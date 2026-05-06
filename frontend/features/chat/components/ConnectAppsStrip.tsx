@@ -1,32 +1,37 @@
 'use client';
 
-import {
-	GithubIcon,
-	HardDriveIcon,
-	type LucideIcon,
-	NotebookTextIcon,
-	SlackIcon,
-	SquareKanbanIcon,
-	XIcon,
-} from 'lucide-react';
+import { XIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useState } from 'react';
-import { InputGroupAddon } from '@/components/ui/input-group';
+import { GitHubIcon } from '@/components/brand-icons/GitHubIcon';
+import { GoogleDriveIcon } from '@/components/brand-icons/GoogleDriveIcon';
+import { LinearIcon } from '@/components/brand-icons/LinearIcon';
+import { NotionIcon } from '@/components/brand-icons/NotionIcon';
+import { SlackIcon } from '@/components/brand-icons/SlackIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+
+/** Settings sub-page that owns integrations management. */
+const INTEGRATIONS_HREF = '/settings/integrations';
+
+type BrandIconComponent = (props: { className?: string }) => React.JSX.Element;
 
 type ConnectAppEntry = {
 	id: string;
 	label: string;
-	icon: LucideIcon;
+	/** Brand icon component — pulled from `components/brand-icons/`. */
+	Icon: BrandIconComponent;
+	/** Optional Tailwind text class to color a single-color brand glyph. */
+	colorClass?: string;
 };
 
 const CONNECT_APPS: ReadonlyArray<ConnectAppEntry> = [
-	{ id: 'notion', label: 'Notion', icon: NotebookTextIcon },
-	{ id: 'slack', label: 'Slack', icon: SlackIcon },
-	{ id: 'google-drive', label: 'Google Drive', icon: HardDriveIcon },
-	{ id: 'github', label: 'GitHub', icon: GithubIcon },
-	{ id: 'linear', label: 'Linear', icon: SquareKanbanIcon },
+	{ id: 'notion', label: 'Notion', Icon: NotionIcon, colorClass: 'text-foreground' },
+	{ id: 'slack', label: 'Slack', Icon: SlackIcon },
+	{ id: 'google-drive', label: 'Google Drive', Icon: GoogleDriveIcon },
+	{ id: 'github', label: 'GitHub', Icon: GitHubIcon, colorClass: 'text-foreground' },
+	{ id: 'linear', label: 'Linear', Icon: LinearIcon, colorClass: 'text-[#5e6ad2]' },
 ];
 
 /** Props for the {@link ConnectAppsStrip} component. */
@@ -38,69 +43,107 @@ export type ConnectAppsStripProps = {
 };
 
 /**
- * Renders a compact, dismissible footer band attached to the bottom of the
- * landing chat composer. Designed to be rendered as a child of `<PromptInput>`
- * so it shares the same `<InputGroup>` surface and rounded corners.
+ * Compact, dismissible band that renders BEHIND the chat composer and peeks
+ * out below it. The component is now a standalone rounded `<div>` (not an
+ * `InputGroupAddon`) so it can be siblings with the `PromptInput` above it
+ * in `ChatComposer`, with a negative top margin sliding the upper portion
+ * under the composer's rounded shell — that's what produces the "this
+ * strip is layered under the chat box and pokes out at the bottom" depth
+ * effect.
  *
- * The strip nudges the user to connect their integrations (Notion, Slack,
- * Google Drive, GitHub, Linear) for richer answers and exposes an inline
- * dismiss control. Dismissal is local-only (per-mount session state); no
- * persistence yet.
+ * Uses real brand-color icons (per AGENTS.md icon rule, each lives in its
+ * own file under `components/brand-icons/`) so the strip reads as a
+ * recognisable lineup of integrations rather than abstract Lucide glyphs.
+ *
+ * Layout contract (consumer-managed):
+ * - Wrap `<PromptInput>` and `<ConnectAppsStrip>` in a `relative` parent.
+ * - The PromptInput should sit on a higher z-index (e.g. `relative z-10`)
+ *   and have a solid background (`bg-[color:var(--background-elevated)]`).
+ * - This strip handles its own negative margin + `z-0`, so the consumer
+ *   only has to render it after the PromptInput in the parent flex/column.
  */
 export function ConnectAppsStrip({
 	className,
 	onDismiss,
 }: ConnectAppsStripProps): React.JSX.Element | null {
 	const [isDismissed, setIsDismissed] = useState(false);
+	const router = useRouter();
 
 	if (isDismissed) {
 		return null;
 	}
 
-	const handleDismiss = (): void => {
+	const handleDismiss = (event: React.MouseEvent<HTMLButtonElement>): void => {
+		// Stop the click from bubbling into the strip's click handler so dismiss
+		// doesn't also trigger an integrations route push.
+		event.stopPropagation();
 		setIsDismissed(true);
 		onDismiss?.();
 	};
 
+	const goToIntegrations = (): void => {
+		router.push(INTEGRATIONS_HREF);
+	};
+
 	return (
-		<InputGroupAddon
-			align="block-end"
+		// `-mt-4` slides the strip up so its top portion is hidden under
+		// the composer's rounded shell. `pt-5` gives the matching breathing
+		// room to the visible content. `relative z-0` keeps it under the
+		// composer (`z-10` on the PromptInput in `ChatComposer`).
+		// `rounded-surface-lg` matches the composer's corner radius so the
+		// visible bottom of the strip echoes the composer's geometry.
+		//
+		// Clickable `<div>` without a semantic role is intentional: the
+		// strip contains nested `<button>` elements (the brand chips and
+		// the dismiss X), so `<a>` / `<button>` / `role="link"` would
+		// produce invalid HTML or duplicate keyboard targets. The brand
+		// chips themselves are the keyboard-reachable affordances; the
+		// strip-level click is a mouse-only convenience that triggers the
+		// same `goToIntegrations` route.
+		<div
 			className={cn(
-				'relative cursor-default justify-between gap-3 bg-foreground-10 px-3 py-2 font-normal',
-				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
+				'relative z-0 -mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-surface-lg bg-[color:var(--background-elevated-shade)] px-3 pt-5 pb-1 font-normal shadow-minimal transition-colors hover:bg-foreground/[0.04]',
 				className
 			)}
+			onClick={goToIntegrations}
 		>
-			<p className="min-w-0 truncate text-[12px] text-muted-foreground">
+			<p className="min-w-0 truncate text-xs text-muted-foreground">
 				Connect your apps to get better answers
 			</p>
-			<div className="flex shrink-0 items-center gap-1">
-				{CONNECT_APPS.map((app) => {
-					const Icon = app.icon;
-					return (
-						<Tooltip key={app.id}>
-							<TooltipTrigger asChild>
-								<button
-									aria-label={`Connect ${app.label}`}
-									className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
-									type="button"
-								>
-									<Icon aria-hidden="true" className="size-3.5" />
-								</button>
-							</TooltipTrigger>
-							<TooltipContent side="top">{app.label}</TooltipContent>
-						</Tooltip>
-					);
-				})}
+			{/* Tightest grouping: `size-6` (24px) hit targets with `size-3`
+			    (12px) glyphs so the lineup reads as one cluster of brand
+			    chips instead of spaced affordances. */}
+			<div className="-mr-1 flex shrink-0 items-center gap-0">
+				{CONNECT_APPS.map((app) => (
+					<Tooltip key={app.id}>
+						<TooltipTrigger asChild>
+							<button
+								aria-label={`Connect ${app.label}`}
+								className={cn(
+									'flex size-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
+									app.colorClass ?? 'text-foreground'
+								)}
+								onClick={(event) => {
+									event.stopPropagation();
+									goToIntegrations();
+								}}
+								type="button"
+							>
+								<app.Icon className="size-3" />
+							</button>
+						</TooltipTrigger>
+						<TooltipContent side="top">{app.label}</TooltipContent>
+					</Tooltip>
+				))}
 				<button
 					aria-label="Dismiss connect apps strip"
-					className="ml-1 flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+					className="ml-0.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 					onClick={handleDismiss}
 					type="button"
 				>
-					<XIcon aria-hidden="true" className="size-3.5" />
+					<XIcon aria-hidden="true" className="size-3" />
 				</button>
 			</div>
-		</InputGroupAddon>
+		</div>
 	);
 }

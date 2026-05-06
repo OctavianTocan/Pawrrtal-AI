@@ -34,7 +34,7 @@ function createWindow() {
   })
 
   mainWindow.loadFile('index.html')
-  
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -103,7 +103,7 @@ if (!gotTheLock) {
   app.on('second-instance', () => {
     // Handle second instance
   })
-  
+
   // Continue with app initialization
   app.whenReady().then(() => {
     createWindow()

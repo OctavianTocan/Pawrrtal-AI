@@ -3,11 +3,19 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type * as React from 'react';
+import { Toaster } from 'sonner';
 import { getQueryClient } from './get-query-client';
 
 /**
- * Providers is a React component that provides the query client to the application.
- * It is used to wrap the application in a query client provider.
+ * App-root provider tree.
+ *
+ * Mounts TanStack Query (with devtools) and the global Sonner toaster.
+ *
+ * The `<AppearanceProvider>` that used to sit here was removed as part of
+ * the 2026-05-06 theming-system rip
+ * (see `docs/decisions/2026-05-06-rip-theming-system.md`). The cascade
+ * defaults defined in `frontend/app/globals.css` now drive the entire
+ * theme; per-user runtime CSS variable injection is gone.
  *
  * @param children - The children to wrap in the query client provider.
  * @returns The query client provider wrapped around the children.
@@ -19,6 +27,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 		<QueryClientProvider client={queryClient}>
 			<ReactQueryDevtools initialIsOpen={false} />
 			{children}
+			<Toaster
+				closeButton
+				duration={3500}
+				position="top-center"
+				richColors={false}
+				theme="system"
+				visibleToasts={3}
+			/>
 		</QueryClientProvider>
 	);
 }

@@ -9,6 +9,7 @@ import {
 	useConversationMetadataActions,
 } from './use-conversation-metadata-actions';
 import { useDeleteConversation, useRenameConversation } from './use-conversation-mutations';
+import { useExportConversation } from './use-export-conversation';
 
 /** Dialog and navigation state returned by {@link useConversationActions}. */
 interface UseConversationActionsDialogResult {
@@ -40,6 +41,8 @@ interface UseConversationActionsDialogResult {
 	handleRenameDialogOpenChange: (open: boolean) => void;
 	/** Handles delete dialog open/close state changes. */
 	handleDeleteDialogOpenChange: (open: boolean) => void;
+	/** Triggers a Markdown download for the given conversation by id. */
+	handleExportMarkdown: (conversationId: string) => void;
 }
 
 /** Full result type combining dialog state with metadata actions. */
@@ -62,6 +65,7 @@ export function useConversationActions(
 	const renameConversationMutation = useRenameConversation();
 	const deleteConversationMutation = useDeleteConversation();
 	const metadataActions = useConversationMetadataActions(conversations);
+	const { exportAsMarkdown } = useExportConversation();
 
 	const [renameDialogConversationId, setRenameDialogConversationId] = useState<string | null>(
 		null
@@ -145,6 +149,12 @@ export function useConversationActions(
 		if (!open) setDeleteDialogConversationId(null);
 	};
 
+	const handleExportMarkdown = (conversationId: string): void => {
+		const conversation = conversations?.find((c) => c.id === conversationId);
+		if (!conversation) return;
+		void exportAsMarkdown(conversation);
+	};
+
 	return {
 		renameDialogConversationId,
 		deleteDialogConversationId,
@@ -160,6 +170,7 @@ export function useConversationActions(
 		handleDeleteConfirm,
 		handleRenameDialogOpenChange,
 		handleDeleteDialogOpenChange,
+		handleExportMarkdown,
 		...metadataActions,
 	};
 }

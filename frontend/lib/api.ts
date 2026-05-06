@@ -114,4 +114,39 @@ export const API_ENDPOINTS = {
 		 */
 		get: '/token',
 	},
+	/** Speech-to-text proxy endpoints (xAI behind the backend). */
+	stt: {
+		/**
+		 * Transcribe an uploaded audio blob via the xAI STT proxy.
+		 * @returns `/api/v1/stt`
+		 */
+		transcribe: '/api/v1/stt',
+	},
+	/** Personalization wizard (home-page modal) endpoints. */
+	personalization: {
+		/** Read the authenticated user's personalization profile. */
+		get: '/api/v1/personalization',
+		/** Replace the authenticated user's personalization profile. */
+		put: '/api/v1/personalization',
+	},
+	/** Project (sidebar grouping) endpoints. */
+	projects: {
+		/**
+		 * List every project owned by the user.
+		 * @returns `/api/v1/projects`
+		 */
+		list: '/api/v1/projects',
+		/** Create a new project. */
+		create: '/api/v1/projects',
+		/**
+		 * Update (rename) a project by ID.
+		 * @param id - Project ID
+		 */
+		update: (id: string) => `/api/v1/projects/${id}`,
+		/**
+		 * Delete a project by ID. Linked conversations are unlinked, not deleted.
+		 * @param id - Project ID
+		 */
+		delete: (id: string) => `/api/v1/projects/${id}`,
+	},
 } as const;

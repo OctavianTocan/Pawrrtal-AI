@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "instruction": "Type %name% into the Your name field",
+  "url": "http://localhost:3001/",
+  "variableKeys": [
+    "name"
+  ],
+  "actions": [
+    {
+      "selector": "xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[1]/div[1]/input[1]",
+      "description": "textbox: Your name",
+      "method": "type",
+      "arguments": [
+        "%name%"
+      ]
+    }
+  ],
+  "actionDescription": "textbox: Your name",
+  "message": "Action [type] performed successfully on selector: xpath=/html[1]/body[1]/div[5]/div[2]/div[1]/section[1]/div[1]/div[1]/input[1]"
+}

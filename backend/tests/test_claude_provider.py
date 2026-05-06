@@ -11,6 +11,7 @@ assert that:
 - it reuses the ``conversation_id`` as the SDK session ID and switches
   from ``session_id`` (first turn) to ``resume`` (subsequent turns)
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -20,11 +21,11 @@ from uuid import UUID, uuid4
 import pytest
 from claude_agent_sdk import (
     AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKError,
     CLIConnectionError,
     CLIJSONDecodeError,
     CLINotFoundError,
-    ClaudeAgentOptions,
-    ClaudeSDKError,
     ProcessError,
     RateLimitEvent,
     RateLimitInfo,
@@ -48,7 +49,6 @@ from app.core.providers.claude_provider import (
     _resolve_sdk_model,
     _tool_result_to_text,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test plumbing
@@ -136,10 +136,7 @@ async def _collect(
     conversation_id: UUID,
     user_id: UUID,
 ) -> list[StreamEvent]:
-    return [
-        event
-        async for event in provider.stream(question, conversation_id, user_id)
-    ]
+    return [event async for event in provider.stream(question, conversation_id, user_id)]
 
 
 # ---------------------------------------------------------------------------
@@ -259,9 +256,7 @@ class TestEventsFromMessage:
             model="claude",
         )
         events = list(_events_from_message(message))
-        assert events == [
-            {"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}
-        ]
+        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}]
 
     def test_assistant_mixed_blocks_preserve_order(self) -> None:
         """Multiple blocks in one message should yield events in order."""
@@ -295,9 +290,7 @@ class TestEventsFromMessage:
             content=[ToolResultBlock(tool_use_id="tu_1", content="ok")],
         )
         events = list(_events_from_message(message))
-        assert events == [
-            {"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}
-        ]
+        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}]
 
     def test_user_message_with_string_content_emits_nothing(self) -> None:
         """Plain string user messages are echoes — no events should be emitted."""
@@ -693,9 +686,7 @@ class TestProviderErrors:
         user_id: UUID,
     ) -> None:
         """Connection errors should round-trip with a stream-level error event."""
-        _patch_query(
-            monkeypatch, _async_raises(CLIConnectionError("subprocess died"))
-        )
+        _patch_query(monkeypatch, _async_raises(CLIConnectionError("subprocess died")))
         events = await _collect(
             ClaudeProvider("claude-sonnet-4-6"),
             "hi",
@@ -716,9 +707,7 @@ class TestProviderErrors:
         """``ProcessError`` should surface its exit code and stderr in the event."""
         _patch_query(
             monkeypatch,
-            _async_raises(
-                ProcessError("crashed", exit_code=2, stderr="bad token")
-            ),
+            _async_raises(ProcessError("crashed", exit_code=2, stderr="bad token")),
         )
 
         events = await _collect(
@@ -842,7 +831,7 @@ class TestFactory:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A token configured in settings must reach :class:`ClaudeProviderConfig`."""
-        from app.core.providers import factory
+        from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "from-config")
 
@@ -850,11 +839,9 @@ class TestFactory:
         assert isinstance(provider, ClaudeProvider)
         assert provider._config.oauth_token == "from-config"
 
-    def test_resolve_provider_omits_token_when_blank(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_resolve_provider_omits_token_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A blank token in settings must coerce to ``None`` so we don't forward an empty value."""
-        from app.core.providers import factory
+        from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "")
 

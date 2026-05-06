@@ -1,4 +1,5 @@
 import { LoginForm } from '@/features/auth/LoginForm';
+import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 
 /**
  * Returns whether the dev admin shortcut should be shown.
@@ -12,13 +13,19 @@ function canUseDevAdminLogin(): boolean {
 	return process.env.VERCEL_ENV !== 'production';
 }
 
-/** Login page — renders the login form with an optional dev-only admin shortcut. */
+/**
+ * Login page — renders the login form on the same scenic dotted backdrop
+ * used by the onboarding modal so the auth surface and post-login surface
+ * read as one design language. The form sits centered with the standard
+ * `popover-styled onboarding-panel` chrome around it.
+ */
 export default function Page(): React.JSX.Element {
 	const showDevAdminLogin = canUseDevAdminLogin();
 
 	return (
-		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-			<div className="w-full max-w-sm">
+		<div className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-background p-6 md:p-10">
+			<OnboardingBackdrop />
+			<div className="relative z-10 w-full max-w-md">
 				<LoginForm canUseDevAdminLogin={showDevAdminLogin} />
 			</div>
 		</div>

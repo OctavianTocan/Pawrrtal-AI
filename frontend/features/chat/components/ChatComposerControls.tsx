@@ -4,8 +4,11 @@ import {
 	ArrowUpIcon,
 	CheckIcon,
 	ChevronDownIcon,
+	HandIcon,
 	ListChecksIcon,
+	Loader2,
 	PlusIcon,
+	ShieldAlertIcon,
 	ShieldCheckIcon,
 	SlidersHorizontalIcon,
 	SquareIcon,
@@ -22,8 +25,27 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePersistedState } from '@/hooks/use-persisted-state';
+import { cn } from '@/lib/utils';
+import {
+	CHAT_STORAGE_KEYS,
+	DEFAULT_SAFETY_MODE,
+	SAFETY_MODE_ADVANCED,
+	SAFETY_MODE_ORDER,
+	SAFETY_MODES,
+	type SafetyMode,
+} from '../constants';
 
-const VOICE_METER_BARS = [8, 14, 10, 18, 12, 24, 16, 30, 18, 26, 14, 22, 10, 18, 12, 20];
+/**
+ * Bar heights (px) used by the scrolling waveform timeline. The pattern
+ * is intentionally jagged so the rendered timeline reads as "live audio"
+ * rather than a synthesizer-style equalizer; the array is doubled and
+ * scrolled with a CSS animation to give the illusion of continuous flow.
+ */
+const WAVEFORM_BARS = [
+	6, 10, 8, 14, 22, 18, 12, 28, 20, 14, 8, 18, 24, 16, 10, 6, 12, 20, 28, 22, 14, 10, 16, 24, 18,
+	12, 8, 14, 20, 26, 18, 12, 8, 16, 22, 28, 20, 14, 10, 6,
+] as const;
 
 /** Minimal browser speech-recognition surface used by the composer. */
 export type BrowserSpeechRecognition = {
@@ -191,10 +213,78 @@ export function PlanButton(): React.JSX.Element {
 	);
 }
 
-/** Renders the auto-review permissions selector in the composer toolbar. */
+interface SafetyModeMeta {
+	/** Human-readable label shown in the dropdown and trigger. */
+	label: string;
+	/** Lucide icon used as the leading affordance for this mode. */
+	Icon: typeof ShieldCheckIcon;
+	/** Tailwind text color token applied to the trigger + icon for this mode. */
+	colorClass: string;
+	/** Tailwind background tint applied behind the icon for this mode. */
+	bgClass: string;
+}
+
+/**
+ * Static metadata for each safety mode. Indexed by {@link SafetyMode} so adding
+ * a new mode forces a TypeScript error until both the union and metadata are updated.
+ *
+ * Each mode owns a distinct color (matching the Codex reference): blue =
+ * Default, amber = Auto-review (cautious), red = Full access (dangerous),
+ * neutral = Custom. Colors are picked from the project semantic tokens
+ * (`--info`, `--warning`, `--destructive`) so dark/light themes stay
+ * coherent without per-shade overrides.
+ *
+ * Lives next to the renderer (not in `constants.ts`) because the Lucide icon
+ * components are React render concerns, not data; keeping them here means the
+ * shared constants module stays free of UI imports.
+ */
+const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
+	'default-permissions': {
+		label: 'Default permissions',
+		Icon: HandIcon,
+		colorClass: 'text-info',
+		bgClass: 'bg-info/15',
+	},
+	'auto-review': {
+		label: 'Auto-review',
+		Icon: ShieldCheckIcon,
+		colorClass: 'text-warning',
+		bgClass: 'bg-warning/15',
+	},
+	'full-access': {
+		label: 'Full access',
+		Icon: ShieldAlertIcon,
+		colorClass: 'text-destructive',
+		bgClass: 'bg-destructive/15',
+	},
+	custom: {
+		label: 'Custom (config.toml)',
+		Icon: SlidersHorizontalIcon,
+		colorClass: 'text-muted-foreground',
+		bgClass: 'bg-foreground/10',
+	},
+};
+
+/** Runtime guard so older persisted strings don't crash the selector. */
+function isSafetyMode(value: unknown): value is SafetyMode {
+	return typeof value === 'string' && (SAFETY_MODES as readonly string[]).includes(value);
+}
+
+/** Renders the auto-review/safety permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [tooltipOpen, setTooltipOpen] = useState(false);
+	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
+		storageKey: CHAT_STORAGE_KEYS.safetyMode,
+		defaultValue: DEFAULT_SAFETY_MODE,
+		validate: isSafetyMode,
+	});
+
+	const activeMeta = SAFETY_MODE_META[safetyMode];
+	const ActiveIcon = activeMeta.Icon;
+
+	const primaryModes = SAFETY_MODE_ORDER.filter((mode) => !SAFETY_MODE_ADVANCED.has(mode));
+	const advancedModes = SAFETY_MODE_ORDER.filter((mode) => SAFETY_MODE_ADVANCED.has(mode));
 
 	return (
 		<TooltipProvider disableHoverableContent>
@@ -219,12 +309,15 @@ export function AutoReviewSelector(): React.JSX.Element {
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>
 							<Button
-								className="h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal text-accent hover:bg-foreground/[0.04] hover:text-accent aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]"
+								className={cn(
+									'h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal hover:bg-foreground/[0.04] aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]',
+									activeMeta.colorClass
+								)}
 								type="button"
 								variant="ghost"
 							>
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-								Auto-review
+								<ActiveIcon aria-hidden="true" className="size-3.5" />
+								{activeMeta.label}
 								<ChevronDownIcon aria-hidden="true" className="size-3" />
 							</Button>
 						</DropdownMenuTrigger>
@@ -235,32 +328,23 @@ export function AutoReviewSelector(): React.JSX.Element {
 						side="top"
 						sideOffset={8}
 					>
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Default permissions
-						</DropdownMenuItem>
-						<DropdownMenuItem className="justify-between">
-							<span className="flex items-center gap-2">
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-								Auto-review
-							</span>
-							<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-						</DropdownMenuItem>
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<ShieldCheckIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Full access
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem>
-							<span className="flex size-4 items-center justify-center">
-								<SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
-							</span>
-							Custom (config.toml)
-						</DropdownMenuItem>
+						{primaryModes.map((mode) => (
+							<SafetyModeMenuItem
+								isSelected={mode === safetyMode}
+								key={mode}
+								mode={mode}
+								onSelect={setSafetyMode}
+							/>
+						))}
+						{advancedModes.length > 0 ? <DropdownMenuSeparator /> : null}
+						{advancedModes.map((mode) => (
+							<SafetyModeMenuItem
+								isSelected={mode === safetyMode}
+								key={mode}
+								mode={mode}
+								onSelect={setSafetyMode}
+							/>
+						))}
 					</DropdownMenuContent>
 				</DropdownMenu>
 				<TooltipContent side="top">Review code changes automatically</TooltipContent>
@@ -269,54 +353,85 @@ export function AutoReviewSelector(): React.JSX.Element {
 	);
 }
 
+interface SafetyModeMenuItemProps {
+	mode: SafetyMode;
+	isSelected: boolean;
+	onSelect: (mode: SafetyMode) => void;
+}
+
+/** Single dropdown row for a safety mode, with a leading icon and trailing checkmark when active. */
+function SafetyModeMenuItem({
+	mode,
+	isSelected,
+	onSelect,
+}: SafetyModeMenuItemProps): React.JSX.Element {
+	const { label, Icon, colorClass, bgClass } = SAFETY_MODE_META[mode];
+
+	return (
+		<DropdownMenuItem className="justify-between" onSelect={() => onSelect(mode)}>
+			<span className="flex items-center gap-2">
+				<span
+					aria-hidden="true"
+					className={cn(
+						'inline-flex size-5 items-center justify-center rounded-[5px]',
+						bgClass,
+						colorClass
+					)}
+				>
+					<Icon className="size-3" />
+				</span>
+				{label}
+			</span>
+			{isSelected ? (
+				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+			) : null}
+		</DropdownMenuItem>
+	);
+}
+
 /** Renders live voice recording controls and the animated voice meter. */
 export function VoiceMeter({
 	elapsedSeconds,
+	isTranscribing,
 	onSend,
 	onStop,
 }: {
 	elapsedSeconds: number;
+	/** When true, swap the stop button for a loader and disable Send. */
+	isTranscribing?: boolean;
 	onSend: () => void;
 	onStop: () => void;
 }): React.JSX.Element {
 	return (
 		<div className="ml-2 flex min-w-0 flex-1 items-center gap-2">
-			<div className="flex min-w-0 flex-1 items-center">
-				<div className="h-px min-w-8 flex-1 border-muted-foreground/30 border-t border-dashed" />
-				<div className="flex h-7 shrink-0 items-center gap-[2px] px-2">
-					{VOICE_METER_BARS.map((height, index) => (
-						<span
-							aria-hidden="true"
-							className="w-[2px] rounded-full bg-foreground/75"
-							key={`${height}-${index}`}
-							style={{
-								height,
-								opacity: index % 3 === 0 ? 0.55 : 0.9,
-								animation: `pulse 1.1s ease-in-out ${index * 70}ms infinite`,
-							}}
-						/>
-					))}
-				</div>
-			</div>
+			<WaveformTimeline isPaused={Boolean(isTranscribing)} />
 			<span className="w-9 text-right text-[12px] text-muted-foreground tabular-nums">
 				{formatRecordingTime(elapsedSeconds)}
 			</span>
-			<ComposerTooltip content="Stop and transcribe">
+			<ComposerTooltip content={isTranscribing ? 'Transcribing…' : 'Stop and transcribe'}>
 				<Button
-					aria-label="Stop and transcribe"
-					className="size-8 rounded-full bg-foreground-10 text-foreground hover:bg-foreground-15"
+					aria-label={isTranscribing ? 'Transcribing' : 'Stop and transcribe'}
+					className="size-8 rounded-full bg-foreground-10 text-foreground hover:bg-foreground-15 disabled:cursor-not-allowed disabled:opacity-60"
+					disabled={isTranscribing}
 					onClick={onStop}
 					size="icon-sm"
 					type="button"
 					variant="ghost"
 				>
-					<SquareIcon aria-hidden="true" className="size-3 fill-current" />
+					{isTranscribing ? (
+						<Loader2 aria-hidden="true" className="size-4 animate-spin" />
+					) : (
+						<SquareIcon aria-hidden="true" className="size-3 fill-current" />
+					)}
 				</Button>
 			</ComposerTooltip>
-			<ComposerTooltip content="Transcribe and send">
+			<ComposerTooltip
+				content={isTranscribing ? 'Wait for transcription' : 'Transcribe and send'}
+			>
 				<Button
 					aria-label="Transcribe and send"
-					className="size-8 rounded-full bg-foreground text-background hover:bg-foreground/85"
+					className="size-8 rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={isTranscribing}
 					onClick={onSend}
 					size="icon-sm"
 					type="button"
@@ -325,6 +440,46 @@ export function VoiceMeter({
 					<ArrowUpIcon aria-hidden="true" className="size-4" />
 				</Button>
 			</ComposerTooltip>
+		</div>
+	);
+}
+
+/**
+ * Continuously scrolling bar timeline used as the recording-state
+ * indicator. Renders the bars twice end-to-end and translates the
+ * inner strip leftward via CSS keyframe so the result reads as
+ * "audio scrolling past a playhead" without an actual analyser node.
+ *
+ * `isPaused=true` halts the scroll (used while transcribing) so the
+ * UI feels frozen on the captured timeline rather than ticking forward
+ * after the recording ended.
+ */
+function WaveformTimeline({ isPaused }: { isPaused: boolean }): React.JSX.Element {
+	return (
+		<div className="relative flex h-8 min-w-0 flex-1 items-center overflow-hidden">
+			<div
+				aria-hidden="true"
+				className="flex h-full items-center gap-[3px]"
+				style={{
+					animation: isPaused ? undefined : 'waveform-scroll 6s linear infinite',
+				}}
+			>
+				{[...WAVEFORM_BARS, ...WAVEFORM_BARS].map((height, index) => (
+					<span
+						className="w-[2px] shrink-0 rounded-full bg-foreground/75"
+						key={`bar-${index}-${height}`}
+						style={{
+							height,
+							opacity: 0.4 + ((index % 5) / 5) * 0.6,
+						}}
+					/>
+				))}
+			</div>
+			{/* Subtle right-side fade so the scroll edge doesn't read as a hard cut. */}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-foreground-5 to-transparent"
+			/>
 		</div>
 	);
 }

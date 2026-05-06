@@ -1,16 +1,14 @@
-"""
-This module contains the conversation endpoints for the API.
-"""
+"""This module contains the conversation endpoints for the API."""
 
 import logging
 import uuid
-from typing import Any, List, Optional
+from typing import Any, Literal, cast
 
-from agno.agent import Message
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agents import create_history_reader_agent, create_utility_agent
+from app.core.agents import create_utility_agent
+from app.crud.chat_message import get_messages_for_conversation
 from app.crud.conversation import (
     create_conversation_service,
     delete_conversation_service,
@@ -20,106 +18,40 @@ from app.crud.conversation import (
     update_conversation_title_service,
 )
 from app.db import User, get_async_session
-from app.models import Conversation
-from app.schemas import ConversationCreate, ConversationResponse, ConversationUpdate
+from app.models import ChatMessage, Conversation
+from app.schemas import (
+    ChatMessageRead,
+    ConversationCreate,
+    ConversationResponse,
+    ConversationUpdate,
+)
 from app.users import current_active_user
 
 # Logger follows module namespace conventions for consistent filtering and tracing.
 logger = logging.getLogger(__name__)
 
-
-def _extract_message_text(
-    content: Any, *, _depth: int = 0, _max_depth: int = 5, _max_length: int = 4000
-) -> str:
-    """Flatten Agno/Gemini message content into safe plain text for the frontend.
-
-    - Limits recursion depth to avoid very deep/recursive structures.
-    - Avoids stringifying arbitrary objects to prevent leaking internal structures.
-    - Restricts which dict keys are traversed to keep irrelevant fields out of the UI.
-    - Applies a max-length cap on the returned text.
-    """
-    if content is None:
-        return ""
-
-    if _depth > _max_depth:
-        return ""
-
-    # Fast path for strings
-    if isinstance(content, str):
-        return content[:_max_length]
-
-    # Bytes: try to decode as UTF-8, otherwise drop
-    if isinstance(content, (bytes, bytearray, memoryview)):
-        try:
-            text = bytes(content).decode("utf-8", errors="ignore")
-        except Exception:
-            return ""
-        return text[:_max_length]
-
-    # Lists/tuples: concatenate child text, respecting depth/length limits
-    if isinstance(content, (list, tuple)):
-        parts: List[str] = []
-        remaining = _max_length
-        for item in content:
-            if remaining <= 0:
-                break
-            part = _extract_message_text(
-                item, _depth=_depth + 1, _max_depth=_max_depth, _max_length=remaining
-            )
-            if not part:
-                continue
-            if len(part) > remaining:
-                part = part[:remaining]
-            parts.append(part)
-            remaining -= len(part)
-        return "".join(parts)
-
-    # Dicts: only traverse a limited set of text-like keys to avoid large/irrelevant data
-    if isinstance(content, dict):
-        candidate_keys = ("text", "content", "message", "output")
-        for key in candidate_keys:
-            if key in content:
-                value = content.get(key)
-                if value is not None:
-                    return _extract_message_text(
-                        value,
-                        _depth=_depth + 1,
-                        _max_depth=_max_depth,
-                        _max_length=_max_length,
-                    )
-        # If no known text-like keys are present, do not traverse the entire structure
-        return ""
-
-    # Avoid str()-casting arbitrary objects (e.g., large tool payloads)
-    return ""
+# Generated conversation titles longer than this are treated as overflow / model
+# refusal text and rejected in favour of falling back to the heuristic title.
+MAX_GENERATED_TITLE_LENGTH = 80
 
 
-def _serialize_chat_history(messages: List[Message]) -> List[dict[str, str]]:
-    """Convert Agno messages into the minimal chat shape expected by the UI.
-
-    The response contract for the ConversationPage is intentionally minimal:
-    ``{"role": "user"|"assistant", "content": str}``.
-    """
-
-    serialized_messages: List[dict[str, str]] = []
-
-    for message in messages:
-        if message.role not in {"user", "assistant"}:
-            continue
-
-        content = _extract_message_text(message.content)
-        if not content:
-            continue
-
-        serialized_messages.append({"role": message.role, "content": content})
-
-    return serialized_messages
-
-
-def _is_missing_session_error(error: Exception) -> bool:
-    """Return whether the error indicates an absent Agno session."""
-
-    return "session not found" in str(error).lower()
+def _serialize_chat_message(row: ChatMessage) -> ChatMessageRead:
+    """Convert a ``ChatMessage`` ORM row into the API ``ChatMessageRead`` shape."""
+    role = cast(Literal["user", "assistant"], row.role)
+    status_value = (
+        cast(Literal["streaming", "complete", "failed"], row.assistant_status)
+        if row.assistant_status in {"streaming", "complete", "failed"}
+        else None
+    )
+    return ChatMessageRead(
+        role=role,
+        content=row.content,
+        thinking=row.thinking,
+        tool_calls=row.tool_calls,
+        timeline=row.timeline,
+        thinking_duration_seconds=row.thinking_duration_seconds,
+        assistant_status=status_value,
+    )
 
 
 GENERATED_TITLE_REJECTION_PHRASES = (
@@ -135,7 +67,6 @@ GENERATED_TITLE_REJECTION_PHRASES = (
 
 def _normalize_generated_title(content: Any) -> str | None:
     """Return a usable generated title, or ``None`` for provider/error text."""
-
     title = str(content or "").strip().strip('"').strip("'").strip()
     if not title:
         return None
@@ -145,14 +76,13 @@ def _normalize_generated_title(content: Any) -> str | None:
     if any(phrase in title_lower for phrase in GENERATED_TITLE_REJECTION_PHRASES):
         return None
 
-    if len(collapsed_title) > 80:
+    if len(collapsed_title) > MAX_GENERATED_TITLE_LENGTH:
         return None
 
     return collapsed_title
 
 
-
-def get_conversations_router() -> APIRouter:
+def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router builders aggregate many route handlers; complexity reflects route count, not branching depth
     """Get a router for the conversations API."""
     router = APIRouter(prefix="/api/v1/conversations", tags=["conversations"])
 
@@ -161,45 +91,29 @@ def get_conversations_router() -> APIRouter:
         conversation_id: uuid.UUID,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> List[dict[str, str]]:
+    ) -> list[ChatMessageRead]:
         """Return message history for a conversation.
 
-        Verifies ownership first, then reads from Agno using conversation ID as
-        session ID. Returns an empty list for new conversations without history.
+        Verifies ownership first, then reads the persisted ``chat_messages``
+        rows in insertion order. Each row carries the full chain-of-thought
+        state (thinking, tool calls, timeline, duration), so a hard reload
+        rehydrates the chat exactly as the user last saw it.
         """
-
         conversation = await get_conversation_service(user.id, session, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        try:
-            return _serialize_chat_history(create_history_reader_agent(conversation_id))
-        except Exception as error:
-            if _is_missing_session_error(error):
-                logger.warning(
-                    "No history session found for conversation %s; returning empty history",
-                    conversation_id,
-                )
-                return []
-
-            logger.exception(
-                "Error reading conversation history for %s",
-                conversation_id,
-                exc_info=error,
-            )
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to read conversation history",
-            ) from error
+        rows = await get_messages_for_conversation(session, conversation_id)
+        return [_serialize_chat_message(row) for row in rows]
 
     @router.get("/{conversation_id}")
     async def get_conversation(
         conversation_id: uuid.UUID,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> Optional[ConversationResponse]:
+    ) -> ConversationResponse | None:
         """Return metadata for a single conversation."""
-        conversation: Optional[Conversation] = await get_conversation_service(
+        conversation: Conversation | None = await get_conversation_service(
             user.id, session, conversation_id
         )
         if conversation:
@@ -214,6 +128,8 @@ def get_conversations_router() -> APIRouter:
                 is_unread=conversation.is_unread,
                 status=conversation.status,
                 model_id=conversation.model_id,
+                labels=list(conversation.labels or []),
+                project_id=conversation.project_id,
             )
         return None
 
@@ -225,7 +141,6 @@ def get_conversations_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> str:
         """Generate and persist a short conversation title from the first message."""
-
         response = create_utility_agent(
             "Generate a title for the conversation based on the first message: "
             + first_message
@@ -260,7 +175,6 @@ def get_conversations_router() -> APIRouter:
         Accepts any combination of: title, is_archived, is_flagged, is_unread,
         and status. Only fields present in the payload are updated.
         """
-
         if payload.title is not None and not payload.title.strip():
             raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
 
@@ -284,6 +198,8 @@ def get_conversations_router() -> APIRouter:
             is_unread=conversation.is_unread,
             status=conversation.status,
             model_id=conversation.model_id,
+            labels=list(conversation.labels or []),
+            project_id=conversation.project_id,
         )
 
     @router.delete("/{conversation_id}", status_code=204)
@@ -293,7 +209,6 @@ def get_conversations_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a conversation owned by the authenticated user."""
-
         deleted = await delete_conversation_service(user.id, session, conversation_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Conversation not found")
@@ -302,9 +217,9 @@ def get_conversations_router() -> APIRouter:
     async def list_conversations(
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> List[ConversationResponse]:
+    ) -> list[ConversationResponse]:
         """List all conversations for the authenticated user, most recent first."""
-        conversations: List[Conversation] = await get_conversations_for_user_service(
+        conversations: list[Conversation] = await get_conversations_for_user_service(
             user.id, session
         )
         return [
@@ -319,6 +234,8 @@ def get_conversations_router() -> APIRouter:
                 is_unread=conversation.is_unread,
                 status=conversation.status,
                 model_id=conversation.model_id,
+                labels=list(conversation.labels or []),
+                project_id=conversation.project_id,
             )
             for conversation in conversations
         ]
@@ -335,7 +252,6 @@ def get_conversations_router() -> APIRouter:
         Frontend generates the UUID first; this endpoint persists metadata before
         the first streamed turn.
         """
-
         creation_payload = payload or ConversationCreate()
         try:
             new_conversation: Conversation = await create_conversation_service(
@@ -357,6 +273,8 @@ def get_conversations_router() -> APIRouter:
             is_unread=new_conversation.is_unread,
             status=new_conversation.status,
             model_id=new_conversation.model_id,
+            labels=list(new_conversation.labels or []),
+            project_id=new_conversation.project_id,
         )
 
     return router

@@ -1,5 +1,4 @@
-"""
-FastAPI application entry point.
+"""FastAPI application entry point.
 
 Defines all API routes, configures middleware, and wires up authentication.
 """
@@ -11,12 +10,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp
 
+from app.api.appearance import get_appearance_router
 from app.api.auth import get_auth_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
+from app.api.oauth import get_oauth_router
+from app.api.personalization import get_personalization_router
+from app.api.projects import get_projects_router
+from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.request_logging import RequestLoggingMiddleware
 from app.db import create_db_and_tables
 from app.logger_setup import (
     configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
@@ -35,7 +40,7 @@ configure_logging()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Run startup tasks (database table creation) before the app begins serving."""
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
@@ -47,15 +52,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    """
-    Create a FastAPI app instance with middleware and routes.
-    """
+    """Create a FastAPI app instance with middleware and routes."""
     fastapi_app = FastAPI(
         lifespan=lifespan,
         title="Nexus-AI",
         description="An AI assistant platform",
         version="0.1.0",
     )
+    # Request-logging middleware must be added before any route is registered
+    # so it wraps every endpoint. Each request gets a unique ID logged on
+    # entry and exit (see app/core/request_logging.py).
+    fastapi_app.add_middleware(RequestLoggingMiddleware)
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )
@@ -82,6 +89,21 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_models_router(),
+    )
+    fastapi_app.include_router(
+        get_stt_router(),
+    )
+    fastapi_app.include_router(
+        get_projects_router(),
+    )
+    fastapi_app.include_router(
+        get_personalization_router(),
+    )
+    fastapi_app.include_router(
+        get_appearance_router(),
+    )
+    fastapi_app.include_router(
+        get_oauth_router(),
     )
 
     return fastapi_app

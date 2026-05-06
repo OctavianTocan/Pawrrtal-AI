@@ -46,10 +46,18 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
 	showCloseButton?: boolean;
 }) {
+	// Radix warns if Content has neither a `<DialogDescription>` child nor
+	// an explicit `aria-describedby={undefined}` opt-out. Most call sites
+	// in this repo are full-screen onboarding / scenic shells that do not
+	// need a description, so the wrapper defaults `aria-describedby` to
+	// `undefined` here (silences the warning); call sites that DO want a
+	// description still wire it through `<DialogDescription>`, which sets
+	// `aria-describedby` itself and wins via the spread on the next line.
 	return (
 		<DialogPortal>
 			<DialogOverlay />
 			<DialogPrimitive.Content
+				aria-describedby={undefined}
 				data-slot="dialog-content"
 				className={cn(
 					'fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl bg-background p-6 text-sm ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
@@ -114,7 +122,10 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
 	return (
 		<DialogPrimitive.Title
 			data-slot="dialog-title"
-			className={cn('text-base leading-none font-medium', className)}
+			// `text-balance` per the userinterface-wiki rule on heading wrap —
+			// dialog titles are short headings that benefit from balanced
+			// line breaks. Caller can override via `className`.
+			className={cn('text-balance text-base leading-none font-medium', className)}
 			{...props}
 		/>
 	);
@@ -127,8 +138,11 @@ function DialogDescription({
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"
+			// `text-pretty` per the userinterface-wiki rule on body wrap —
+			// dialog descriptions are short prose that benefits from
+			// orphan-suppression at the wrap.
 			className={cn(
-				'text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
+				'text-pretty text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
 				className
 			)}
 			{...props}

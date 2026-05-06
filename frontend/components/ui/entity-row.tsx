@@ -34,6 +34,12 @@ export interface EntityRowProps {
 	isInMultiSelect?: boolean;
 	/** Mouse down handler for modifier key detection */
 	onMouseDown?: (e: React.MouseEvent) => void;
+	/** When true, the inner row becomes draggable. */
+	draggable?: boolean;
+	/** Fires on drag start — the row sets up the dataTransfer payload here. */
+	onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
+	/** Fires on drag end — used to clean up local "is dragging" state. */
+	onDragEnd?: (e: React.DragEvent<HTMLDivElement>) => void;
 	/** Props spread onto the row's clickable div (role="button") element */
 	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
 	/** Data attributes on outer wrapper */
@@ -67,6 +73,9 @@ export function EntityRow({
 	contextMenuContent,
 	isInMultiSelect = false,
 	onMouseDown,
+	draggable: isDraggable,
+	onDragStart,
+	onDragEnd,
 	buttonProps,
 	dataAttributes,
 	hideMoreButton = false,
@@ -86,7 +95,10 @@ export function EntityRow({
 				role="button"
 				tabIndex={0}
 				{...buttonProps}
+				draggable={isDraggable}
 				onClick={onClick}
+				onDragEnd={onDragEnd}
+				onDragStart={onDragStart}
 				onMouseDown={onMouseDown}
 				onKeyDown={(e) => {
 					// Activate on Enter/Space like a native button
@@ -96,7 +108,7 @@ export function EntityRow({
 					}
 				}}
 				className={cn(
-					'flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]',
+					'flex w-full items-start gap-2 pl-2 pr-4 py-2 text-left text-sm outline-none rounded-[8px]',
 					'transition-[background-color] duration-75 cursor-pointer',
 					isSelected || isInMultiSelect ? 'bg-foreground/3' : 'hover:bg-foreground/2',
 					buttonProps?.className

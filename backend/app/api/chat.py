@@ -1,24 +1,43 @@
 """Chat API — provider-agnostic streaming endpoint."""
+
 from __future__ import annotations
 
 import json
-import uuid
+import logging
+import time
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_provider
+from app.core.providers.base import StreamEvent
+from app.core.request_logging import get_request_id
+from app.crud.chat_message import (
+    append_assistant_placeholder,
+    append_user_message,
+    finalize_assistant_message,
+)
 from app.crud.conversation import get_conversation_service, update_conversation_model_service
-from app.db import User, get_async_session
+from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "gemini-3-flash-preview"
 
 
 def get_chat_router() -> APIRouter:
+    """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
+
+    Returns:
+        An ``APIRouter`` exposing a single streaming ``POST /`` endpoint
+        that emits Server-Sent Events from the resolved AI provider.
+    """
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
@@ -37,14 +56,37 @@ def get_chat_router() -> APIRouter:
           {"type": "error", "content": "..."}      — stream-level error
           [DONE]
 
+        While streaming, the endpoint also persists the turn to the
+        ``chat_messages`` table — the user prompt as a row, the assistant
+        reply as a placeholder that is patched on stream end with the full
+        chain-of-thought state. This is what powers ``GET /conversations/:id/messages``
+        rehydration: the chat UI reads from ``chat_messages``, not from
+        Agno's internal log.
+
         The provider is resolved from model_id — the endpoint is fully
         provider-agnostic. Changing model_id changes the provider; the
         stream format never changes.
         """
-        conversation = await get_conversation_service(
-            user.id, session, request.conversation_id
+        # Entry log — pairs with REQ_IN/REQ_OUT from the request middleware via rid.
+        # Question length, not contents, to avoid leaking PII into the log file.
+        rid = get_request_id()
+        logger.info(
+            "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s question_len=%d",
+            rid,
+            user.id,
+            request.conversation_id,
+            request.model_id or "<default>",
+            len(request.question),
         )
+
+        conversation = await get_conversation_service(user.id, session, request.conversation_id)
         if conversation is None:
+            logger.warning(
+                "CHAT_404 rid=%s user_id=%s conversation_id=%s",
+                rid,
+                user.id,
+                request.conversation_id,
+            )
             raise HTTPException(status_code=404, detail="Conversation not found")
 
         # Resolve model: request overrides stored model, stored model overrides default
@@ -59,20 +101,93 @@ def get_chat_router() -> APIRouter:
                 session=session,
             )
 
+        # Persist the user prompt + assistant placeholder rows up front so a
+        # client that disconnects mid-stream still has a partial record.
+        await append_user_message(
+            session,
+            conversation_id=request.conversation_id,
+            user_id=user.id,
+            content=request.question,
+        )
+        assistant_row = await append_assistant_placeholder(
+            session,
+            conversation_id=request.conversation_id,
+            user_id=user.id,
+        )
+        assistant_message_id = assistant_row.id
+        # Commit before streaming starts — the request session is closed when
+        # the StreamingResponse generator runs in a fresh task, so we open a
+        # short-lived session inside the generator for the final UPDATE.
+        await session.commit()
+
         provider = resolve_provider(model_id)
 
-        async def event_stream():
+        async def event_stream() -> AsyncGenerator[str]:
+            """Yield SSE-framed events from the provider stream.
+
+            Wraps the provider's async iterator with timing, event counting,
+            and structured ``CHAT_OUT`` / ``CHAT_ERR`` log markers so a
+            single user message produces exactly one entry/exit pair in
+            ``backend/app.log`` per request ID.
+            """
+            stream_start = time.perf_counter()
+            event_count = 0
+            aggregator = ChatTurnAggregator()
             try:
                 async for event in provider.stream(
                     request.question,
                     request.conversation_id,
                     user.id,
                 ):
+                    event_count += 1
+                    aggregator.apply(event)
                     yield f"data: {json.dumps(event)}\n\n"
             except Exception as exc:
-                error_event = {"type": "error", "content": str(exc)}
+                # Logged with full traceback so the file has enough info to triage
+                # without needing to also tail stdout. Always pair with a CHAT_ERR
+                # marker so the corresponding REQ_OUT can be matched by rid.
+                logger.exception(
+                    "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
+                    rid,
+                    request.conversation_id,
+                    model_id,
+                    event_count,
+                )
+                error_event: StreamEvent = {"type": "error", "content": str(exc)}
+                aggregator.apply(error_event)
                 yield f"data: {json.dumps(error_event)}\n\n"
             finally:
+                duration_ms = (time.perf_counter() - stream_start) * 1000
+                # Persist the final assistant snapshot. Open a fresh session —
+                # the request-scoped one was committed and may have been closed
+                # by the time this finally runs in the streaming task.
+                final_status = "failed" if aggregator.error_text else "complete"
+                snapshot = aggregator.to_persisted_shape(status=final_status)
+                try:
+                    async with async_session_maker() as persist_session:
+                        await finalize_assistant_message(
+                            persist_session,
+                            message_id=assistant_message_id,
+                            **snapshot,
+                        )
+                        await persist_session.commit()
+                except Exception:
+                    # Persistence failure must not break the SSE response; the
+                    # client already saw every event live and the recovery hook
+                    # can replay if needed.
+                    logger.exception(
+                        "CHAT_PERSIST_ERR rid=%s message_id=%s",
+                        rid,
+                        assistant_message_id,
+                    )
+                logger.info(
+                    "CHAT_OUT rid=%s conversation_id=%s model_id=%s events=%d duration_ms=%.1f",
+                    rid,
+                    request.conversation_id,
+                    model_id,
+                    event_count,
+                    duration_ms,
+                )
                 yield "data: [DONE]\n\n"
 
         return StreamingResponse(

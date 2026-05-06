@@ -1,5 +1,4 @@
-"""
-CRUD operations for the Conversation model.
+"""CRUD operations for the Conversation model.
 
 All functions enforce user ownership — a user can only access or modify
 their own conversations.
@@ -7,7 +6,6 @@ their own conversations.
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -59,7 +57,7 @@ async def create_conversation_service(
 
 async def get_conversation_service(
     user_id: uuid.UUID, session: AsyncSession, conversation_id: uuid.UUID
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Retrieve a single conversation by ID, scoped to the given user.
 
     Args:
@@ -81,7 +79,7 @@ async def get_conversation_service(
 
 async def get_conversations_for_user_service(
     user_id: uuid.UUID, session: AsyncSession
-) -> List[Conversation]:
+) -> list[Conversation]:
     """Retrieve all conversations for a user, most-recent first.
 
     Args:
@@ -102,7 +100,7 @@ async def get_conversations_for_user_service(
 
 async def update_conversation_title_service(
     title: str, user_id: uuid.UUID, conversation_id: uuid.UUID, session: AsyncSession
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Update the title of an existing conversation.
 
     Args:
@@ -138,7 +136,7 @@ async def update_conversation_service(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
     session: AsyncSession,
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Update mutable fields on an existing conversation.
 
     Only fields explicitly set in ``payload`` are applied. Supports title,
@@ -176,6 +174,17 @@ async def update_conversation_service(
         conversation.status = payload.status
     if payload.model_id is not None:
         conversation.model_id = payload.model_id
+    if payload.labels is not None:
+        # Full replacement — the frontend sends the desired final set,
+        # so we don't merge here. `list(...)` detaches from the request
+        # object so cleanup of the Pydantic model can't mutate ours.
+        conversation.labels = list(payload.labels)
+    if payload.project_id_set:
+        # Explicit set (even to None) — drag-and-drop into a project sets
+        # project_id, dragging out clears it. The companion flag lets us
+        # distinguish "set to null" from "leave unchanged" since the JSON
+        # body collapses them otherwise.
+        conversation.project_id = payload.project_id
 
     conversation.updated_at = datetime.now()
     session.add(conversation)
@@ -189,7 +198,7 @@ async def update_conversation_model_service(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
     session: AsyncSession,
-) -> Optional[Conversation]:
+) -> Conversation | None:
     """Persist a model_id change on an existing conversation.
 
     Args:

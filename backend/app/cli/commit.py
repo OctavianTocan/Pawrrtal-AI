@@ -1,5 +1,4 @@
-"""
-Auto-generate conventional commit messages from staged changes using Agno + Gemini.
+"""Auto-generate conventional commit messages from staged changes using Agno + Gemini.
 
 Usage:
     just commit
@@ -56,12 +55,14 @@ def get_staged_diff() -> tuple[str, str]:
         capture_output=True,
         text=True,
         cwd=_project_root,
+        check=False,
     )
     diff = subprocess.run(
         ["git", "diff", "--cached"],
         capture_output=True,
         text=True,
         cwd=_project_root,
+        check=False,
     )
     return stat.stdout.strip(), diff.stdout.strip()
 
@@ -91,6 +92,7 @@ def commit(message: str) -> bool:
         capture_output=True,
         text=True,
         cwd=_project_root,
+        check=False,
     )
     if result.returncode == 0:
         print(result.stdout.strip())
@@ -100,6 +102,7 @@ def commit(message: str) -> bool:
 
 
 def main() -> None:
+    """CLI entry point — generate and apply an AI-authored commit message for staged changes."""
     stat, diff = get_staged_diff()
 
     if not diff:

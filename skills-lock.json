@@ -60,11 +60,29 @@
 			"skillPath": "plugins/javascript-typescript/skills/javascript-testing-patterns/SKILL.md",
 			"computedHash": "8d0a8d7615ff343770af0218720691d56c55ae258793565936c8b3a97e188f51"
 		},
+		"logging-best-practices": {
+			"source": "boristane/agent-skills",
+			"sourceType": "github",
+			"skillPath": "skills/logging-best-practices/SKILL.md",
+			"computedHash": "b4810947c33b5356bf385c84cfe387afa9c54af652baaedb7d642a083cceaa4c"
+		},
 		"next-best-practices": {
 			"source": "vercel-labs/next-skills",
 			"sourceType": "github",
 			"skillPath": "skills/next-best-practices/SKILL.md",
 			"computedHash": "db85045827ebeb83ac8dbc992b69188755eeb74dcf01cbf5e694d58aa494a106"
+		},
+		"next-cache-components": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"skillPath": "skills/next-cache-components/SKILL.md",
+			"computedHash": "f835d8226c28abf012cc013928e2627c8a7a046de61127ef229be1711bd1f255"
+		},
+		"next-upgrade": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"skillPath": "skills/next-upgrade/SKILL.md",
+			"computedHash": "e3aeb1f9e8a68d24df0c1c2e3c8ab97ede09a7251a2c76988318d02254346979"
 		},
 		"python-testing-patterns": {
 			"source": "wshobson/agents",

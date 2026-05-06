@@ -82,12 +82,12 @@ GRPC_PROXY=socks5h://localhost:58707
 grpc_proxy=socks5h://localhost:58707
 _=/usr/bin/env (default 'dev')
 - Added  convenience property
-- Configured  with  file loading, UTF-8 encoding, and 
-- Added  to 
-- Replaced hardcoded  in  with 
-- Replaced manual  +  guard in  with 
-- Replaced  in  with 
-- Removed  and  imports from 
+- Configured  with  file loading, UTF-8 encoding, and
+- Added  to
+- Replaced hardcoded  in  with
+- Replaced manual  +  guard in  with
+- Replaced  in  with
+- Removed  and  imports from
 
 ## Summary of Changes
 

@@ -14,7 +14,7 @@ export const TopBarButton = React.forwardRef<HTMLButtonElement, TopBarButtonProp
 				type="button"
 				disabled={disabled}
 				className={cn(
-					'flex h-7 w-7 items-center justify-center rounded-[6px] transition-colors duration-100',
+					'flex h-8 w-8 items-center justify-center rounded-[6px] transition-colors duration-100',
 					'cursor-pointer hover:bg-foreground/5 focus:outline-none focus-visible:ring-0',
 					'disabled:pointer-events-none disabled:opacity-30',
 					isActive && 'bg-foreground/5',

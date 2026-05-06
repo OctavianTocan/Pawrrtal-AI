@@ -16,4 +16,3 @@ globs: **/*.py
 
 1. **Do not use `cast(Any, ...)`.**
    This is a type-suppression pattern that violates the project's strict typing rules. If you find yourself needing to cast to `Any` to make a library happy, your underlying types are usually wrong (e.g., using `str` instead of `Literal`). Fix the source type.
-

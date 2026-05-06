@@ -99,20 +99,12 @@ async def test_delete_conversation_removes_conversation(client: AsyncClient) -> 
 
 
 @pytest.mark.anyio
-async def test_get_conversation_messages_returns_empty_for_missing_agno_session(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+async def test_get_conversation_messages_returns_empty_for_new_conversation(
+    client: AsyncClient,
 ) -> None:
-    """Missing Agno sessions are treated as empty conversation history."""
+    """A freshly-created conversation has no chat_messages rows yet — empty list."""
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Messages"})
-
-    def raise_missing_session(_conversation_id: object) -> list[object]:
-        raise RuntimeError("session not found")
-
-    monkeypatch.setattr(
-        "app.api.conversations.create_history_reader_agent",
-        raise_missing_session,
-    )
 
     response = await client.get(f"/api/v1/conversations/{conversation_id}/messages")
 

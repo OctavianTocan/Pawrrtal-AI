@@ -2,16 +2,9 @@
 
 import { useId } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
 interface ConversationRenameDialogProps {
 	/** Whether the dialog is open. */
@@ -31,8 +24,11 @@ interface ConversationRenameDialogProps {
 /**
  * Dialog for renaming a conversation.
  *
- * Shows a text input for editing the conversation title. Disables the
- * Save button while the rename mutation is pending or if the title is empty.
+ * Renders as a centered Modal on desktop and a draggable BottomSheet on mobile
+ * via {@link ResponsiveModal}. Disables the Save button while the rename
+ * mutation is pending or if the title is empty.
+ *
+ * @returns The rename dialog rendered through the project overlay primitive.
  */
 export function ConversationRenameDialog({
 	isOpen,
@@ -43,16 +39,28 @@ export function ConversationRenameDialog({
 	onSubmit,
 }: ConversationRenameDialogProps): React.JSX.Element {
 	const titleInputId = useId();
+	const headingId = useId();
+	const descriptionId = useId();
 
 	return (
-		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Rename Conversation</DialogTitle>
-					<DialogDescription>
+		<ResponsiveModal
+			open={isOpen}
+			onDismiss={() => onOpenChange(false)}
+			ariaLabelledBy={headingId}
+			ariaDescribedBy={descriptionId}
+			size="md"
+			showDismissButton
+			testId="conversation-rename-dialog"
+		>
+			<div className="flex flex-col gap-4 p-6 text-foreground">
+				<header className="flex flex-col gap-1.5">
+					<h2 id={headingId} className="text-lg font-semibold leading-none">
+						Rename Conversation
+					</h2>
+					<p id={descriptionId} className="text-sm text-muted-foreground">
 						Update the sidebar title for this conversation.
-					</DialogDescription>
-				</DialogHeader>
+					</p>
+				</header>
 				<form
 					className="grid gap-4"
 					onSubmit={(event) => {
@@ -71,16 +79,21 @@ export function ConversationRenameDialog({
 						maxLength={255}
 						autoFocus
 					/>
-					<DialogFooter>
-						<Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onOpenChange(false)}
+							disabled={isPending}
+						>
 							Cancel
 						</Button>
 						<Button type="submit" disabled={!draftTitle.trim() || isPending}>
 							{isPending ? 'Saving...' : 'Save'}
 						</Button>
-					</DialogFooter>
+					</div>
 				</form>
-			</DialogContent>
-		</Dialog>
+			</div>
+		</ResponsiveModal>
 	);
 }

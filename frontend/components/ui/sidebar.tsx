@@ -29,13 +29,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TopBarButton } from '@/components/ui/top-bar-button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { SIDEBAR_STORAGE_KEYS } from '@/lib/storage-keys';
 import { cn } from '@/lib/utils';
 
-const SIDEBAR_STATE_STORAGE_KEY = 'sidebar_state';
 export const SIDEBAR_DEFAULT_WIDTH = 300;
 export const SIDEBAR_MIN_WIDTH = 240;
 export const SIDEBAR_MAX_WIDTH = 420;
-const SIDEBAR_WIDTH_STORAGE_KEY = 'sidebar_width';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b';
@@ -56,7 +55,7 @@ function loadDesktopSidebarWidth(): number {
 	if (typeof window === 'undefined') return SIDEBAR_DEFAULT_WIDTH;
 
 	try {
-		const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+		const storedWidth = window.localStorage.getItem(SIDEBAR_STORAGE_KEYS.width);
 		if (!storedWidth) return SIDEBAR_DEFAULT_WIDTH;
 
 		const parsedWidth = Number.parseInt(storedWidth, 10);
@@ -135,7 +134,7 @@ function SidebarProvider({
 			return;
 		}
 		try {
-			const stored = window.localStorage.getItem(SIDEBAR_STATE_STORAGE_KEY);
+			const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEYS.state);
 			if (stored === 'expanded' || stored === 'collapsed') {
 				_setState(stored);
 			}
@@ -158,7 +157,7 @@ function SidebarProvider({
 			// Persist state to localStorage
 			if (typeof window !== 'undefined') {
 				try {
-					window.localStorage.setItem(SIDEBAR_STATE_STORAGE_KEY, newState);
+					window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.state, newState);
 				} catch {
 					// Storage writes are best-effort only for this UI preference.
 				}
@@ -190,7 +189,7 @@ function SidebarProvider({
 	// that must happen after render, and effects don't run on SSR.
 	React.useEffect(() => {
 		try {
-			window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(desktopWidth));
+			window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.width, String(desktopWidth));
 		} catch {
 			// Storage writes are best-effort only for this UI preference.
 		}
@@ -327,7 +326,7 @@ function Sidebar({
 			<div
 				data-slot="sidebar-gap"
 				className={cn(
-					'transition-[width] duration-200 ease-linear relative w-(--sidebar-width) bg-transparent',
+					'transition-[width] duration-200 ease-out relative w-(--sidebar-width) bg-transparent',
 					'group-data-[collapsible=offcanvas]:w-0',
 					'group-data-[side=right]:rotate-180',
 					variant === 'floating' || variant === 'inset'
@@ -339,7 +338,7 @@ function Sidebar({
 				data-slot="sidebar-container"
 				data-side={side}
 				className={cn(
-					'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex',
+					'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-out data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex',
 					// Adjust the padding for floating and inset variants.
 					variant === 'floating' || variant === 'inset'
 						? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
@@ -486,7 +485,7 @@ function SidebarGroupLabel({
 			data-slot="sidebar-group-label"
 			data-sidebar="group-label"
 			className={cn(
-				'text-sidebar-foreground/45 h-5 px-2.5 pb-[5px] pt-[3px] text-[10px] font-medium uppercase tracking-[0.16em] transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-3.5 flex shrink-0 items-center outline-hidden [&>svg]:shrink-0',
+				'text-sidebar-foreground/45 h-5 px-2.5 pb-[5px] pt-[3px] text-[10px] font-medium uppercase tracking-[0.16em] transition-[margin,opacity] duration-200 ease-out group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-3.5 flex shrink-0 items-center outline-hidden [&>svg]:shrink-0',
 				className
 			)}
 			{...props}

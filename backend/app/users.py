@@ -1,10 +1,8 @@
-"""
-User management and authentication using FastAPI-Users. This module defines the UserManager class that handles user lifecycle events (registration, login, etc.) and sets up the authentication backend using JWTs stored in secure cookies. It also provides FastAPI dependencies for accessing the user manager and the current active user.
-"""
+"""User management and authentication using FastAPI-Users. This module defines the UserManager class that handles user lifecycle events (registration, login, etc.) and sets up the authentication backend using JWTs stored in secure cookies. It also provides FastAPI dependencies for accessing the user manager and the current active user."""
 
 import uuid
 from collections.abc import AsyncGenerator
-from typing import AsyncGenerator, Optional
+from typing import cast
 
 from fastapi import Depends, HTTPException, Request, Response
 from fastapi_users import (
@@ -19,11 +17,12 @@ from fastapi_users.authentication import (
     JWTStrategy,
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
-from typing_extensions import cast
 
 from app.core.config import settings
 from app.db import User, get_user_db
 from app.schemas import UserCreate
+
+MIN_PASSWORD_LENGTH = 8
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
@@ -34,9 +33,10 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
     async def validate_password(self, password: str, user: UserCreate | User) -> None:  # type: ignore[override]
         """Enforce minimum password length."""
-        if len(password) < 8:
+        if len(password) < MIN_PASSWORD_LENGTH:
             raise HTTPException(
-                status_code=400, detail="Password must be at least 8 characters."
+                status_code=400,
+                detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
             )
 
     async def create(
@@ -49,28 +49,24 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         expected = settings.registration_secret
         invite_code = getattr(user_create, "invite_code", "")
         if expected and invite_code != expected:
-            raise HTTPException(
-                status_code=403, detail="Invalid or missing invite code."
-            )
+            raise HTTPException(status_code=403, detail="Invalid or missing invite code.")
         return await super().create(user_create, safe=safe, request=request)
 
-    async def on_after_register(
-        self, user: User, request: Optional[Request] = None
-    ) -> None:
+    async def on_after_register(self, user: User, request: Request | None = None) -> None:
         """Hook called after a new user registers."""
 
     async def on_after_login(
         self,
         user: User,
-        request: Optional[Request] = None,
-        response: Optional[Response] = None,
+        request: Request | None = None,
+        response: Response | None = None,
     ) -> None:
         """Hook called after a user logs in."""
 
 
 async def get_user_manager(
     user_db: SQLAlchemyUserDatabase[User, uuid.UUID] = Depends(get_user_db),
-) -> AsyncGenerator[UserManager, None]:
+) -> AsyncGenerator[UserManager]:
     """FastAPI dependency that yields a ``UserManager`` instance."""
     yield UserManager(user_db)
 

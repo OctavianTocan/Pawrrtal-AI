@@ -1,8 +1,8 @@
 """Shared backend test fixtures."""
 
+import sys
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-import sys
 from uuid import uuid4
 
 import pytest
@@ -39,7 +39,7 @@ def test_user() -> User:
 
 
 @pytest.fixture
-async def db_session(test_user: User) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(test_user: User) -> AsyncGenerator[AsyncSession]:
     """Provide an isolated in-memory SQLite database session."""
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
@@ -60,13 +60,11 @@ async def db_session(test_user: User) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-def app_with_overrides(
-    db_session: AsyncSession, test_user: User
-) -> Generator[object, None, None]:
+def app_with_overrides(db_session: AsyncSession, test_user: User) -> Generator[object]:
     """Create a FastAPI app with auth and database dependencies overridden."""
     app = create_app()
 
-    async def override_session() -> AsyncGenerator[AsyncSession, None]:
+    async def override_session() -> AsyncGenerator[AsyncSession]:
         yield db_session
 
     app.dependency_overrides[get_async_session] = override_session
@@ -78,7 +76,7 @@ def app_with_overrides(
 
 
 @pytest.fixture
-async def client(app_with_overrides: object) -> AsyncGenerator[AsyncClient, None]:
+async def client(app_with_overrides: object) -> AsyncGenerator[AsyncClient]:
     """Provide an async HTTP client for the overridden FastAPI app."""
     transport = ASGITransport(app=app_with_overrides)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:

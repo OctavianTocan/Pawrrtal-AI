@@ -97,4 +97,3 @@ alwaysApply: false
 ### 3. Performance
 - **Metrics:** Layout Shift (CLS) - explicit image dims. Interaction (INP) - < 200ms.
 - **Optimistic UI:** Update UI immediately, reconcile on server response.
-

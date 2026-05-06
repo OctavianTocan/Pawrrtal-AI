@@ -15,4 +15,3 @@ Add unit tests for lib helpers (route-utils, format-conversation-age, highlightM
 ## Summary of Changes
 
 Added colocated Vitest tests: lib/route-utils.test.ts, lib/format-conversation-age.test.ts, lib/highlight-match.test.tsx, lib/utils.test.ts. Total frontend tests: 33 passing. Follows pyramid: fast pure-function and RTL checks only.
-
