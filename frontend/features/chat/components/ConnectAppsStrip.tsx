@@ -9,7 +9,6 @@ import { GoogleDriveIcon } from '@/components/brand-icons/GoogleDriveIcon';
 import { LinearIcon } from '@/components/brand-icons/LinearIcon';
 import { NotionIcon } from '@/components/brand-icons/NotionIcon';
 import { SlackIcon } from '@/components/brand-icons/SlackIcon';
-import { InputGroupAddon } from '@/components/ui/input-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
@@ -44,13 +43,24 @@ export type ConnectAppsStripProps = {
 };
 
 /**
- * Renders a compact, dismissible footer band attached to the bottom of the
- * landing chat composer. Designed to be rendered as a child of `<PromptInput>`
- * so it shares the same `<InputGroup>` surface and rounded corners.
+ * Compact, dismissible band that renders BEHIND the chat composer and peeks
+ * out below it. The component is now a standalone rounded `<div>` (not an
+ * `InputGroupAddon`) so it can be siblings with the `PromptInput` above it
+ * in `ChatComposer`, with a negative top margin sliding the upper portion
+ * under the composer's rounded shell — that's what produces the "this
+ * strip is layered under the chat box and pokes out at the bottom" depth
+ * effect.
  *
  * Uses real brand-color icons (per AGENTS.md icon rule, each lives in its
  * own file under `components/brand-icons/`) so the strip reads as a
  * recognisable lineup of integrations rather than abstract Lucide glyphs.
+ *
+ * Layout contract (consumer-managed):
+ * - Wrap `<PromptInput>` and `<ConnectAppsStrip>` in a `relative` parent.
+ * - The PromptInput should sit on a higher z-index (e.g. `relative z-10`)
+ *   and have a solid background (`bg-[color:var(--background-elevated)]`).
+ * - This strip handles its own negative margin + `z-0`, so the consumer
+ *   only has to render it after the PromptInput in the parent flex/column.
  */
 export function ConnectAppsStrip({
 	className,
@@ -76,39 +86,26 @@ export function ConnectAppsStrip({
 	};
 
 	return (
-		// Whole strip is now a single click target that routes to the
-		// integrations settings page — the brand icons + dismiss X stay as
-		// nested buttons (with stopPropagation) so they keep their own
-		// affordances. Using onClick on the InputGroupAddon (rendered as a
-		// `div role="group"`) instead of wrapping in a `<button>` because the
-		// strip already contains nested buttons and the dismiss X must remain
-		// keyboard-tab-reachable as its own element.
-		<InputGroupAddon
-			align="block-end"
-			// Tighter padding (`py-1.5`) and smaller text (`text-xs`) than the
-			// previous `py-2 + text-sm` layout — the strip was reading visually
-			// too tall against the composer above it. Brand glyphs sit in
-			// `size-7` hit targets so they group as a tight horizontal lineup
-			// rather than being spaced apart by the old `size-8` + `gap-1`.
-			// Strip surface is a slightly-darker companion to the chat panel —
-			// `--background-elevated-shade` is `--background-elevated` lifted
-			// down by 0.03 lightness, so it tracks the chat panel's hue
-			// (warm-cream, white, dark-teal, whatever) and reads as one
-			// notch deeper instead of the old `bg-foreground-10` gray cast.
+		// `-mt-4` slides the strip up so its top portion is hidden under
+		// the composer's rounded shell. `pt-5` gives the matching breathing
+		// room to the visible content. `relative z-0` keeps it under the
+		// composer (`z-10` on the PromptInput in `ChatComposer`).
+		// `rounded-surface-lg` matches the composer's corner radius so the
+		// visible bottom of the strip echoes the composer's geometry.
+		//
+		// Clickable `<div>` without a semantic role is intentional: the
+		// strip contains nested `<button>` elements (the brand chips and
+		// the dismiss X), so `<a>` / `<button>` / `role="link"` would
+		// produce invalid HTML or duplicate keyboard targets. The brand
+		// chips themselves are the keyboard-reachable affordances; the
+		// strip-level click is a mouse-only convenience that triggers the
+		// same `goToIntegrations` route.
+		<div
 			className={cn(
-				'relative cursor-pointer justify-between gap-3 bg-[color:var(--background-elevated-shade)] px-3 py-1 pb-1 font-normal transition-colors hover:bg-foreground/[0.04]',
-				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
+				'relative z-0 -mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-surface-lg bg-[color:var(--background-elevated-shade)] px-3 pt-5 pb-1 font-normal shadow-minimal transition-colors hover:bg-foreground/[0.04]',
 				className
 			)}
 			onClick={goToIntegrations}
-			onKeyDown={(event) => {
-				if (event.key === 'Enter' || event.key === ' ') {
-					event.preventDefault();
-					goToIntegrations();
-				}
-			}}
-			role="link"
-			tabIndex={0}
 		>
 			<p className="min-w-0 truncate text-xs text-muted-foreground">
 				Connect your apps to get better answers
@@ -147,6 +144,6 @@ export function ConnectAppsStrip({
 					<XIcon aria-hidden="true" className="size-3" />
 				</button>
 			</div>
-		</InputGroupAddon>
+		</div>
 	);
 }

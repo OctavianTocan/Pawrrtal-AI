@@ -233,108 +233,112 @@ export function ChatComposer({
 	};
 
 	return (
-		<PromptInput
-			className={cn('w-full max-w-[48.75rem]', className)}
-			// Composer uses the same `--background-elevated` surface as the
-			// chat panel (the arbitrary `bg-[color:var(--background-elevated)]`
-			// reads the live CSS variable so it re-tints with each preset),
-			// instead of the old `bg-foreground-5` token, which was producing
-			// the gray-cast box on a white chat panel. Border swapped to a
-			// hairline `border-border/50` so the composer still reads as a
-			// discrete control on the white chat panel, matching the Cursor
-			// reference.
-			inputGroupClassName="chat-composer-input-group rounded-surface-lg border border-border/50 bg-[color:var(--background-elevated)] shadow-minimal"
-			multiple={true}
-			onKeyDown={handleComposerKeyDown}
-			onSubmit={onSendMessage}
-		>
-			<PromptInputAttachments className="px-3 pt-2 pb-0">
-				{(attachment) => <PromptInputAttachment data={attachment} />}
-			</PromptInputAttachments>
-			<div className="relative w-full self-stretch">
-				<AnimatedComposerPlaceholder isVisible={!hasContent} text={placeholder} />
-				{/* `min-h-11` (44px) + `pt-2` lets a one-line draft sit
+		// Stacks the composer above the connect-apps strip via z-index so
+		// the strip looks layered behind the chat box (see ConnectAppsStrip).
+		<div className={cn('relative flex w-full max-w-[48.75rem] flex-col', className)}>
+			<PromptInput
+				className="relative z-10 w-full"
+				// Composer surface = chat-panel surface (`--background-elevated`)
+				// + hairline border, so it reads as a discrete control on the
+				// panel without the old gray-cast `bg-foreground-5` wash.
+				inputGroupClassName="chat-composer-input-group rounded-surface-lg border border-border/50 bg-[color:var(--background-elevated)] shadow-minimal"
+				multiple={true}
+				onKeyDown={handleComposerKeyDown}
+				onSubmit={onSendMessage}
+			>
+				<PromptInputAttachments className="px-3 pt-2 pb-0">
+					{(attachment) => <PromptInputAttachment data={attachment} />}
+				</PromptInputAttachments>
+				<div className="relative w-full self-stretch">
+					<AnimatedComposerPlaceholder isVisible={!hasContent} text={placeholder} />
+					{/* `min-h-11` (44px) + `pt-2` lets a one-line draft sit
 				    comfortably without the textarea reading as a tall card on
 				    its own. The placeholder absolutely-positioned at `top-3`
 				    is shifted to `top-2` to track this in the parent. */}
-				<PromptInputTextarea
-					aria-label={placeholder}
-					className="max-h-48 min-h-11 w-full overflow-y-auto px-3 pt-2 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
-					onChange={onUpdateMessage}
-					placeholder=""
-					value={message.content}
-				/>
-			</div>
-			{/* `min-h-8` (32px) + `py-1` keeps the controls vertically
+					<PromptInputTextarea
+						aria-label={placeholder}
+						className="max-h-48 min-h-11 w-full overflow-y-auto px-3 pt-2 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
+						onChange={onUpdateMessage}
+						placeholder=""
+						value={message.content}
+					/>
+				</div>
+				{/* `min-h-8` (32px) + `py-1` keeps the controls vertically
 			    centered without giving the footer the extra 4px of slack
 			    `min-h-9` was reading as. */}
-			<PromptInputFooter className="min-h-8 px-1.5 py-1">
-				<div className="flex min-w-0 flex-1 items-center gap-1">
-					<AttachButton />
-					{isRecording || isTranscribing ? (
-						<VoiceMeter
-							elapsedSeconds={recordingSeconds}
-							isTranscribing={isTranscribing}
-							onSend={handleSendRecording}
-							onStop={handleStopRecording}
-						/>
-					) : (
-						<>
-							{isPlanTagVisible ? <PlanButton /> : null}
-							<AutoReviewSelector />
-						</>
-					)}
-				</div>
-
-				<div
-					className={cn(
-						'ml-auto flex shrink-0 items-center gap-1',
-						isRecording && 'hidden'
-					)}
-				>
-					<ModelSelectorPopover
-						selectedModelId={selectedModelId}
-						selectedReasoning={selectedReasoning}
-						onSelectModel={onSelectModel}
-						onSelectReasoning={onSelectReasoning}
-					/>
-					<ComposerTooltip
-						content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
-					>
-						<Button
-							aria-label="Start voice input"
-							aria-pressed={isRecording}
-							className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
-							disabled={isTranscribing}
-							onClick={startRecording}
-							size="icon-sm"
-							type="button"
-							variant="ghost"
-						>
-							<MicIcon
-								aria-hidden="true"
-								className={cn('size-3.5', isTranscribing && 'animate-pulse')}
+				<PromptInputFooter className="min-h-8 px-1.5 py-1">
+					<div className="flex min-w-0 flex-1 items-center gap-1">
+						<AttachButton />
+						{isRecording || isTranscribing ? (
+							<VoiceMeter
+								elapsedSeconds={recordingSeconds}
+								isTranscribing={isTranscribing}
+								onSend={handleSendRecording}
+								onStop={handleStopRecording}
 							/>
-						</Button>
-					</ComposerTooltip>
-					<ComposerTooltip
-						content={isTranscribing ? 'Wait for transcription' : 'Send message'}
+						) : (
+							<>
+								{isPlanTagVisible ? <PlanButton /> : null}
+								<AutoReviewSelector />
+							</>
+						)}
+					</div>
+
+					<div
+						className={cn(
+							'ml-auto flex shrink-0 items-center gap-1',
+							isRecording && 'hidden'
+						)}
 					>
-						<PromptInputSubmit
-							className="size-9 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
-							disabled={!hasContent || isLoading || isTranscribing}
-							status={isLoading ? 'streaming' : 'ready'}
+						<ModelSelectorPopover
+							selectedModelId={selectedModelId}
+							selectedReasoning={selectedReasoning}
+							onSelectModel={onSelectModel}
+							onSelectReasoning={onSelectReasoning}
+						/>
+						<ComposerTooltip
+							content={
+								isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'
+							}
 						>
-							{isLoading ? (
-								<SquareIcon aria-hidden="true" className="size-2.5 fill-current" />
-							) : (
-								<ArrowUpIcon aria-hidden="true" className="size-3.5" />
-							)}
-						</PromptInputSubmit>
-					</ComposerTooltip>
-				</div>
-			</PromptInputFooter>
+							<Button
+								aria-label="Start voice input"
+								aria-pressed={isRecording}
+								className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+								disabled={isTranscribing}
+								onClick={startRecording}
+								size="icon-sm"
+								type="button"
+								variant="ghost"
+							>
+								<MicIcon
+									aria-hidden="true"
+									className={cn('size-3.5', isTranscribing && 'animate-pulse')}
+								/>
+							</Button>
+						</ComposerTooltip>
+						<ComposerTooltip
+							content={isTranscribing ? 'Wait for transcription' : 'Send message'}
+						>
+							<PromptInputSubmit
+								className="size-9 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
+								disabled={!hasContent || isLoading || isTranscribing}
+								status={isLoading ? 'streaming' : 'ready'}
+							>
+								{isLoading ? (
+									<SquareIcon
+										aria-hidden="true"
+										className="size-2.5 fill-current"
+									/>
+								) : (
+									<ArrowUpIcon aria-hidden="true" className="size-3.5" />
+								)}
+							</PromptInputSubmit>
+						</ComposerTooltip>
+					</div>
+				</PromptInputFooter>
+			</PromptInput>
 			{showConnectAppsStrip ? <ConnectAppsStrip onDismiss={onDismissConnectApps} /> : null}
-		</PromptInput>
+		</div>
 	);
 }
