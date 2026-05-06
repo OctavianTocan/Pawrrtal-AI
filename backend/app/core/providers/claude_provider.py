@@ -1,7 +1,7 @@
 """Claude Agent SDK provider.
 
 Wraps :func:`claude_agent_sdk.query` to expose a streaming chat interface
-that matches the rest of the :class:`AIProvider` protocol — every tick
+that matches the rest of the :class:`AILLM` protocol — every tick
 becomes a :class:`StreamEvent` dictionary.
 
 Notable design decisions:
@@ -81,7 +81,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Defaults — tunable at construction time via :class:`ClaudeProviderConfig`.
+# Defaults — tunable at construction time via :class:`ClaudeLLMConfig`.
 # ---------------------------------------------------------------------------
 
 # Map our frontend model IDs to Claude SDK model strings. The frontend uses
@@ -142,10 +142,10 @@ _DEFAULT_SYSTEM_PROMPT = (
 
 
 @dataclass(frozen=True)
-class ClaudeProviderConfig:
-    """Tunable configuration for :class:`ClaudeProvider`.
+class ClaudeLLMConfig:
+    """Tunable configuration for :class:`ClaudeLLM`.
 
-    Each field has a safe default; pass an instance to ``ClaudeProvider``
+    Each field has a safe default; pass an instance to ``ClaudeLLM``
     when you need to override one (most often in tests).
     """
 
@@ -179,17 +179,17 @@ class ClaudeProviderConfig:
 # ---------------------------------------------------------------------------
 
 
-class ClaudeProvider:
+class ClaudeLLM:
     """Wraps the Claude Agent SDK for streaming chat."""
 
     def __init__(
         self,
         model_id: str,
         *,
-        config: ClaudeProviderConfig | None = None,
+        config: ClaudeLLMConfig | None = None,
     ) -> None:
         self._model_id = model_id
-        self._config = config or ClaudeProviderConfig()
+        self._config = config or ClaudeLLMConfig()
 
     async def stream(
         self,

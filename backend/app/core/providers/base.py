@@ -22,11 +22,11 @@ class StreamEvent(TypedDict, total=False):
     tool_use_id: str  # for tool_result
 
 
-class AIProvider(Protocol):
+class AILLM(Protocol):
     """Unified streaming interface for all AI providers.
 
-    GeminiProvider uses ``history`` (read from our Message table) to build
-    multi-turn context.  ClaudeProvider manages its own session continuity
+    GeminiLLM uses ``history`` (read from our Message table) to build
+    multi-turn context.  ClaudeLLM manages its own session continuity
     via ``resume`` and can ignore ``history``.
     """
 
@@ -53,7 +53,7 @@ class AIProvider(Protocol):
             history: Optional list of prior messages oldest-first, each a
                      dict with ``role`` (``"user"``/``"assistant"``) and
                      ``content`` keys.  Providers that manage their own
-                     history (e.g. ClaudeProvider via ``resume``) may ignore
+                     history (e.g. ClaudeLLM via ``resume``) may ignore
                      this.
         """
         ...

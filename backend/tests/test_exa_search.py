@@ -10,11 +10,11 @@ Coverage layers:
   builder.
 * Agno adapter (``app.core.tools.exa_search_agno``) — Toolkit
   registration, num-results capping, async-from-sync bridge.
-* ClaudeProvider wiring (``app.core.providers.claude_provider``) —
+* ClaudeLLM wiring (``app.core.providers.claude_provider``) —
   ``enable_exa_search`` toggle gates ``mcp_servers`` and the
   whitelist entry.
 * Factory routing (``app.core.providers.factory``) — ``EXA_API_KEY``
-  presence flips ``ClaudeProviderConfig.enable_exa_search``.
+  presence flips ``ClaudeLLMConfig.enable_exa_search``.
 
 The HTTP boundary is mocked with ``httpx.MockTransport`` so no test
 ever talks to the real Exa API.
@@ -32,7 +32,7 @@ import httpx
 import pytest
 
 from app.core.providers import factory
-from app.core.providers.claude_provider import ClaudeProvider, ClaudeProviderConfig
+from app.core.providers.claude_provider import ClaudeLLM, ClaudeLLMConfig
 from app.core.tools.exa_search import (
     DEFAULT_NUM_RESULTS,
     EXA_API_URL,
@@ -509,14 +509,14 @@ def test_agno_exa_search_renders_error_for_missing_key(monkeypatch: pytest.Monke
 
 
 # ---------------------------------------------------------------------------
-# ClaudeProvider wiring
+# ClaudeLLM wiring
 # ---------------------------------------------------------------------------
 
 
 def test_provider_options_omit_exa_when_disabled() -> None:
-    provider = ClaudeProvider(
+    provider = ClaudeLLM(
         "claude-haiku-4-5",
-        config=ClaudeProviderConfig(oauth_token=None, enable_exa_search=False),
+        config=ClaudeLLMConfig(oauth_token=None, enable_exa_search=False),
     )
 
     options = provider._build_options(uuid4())
@@ -527,9 +527,9 @@ def test_provider_options_omit_exa_when_disabled() -> None:
 
 
 def test_provider_options_mount_exa_mcp_server_when_enabled() -> None:
-    provider = ClaudeProvider(
+    provider = ClaudeLLM(
         "claude-haiku-4-5",
-        config=ClaudeProviderConfig(oauth_token=None, enable_exa_search=True),
+        config=ClaudeLLMConfig(oauth_token=None, enable_exa_search=True),
     )
 
     options = provider._build_options(uuid4())
@@ -539,9 +539,9 @@ def test_provider_options_mount_exa_mcp_server_when_enabled() -> None:
 
 
 def test_provider_options_does_not_duplicate_exa_tool_when_already_listed() -> None:
-    provider = ClaudeProvider(
+    provider = ClaudeLLM(
         "claude-haiku-4-5",
-        config=ClaudeProviderConfig(
+        config=ClaudeLLMConfig(
             tools=[CLAUDE_TOOL_ID],  # already in the whitelist
             oauth_token=None,
             enable_exa_search=True,
@@ -560,15 +560,15 @@ def test_provider_options_does_not_duplicate_exa_tool_when_already_listed() -> N
 
 def test_factory_enables_exa_when_api_key_is_set() -> None:
     with patch.object(factory.settings, "exa_api_key", "ek"):
-        provider = factory.resolve_provider("claude-haiku-4-5")
+        provider = factory.resolve_llm("claude-haiku-4-5")
 
-    # The factory only constructs ClaudeProvider for claude-* model IDs.
-    assert provider.__class__.__name__ == "ClaudeProvider"
+    # The factory only constructs ClaudeLLM for claude-* model IDs.
+    assert provider.__class__.__name__ == "ClaudeLLM"
     assert provider._config.enable_exa_search is True
 
 
 def test_factory_disables_exa_when_api_key_is_empty() -> None:
     with patch.object(factory.settings, "exa_api_key", ""):
-        provider = factory.resolve_provider("claude-haiku-4-5")
+        provider = factory.resolve_llm("claude-haiku-4-5")
 
     assert provider._config.enable_exa_search is False

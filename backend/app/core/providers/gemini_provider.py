@@ -22,7 +22,7 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.config import settings
-from .base import AIProvider, StreamEvent
+from .base import AILLM, StreamEvent
 
 _SYSTEM_PROMPT = (
     "You are a helpful AI assistant. "
@@ -165,8 +165,8 @@ def _identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
     return [m for m in messages if m["role"] in {"user", "assistant", "toolResult"}]
 
 
-class GeminiProvider:
-    """AIProvider backed by the agent_loop + a Gemini StreamFn.
+class GeminiLLM:
+    """AILLM backed by the agent_loop + a Gemini StreamFn.
 
     History is supplied by the caller (read from our Message table in
     chat.py).  Tools are injected per-request via the AgentContext.

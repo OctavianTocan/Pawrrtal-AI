@@ -1,4 +1,4 @@
-"""Tests for GeminiProvider's StreamFn wiring into agent_loop.
+"""Tests for GeminiLLM's StreamFn wiring into agent_loop.
 
 Uses a mock StreamFn — no real Gemini API calls.
 """
@@ -78,10 +78,10 @@ def _make_tool_then_text_stream_fn(tool_name: str, tool_args: dict, final_text: 
 
 @pytest.mark.anyio
 async def test_gemini_provider_yields_delta_events_from_loop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """GeminiProvider.stream() translates agent_loop text_deltas to StreamEvent deltas."""
-    from app.core.providers.gemini_provider import GeminiProvider
+    """GeminiLLM.stream() translates agent_loop text_deltas to StreamEvent deltas."""
+    from app.core.providers.gemini_provider import GeminiLLM
 
-    provider = GeminiProvider("gemini-test")
+    provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(provider, "_stream_fn", _make_text_stream_fn("hello"))
 
     events: list[StreamEvent] = []
@@ -101,7 +101,7 @@ async def test_gemini_provider_yields_delta_events_from_loop(monkeypatch: pytest
 @pytest.mark.anyio
 async def test_gemini_provider_passes_history_to_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     """Prior messages in history are included in what the StreamFn sees."""
-    from app.core.providers.gemini_provider import GeminiProvider
+    from app.core.providers.gemini_provider import GeminiLLM
 
     seen_messages: list[list[AgentMessage]] = []
 
@@ -115,7 +115,7 @@ async def test_gemini_provider_passes_history_to_loop(monkeypatch: pytest.Monkey
             content=[TextContent(type="text", text="ok")],
         )
 
-    provider = GeminiProvider("gemini-test")
+    provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(provider, "_stream_fn", recording_stream_fn)
 
     history = [
@@ -141,7 +141,7 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Tool call lifecycle events are translated to StreamEvents correctly."""
-    from app.core.providers.gemini_provider import GeminiProvider, AgentContext, AgentLoopConfig, AgentTool
+    from app.core.providers.gemini_provider import GeminiLLM, AgentContext, AgentLoopConfig, AgentTool
 
     executed: list[str] = []
 
@@ -156,7 +156,7 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
         execute=echo_execute,
     )
 
-    provider = GeminiProvider("gemini-test")
+    provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(
         provider, "_stream_fn",
         _make_tool_then_text_stream_fn("echo", {"value": "hi"}, "Done!")

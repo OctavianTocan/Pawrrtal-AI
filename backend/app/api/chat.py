@@ -13,7 +13,7 @@ from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.providers import resolve_provider
+from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
@@ -137,7 +137,7 @@ def get_chat_router() -> APIRouter:
         # short-lived session inside the generator for the final UPDATE.
         await session.commit()
 
-        provider = resolve_provider(model_id)
+        provider = resolve_llm(model_id)
 
         async def event_stream() -> AsyncGenerator[str]:
             """Yield SSE-framed events from the provider stream.

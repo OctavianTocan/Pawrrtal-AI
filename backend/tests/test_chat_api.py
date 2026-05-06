@@ -39,7 +39,7 @@ async def test_chat_streams_provider_events(
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"})
     monkeypatch.setattr(
-        "app.api.chat.resolve_provider",
+        "app.api.chat.resolve_llm",
         lambda _model_id: FakeProvider([{"type": "delta", "content": "hello"}]),
     )
 
@@ -61,7 +61,7 @@ async def test_chat_persists_requested_model_id(
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Model"})
     monkeypatch.setattr(
-        "app.api.chat.resolve_provider",
+        "app.api.chat.resolve_llm",
         lambda _model_id: FakeProvider([{"type": "delta", "content": "ok"}]),
     )
 
@@ -94,7 +94,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
 
-    monkeypatch.setattr("app.api.chat.resolve_provider", lambda _model_id: FailingProvider())
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: FailingProvider())
 
     response = await client.post(
         "/api/v1/chat/",
