@@ -20,6 +20,7 @@ from app.crud.chat_message import (
     append_assistant_placeholder,
     append_user_message,
     finalize_assistant_message,
+    get_messages_for_conversation,
 )
 from app.crud.conversation import get_conversation_service, update_conversation_model_service
 from app.db import User, async_session_maker, get_async_session
@@ -27,6 +28,10 @@ from app.schemas import ChatRequest
 from app.users import current_active_user
 
 logger = logging.getLogger(__name__)
+
+# How many recent messages to send as context to the provider.
+# Keeps token usage predictable while preserving recent turns.
+_HISTORY_WINDOW = 20
 
 _DEFAULT_MODEL = "gemini-3-flash-preview"
 
@@ -101,6 +106,18 @@ def get_chat_router() -> APIRouter:
                 session=session,
             )
 
+        # Read recent history *before* persisting the current message so the
+        # current question is not included in the history slice passed to the
+        # provider (the provider receives it separately as ``question``).
+        recent_rows = await get_messages_for_conversation(
+            session, request.conversation_id, limit=_HISTORY_WINDOW
+        )
+        history = [
+            {"role": row.role, "content": row.content or ""}
+            for row in recent_rows
+            if row.role in {"user", "assistant"}
+        ]
+
         # Persist the user prompt + assistant placeholder rows up front so a
         # client that disconnects mid-stream still has a partial record.
         await append_user_message(
@@ -138,6 +155,7 @@ def get_chat_router() -> APIRouter:
                     request.question,
                     request.conversation_id,
                     user.id,
+                    history=history,
                 ):
                     event_count += 1
                     aggregator.apply(event)
