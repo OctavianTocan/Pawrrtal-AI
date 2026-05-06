@@ -83,6 +83,12 @@
 	   on every preset, with just enough hue carry to read as the same
 	   family as the sidebar. */
 	--background-elevated: oklch(from var(--background) 0.99 calc(c * 0.25) h);
+	/* Slightly-darker companion to `--background-elevated` for surfaces that
+	   should sit one notch lower in the elevation stack — currently the
+	   "Connect your apps" strip attached under the composer. Lift the
+	   lightness of `--background-elevated` *down* by 0.03 so the shade
+	   tracks any hue/chroma the chat panel inherited from the preset. */
+	--background-elevated-shade: oklch(from var(--background-elevated) calc(l - 0.03) c h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
 		radial-gradient(
@@ -292,6 +298,10 @@
 	   lightness gives a clearly visible "elevated" surface that still
 	   reads as the same hue family as the canvas. */
 	--background-elevated: oklch(from var(--background) calc(l + 0.04) c h);
+	/* In dark mode the shade is slightly darker than the elevated panel —
+	   sits between canvas and panel, so the connect-apps strip reads as a
+	   recessed band beneath the chat surface instead of competing with it. */
+	--background-elevated-shade: oklch(from var(--background-elevated) calc(l - 0.02) c h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.22), transparent 45%),
 		radial-gradient(
@@ -484,6 +494,7 @@ html[data-font="inter"] {
 	/* === 6 BASE COLORS === */
 	--color-background: var(--background);
 	--color-background-elevated: var(--background-elevated);
+	--color-background-elevated-shade: var(--background-elevated-shade);
 	--color-foreground: var(--foreground);
 	--color-accent: var(--accent);
 	--color-info: var(--info);

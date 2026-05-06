@@ -90,8 +90,13 @@ export function ConnectAppsStrip({
 			// too tall against the composer above it. Brand glyphs sit in
 			// `size-7` hit targets so they group as a tight horizontal lineup
 			// rather than being spaced apart by the old `size-8` + `gap-1`.
+			// Strip surface is a slightly-darker companion to the chat panel —
+			// `--background-elevated-shade` is `--background-elevated` lifted
+			// down by 0.03 lightness, so it tracks the chat panel's hue
+			// (warm-cream, white, dark-teal, whatever) and reads as one
+			// notch deeper instead of the old `bg-foreground-10` gray cast.
 			className={cn(
-				'relative cursor-pointer justify-between gap-3 bg-foreground-10 px-3 py-1 pb-1 font-normal transition-colors hover:bg-foreground/[0.12]',
+				'relative cursor-pointer justify-between gap-3 bg-[color:var(--background-elevated-shade)] px-3 py-1 pb-1 font-normal transition-colors hover:bg-foreground/[0.04]',
 				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
 				className
 			)}
