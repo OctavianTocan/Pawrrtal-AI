@@ -34,7 +34,7 @@ function DropdownMenuContent({
 				sideOffset={sideOffset}
 				align={align}
 				className={cn(
-					'popover-styled data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-40 p-1 duration-100 z-50 max-h-(--radix-dropdown-menu-content-available-height) origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto data-[state=closed]:overflow-hidden',
+					'popover-styled w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-40 p-1 z-50 max-h-(--radix-dropdown-menu-content-available-height) origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto data-[state=closed]:overflow-hidden',
 					className
 				)}
 				{...props}
@@ -219,7 +219,7 @@ function DropdownMenuSubContent({
 		<DropdownMenuPrimitive.SubContent
 			data-slot="dropdown-menu-sub-content"
 			className={cn(
-				'popover-styled data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-36 p-1 duration-100 z-50 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden',
+				'popover-styled w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-36 p-1 z-50 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden',
 				className
 			)}
 			{...props}

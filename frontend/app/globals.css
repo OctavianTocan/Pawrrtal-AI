@@ -608,6 +608,36 @@ html[data-font="inter"] {
 		both;
 }
 
+/* Dropdown open/close animations — CSS keyframes so Radix detects animationend and
+   waits for exit to complete before removing the element from the DOM. Scoped by
+   data-slot to avoid collisions. Transform-origin is set by the Tailwind
+   origin-(--radix-dropdown-menu-content-transform-origin) class on the element,
+   so scale(0.95) always grows/shrinks from the trigger side. */
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"] {
+	&[data-state="open"] {
+		animation: dropdown-open 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+
+	&[data-state="closed"] {
+		animation: dropdown-close 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+}
+
+@keyframes dropdown-open {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+@keyframes dropdown-close {
+	to {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
 /* Global styles */
 @layer base {
 	* {
