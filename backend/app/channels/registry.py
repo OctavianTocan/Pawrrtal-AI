@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from .base import Channel
 from .sse import SURFACE_ELECTRON, SURFACE_WEB, SSEChannel
+from .telegram import SURFACE_TELEGRAM, TelegramChannel
 
 # ---------------------------------------------------------------------------
 # Registry — explicit mapping of surface name → Channel instance.
@@ -34,7 +35,7 @@ from .sse import SURFACE_ELECTRON, SURFACE_WEB, SSEChannel
 _REGISTRY: dict[str, Channel] = {
     SURFACE_WEB: SSEChannel(surface=SURFACE_WEB),
     SURFACE_ELECTRON: SSEChannel(surface=SURFACE_ELECTRON),
-    # "telegram": TelegramChannel(),  ← next PR
+    SURFACE_TELEGRAM: TelegramChannel(),
 }
 
 

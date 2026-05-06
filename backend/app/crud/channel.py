@@ -212,3 +212,56 @@ async def get_user_id_for_external(
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_or_create_telegram_conversation(
+    *,
+    user_id: uuid.UUID,
+    session: AsyncSession,
+) -> uuid.UUID:
+    """Return a stable Telegram conversation UUID for *user_id*.
+
+    Finds the most-recent conversation whose title starts with ``"Telegram"``
+    and was created for this user, or creates a fresh one if none exists.
+    Keeping a persistent conversation means message history survives across
+    bot restarts, giving the LLM access to the thread's prior turns just as
+    the web UI would.
+
+    Args:
+        user_id: Nexus user who owns the conversation.
+        session: Async database session.
+
+    Returns:
+        UUID of the resolved (or newly created) ``Conversation`` row.
+    """
+    from sqlalchemy import select  # already imported at module level; re-import safe
+
+    from app.models import Conversation  # noqa: PLC0415
+
+    stmt = (
+        select(Conversation)
+        .where(
+            Conversation.user_id == user_id,
+            Conversation.title.like("Telegram%"),
+        )
+        .order_by(Conversation.updated_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    if existing is not None:
+        return existing.id
+
+    from datetime import datetime  # noqa: PLC0415
+
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        title="Telegram",
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(conversation)
+    await session.commit()
+    await session.refresh(conversation)
+    return conversation.id

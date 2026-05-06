@@ -1,36 +1,46 @@
 """Inbound message handlers for the Telegram channel adapter.
 
-Kept deliberately framework-thin so the same logic can be exercised
-from a unit test without spinning up aiogram. Each handler returns
-the text the bot should reply with; the caller is responsible for the
-actual ``bot.send_message`` call. This split is what makes Telegram
-features testable locally — see tests/integrations/test_telegram.py.
+Kept deliberately framework-thin so the same logic can be exercised from a
+unit test without spinning up aiogram.  Each handler returns either a plain
+string (for terminal error replies the bot sends immediately) or a
+``TelegramTurnContext`` when the message should be routed to the LLM pipeline.
 
-The handlers know about three states:
+The split is what makes Telegram features testable locally — see
+``tests/integrations/test_telegram.py``.
 
-1. The user sent ``/start <code>`` (or ``/start`` then a bare code) —
-   redeem the code via :mod:`app.crud.channel` and confirm the bind.
-2. The user has an existing binding — the message is forwarded into
-   the existing chat service. Today's silver-bullet just acknowledges
-   receipt; full streaming + provider routing is BEAN-marked below.
-3. The user is unknown — nudge them toward the binding flow.
+Handler states
+--------------
+1. The user sent ``/start <code>`` — redeem the code and confirm the bind.
+2. The user sent a plain message **and** has a binding — return a
+   ``TelegramTurnContext`` so ``bot.py`` can route to the LLM via the
+   channel abstraction.
+3. The user sent a plain message but is **not** bound — return the
+   onboarding nudge string.
 """
 
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.channel import get_user_id_for_external, redeem_link_code
+from app.crud.channel import (
+    get_or_create_telegram_conversation,
+    get_user_id_for_external,
+    redeem_link_code,
+)
 
 logger = logging.getLogger(__name__)
 
 PROVIDER = "telegram"
 
-# Surfaced verbatim in chat. Kept here so copy review can happen
-# without touching the dispatcher.
+# Default model used when the conversation has no stored override.
+_DEFAULT_MODEL = "gemini-3-flash-preview"
+
+# Reply strings — centralized here so copy review doesn't require tracing
+# through the dispatcher.
 _NOT_BOUND_MESSAGE = (
     "Hey 👋 I don't recognize this Telegram account yet.\n\n"
     "To connect it, log in on the web app, open Settings → Channels, "
@@ -42,21 +52,39 @@ _BIND_BAD_CODE_MESSAGE = (
     "That code didn't work. It may have expired (codes live for 10 minutes) "
     "or already been used. Generate a fresh one from Settings → Channels."
 )
-_BOUND_ACK_MESSAGE_PREFIX = "Got it. Working on a reply…"
 
 
 @dataclass(frozen=True)
 class TelegramSender:
     """Stable subset of an aiogram ``Message.from_user`` we need.
 
-    Modeled as a plain dataclass so handler tests don't have to import
-    aiogram or build a fake bot.
+    Modeled as a plain dataclass so handler tests don't have to import aiogram
+    or build a fake bot.
     """
 
     user_id: int
     chat_id: int
     username: str | None
     full_name: str | None
+
+
+@dataclass(frozen=True)
+class TelegramTurnContext:
+    """Resolved context for routing a Telegram message to the LLM pipeline.
+
+    Returned by ``handle_plain_message`` when the sender has a valid binding.
+    ``bot.py`` uses this to build the ``ChannelMessage`` and invoke the
+    channel delivery loop.
+    """
+
+    nexus_user_id: uuid.UUID
+    """Nexus user UUID resolved from the channel binding."""
+
+    conversation_id: uuid.UUID
+    """Stable Nexus conversation for this Telegram user."""
+
+    model_id: str
+    """Model to use for this turn (default or conversation override)."""
 
 
 async def handle_start_command(
@@ -67,9 +95,17 @@ async def handle_start_command(
 ) -> str:
     """Process ``/start`` (with or without a binding code) inbound update.
 
-    When a code is included (Telegram delivers the deep-link argument
-    as the first text after ``/start``), redeem it and produce the bind
-    confirmation. Without one, drop into the standard not-bound nudge.
+    When a code is included (Telegram delivers the deep-link argument as the
+    first text after ``/start``), redeem it and produce the bind confirmation.
+    Without one, fall back to the not-bound nudge.
+
+    Args:
+        sender: Normalized sender identity.
+        payload: Text after ``/start``, if any (the binding code).
+        session: Async database session.
+
+    Returns:
+        Reply string the bot should send immediately.
     """
     code = (payload or "").strip()
     if not code:
@@ -85,6 +121,7 @@ async def handle_start_command(
     )
     if binding is None:
         return _BIND_BAD_CODE_MESSAGE
+
     logger.info(
         "TELEGRAM_BIND_OK external_user_id=%s nexus_user_id=%s",
         sender.user_id,
@@ -98,25 +135,45 @@ async def handle_plain_message(
     sender: TelegramSender,
     text: str,
     session: AsyncSession,
-) -> str:
+) -> str | TelegramTurnContext:
     """Process a non-command message from a Telegram chat.
 
-    For the silver-bullet milestone we just confirm the message was
-    received and quote it back — the chat-completion path is wired up
-    in a follow-up that threads the existing provider router into the
-    adapter without changing this signature.
+    Returns a string when the message can be replied to immediately (e.g. the
+    user isn't bound yet), or a ``TelegramTurnContext`` when the message
+    should be routed to the LLM pipeline.  The bot dispatcher calls this,
+    inspects the result, and either sends the string directly or drives the
+    channel streaming loop.
+
+    Args:
+        sender: Normalized sender identity.
+        text: User's message text.
+        session: Async database session.
+
+    Returns:
+        ``str`` for immediate replies, ``TelegramTurnContext`` for LLM routing.
     """
-    user_id = await get_user_id_for_external(
+    nexus_user_id = await get_user_id_for_external(
         provider=PROVIDER,
         external_user_id=str(sender.user_id),
         session=session,
     )
-    if user_id is None:
+    if nexus_user_id is None:
         return _NOT_BOUND_MESSAGE
 
-    # BEAN: forward `text` into the chat service for `user_id`, stream
-    # the assistant reply into `chat_messages`, and surface the final
-    # text via Telegram's edit_message_text loop. Today we acknowledge
-    # so the binding round-trip is itself testable end-to-end.
-    snippet = text.strip().splitlines()[0][:120] if text.strip() else "(empty message)"
-    return f"{_BOUND_ACK_MESSAGE_PREFIX}\n\n> {snippet}"
+    conversation_id = await get_or_create_telegram_conversation(
+        user_id=nexus_user_id,
+        session=session,
+    )
+
+    logger.info(
+        "TELEGRAM_TURN user_id=%s conversation_id=%s text_len=%d",
+        nexus_user_id,
+        conversation_id,
+        len(text),
+    )
+
+    return TelegramTurnContext(
+        nexus_user_id=nexus_user_id,
+        conversation_id=conversation_id,
+        model_id=_DEFAULT_MODEL,
+    )

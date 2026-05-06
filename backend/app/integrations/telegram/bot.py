@@ -25,10 +25,14 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from app.channels import ChannelMessage, resolve_channel
+from app.channels.telegram import SURFACE_TELEGRAM
 from app.core.config import settings
+from app.core.providers import resolve_llm
 from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
     TelegramSender,
+    TelegramTurnContext,
     handle_plain_message,
     handle_start_command,
 )
@@ -100,10 +104,43 @@ def build_telegram_service() -> "TelegramService":
             return
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
-            reply = await handle_plain_message(
+            result = await handle_plain_message(
                 sender=sender, text=message.text, session=session
             )
-        await message.answer(reply)
+
+        if isinstance(result, str):
+            # Terminal reply — user isn't bound or some other error.
+            await message.answer(result)
+            return
+
+        # LLM turn — send a placeholder, then stream edits into it.
+        context: TelegramTurnContext = result
+        thinking_msg = await message.answer("⏳")
+
+        channel_message: ChannelMessage = {
+            "user_id": context.nexus_user_id,
+            "conversation_id": context.conversation_id,
+            "text": message.text,
+            "surface": SURFACE_TELEGRAM,
+            "model_id": context.model_id,
+            "metadata": {
+                "bot": message.bot,
+                "chat_id": message.chat.id,
+                "message_id": thinking_msg.message_id,
+            },
+        }
+
+        provider = resolve_llm(context.model_id)
+        channel = resolve_channel(SURFACE_TELEGRAM)
+
+        raw_stream = provider.stream(
+            message.text,
+            context.conversation_id,
+            context.nexus_user_id,
+            history=[],
+        )
+        async for _ in channel.deliver(raw_stream, channel_message):
+            pass  # delivery is a side-effect; nothing yielded by TelegramChannel
 
     return TelegramService(bot=bot, dispatcher=dispatcher)
 
