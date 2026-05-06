@@ -112,7 +112,10 @@ function ChatView({
 			{isEmptyConversation ? (
 				<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
-						<h1 className="mb-6 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
+						{/* `mb-10` (40px) for breathing room between the headline and
+						    the composer; `mb-6` parked them too tight against each
+						    other for a landing surface. */}
+						<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
 							What should we build in AI Nexus?
 						</h1>
 						<ChatComposer

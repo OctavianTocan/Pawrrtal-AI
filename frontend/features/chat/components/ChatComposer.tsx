@@ -235,7 +235,15 @@ export function ChatComposer({
 	return (
 		<PromptInput
 			className={cn('w-full max-w-[48.75rem]', className)}
-			inputGroupClassName="chat-composer-input-group rounded-surface-lg border-transparent bg-foreground-5 shadow-minimal"
+			// Composer uses the same `--background-elevated` surface as the
+			// chat panel (the arbitrary `bg-[color:var(--background-elevated)]`
+			// reads the live CSS variable so it re-tints with each preset),
+			// instead of the old `bg-foreground-5` token, which was producing
+			// the gray-cast box on a white chat panel. Border swapped to a
+			// hairline `border-border/50` so the composer still reads as a
+			// discrete control on the white chat panel, matching the Cursor
+			// reference.
+			inputGroupClassName="chat-composer-input-group rounded-surface-lg border border-border/50 bg-[color:var(--background-elevated)] shadow-minimal"
 			multiple={true}
 			onKeyDown={handleComposerKeyDown}
 			onSubmit={onSendMessage}

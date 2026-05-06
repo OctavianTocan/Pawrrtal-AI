@@ -74,7 +74,15 @@
 	/* === 6 BASE COLORS — Mistral defaults === */
 	/* Warm cream surface (~#fff8e0). High luminance, warm chroma, sunset hue. */
 	--background: oklch(0.985 0.026 92);
-	--background-elevated: oklch(from var(--background) min(calc(l + 0.04), 1) c h);
+	/* Light-mode chat panel — pinned at OKLCH lightness 0.99 (near-white)
+	   while preserving the canvas hue and dropping chroma to 25% so warm
+	   backgrounds (Mistral cream, Cursor warm-grey) resolve to a near-white
+	   surface that still carries a hint of the preset's tint, and pure-color
+	   backgrounds (a bright blue preset, etc.) don't bleed their saturation
+	   into the chat panel as a tinted wash. Result: chat panel feels white
+	   on every preset, with just enough hue carry to read as the same
+	   family as the sidebar. */
+	--background-elevated: oklch(from var(--background) 0.99 calc(c * 0.25) h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
 		radial-gradient(
@@ -278,12 +286,12 @@
 	/* === 6 BASE COLORS === */
 	/* Page/workspace ~#0D1117 */
 	--background: oklch(0.205 0.012 264);
-	/* Chat panel surface — same formula as light mode so the panel always
-	   reads as a slight tint of the canvas toward the foreground. With a
-	   light foreground the dark canvas lifts slightly; with a dark foreground
-	   it deepens. The dark-mode hardcoded `oklch(0.239 ...)` preserved a
-	   stale hardcoded blue regardless of preset overrides. */
-	--background-elevated: oklch(from var(--background) min(calc(l + 0.04), 1) c h);
+	/* Dark-mode chat panel — lift lightness off `--background` while keeping
+	   chroma and hue, so the panel re-tints whenever the preset's dark
+	   palette changes (instead of the old hardcoded blue). The +0.04
+	   lightness gives a clearly visible "elevated" surface that still
+	   reads as the same hue family as the canvas. */
+	--background-elevated: oklch(from var(--background) calc(l + 0.04) c h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.22), transparent 45%),
 		radial-gradient(
@@ -1498,7 +1506,10 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 .chat-composer-input-group,
 .chat-composer-input-group:focus-within,
 .chat-composer-input-group:has([data-slot="input-group-control"]:focus-visible) {
-	border-color: transparent;
+	/* `border-color` is left to the inline class (`border-border/50`) so the
+	   composer reads as a discrete card on the white chat panel — this rule
+	   used to force `transparent`, which made the box indistinguishable from
+	   the panel surface. The hairline shadow stays. */
 	box-shadow: var(--shadow-minimal);
 }
 
