@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.13.0",
     "aiosqlite>=0.22.1",
     "anyio>=4.0.0",
+    "anthropic>=0.40.0",
     "claude-agent-sdk",
     "fastapi-users[sqlalchemy]>=15.0.3",
     "fastapi[standard]>=0.127.0",
