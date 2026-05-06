@@ -26,6 +26,7 @@ vi.mock('electron', () => ({
 	},
 }));
 
+/** Loads `permissions` fresh, resets persisted state, and registers IPC with no window (prompts deny). */
 async function loadPermissions() {
 	vi.resetModules();
 	const mod = await import('./permissions');

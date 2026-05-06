@@ -24,17 +24,20 @@ interface PersistedWorkspace extends Record<string, unknown> {
 	roots: string[];
 }
 
+/** Successful containment check after realpath resolution. */
 interface ValidationOk {
 	ok: true;
 	resolvedPath: string;
 	root: string;
 }
 
+/** Validation failed; `reason` is safe to surface in UI or logs. */
 interface ValidationFail {
 	ok: false;
 	reason: string;
 }
 
+/** Outcome of {@link validateFilePath} — discriminated on `ok`. */
 export type ValidationResult = ValidationOk | ValidationFail;
 
 const workspaceStore = createStore<PersistedWorkspace>({

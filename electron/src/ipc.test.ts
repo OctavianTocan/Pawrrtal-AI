@@ -40,6 +40,7 @@ vi.mock('electron', () => ({
 	shell: { openExternal: vi.fn() },
 }));
 
+/** Resets IPC mocks and workspace cache, then registers handlers under test. */
 async function setup() {
 	vi.resetModules();
 	ipcHandlers.clear();
@@ -50,6 +51,7 @@ async function setup() {
 	return workspace;
 }
 
+/** Invokes a captured `ipcMain.handle` callback by channel name (test harness). */
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 	const handler = ipcHandlers.get(channel);
 	if (!handler) throw new Error(`No handler registered for ${channel}`);

@@ -27,6 +27,7 @@ interface RegisterOptions {
 	getWindow: () => BrowserWindow | undefined;
 }
 
+/** One row from `fs:list-directory` with stable fields for the renderer file tree. */
 export interface DirEntry {
 	name: string;
 	path: string;
@@ -43,6 +44,12 @@ interface WatchHandle {
 const watchers = new Map<string, WatchHandle>();
 let nextWatchId = 0;
 
+/**
+ * Registers `fs:*` handlers (read, write, list, watch, unwatch) with workspace
+ * validation and permission checks on writes.
+ *
+ * @param getWindow - Used to push `fs:watch-event` payloads to the active renderer.
+ */
 export function registerFsHandlers({ getWindow }: RegisterOptions): void {
 	ipcMain.handle('fs:read-file', async (_event, rawPath: unknown) => {
 		if (typeof rawPath !== 'string') return { ok: false as const, reason: 'Path required.' };

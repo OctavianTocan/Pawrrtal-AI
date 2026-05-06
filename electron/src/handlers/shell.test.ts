@@ -39,6 +39,7 @@ vi.mock('electron', () => ({
 	},
 }));
 
+/** Registers workspace, shell, permissions, and ipc handlers with yolo mode and a temp root. */
 async function setup() {
 	vi.resetModules();
 	ipcHandlers.clear();
@@ -55,6 +56,7 @@ async function setup() {
 	await invoke('permissions:set-mode', 'yolo');
 }
 
+/** Calls the mocked `ipcMain.handle` callback registered for `channel`. */
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 	const handler = ipcHandlers.get(channel);
 	if (!handler) throw new Error(`No handler registered for ${channel}`);

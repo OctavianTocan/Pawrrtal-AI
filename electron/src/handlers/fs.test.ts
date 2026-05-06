@@ -38,6 +38,7 @@ vi.mock('electron', () => ({
 	},
 }));
 
+/** Loads workspace + permissions + fs handlers with yolo mode and a temp allowlisted root. */
 async function setup() {
 	vi.resetModules();
 	ipcHandlers.clear();
@@ -54,6 +55,10 @@ async function setup() {
 	return { workspace, permissions, fs };
 }
 
+/**
+ * Invokes a registered IPC handler, lazily loading full `ipc` registration when needed
+ * (e.g. for `permissions:set-mode`).
+ */
 async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 	const handler = ipcHandlers.get(channel);
 	if (!handler) {

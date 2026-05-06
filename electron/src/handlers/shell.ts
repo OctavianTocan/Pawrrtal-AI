@@ -58,6 +58,12 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 /** Active streaming jobs keyed by jobId. */
 const streamingJobs = new Map<string, ChildProcess>();
 
+/**
+ * Registers `shell:run`, `shell:spawn-streaming`, and `shell:kill` with cwd
+ * containment checks and the permission ladder.
+ *
+ * @param getWindow - Required for streaming stdout/stderr into the renderer.
+ */
 export function registerShellHandlers({ getWindow }: RegisterOptions): void {
 	ipcMain.handle('shell:run', async (_event, raw: unknown): Promise<RunResult | FailResult> => {
 		const request = parseRunRequest(raw);

@@ -26,6 +26,7 @@ import { buildApplicationMenu } from './menu';
 import { type StartedServer, startNextServer } from './server';
 import { ensureDefaultWorkspaceRoot } from './workspace';
 
+/** Persisted BrowserWindow geometry saved via {@link windowStore}. */
 interface WindowState {
 	width: number;
 	height: number;
@@ -227,6 +228,11 @@ function createWindow(targetUrl: string): BrowserWindow {
 	return window;
 }
 
+/**
+ * Application startup: ensure workspace defaults, open the splash window,
+ * register IPC + menu, attach to or start the Next.js server, then navigate
+ * the window to the real URL (or the dev-server error page on failure).
+ */
 async function bootstrap(): Promise<void> {
 	// Auto-create the default workspace root before any privileged op
 	// can run (every fs/shell handler validates against the allowlist).

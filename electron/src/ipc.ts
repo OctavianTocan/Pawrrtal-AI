@@ -13,10 +13,18 @@ import { registerShellHandlers } from './handlers/shell';
 import { registerPermissionIpc } from './permissions';
 import { addRoot, listRoots, removeRoot } from './workspace';
 
+/** Supplies the focused {@link BrowserWindow} for dialog parenting and IPC context. */
 interface RegisterOptions {
 	getWindow: () => BrowserWindow | undefined;
 }
 
+/**
+ * Registers every `ipcMain` channel used by the preload bridge: workspace,
+ * filesystem, shell, permissions, and desktop helpers (`openExternal`, dialogs,
+ * platform, version).
+ *
+ * @param getWindow - Lazy accessor so handlers resolve the current window after startup.
+ */
 export function registerIpcHandlers({ getWindow }: RegisterOptions): void {
 	registerPermissionIpc(getWindow);
 	registerFsHandlers({ getWindow });

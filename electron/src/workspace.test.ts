@@ -26,6 +26,7 @@ vi.mock('electron', () => ({
 	},
 }));
 
+/** Dynamically imports `workspace` after resetting Vitest modules and the roots cache. */
 async function loadWorkspace() {
 	vi.resetModules();
 	const mod = await import('./workspace');
