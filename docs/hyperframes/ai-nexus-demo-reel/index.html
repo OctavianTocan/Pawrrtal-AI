@@ -592,6 +592,7 @@
       mainTl.from("#intro .subtitle", { y: 30, opacity: 0, duration: 0.55, ease: "power3.out" }, 0.78);
       mainTl.from("#intro .prompt-card", { x: 48, y: 34, opacity: 0, duration: 0.6, ease: "power3.out" }, 1.12);
       mainTl.to("#intro", { y: -44, opacity: 0, duration: 0.45, ease: "power2.in" }, 3.55);
+      mainTl.set("#intro", { opacity: 0 }, 4);
 
       mainTl.set("#chat", { opacity: 1 }, 4);
       mainTl.from("#chat .app-shell", { y: 52, opacity: 0, duration: 0.7, ease: "power3.out" }, 4.12);
@@ -604,6 +605,7 @@
       mainTl.from("#chat .composer", { y: 24, opacity: 0, duration: 0.45, ease: "power2.out" }, 8.8);
       mainTl.to("#chat .send-button", { scale: 1.16, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out" }, 9.35);
       mainTl.to("#chat", { scale: 0.965, opacity: 0, duration: 0.42, ease: "power2.in" }, 10.58);
+      mainTl.set("#chat", { opacity: 0 }, 11);
 
       mainTl.set("#tools", { opacity: 1 }, 11);
       mainTl.from("#tools .eyebrow", { y: 24, opacity: 0, duration: 0.4, ease: "power2.out" }, 11.12);
@@ -613,6 +615,7 @@
       mainTl.from("#tools .gate-row", { x: -36, opacity: 0, stagger: 0.16, duration: 0.38, ease: "power2.out" }, 12.2);
       mainTl.to("#tools .check", { scale: 1.28, duration: 0.16, stagger: 0.18, yoyo: true, repeat: 1, ease: "power2.out" }, 13.65);
       mainTl.to("#tools", { y: -38, opacity: 0, duration: 0.42, ease: "power2.in" }, 15.58);
+      mainTl.set("#tools", { opacity: 0 }, 16);
 
       mainTl.set("#outro", { opacity: 1 }, 16);
       mainTl.from("#outro .brand-mark", { y: 24, opacity: 0, duration: 0.4, ease: "power2.out" }, 16.18);
