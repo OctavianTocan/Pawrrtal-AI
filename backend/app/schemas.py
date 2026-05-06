@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -316,3 +316,48 @@ class ChannelLinkCodeResponse(BaseModel):
     expires_at: datetime
     bot_username: str | None = None
     deep_link: str | None = None
+
+
+# --- Workspace schemas --------------------------------------------------------
+
+
+class WorkspaceRead(BaseModel):
+    """Workspace summary returned by list / detail endpoints."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    path: str
+    is_default: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceFileNode(BaseModel):
+    """A single node in a workspace file-tree response."""
+
+    name: str
+    path: str          # workspace-relative path, e.g. "memory/2026-05-06.md"
+    is_dir: bool
+    size: int | None = None  # None for directories
+
+
+class WorkspaceTreeResponse(BaseModel):
+    """Recursive file tree rooted at the workspace directory."""
+
+    workspace_id: uuid.UUID
+    nodes: list[WorkspaceFileNode]
+
+
+class WorkspaceFileContent(BaseModel):
+    """Contents of a single workspace file."""
+
+    path: str
+    content: str
+
+
+class WorkspaceFileWrite(BaseModel):
+    """Payload for writing a workspace file."""
+
+    content: str
