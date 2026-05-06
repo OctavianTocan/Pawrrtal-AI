@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Seamless whimsical AI Nexus chat texture tile">
+  <defs>
+    <style>
+      .paper { fill: #f3eddf; }
+      .ink { fill: none; stroke: #51483c; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .24; }
+      .ink-soft { fill: none; stroke: #7b705f; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .2; }
+      .moss { fill: none; stroke: #6b7b58; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .22; }
+      .amber { fill: none; stroke: #b9853c; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .22; }
+      .coral { fill: none; stroke: #b56c58; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; opacity: .2; }
+      .dust { fill: #51483c; opacity: .085; }
+    </style>
+
+    <symbol id="spark" viewBox="-12 -12 24 24">
+      <path class="amber" d="M0-9v18M-9 0H9M-5-5l10 10M5-5-5 5" />
+    </symbol>
+
+    <symbol id="bubble" viewBox="-28 -22 56 44">
+      <path class="ink" d="M-20-12h31a12 12 0 0 1 0 24H-5l-12 8 3-8h-6a12 12 0 0 1 0-24Z" />
+      <path class="ink-soft" d="M-9-3h18M-10 5H4" />
+    </symbol>
+
+    <symbol id="agent" viewBox="-26 -26 52 52">
+      <path class="moss" d="M-15 4c0-13 8-21 15-21S15-9 15 4v9c0 5-5 9-15 9s-15-4-15-9Z" />
+      <path class="ink-soft" d="M-8 0h16M-6 8h12" />
+      <path class="ink" d="M-18 3h-5M18 3h5M0-17v-7" />
+      <circle class="dust" cx="-6" cy="2" r="2.5" />
+      <circle class="dust" cx="6" cy="2" r="2.5" />
+    </symbol>
+
+    <symbol id="cursor" viewBox="-20 -20 40 40">
+      <path class="coral" d="M-10-13 11 5 1 7l-4 10Z" />
+    </symbol>
+
+    <symbol id="orbit" viewBox="-30 -30 60 60">
+      <ellipse class="ink-soft" cx="0" cy="0" rx="24" ry="9" transform="rotate(-24)" />
+      <ellipse class="moss" cx="0" cy="0" rx="9" ry="24" transform="rotate(-24)" />
+      <circle class="dust" cx="17" cy="-8" r="3" />
+    </symbol>
+
+    <symbol id="chip" viewBox="-24 -24 48 48">
+      <rect class="ink" x="-13" y="-13" width="26" height="26" rx="6" />
+      <path class="ink-soft" d="M-5-13v-7M5-13v-7M-5 13v7M5 13v7M-13-5h-7M-13 5h-7M13-5h7M13 5h7" />
+      <path class="amber" d="M-5 0h10M0-5v10" />
+    </symbol>
+
+    <symbol id="card" viewBox="-30 -24 60 48">
+      <path class="ink" d="M-20-13h40a6 6 0 0 1 6 6v21a6 6 0 0 1-6 6h-40a6 6 0 0 1-6-6V-7a6 6 0 0 1 6-6Z" />
+      <path class="ink-soft" d="M-14-3h27M-14 7H5" />
+      <circle class="dust" cx="17" cy="7" r="3" />
+    </symbol>
+  </defs>
+
+  <rect class="paper" width="512" height="512" />
+  <path class="ink-soft" d="M38 42c48-17 88-18 122-3M330 466c37-14 77-16 122-4M212 250c29-12 60-11 93 2" />
+
+  <use href="#bubble" x="76" y="78" transform="rotate(-9 76 78)" />
+  <use href="#agent" x="206" y="58" transform="rotate(7 206 58)" />
+  <use href="#chip" x="342" y="88" transform="rotate(12 342 88)" />
+  <use href="#orbit" x="492" y="72" transform="rotate(9 492 72)" />
+  <use href="#orbit" x="-20" y="72" transform="rotate(9 -20 72)" />
+
+  <use href="#spark" x="142" y="-6" transform="rotate(16 142 -6)" />
+  <use href="#spark" x="142" y="506" transform="rotate(16 142 506)" />
+  <use href="#cursor" x="286" y="12" transform="rotate(-14 286 12)" />
+  <use href="#cursor" x="286" y="524" transform="rotate(-14 286 524)" />
+
+  <use href="#card" x="40" y="190" transform="rotate(8 40 190)" />
+  <use href="#spark" x="162" y="176" transform="rotate(-18 162 176) scale(.72)" />
+  <use href="#orbit" x="264" y="202" transform="rotate(-8 264 202)" />
+  <use href="#bubble" x="414" y="178" transform="rotate(10 414 178) scale(.9)" />
+
+  <use href="#chip" x="96" y="318" transform="rotate(-16 96 318) scale(.88)" />
+  <use href="#cursor" x="218" y="326" transform="rotate(18 218 326)" />
+  <use href="#agent" x="360" y="310" transform="rotate(-5 360 310) scale(.92)" />
+  <use href="#spark" x="510" y="300" transform="rotate(8 510 300) scale(.86)" />
+  <use href="#spark" x="-2" y="300" transform="rotate(8 -2 300) scale(.86)" />
+
+  <use href="#bubble" x="14" y="438" transform="rotate(-12 14 438) scale(.82)" />
+  <use href="#bubble" x="526" y="438" transform="rotate(-12 526 438) scale(.82)" />
+  <use href="#card" x="180" y="436" transform="rotate(-7 180 436)" />
+  <use href="#orbit" x="330" y="504" transform="rotate(15 330 504) scale(.84)" />
+  <use href="#orbit" x="330" y="-8" transform="rotate(15 330 -8) scale(.84)" />
+  <use href="#agent" x="462" y="428" transform="rotate(9 462 428) scale(.74)" />
+
+  <circle class="dust" cx="34" cy="30" r="2.4" />
+  <circle class="dust" cx="250" cy="144" r="2" />
+  <circle class="dust" cx="468" cy="246" r="2.6" />
+  <circle class="dust" cx="124" cy="470" r="2.2" />
+  <circle class="dust" cx="500" cy="506" r="2.4" />
+  <circle class="dust" cx="-12" cy="506" r="2.4" />
+</svg>

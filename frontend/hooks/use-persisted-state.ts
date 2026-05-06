@@ -147,8 +147,26 @@ function noop(): void {
 }
 
 /**
+ * Per-key cache of `{ raw: lastSeenString, value: parsed }`. `useSyncExternalStore`
+ * calls `getSnapshot` multiple times per render and warns about an infinite loop
+ * if it returns a different reference each time. For object/array values that's
+ * exactly what `JSON.parse` does — fresh reference, identical contents — so we
+ * key the cache on the raw localStorage string and only re-parse when it changes.
+ *
+ * Module-level so two consumers of the same key share a parsed reference. The
+ * cache is bounded by the number of distinct storage keys ever seen (in practice
+ * a small fixed set) and never holds onto stale entries beyond a re-write since
+ * the next read with a different `raw` overwrites the slot.
+ */
+const snapshotCache = new Map<string, { raw: string | null; value: unknown }>();
+
+/**
  * Read and validate a value from `localStorage`, falling back to `defaultValue`
  * when the entry is missing, unparseable, or fails the optional `validate` guard.
+ *
+ * Caches the parsed value by raw string (see {@link snapshotCache}) so repeated
+ * reads with an unchanged underlying string return a stable reference — required
+ * for `useSyncExternalStore` correctness when the value is an object or array.
  */
 function readPersistedValue<T>(
 	storageKey: string,
@@ -159,22 +177,43 @@ function readPersistedValue<T>(
 		return defaultValue;
 	}
 
+	let rawValue: string | null;
 	try {
-		const rawValue = window.localStorage.getItem(storageKey);
-		if (rawValue === null) {
-			return defaultValue;
-		}
-
-		const parsedValue: unknown = JSON.parse(rawValue);
-
-		if (validate && !validate(parsedValue)) {
-			return defaultValue;
-		}
-
-		return parsedValue as T;
+		rawValue = window.localStorage.getItem(storageKey);
 	} catch {
+		// Private browsing or storage access denied — fall back without caching
+		// so a future call retries the read once the constraint clears.
 		return defaultValue;
 	}
+
+	const cached = snapshotCache.get(storageKey);
+	if (cached && cached.raw === rawValue) {
+		// Re-validate against the *current* call's validator: the cache may have
+		// been populated by a different caller passing a wider/no validator.
+		if (validate && !validate(cached.value)) {
+			return defaultValue;
+		}
+		return cached.value as T;
+	}
+
+	let parsed: T;
+	if (rawValue === null) {
+		parsed = defaultValue;
+	} else {
+		try {
+			const parsedUnknown: unknown = JSON.parse(rawValue);
+			if (validate && !validate(parsedUnknown)) {
+				parsed = defaultValue;
+			} else {
+				parsed = parsedUnknown as T;
+			}
+		} catch {
+			parsed = defaultValue;
+		}
+	}
+
+	snapshotCache.set(storageKey, { raw: rawValue, value: parsed });
+	return parsed;
 }
 
 /** Persist a value to localStorage, swallowing quota / availability errors. */

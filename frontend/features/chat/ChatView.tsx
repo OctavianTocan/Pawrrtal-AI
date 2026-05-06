@@ -3,6 +3,7 @@
 import type * as React from 'react';
 import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
+import { useWhimsyTile } from '@/features/whimsy';
 import type { AgnoMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
@@ -93,6 +94,7 @@ function ChatView({
 	onRegenerate,
 }: ChatProps): React.JSX.Element {
 	const isEmptyConversation = chatHistory.length === 0;
+	const whimsy = useWhimsyTile();
 
 	// Chat panel reads `--background-elevated` directly via inline style.
 	// Inline style is used (rather than a `bg-…` Tailwind utility) because the
@@ -109,8 +111,39 @@ function ChatView({
 			className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-surface-lg px-4 shadow-panel-floating"
 			style={{ backgroundColor: 'var(--background-elevated)' }}
 		>
+			{/*
+			 * Whimsy texture overlay. Sits behind all chat content via tree
+			 * order: an absolute sibling without z-index paints after static
+			 * children, so the content wrappers below need `relative` to
+			 * appear above it (see .claude/rules/figma/check-stacking-context-
+			 * for-absolute-backgrounds.md).
+			 *
+			 * Inputs come from the user-tunable config in
+			 * `frontend/features/whimsy` (Settings → Appearance → Whimsy
+			 * texture). Color is `currentColor` (text-foreground), and overall
+			 * intensity is multiplied through CSS `opacity` from the same
+			 * config — so the texture re-tints with theme tokens. When the
+			 * user disables the texture, `cssUrl` is null and the overlay is
+			 * skipped entirely.
+			 */}
+			{whimsy.cssUrl ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0 text-foreground"
+					style={{
+						backgroundColor: 'currentColor',
+						opacity: whimsy.opacity,
+						maskImage: whimsy.cssUrl,
+						WebkitMaskImage: whimsy.cssUrl,
+						maskSize: `${whimsy.size}px ${whimsy.size}px`,
+						WebkitMaskSize: `${whimsy.size}px ${whimsy.size}px`,
+						maskRepeat: 'repeat',
+						WebkitMaskRepeat: 'repeat',
+					}}
+				/>
+			) : null}
 			{isEmptyConversation ? (
-				<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
+				<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
 						{/* `mb-10` (40px) for breathing room between the headline and
 						    the composer; `mb-6` parked them too tight against each
@@ -144,7 +177,7 @@ function ChatView({
 				// chat panel killed scroll capture. Letting `<Conversation>` span
 				// the full panel width fixes that and parks the (hidden) scrollbar
 				// flush with the panel's right edge.
-				<div className="flex h-full w-full min-w-0 flex-col">
+				<div className="relative flex h-full w-full min-w-0 flex-col">
 					<Conversation
 						className="scrollbar-hide min-h-0 flex-1 overflow-y-auto"
 						resize="smooth"

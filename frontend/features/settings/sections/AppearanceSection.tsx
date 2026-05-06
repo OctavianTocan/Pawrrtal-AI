@@ -20,6 +20,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
+import { WhimsySettingsCard } from '@/features/whimsy';
 import { cn } from '@/lib/utils';
 import {
 	SettingsCard,
@@ -402,6 +403,17 @@ export function AppearanceSection(): React.JSX.Element {
 				pointerCursors={options.pointer_cursors ?? true}
 				translucentSidebar={options.translucent_sidebar ?? false}
 			/>
+
+			{/*
+			 * Whimsy texture customization. Lives in `@/features/whimsy` as a
+			 * single self-contained module (hook + storage + settings card).
+			 * Unlike the rest of this section, this card *does* persist and
+			 * affect the runtime UI (chat panel background) — it intentionally
+			 * sits at the bottom so its live behavior doesn't get confused
+			 * with the visual-mock controls above. Remove the import + this
+			 * line (and the matching call in `ChatView`) to rip it out.
+			 */}
+			<WhimsySettingsCard />
 		</SettingsPage>
 	);
 }
