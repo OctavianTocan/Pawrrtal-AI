@@ -124,3 +124,12 @@ package-lock.json
 # react-dropdown local checkout — nested git repo, push changes back via
 # frontend/lib/react-dropdown/ independently of ai-nexus history.
 frontend/lib/react-dropdown/
+
+# Cursor IDE runtime state (generated every session, not config)
+.cursor/hooks/state/
+
+# Cursor Composer AI-generated plan files (ephemeral, not source-of-truth)
+.cursor/plans/
+
+# OpenCode internal generated artifacts
+.opencode/package-lock.json
