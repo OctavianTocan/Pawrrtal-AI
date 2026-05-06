@@ -310,6 +310,32 @@ function BehaviorCard({
 }
 
 /**
+ * Top-of-page card that owns just the theme-mode toggle. Extracted from
+ * {@link AppearanceSection} to keep that function under the project's
+ * 120-line per-function ceiling. `noDivider` because the card has no
+ * rows beneath the header; without it, the standard hairline reads as
+ * a stray separator floating inside an otherwise empty card.
+ */
+function ThemeModeCard({
+	themeMode,
+	onChange,
+}: {
+	themeMode: ThemeMode;
+	onChange: (mode: ThemeMode) => void;
+}): React.JSX.Element {
+	return (
+		<SettingsCard>
+			<SettingsSectionHeader
+				actions={<ThemeModeToggle onChange={onChange} value={themeMode} />}
+				description="Use light, dark, or match your system. Light and dark themes can be picked from different presets independently."
+				noDivider
+				title="Theme"
+			/>
+		</SettingsCard>
+	);
+}
+
+/**
  * Live, persisted Appearance settings section.
  *
  * Reads the user's saved overrides via TanStack Query, resolves them
@@ -417,18 +443,10 @@ export function AppearanceSection(): React.JSX.Element {
 			description="Customize colors, typography, and behavior. Pick a preset or fine-tune individual slots — your overrides apply across the entire app."
 			title="Appearance"
 		>
-			<SettingsCard>
-				<SettingsSectionHeader
-					actions={
-						<ThemeModeToggle
-							onChange={(mode) => setOption('theme_mode', mode)}
-							value={themeMode}
-						/>
-					}
-					description="Use light, dark, or match your system. Light and dark themes can be picked from different presets independently."
-					title="Theme"
-				/>
-			</SettingsCard>
+			<ThemeModeCard
+				onChange={(mode) => setOption('theme_mode', mode)}
+				themeMode={themeMode}
+			/>
 
 			<ThemeColorCard
 				defaults={DEFAULT_APPEARANCE.light}

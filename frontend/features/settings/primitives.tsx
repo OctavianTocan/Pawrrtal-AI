@@ -297,6 +297,12 @@ export type SettingsSectionHeaderProps = {
 	description?: ReactNode;
 	/** Right-aligned actions / pickers (e.g. preset selector, mode toggle). */
 	actions?: ReactNode;
+	/**
+	 * Drop the bottom hairline. Use for cards where the header is the only
+	 * content — without this, the divider reads as a stray separator at the
+	 * bottom of the card.
+	 */
+	noDivider?: boolean;
 };
 
 /**
@@ -315,9 +321,15 @@ export function SettingsSectionHeader({
 	title,
 	description,
 	actions,
+	noDivider,
 }: SettingsSectionHeaderProps): React.JSX.Element {
 	return (
-		<header className="flex items-start justify-between gap-3 border-b border-border/40 pt-1 pb-3">
+		<header
+			className={cn(
+				'flex items-start justify-between gap-3 pt-1 pb-3',
+				!noDivider && 'border-b border-border/40'
+			)}
+		>
 			<div className="flex min-w-0 flex-col gap-1">
 				{/* Semantic `<h3>` so this matches `SettingsCard`'s standalone
 				   title path (also `<h3>`). Using a `<span>` previously meant

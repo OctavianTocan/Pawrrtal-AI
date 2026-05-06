@@ -122,7 +122,7 @@ export function ProjectRow({
 			>
 				<Folder
 					aria-hidden="true"
-					className="size-4 shrink-0 text-muted-foreground group-hover/project-row:text-foreground"
+					className="size-3.5 shrink-0 text-muted-foreground group-hover/project-row:text-foreground"
 				/>
 				{/* Explicit 14px so the project name matches the conversation
 				    row title size and doesn't drift with the parent button

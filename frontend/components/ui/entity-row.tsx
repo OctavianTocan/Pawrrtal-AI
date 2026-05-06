@@ -108,7 +108,7 @@ export function EntityRow({
 					}
 				}}
 				className={cn(
-					'flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]',
+					'flex w-full items-start gap-2 pl-2 pr-4 py-2 text-left text-sm outline-none rounded-[8px]',
 					'transition-[background-color] duration-75 cursor-pointer',
 					isSelected || isInMultiSelect ? 'bg-foreground/3' : 'hover:bg-foreground/2',
 					buttonProps?.className

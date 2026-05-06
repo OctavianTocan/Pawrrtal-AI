@@ -133,7 +133,12 @@ function ChatView({
 						className="scrollbar-hide min-h-0 flex-1 overflow-y-auto"
 						resize="smooth"
 					>
-						<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 py-6">
+						{/* `pt-12` (48px) so the first message lands a comfortable
+						    distance below the panel's rounded top edge — `py-6`
+						    parked the first turn flush with the chrome and read
+						    as cramped. Bottom padding stays `pb-6` so the last
+						    message has breathing room above the composer. */}
+						<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
 							{chatHistory.map((chatMessage, index) => {
 								const key = `${chatMessage.role}-${index}`;
 								if (chatMessage.role === 'assistant') {
@@ -191,6 +196,9 @@ function ChatView({
 							isLoading={isLoading}
 							selectedModelId={selectedModelId}
 							selectedReasoning={selectedReasoning}
+							// Follow-up turn — fixed placeholder rather than the
+							// rotating landing-page tip carousel.
+							placeholderOverride="Ask a follow up"
 							onSendMessage={onSendMessage}
 							onReplaceMessageContent={onReplaceMessageContent}
 							onSelectModel={onSelectModel}

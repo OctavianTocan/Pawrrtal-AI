@@ -97,11 +97,16 @@ export function ProjectsList({
 
 	return (
 		<>
-			<header className="group/projects-header mt-2 flex items-center gap-1 px-3 py-1 text-xs font-semibold text-muted-foreground">
+			{/* Sidebar section header. Per DESIGN.md → Sidebar Type Baseline,
+			    the floor is 14px (`text-sm`) and visual de-emphasis goes
+			    through tone, not size. Section heads stand out by being
+			    `text-foreground font-semibold` — that's what separates
+			    "Projects" from the lighter date-group rows beneath. */}
+			<header className="group/projects-header mt-3 flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-foreground">
 				<button
 					aria-expanded={!isCollapsed}
 					aria-label={isCollapsed ? 'Expand projects' : 'Collapse projects'}
-					className="flex cursor-pointer items-center gap-1.5 rounded-[4px] px-1 py-0.5 text-muted-foreground hover:text-foreground"
+					className="flex cursor-pointer items-center gap-1.5 rounded-[4px] px-1 py-0.5 text-foreground hover:text-foreground"
 					onClick={() => setIsCollapsed((prev) => !prev)}
 					type="button"
 				>
@@ -121,7 +126,10 @@ export function ProjectsList({
 					onClick={openCreateModal}
 					type="button"
 				>
-					<FolderPlus className="size-4" />
+					{/* Smaller glyph (`size-3.5` = 14px) — matches the chevron and
+					    other sidebar affordances; the `size-4` plus icon was
+					    visibly oversized against 14px row text. */}
+					<FolderPlus className="size-3.5" />
 				</button>
 			</header>
 
@@ -175,7 +183,17 @@ export function ProjectsList({
 	);
 }
 
-/** Inline rename modal — same shape as ConversationRenameDialog. */
+/**
+ * Inline rename modal.
+ *
+ * Acts as a thin gate: when there's no `project` selected we don't render a
+ * modal at all. When a project IS selected we mount {@link RenameProjectModalInner}
+ * with `key={project.id}` so React fully remounts the inner form whenever
+ * the user picks a different project to rename. This replaces an older
+ * setState-during-render pattern that left the input fighting the user's
+ * keystrokes (clearing the field auto-snapped the value back to the project
+ * name) and could leave the modal in a stale-text state across opens.
+ */
 function RenameProjectModal({
 	project,
 	isPending,
@@ -187,18 +205,36 @@ function RenameProjectModal({
 	onDismiss: () => void;
 	onSubmit: (next: string) => void;
 }): React.JSX.Element | null {
-	const [draft, setDraft] = useState('');
-
-	// When `project` flips from null → an entry, sync the input text.
-	if (project && draft === '' && project.name !== '') {
-		setDraft(project.name);
-	}
-	// When `project` clears, reset the draft so the next open is fresh.
-	if (!project && draft !== '') {
-		setDraft('');
-	}
-
 	if (!project) return null;
+	return (
+		<RenameProjectModalInner
+			key={project.id}
+			isPending={isPending}
+			onDismiss={onDismiss}
+			onSubmit={onSubmit}
+			project={project}
+		/>
+	);
+}
+
+/**
+ * Form body for the rename modal. Owns its own draft state, seeded from the
+ * project name on mount; the `key={project.id}` on the wrapper guarantees a
+ * fresh draft per project so the user can fully clear the field without it
+ * snapping back.
+ */
+function RenameProjectModalInner({
+	project,
+	isPending,
+	onDismiss,
+	onSubmit,
+}: {
+	project: Project;
+	isPending: boolean;
+	onDismiss: () => void;
+	onSubmit: (next: string) => void;
+}): React.JSX.Element {
+	const [draft, setDraft] = useState(project.name);
 
 	return (
 		<ResponsiveModal

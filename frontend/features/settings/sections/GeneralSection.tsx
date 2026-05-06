@@ -57,53 +57,11 @@ export function GeneralSection(): React.JSX.Element {
 				</SettingsRow>
 			</SettingsCard>
 
-			<SettingsCard>
-				<SettingsSectionHeader
-					description="Light surface defaults and language settings."
-					title="Preferences"
-				/>
-				<SettingsRow
-					description="Detailed theme controls live under Appearance."
-					label="Appearance"
-				>
-					<div
-						aria-label="Quick theme mode"
-						className="flex items-center gap-1 rounded-[8px] border border-border/50 bg-foreground/[0.03] p-0.5"
-						role="toolbar"
-					>
-						{/* The active pill uses `bg-background + shadow-sm` instead
-						   of a foreground/10 wash so it lifts cleanly off the
-						   muted track — same recipe as the Appearance section's
-						   ThemeModeToggle. Visual-only mock today; the live
-						   wiring lives under the Appearance section. */}
-						<button
-							aria-pressed="true"
-							className="cursor-pointer rounded-[6px] bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-sm transition-colors duration-150 ease-out"
-							type="button"
-						>
-							System
-						</button>
-						<button
-							className="cursor-pointer rounded-[6px] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.05] hover:text-foreground"
-							type="button"
-						>
-							Light
-						</button>
-						<button
-							className="cursor-pointer rounded-[6px] px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.05] hover:text-foreground"
-							type="button"
-						>
-							Dark
-						</button>
-					</div>
-				</SettingsRow>
-				<SettingsRow label="Chat font">
-					<span className="text-sm text-muted-foreground">Inter</span>
-				</SettingsRow>
-				<SettingsRow label="Voice">
-					<span className="text-sm text-muted-foreground">Default</span>
-				</SettingsRow>
-			</SettingsCard>
+			{/* The "Preferences" card was removed — it duplicated the live
+			    Appearance section (theme mode, chat font, voice) with a
+			    visual-only mock that drifted out of sync. The Appearance
+			    rail item is the single source of truth for those
+			    controls now. */}
 
 			<SettingsCard>
 				<SettingsSectionHeader

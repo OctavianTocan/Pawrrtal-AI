@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-05-06T11:45:00Z
-updated_at: 2026-05-06T11:48:53Z
+updated_at: 2026-05-06T12:02:26Z
 ---
 
 Address 6 UI feedback items from user inspector report:

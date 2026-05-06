@@ -41,7 +41,10 @@ export function CollapsibleGroupHeader({
 						!isCollapsed && 'rotate-90'
 					)}
 				/>
-				<span className="text-xs font-medium text-muted-foreground relative">
+				{/* DESIGN.md → Sidebar Type Baseline pins the floor at 14px
+				    (`text-sm`); group-meta de-emphasis is carried by
+				    `text-muted-foreground`, not a smaller font size. */}
+				<span className="text-sm font-medium text-muted-foreground relative">
 					{label}
 					{isCollapsed ? (
 						<>

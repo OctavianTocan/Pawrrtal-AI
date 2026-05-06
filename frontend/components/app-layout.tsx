@@ -95,12 +95,32 @@ function handleOpenOnboarding(): void {
 	window.dispatchEvent(new Event(OPEN_ONBOARDING_EVENT));
 }
 
+/**
+ * Back / Forward buttons that drive the browser history stack so the user can
+ * step between previously-visited routes (chat → settings → another chat,
+ * etc.). Wired through `window.history` directly because Next.js's
+ * `router.back()` lacks a corresponding `forward()` and we want both
+ * directions to behave identically.
+ */
 function AppHistoryControls(): React.JSX.Element {
+	const handleBack = React.useCallback(() => {
+		if (typeof window !== 'undefined') {
+			window.history.back();
+		}
+	}, []);
+
+	const handleForward = React.useCallback(() => {
+		if (typeof window !== 'undefined') {
+			window.history.forward();
+		}
+	}, []);
+
 	return (
 		<div className="flex items-center gap-0.5">
 			<Button
 				aria-label="Back"
 				className="size-7 cursor-pointer rounded-[7px] text-muted-foreground transition-[background-color,color] duration-150 hover:bg-foreground/[0.055] hover:text-foreground"
+				onClick={handleBack}
 				size="icon-xs"
 				title="Back"
 				type="button"
@@ -111,6 +131,7 @@ function AppHistoryControls(): React.JSX.Element {
 			<Button
 				aria-label="Forward"
 				className="size-7 cursor-pointer rounded-[7px] text-muted-foreground transition-[background-color,color] duration-150 hover:bg-foreground/[0.055] hover:text-foreground"
+				onClick={handleForward}
 				size="icon-xs"
 				title="Forward"
 				type="button"
@@ -438,7 +459,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		return (
 			<>
 				<Sidebar>
-					<SidebarFocusShell className="flex h-full flex-col">
+					<SidebarFocusShell className="group flex h-full flex-col">
 						<SidebarHeader className="px-2 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
@@ -498,7 +519,12 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
           The pt-10 offsets sidebar contents so they sit below the absolute
           AppHeader; the panel itself still extends to the top of the viewport
           so the sidebar background reads as full-height behind the header. */}
-				<SidebarFocusShell className="bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
+				{/* `group` so descendants can opt into the
+				    `.group:hover .scrollbar-hover::-webkit-scrollbar-thumb`
+				    rule in `globals.css` — that's how the sidebar's listbox
+				    fades its scrollbar in only while the cursor is anywhere
+				    over the sidebar. */}
+				<SidebarFocusShell className="group bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
 					{/*
 					 * Inner panel content keeps its full min-w-[240px] width
 					 * and stays anchored to the LEFT edge of the parent

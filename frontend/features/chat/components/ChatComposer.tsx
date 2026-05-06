@@ -62,6 +62,13 @@ export type ChatComposerProps = {
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when the connect-apps footer band is dismissed. */
 	onDismissConnectApps?: () => void;
+	/**
+	 * Optional fixed placeholder. When set, overrides the rotating landing
+	 * placeholder — used for the follow-up composer ("Ask a follow up") so
+	 * an active conversation gets a stable label instead of cycling tips
+	 * meant for an empty page.
+	 */
+	placeholderOverride?: string;
 };
 
 /** Module-level type guard so the validator reference stays stable across renders. */
@@ -157,6 +164,7 @@ export function ChatComposer({
 	onSelectModel,
 	onSelectReasoning,
 	onDismissConnectApps,
+	placeholderOverride,
 }: ChatComposerProps): React.JSX.Element {
 	const voice = useVoiceTranscribe();
 	const isRecording = voice.status === 'recording' || voice.status === 'requesting-permission';
@@ -165,7 +173,10 @@ export function ChatComposer({
 	/** When false, the Plan control is hidden (toggle with Shift+Tab from the composer). */
 	const [isPlanTagVisible, setIsPlanTagVisible] = usePlanModeVisible();
 	const hasContent = message.content.trim().length > 0;
-	const placeholder = useRotatingPlaceholder(hasContent);
+	const rotatingPlaceholder = useRotatingPlaceholder(hasContent);
+	// `placeholderOverride` (e.g. "Ask a follow up") wins over the rotating
+	// landing tips so an active conversation gets a stable label.
+	const placeholder = placeholderOverride ?? rotatingPlaceholder;
 
 	useEffect(() => {
 		if (!isRecording) {

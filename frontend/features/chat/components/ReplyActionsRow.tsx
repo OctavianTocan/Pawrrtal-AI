@@ -44,8 +44,11 @@ export function ReplyActionsRow({
 }: ReplyActionsRowProps): ReactNode {
 	const buttonClass = 'size-8 p-0 text-muted-foreground hover:bg-muted hover:text-foreground';
 
+	// Pulled in tight against the message body — `mt-1` left a visible gap
+	// that read as a separate block; `-mt-0.5` puts the actions right under
+	// the last text line so they read as the message's footer.
 	return (
-		<div className={cn('mt-1 flex items-center gap-0.5', className)}>
+		<div className={cn('-mt-0.5 flex items-center gap-0.5', className)}>
 			{onCopy ? (
 				<Tooltip>
 					<TooltipTrigger asChild>

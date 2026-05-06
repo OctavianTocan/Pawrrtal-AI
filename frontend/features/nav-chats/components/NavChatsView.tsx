@@ -350,8 +350,10 @@ function NavChatsContent({
 			// Scrolling lives on the parent wrapper in NavChatsView so the
 			// projects list and the conversation list scroll together as one
 			// group. This element keeps the listbox role + keyboard focus
-			// handling but no longer owns the overflow.
-			className="pt-1 outline-none"
+			// handling but no longer owns the overflow. `mt-3` gives the
+			// Today/Yesterday/Archived groups breathing room from the Projects
+			// section above, matching the ChatGPT-style section rhythm.
+			className="mt-3 pt-1 outline-none"
 			role="listbox"
 			aria-label="Sessions"
 			aria-multiselectable="true"
@@ -465,8 +467,10 @@ export function NavChatsView({
 			{/* Single scroll container for the projects section + the
 			    conversation list so they scroll together as one group rather
 			    than the projects sticking under the search bar while the
-			    chats scroll behind them. */}
-			<div className="min-h-0 flex-1 overflow-y-auto">
+			    chats scroll behind them. `scrollbar-hover` fades the
+			    webkit scrollbar in when an ancestor `.group` element is
+			    hovered (the sidebar shell — see app-layout.tsx). */}
+			<div className="scrollbar-hover min-h-0 flex-1 overflow-y-auto">
 				<ProjectsList />
 				<NavChatsContent
 					isLoading={isLoading}
