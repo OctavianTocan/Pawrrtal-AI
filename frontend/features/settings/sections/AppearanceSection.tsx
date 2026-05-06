@@ -1,41 +1,25 @@
 'use client';
 
 /**
- * Settings → Appearance — live, persisted, user-customizable theme.
+ * Settings → Appearance — visual mock.
  *
- * Every control writes through to `/api/v1/appearance` via TanStack
- * Query and the resolved values land on `<html>` as CSS custom
- * properties through `<AppearanceProvider>` (mounted in
- * `app/providers.tsx`). That means changes show up across the entire
- * app the moment the mutation succeeds — sidebar, chat, modals,
- * popovers, everything reads the same `--background` /
- * `--foreground` / `--accent` slots.
+ * As of the 2026-05-06 theming rip
+ * (`docs/decisions/2026-05-06-rip-theming-system.md`) this section is a
+ * presentation-only shell. The pickers, sliders, and preset buttons
+ * render and accept input, but **none of it persists or affects the
+ * runtime UI**. There is no provider, no API call, no CSS variable
+ * mutation. Local state lives just long enough to make the controls
+ * feel responsive while the rebuild is being designed.
  *
- * Defaults are the Mistral-inspired sunlit-cream palette baked into
- * `frontend/features/appearance/defaults.ts`. The pill picker (entire
- * pill background = the resolved color, hex literal floats on top
- * with auto-contrasting text) follows the Codex settings reference.
+ * Once a new theming system lands, the controls here should be re-wired
+ * (or the entire section deleted, depending on what the rebuild
+ * decides). All references to the deleted `@/features/appearance`
+ * module have been inlined here as static mock data.
  */
 
-import { type ReactNode, useCallback, useMemo } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
-import {
-	type AppearanceFonts,
-	type AppearanceOptions,
-	COLOR_SLOTS,
-	type ColorSlot,
-	DEFAULT_APPEARANCE,
-	FONT_SLOTS,
-	type FontSlot,
-	resolveAppearance,
-	THEME_PRESETS,
-	type ThemeColors,
-	type ThemeMode,
-	type ThemePreset,
-	useAppearance,
-	useUpdateAppearance,
-} from '@/features/appearance';
 import { cn } from '@/lib/utils';
 import {
 	SettingsCard,
@@ -46,15 +30,27 @@ import {
 	Switch,
 } from '../primitives';
 import { ColorRow, FontRow } from './AppearanceRows';
-import { buildPayload, COLOR_LABELS, FONT_LABELS, THEME_MODE_OPTIONS } from './appearance-helpers';
+import {
+	COLOR_LABELS,
+	COLOR_SLOTS,
+	type ColorSlot,
+	DEFAULT_DARK_COLORS,
+	DEFAULT_FONTS,
+	DEFAULT_LIGHT_COLORS,
+	DEFAULT_OPTIONS,
+	FONT_LABELS,
+	FONT_SLOTS,
+	type FontSlot,
+	type MockAppearanceFonts,
+	type MockAppearanceOptions,
+	type MockThemeColors,
+	type MockThemePreset,
+	THEME_MODE_OPTIONS,
+	THEME_PRESETS,
+	type ThemeMode,
+} from './appearance-helpers';
 
-/**
- * Top-of-card theme-mode switcher.
- *
- * Uses `aria-pressed` so screen readers announce the toggle state.
- * Transition is 150ms — `duration-press-hover` from the UI wiki
- * (120-180ms range for press/hover state changes).
- */
+/** Top-of-card theme-mode switcher (visual-only). */
 function ThemeModeToggle({
 	value,
 	onChange,
@@ -97,26 +93,16 @@ function ThemeModeToggle({
 interface ThemeColorCardProps {
 	heading: string;
 	description: string;
-	overrides: ThemeColors;
+	overrides: MockThemeColors;
 	resolvedColors: Record<ColorSlot, string>;
 	defaults: Record<ColorSlot, string>;
 	mode: 'light' | 'dark';
 	onSlotCommit: (slot: ColorSlot, next: string | null) => void;
-	onPresetApply: (preset: ThemePreset) => void;
+	onPresetApply: (preset: MockThemePreset) => void;
 	footer?: ReactNode;
 }
 
-/**
- * Renders one of the two themed cards (Light / Dark) with its 6 color
- * rows and a header-level preset picker.
- *
- * The preset picker is per-mode by design — picking "Mistral" in Light
- * leaves Dark untouched, so the user can mix-and-match (e.g. Mistral
- * Light + Cursor Dark). Each option in the dropdown shows a small
- * `Aa` glyph rendered in that preset's display font, mirroring the
- * Codex Appearance reference where each row previews the theme's
- * typography in-line.
- */
+/** Per-mode theme card — visual-only preview of slot colors + preset picker. */
 function ThemeColorCard({
 	heading,
 	description,
@@ -185,17 +171,13 @@ function ThemeColorCard({
 
 /** Props for the {@link TypographyCard}. */
 interface TypographyCardProps {
-	overrides: AppearanceFonts;
+	overrides: MockAppearanceFonts;
 	uiFontSize: number;
 	onFontCommit: (slot: FontSlot, next: string | null) => void;
 	onUiFontSize: (next: number) => void;
 }
 
-/**
- * Typography card — font-family rows for each slot plus the UI base
- * font-size input. Extracted from {@link AppearanceSection} so the
- * outer component stays under the project's per-function line budget.
- */
+/** Typography card — font-family rows + UI base font-size input (visual-only). */
 function TypographyCard({
 	overrides,
 	uiFontSize,
@@ -210,7 +192,7 @@ function TypographyCard({
 			/>
 			{FONT_SLOTS.map((slot) => (
 				<FontRow
-					defaultValue={DEFAULT_APPEARANCE.fonts[slot]}
+					defaultValue={DEFAULT_FONTS[slot]}
 					key={slot}
 					label={FONT_LABELS[slot]}
 					onCommit={(next) => onFontCommit(slot, next)}
@@ -246,15 +228,13 @@ interface BehaviorCardProps {
 	pointerCursors: boolean;
 	translucentSidebar: boolean;
 	contrast: number;
-	onOptionChange: <K extends keyof AppearanceOptions>(key: K, next: AppearanceOptions[K]) => void;
+	onOptionChange: <K extends keyof MockAppearanceOptions>(
+		key: K,
+		next: MockAppearanceOptions[K]
+	) => void;
 }
 
-/**
- * Behavior card — cross-mode interaction toggles + the global
- * contrast slider. Extracted alongside {@link TypographyCard} so the
- * outer {@link AppearanceSection} body fits comfortably under the
- * 120-line per-function ceiling.
- */
+/** Behavior card — interaction toggles + global contrast slider (visual-only). */
 function BehaviorCard({
 	pointerCursors,
 	translucentSidebar,
@@ -309,13 +289,7 @@ function BehaviorCard({
 	);
 }
 
-/**
- * Top-of-page card that owns just the theme-mode toggle. Extracted from
- * {@link AppearanceSection} to keep that function under the project's
- * 120-line per-function ceiling. `noDivider` because the card has no
- * rows beneath the header; without it, the standard hairline reads as
- * a stray separator floating inside an otherwise empty card.
- */
+/** Theme-mode card — owns just the toggle so the orchestrator stays small. */
 function ThemeModeCard({
 	themeMode,
 	onChange,
@@ -336,152 +310,116 @@ function ThemeModeCard({
 }
 
 /**
- * Live, persisted Appearance settings section.
+ * Visual-mock Appearance settings section.
  *
- * Reads the user's saved overrides via TanStack Query, resolves them
- * against the Mistral defaults, and pipes any change back through a
- * debounced PUT mutation. The provider in `app/providers.tsx` reacts
- * to the mutated cache and rewrites `<html>` CSS variables, so the
- * preview is the live app.
+ * Holds purely local state — there is no provider, no API call, no
+ * CSS-variable mutation, no real preset application beyond updating
+ * the local preview state. See
+ * `docs/decisions/2026-05-06-rip-theming-system.md` for context.
  */
 export function AppearanceSection(): React.JSX.Element {
-	const { data } = useAppearance();
-	const { mutate: updateAppearance } = useUpdateAppearance();
+	const [light, setLight] = useState<MockThemeColors>({});
+	const [dark, setDark] = useState<MockThemeColors>({});
+	const [fonts, setFonts] = useState<MockAppearanceFonts>({});
+	const [options, setOptions] = useState<MockAppearanceOptions>(DEFAULT_OPTIONS);
 
-	// Resolve once per render so both the swatches and the underlying
-	// CSS variables agree on what's "active". `data` may be undefined
-	// during the first request — `resolveAppearance` handles that and
-	// hands back the Mistral defaults.
-	const resolved = useMemo(() => resolveAppearance(data), [data]);
+	const resolvedLight = useMemo<Record<ColorSlot, string>>(() => {
+		return { ...DEFAULT_LIGHT_COLORS, ...stripNulls(light) };
+	}, [light]);
 
-	// Helpers that build a fresh payload with one slice changed and
-	// dispatch the mutation. All four routes call `buildPayload` so
-	// the request shape stays identical across surfaces.
-	const overrides = data ?? {
-		light: {},
-		dark: {},
-		fonts: {},
-		options: {},
-	};
+	const resolvedDark = useMemo<Record<ColorSlot, string>>(() => {
+		return { ...DEFAULT_DARK_COLORS, ...stripNulls(dark) };
+	}, [dark]);
 
-	const setLightSlot = useCallback(
-		(slot: ColorSlot, next: string | null) => {
-			const nextLight: ThemeColors = { ...overrides.light, [slot]: next };
-			updateAppearance(
-				buildPayload(nextLight, overrides.dark, overrides.fonts, overrides.options)
-			);
-		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
-	);
-	const setDarkSlot = useCallback(
-		(slot: ColorSlot, next: string | null) => {
-			const nextDark: ThemeColors = { ...overrides.dark, [slot]: next };
-			updateAppearance(
-				buildPayload(overrides.light, nextDark, overrides.fonts, overrides.options)
-			);
-		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
-	);
-	const setFontSlot = useCallback(
-		(slot: FontSlot, next: string | null) => {
-			const nextFonts: AppearanceFonts = { ...overrides.fonts, [slot]: next };
-			updateAppearance(
-				buildPayload(overrides.light, overrides.dark, nextFonts, overrides.options)
-			);
-		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
-	);
+	const setLightSlot = useCallback((slot: ColorSlot, next: string | null) => {
+		setLight((prev) => ({ ...prev, [slot]: next }));
+	}, []);
+
+	const setDarkSlot = useCallback((slot: ColorSlot, next: string | null) => {
+		setDark((prev) => ({ ...prev, [slot]: next }));
+	}, []);
+
+	const setFontSlot = useCallback((slot: FontSlot, next: string | null) => {
+		setFonts((prev) => ({ ...prev, [slot]: next }));
+	}, []);
+
 	const setOption = useCallback(
-		<K extends keyof AppearanceOptions>(key: K, next: AppearanceOptions[K]) => {
-			const nextOptions: AppearanceOptions = { ...overrides.options, [key]: next };
-			updateAppearance(
-				buildPayload(overrides.light, overrides.dark, overrides.fonts, nextOptions)
-			);
+		<K extends keyof MockAppearanceOptions>(key: K, next: MockAppearanceOptions[K]) => {
+			setOptions((prev) => ({ ...prev, [key]: next }));
 		},
-		[overrides.dark, overrides.fonts, overrides.light, overrides.options, updateAppearance]
+		[]
 	);
 
-	const themeMode = resolved.options.theme_mode;
-	const contrast = resolved.options.contrast;
-	const uiFontSize = resolved.options.ui_font_size;
-	const pointerCursors = resolved.options.pointer_cursors;
-	const translucentSidebar = resolved.options.translucent_sidebar;
+	const applyLightPreset = useCallback((preset: MockThemePreset) => {
+		setLight({ ...preset.light });
+	}, []);
 
-	// Per-mode preset apply: only swaps the *colors* for the chosen
-	// mode. Fonts are intentionally NOT touched here even though
-	// presets carry a `fonts` field — `fonts` is a single global
-	// record (one stack per slot, applied to both modes), so writing
-	// a preset's fonts when the user picks a Light preset would
-	// surface-replace the Dark UI's typography mid-session and vice
-	// versa. The cross-mode font bleed was caught by
-	// `frontend/e2e/preset-mode-isolation.spec.ts`. Users who want a
-	// preset's typography can still get it by editing the Typography
-	// rows directly, or by picking the same preset for both modes
-	// (light + dark cards) — picking Cursor in *both* cards yields a
-	// consistent intent that's safe to translate to global fonts in a
-	// follow-up if we ever add a unified-preset surface.
-	const applyLightPreset = useCallback(
-		(preset: ThemePreset) => {
-			updateAppearance(
-				buildPayload(preset.light, overrides.dark, overrides.fonts, overrides.options)
-			);
-		},
-		[overrides.dark, overrides.fonts, overrides.options, updateAppearance]
-	);
-
-	const applyDarkPreset = useCallback(
-		(preset: ThemePreset) => {
-			updateAppearance(
-				buildPayload(overrides.light, preset.dark, overrides.fonts, overrides.options)
-			);
-		},
-		[overrides.fonts, overrides.light, overrides.options, updateAppearance]
-	);
+	const applyDarkPreset = useCallback((preset: MockThemePreset) => {
+		setDark({ ...preset.dark });
+	}, []);
 
 	return (
 		<SettingsPage
-			description="Customize colors, typography, and behavior. Pick a preset or fine-tune individual slots — your overrides apply across the entire app."
+			description="Customize colors, typography, and behavior. (Currently a visual mock — controls do not persist or change the runtime UI; see docs/decisions/2026-05-06-rip-theming-system.md.)"
 			title="Appearance"
 		>
 			<ThemeModeCard
 				onChange={(mode) => setOption('theme_mode', mode)}
-				themeMode={themeMode}
+				themeMode={options.theme_mode ?? 'system'}
 			/>
 
 			<ThemeColorCard
-				defaults={DEFAULT_APPEARANCE.light}
+				defaults={DEFAULT_LIGHT_COLORS}
 				description="Palette applied when the active theme is light. Pick a preset or fine-tune any of the six semantic slots."
 				heading="Light theme"
 				mode="light"
 				onPresetApply={applyLightPreset}
 				onSlotCommit={setLightSlot}
-				overrides={overrides.light}
-				resolvedColors={resolved.light}
+				overrides={light}
+				resolvedColors={resolvedLight}
 			/>
 			<ThemeColorCard
-				defaults={DEFAULT_APPEARANCE.dark}
+				defaults={DEFAULT_DARK_COLORS}
 				description="Palette applied when the active theme is dark. Pick a preset or fine-tune any of the six semantic slots."
 				heading="Dark theme"
 				mode="dark"
 				onPresetApply={applyDarkPreset}
 				onSlotCommit={setDarkSlot}
-				overrides={overrides.dark}
-				resolvedColors={resolved.dark}
+				overrides={dark}
+				resolvedColors={resolvedDark}
 			/>
 
 			<TypographyCard
 				onFontCommit={setFontSlot}
 				onUiFontSize={(next) => setOption('ui_font_size', next)}
-				overrides={overrides.fonts}
-				uiFontSize={uiFontSize}
+				overrides={fonts}
+				uiFontSize={options.ui_font_size ?? 16}
 			/>
 
 			<BehaviorCard
-				contrast={contrast}
+				contrast={options.contrast ?? 60}
 				onOptionChange={setOption}
-				pointerCursors={pointerCursors}
-				translucentSidebar={translucentSidebar}
+				pointerCursors={options.pointer_cursors ?? true}
+				translucentSidebar={options.translucent_sidebar ?? false}
 			/>
 		</SettingsPage>
 	);
+}
+
+/**
+ * Drop nullish entries from a partial record so spreading it on top of
+ * the defaults doesn't blast a real default value back to null. The
+ * returned type unboxes nullable members to their non-nullable form so
+ * the spread result resolves to the defaults' non-nullable shape.
+ */
+function stripNulls<T extends Record<string, unknown>>(
+	record: T
+): { [K in keyof T]?: NonNullable<T[K]> } {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(record)) {
+		if (value !== null && value !== undefined) {
+			out[key] = value;
+		}
+	}
+	return out as { [K in keyof T]?: NonNullable<T[K]> };
 }

@@ -216,6 +216,8 @@ A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` 
 
 - Local dev runs on plain localhost: Next.js on `http://localhost:3001`, FastAPI on `http://localhost:8000`. `dev.ts` (run via `just dev` or `bun run dev`) starts both side-by-side. No HTTPS, no proxy, no special hostnames.
 - Frontend → backend cookie auth works because both run on the same host (`localhost`); cookies ignore ports, so `Set-Cookie` from `:8000` is visible to fetches from `:3001` with `credentials: 'include'`. Use `COOKIE_SAMESITE=lax` and `COOKIE_SECURE=false` in dev.
+- Post-login navigation in `LoginForm` must use `window.location.replace('/')` (full-page navigation), not `router.push`. Client-side navigation keeps React in the same turn so authed queries (`NavChats`, etc.) can fire before the browser commits the `Set-Cookie` response, causing a 401 → redirect-to-login race. This is especially visible on Safari and when onboarding UI adds heavier post-login hydration.
+- In staging/production the backend API lives on an `api.*` subdomain; the Next.js dev-login proxy (`/api/dev-login`) must call `cookies.set` with an explicit `domain` sourced from the `AUTH_COOKIE_DOMAIN` env var (or inferred by stripping `api.` from `NEXT_PUBLIC_API_URL`). Forwarding the upstream `Set-Cookie` verbatim omits `Domain`, making the cookie host-only for the proxy origin and invisible to API requests on the subdomain — Safari enforces this strictly where Chrome may appear to work.
 
 
 
