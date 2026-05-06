@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     google_api_key: str
     # Fernet Encryption Key (used to encrypt API keys)
     fernet_key: str
+    # Anthropic API key for direct Messages API calls (ClaudeStreamFnProvider).
+    # Required when any claude-* model is selected. Get one from
+    # https://console.anthropic.com/account/keys
+    anthropic_api_key: str = ""
     # OAuth token used by the Claude Agent SDK to authenticate the bundled
     # Claude Code CLI subprocess. Optional — only required when a chat
     # request resolves to a Claude model. Generate with `claude setup-token`.
