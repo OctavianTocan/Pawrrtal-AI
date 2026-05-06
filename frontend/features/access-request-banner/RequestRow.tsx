@@ -48,7 +48,7 @@ export function RequestRow({ request, decision, onApprove, onReject, onReset }: 
 				{/* Scale bounce echoes the avatar spring for a cohesive row entry */}
 				<motion.span
 					className="text-sm font-medium"
-					initial={{ scale: 0.7, opacity: 0 }}
+					initial={{ scale: 0.92, opacity: 0 }}
 					animate={{ scale: 1, opacity: 1 }}
 					transition={BOUNCY_SPRING}
 				>

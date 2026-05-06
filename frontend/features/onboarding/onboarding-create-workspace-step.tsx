@@ -60,7 +60,7 @@ export function OnboardingCreateWorkspaceStep({
 								type="button"
 								className={cn(
 									'flex min-h-[4.75rem] w-full items-center gap-4 rounded-surface-lg px-4 text-left',
-									'bg-foreground/[0.025] ring-1 ring-border transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)]',
+									'bg-foreground/[0.025] ring-1 ring-border transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)]',
 									isEnabled
 										? 'cursor-pointer hover:bg-foreground/[0.045] hover:shadow-minimal active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45'
 										: 'cursor-not-allowed bg-foreground/[0.012] text-muted-foreground/55'

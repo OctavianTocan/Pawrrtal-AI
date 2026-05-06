@@ -65,7 +65,7 @@ export function OnboardingWelcomeStep({
 					return (
 						<div
 							key={item.title}
-							className="flex min-h-[6rem] items-start gap-3 rounded-surface-lg bg-foreground/[0.025] p-4 ring-1 ring-border transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.04] hover:shadow-minimal"
+							className="flex min-h-[6rem] items-start gap-3 rounded-surface-lg bg-foreground/[0.025] p-4 ring-1 ring-border transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.04] hover:shadow-minimal"
 						>
 							<span
 								className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-surface-lg bg-foreground/[0.045] text-muted-foreground ring-1 ring-border"
@@ -94,7 +94,7 @@ export function OnboardingWelcomeStep({
 			<Button
 				type="button"
 				size="lg"
-				className="h-11 w-full cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80"
+				className="h-11 w-full cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80"
 				onClick={onContinue}
 			>
 				Get started

@@ -276,7 +276,7 @@ function AppHeader(): React.JSX.Element {
 					isMacDesktop && '[-webkit-app-region:no-drag]'
 				)}
 			>
-				<SidebarTrigger className="cursor-pointer" />
+				<SidebarTrigger className="size-7 cursor-pointer" />
 				<AppHistoryControls />
 				<Separator
 					orientation="vertical"
@@ -460,7 +460,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<>
 				<Sidebar>
 					<SidebarFocusShell className="group flex h-full flex-col">
-						<SidebarHeader className="px-2 pb-1 shrink-0">
+						<SidebarHeader className="px-2 pt-0 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
@@ -548,7 +548,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						data-state={state}
 						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
-						<SidebarHeader className="px-2 pb-1 shrink-0">
+						<SidebarHeader className="px-2 pt-0 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
@@ -567,8 +567,16 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			 * subtracts these cross-axis margins from the handle's height,
 			 * so the drag affordance + ::after hit area only cover the
 			 * panel boundary — not the header strip or the bottom margin.
+			 * The mask gradient fades the handle line toward both ends so
+			 * it reads as a bounded divider rather than a hard edge.
 			 */}
-			<ResizableHandle className="mt-10 mb-2" />
+			{/*
+			 * after:left-0/after:translate-x-0 anchors the ::after hit area at the
+			 * left edge of the chat panel (overriding the default centered position).
+			 * after:w-12 widens the invisible grab target to 48px — all extending
+			 * rightward into the chat panel so it's reachable from inside the panel.
+			 */}
+			<ResizableHandle className="mt-10 mb-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px,black_calc(100%_-_24px),transparent)] after:left-0 after:translate-x-0 after:w-12" />
 
 			{/*
 			 * Chat panel stacks above the sidebar via z-index so its left-edge
@@ -590,7 +598,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				 * butts up against the sidebar so the leftward shadow
 				 * casts onto it.
 				 */}
-				<div className="h-full min-w-0 pt-10 pr-2 pb-2">
+				<div className="h-full min-w-0 pt-10 pr-2 pb-2 pl-2">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</ResizablePanel>

@@ -16,6 +16,7 @@ import {
 	type BannerState,
 	BOUNCY_SPRING,
 	getInitials,
+	TEXT_SWAP_SPRING,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -89,17 +90,11 @@ function HeaderTextBlock({
 						initial={{ opacity: 0, y: -16, filter: 'blur(4px)' }}
 						animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
 						exit={{ opacity: 0, y: -16, filter: 'blur(4px)' }}
-						transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+						transition={TEXT_SWAP_SPRING}
 					>
-						<motion.span
-							initial={{ scale: 0.85 }}
-							animate={{ scale: 1 }}
-							exit={{ scale: 0.85 }}
-							transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-							className="block origin-left text-sm font-semibold text-foreground"
-						>
+						<span className="block text-sm font-semibold text-foreground">
 							Access Requests
-						</motion.span>
+						</span>
 					</motion.div>
 				) : (
 					<motion.div
@@ -107,17 +102,9 @@ function HeaderTextBlock({
 						initial={{ opacity: 0, y: 16, filter: 'blur(4px)' }}
 						animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
 						exit={{ opacity: 0, y: 16, filter: 'blur(4px)' }}
-						transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+						transition={TEXT_SWAP_SPRING}
 					>
-						<motion.div
-							initial={{ scale: 0.85 }}
-							animate={{ scale: 1 }}
-							exit={{ scale: 0.85 }}
-							transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-							className="origin-left"
-						>
-							<SummaryText requests={requests} />
-						</motion.div>
+						<SummaryText requests={requests} />
 					</motion.div>
 				)}
 			</AnimatePresence>
