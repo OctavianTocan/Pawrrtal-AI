@@ -40,7 +40,7 @@ e2e-android:
 
 ## References
 
-- TwinMind E2E: iOS simulator and Android emulator contend on same Mac Mini
+- a prior E2E project: iOS simulator and Android emulator contend on same Mac Mini
 
 ## Verify
 

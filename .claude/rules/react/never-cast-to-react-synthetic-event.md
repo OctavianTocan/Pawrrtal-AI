@@ -28,7 +28,7 @@ onValueChange(newValue: string): void;
 
 ## Origin
 
-TwinMind webapp — faked ChangeEvent casts caused runtime crashes when error boundaries called preventDefault() on the fake event.
+a prior webapp — faked ChangeEvent casts caused runtime crashes when error boundaries called preventDefault() on the fake event.
 
 ## Verify
 

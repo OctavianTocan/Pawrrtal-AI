@@ -76,7 +76,6 @@ Claude Code loads rules matching the current file's path against the `paths` glo
 
 Rules extracted from real projects:
 
-- **TwinMind** — React Native brownfield meeting app (audio, streaming, native integrations)
 - **tap** — Rust Telegram bot / multi-agent gateway (provider traits, subprocess testing)
 - **ai-nexus** — TypeScript full-stack app (Biome, multi-agent git safety)
 - **openclaw-notion/todoist** — Agent plugins (per-agent auth, test isolation)

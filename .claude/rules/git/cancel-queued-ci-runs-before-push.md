@@ -30,7 +30,7 @@ gh workflow run "E2E Maestro" --ref main
 
 ## References
 
-- TwinMind E2E: E2E run queued for 40+ min behind 5 stale runs from another branch
+- a prior E2E project: E2E run queued for 40+ min behind 5 stale runs from another branch
 
 ## Verify
 

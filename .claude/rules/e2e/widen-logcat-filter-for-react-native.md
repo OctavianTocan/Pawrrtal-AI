@@ -32,7 +32,7 @@ adb logcat -s SurfaceActivity:V Auth0Service:V ReactNativeJS:V hermes:V AndroidR
 
 ## References
 
-- TwinMind E2E: Android surfaces mounted successfully but RN content never rendered; JS errors were invisible
+- a prior E2E project: Android surfaces mounted successfully but RN content never rendered; JS errors were invisible
 
 ## Verify
 

@@ -67,4 +67,4 @@ gh run cancel <push-triggered-id>
 
 ## Origin
 
-TwinMind v0.3.1 publish — push and dispatch ran simultaneously, wrong run was cancelled, required fresh dispatch.
+a prior release workflow publish — push and dispatch ran simultaneously, wrong run was cancelled, required fresh dispatch.

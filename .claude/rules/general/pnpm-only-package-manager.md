@@ -9,7 +9,7 @@ pnpm is the only package manager. No npm, no yarn. Use `--frozen-lockfile` in CI
 
 **Why:** Mixed package managers create inconsistent lockfiles and dependency resolution. pnpm's strict node_modules structure catches phantom dependencies that npm and yarn silently allow.
 
-**Learned from:** All project configurations — biome.json, package.json conventions across thirdear-webapp, ai-nexus, openclaw plugins.
+**Learned from:** All project configurations — biome.json, package.json conventions across the vendored app, ai-nexus, openclaw plugins.
 
 ## Verify
 

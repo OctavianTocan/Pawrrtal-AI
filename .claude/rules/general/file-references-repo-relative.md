@@ -8,7 +8,7 @@ paths: ["**/*"]
 File references in code review, chat, and documentation must be repo-root relative, never absolute paths.
 
 Good: `src/components/ui/sidebar.tsx:80`
-Bad: `/Users/john/workspace/thirdear-webapp/src/components/ui/sidebar.tsx:80`
+Bad: `/Users/john/workspace/the vendored app/src/components/ui/sidebar.tsx:80`
 
 **Why:** Absolute paths are machine-specific, can't be clicked by other developers, and leak system information. Repo-relative paths work for everyone, in any IDE, on any machine.
 

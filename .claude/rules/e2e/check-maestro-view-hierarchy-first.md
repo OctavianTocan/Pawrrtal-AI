@@ -34,7 +34,7 @@ Maestro matches elements by accessibility ID (`id:`), text, or resource-id. When
 
 ## References
 
-- TwinMind E2E: hierarchy dumps revealed surface_list was visible (auth error state), not actual surfaces
+- a prior E2E project: hierarchy dumps revealed surface_list was visible (auth error state), not actual surfaces
 
 ## Verify
 

@@ -43,4 +43,4 @@ Logcat: "Surface mounted successfully" → must be a native layout issue
 
 ## References
 
-- TwinMind E2E: All 3 Android surfaces "mounted successfully" but RN content never appeared
+- a prior E2E project: All 3 Android surfaces "mounted successfully" but RN content never appeared

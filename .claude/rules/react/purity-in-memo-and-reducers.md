@@ -9,7 +9,7 @@ paths: ["**/*.ts", "**/*.tsx"]
 
 **Why:** React may call useMemo/reducers multiple times (StrictMode, concurrent mode, re-renders). Side effects in these functions execute unpredictably, causing double API calls, double state updates, and race conditions that are extremely hard to debug.
 
-**Learned from:** thirdear-webapp (thirdear-ai/thirdear-webapp) — AGENTS.md convention.
+**Learned from:** the vendored app — AGENTS.md convention.
 
 ## Verify
 

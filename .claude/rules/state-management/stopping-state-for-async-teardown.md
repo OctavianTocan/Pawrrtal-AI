@@ -50,4 +50,4 @@ type BadState =
 
 ## Origin
 
-TwinMind mobile — double-tap during encoding gap started two recording sessions that fought over the microphone.
+a prior mobile project — double-tap during encoding gap started two recording sessions that fought over the microphone.

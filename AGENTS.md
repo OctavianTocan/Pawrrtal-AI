@@ -200,11 +200,11 @@ Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full
 
 **Ignore** `.claude/rules/general/pnpm-only-package-manager.md` for installs — this repo uses Bun (`just install`).
 
-### TwinMind / thirdear-webapp Cursor rules (vendored)
+### Vendored Cursor rules (`.cursor/rules/`)
 
-TwinMind `thirdear-webapp` Cursor rules are vendored under `.cursor/rules/` (repo-root relative). Each file is `.mdc` with YAML frontmatter: `description`, `globs` (and sometimes duplicate `paths`), and `alwaysApply` (when `true`, the rule applies broadly instead of only to glob matches).
+External Cursor rules are vendored under `.cursor/rules/` (repo-root relative). Each file is `.mdc` with YAML frontmatter: `description`, `globs` (and sometimes duplicate `paths`), and `alwaysApply` (when `true`, the rule applies broadly instead of only to glob matches).
 
-A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` for reference and diffing alongside the main claude-rules vendored tree. Those `.mdc` copies are not converted to Claude's usual `name` + `paths` `.md` format; use the standard `.claude/rules/**` files above for Claude path-scoped enforcement.
+A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and diffing alongside the main claude-rules vendored tree. Those `.mdc` copies are not converted to Claude's usual `name` + `paths` `.md` format; use the standard `.claude/rules/**` files above for Claude path-scoped enforcement.
 
 ## Learned User Preferences
 

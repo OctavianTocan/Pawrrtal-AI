@@ -22,7 +22,7 @@ interface ReplyActionsRowProps {
 	onRegenerate?: () => void;
 	/** Whether a regeneration request is currently in flight. */
 	isRegenerating?: boolean;
-	/** Share / link-copy hook (mirrors thirdear's share button slot). */
+	/** Share / link-copy hook. */
 	onShare?: () => void;
 	/** Optional extra padding tweaks from the parent. */
 	className?: string;
