@@ -120,3 +120,12 @@ agno.db-wal
 # sentrux local baseline (per-developer, not shared)
 .sentrux/baseline.json
 package-lock.json
+
+# Cursor IDE runtime state (generated every session, not config)
+.cursor/hooks/state/
+
+# Cursor Composer AI-generated plan files (ephemeral, not source-of-truth)
+.cursor/plans/
+
+# OpenCode internal generated artifacts
+.opencode/package-lock.json
