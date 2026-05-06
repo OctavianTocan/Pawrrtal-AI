@@ -1,17 +1,17 @@
-"""Chat API — provider-agnostic streaming endpoint."""
+"""Chat API — channel-routed, provider-agnostic streaming endpoint."""
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
@@ -50,6 +50,7 @@ def get_chat_router() -> APIRouter:
         request: ChatRequest,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
+        x_nexus_surface: str | None = Header(default=None),
     ) -> StreamingResponse:
         """Stream an AI response as Server-Sent Events.
 
@@ -74,13 +75,17 @@ def get_chat_router() -> APIRouter:
         """
         # Entry log — pairs with REQ_IN/REQ_OUT from the request middleware via rid.
         # Question length, not contents, to avoid leaking PII into the log file.
+        surface = surface_from_header(x_nexus_surface)
+        channel = resolve_channel(surface)
+
         rid = get_request_id()
         logger.info(
-            "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s question_len=%d",
+            "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s surface=%s question_len=%d",
             rid,
             user.id,
             request.conversation_id,
             request.model_id or "<default>",
+            surface,
             len(request.question),
         )
 
@@ -139,46 +144,58 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_llm(model_id)
 
-        async def event_stream() -> AsyncGenerator[str]:
-            """Yield SSE-framed events from the provider stream.
+        async def event_stream() -> AsyncGenerator[bytes]:
+            """Yield channel-encoded bytes for each LLM event, then done.
 
-            Wraps the provider's async iterator with timing, event counting,
-            and structured ``CHAT_OUT`` / ``CHAT_ERR`` log markers so a
-            single user message produces exactly one entry/exit pair in
-            ``backend/app.log`` per request ID.
+            Builds a raw provider stream, wraps it with error handling and
+            aggregation, then hands it to ``channel.deliver()`` which
+            encodes each event for the surface (SSE frames for web/Electron,
+            message edits for Telegram, etc.).
             """
             stream_start = time.perf_counter()
             event_count = 0
             aggregator = ChatTurnAggregator()
+
+            async def _guarded_stream():
+                """Wrap the provider stream with error capture + aggregation."""
+                nonlocal event_count
+                try:
+                    async for event in provider.stream(
+                        request.question,
+                        request.conversation_id,
+                        user.id,
+                        history=history,
+                    ):
+                        event_count += 1
+                        aggregator.apply(event)
+                        yield event
+                except Exception as exc:
+                    logger.exception(
+                        "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
+                        rid,
+                        request.conversation_id,
+                        model_id,
+                        event_count,
+                    )
+                    error_event: StreamEvent = {"type": "error", "content": str(exc)}
+                    aggregator.apply(error_event)
+                    yield error_event
+
+            from app.channels.base import ChannelMessage  # noqa: PLC0415
+            channel_message: ChannelMessage = {
+                "user_id": user.id,
+                "conversation_id": request.conversation_id,
+                "text": request.question,
+                "surface": surface,
+                "model_id": model_id,
+                "metadata": {},
+            }
+
             try:
-                async for event in provider.stream(
-                    request.question,
-                    request.conversation_id,
-                    user.id,
-                    history=history,
-                ):
-                    event_count += 1
-                    aggregator.apply(event)
-                    yield f"data: {json.dumps(event)}\n\n"
-            except Exception as exc:
-                # Logged with full traceback so the file has enough info to triage
-                # without needing to also tail stdout. Always pair with a CHAT_ERR
-                # marker so the corresponding REQ_OUT can be matched by rid.
-                logger.exception(
-                    "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
-                    rid,
-                    request.conversation_id,
-                    model_id,
-                    event_count,
-                )
-                error_event: StreamEvent = {"type": "error", "content": str(exc)}
-                aggregator.apply(error_event)
-                yield f"data: {json.dumps(error_event)}\n\n"
+                async for chunk in channel.deliver(_guarded_stream(), channel_message):
+                    yield chunk
             finally:
                 duration_ms = (time.perf_counter() - stream_start) * 1000
-                # Persist the final assistant snapshot. Open a fresh session —
-                # the request-scoped one was committed and may have been closed
-                # by the time this finally runs in the streaming task.
                 final_status = "failed" if aggregator.error_text else "complete"
                 snapshot = aggregator.to_persisted_shape(status=final_status)
                 try:
@@ -190,23 +207,20 @@ def get_chat_router() -> APIRouter:
                         )
                         await persist_session.commit()
                 except Exception:
-                    # Persistence failure must not break the SSE response; the
-                    # client already saw every event live and the recovery hook
-                    # can replay if needed.
                     logger.exception(
                         "CHAT_PERSIST_ERR rid=%s message_id=%s",
                         rid,
                         assistant_message_id,
                     )
                 logger.info(
-                    "CHAT_OUT rid=%s conversation_id=%s model_id=%s events=%d duration_ms=%.1f",
+                    "CHAT_OUT rid=%s conversation_id=%s model_id=%s surface=%s events=%d duration_ms=%.1f",
                     rid,
                     request.conversation_id,
                     model_id,
+                    surface,
                     event_count,
                     duration_ms,
                 )
-                yield "data: [DONE]\n\n"
 
         return StreamingResponse(
             event_stream(),
