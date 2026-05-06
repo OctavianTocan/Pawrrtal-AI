@@ -47,6 +47,80 @@ const SKIP_PATTERNS: RegExp[] = [
 	/next-env\.d\.ts$/,
 ];
 
+/** Patterns loaded from `.docignore` at runtime — populated at the start of `main`. */
+let docIgnorePatterns: RegExp[] = [];
+
+// ── .docignore support ────────────────────────────────────────────────────────
+
+/**
+ * Converts a single gitignore-style glob pattern to a RegExp that matches
+ * repo-root-relative paths (forward-slash separated).
+ *
+ * Supported syntax:
+ * - `**\/` at the start or middle → optional path prefix (`(.*\/)?`)
+ * - `**` at the end → anything (`.*`)
+ * - `*` → any chars except `/` (`[^/]*`)
+ * - `?` → any single char except `/` (`[^/]`)
+ * - All other regex metacharacters are escaped
+ *
+ * @param pattern - A single gitignore-style glob (e.g. `frontend/components/**`)
+ * @returns RegExp anchored with `^...$` that tests repo-relative forward-slash paths
+ */
+function globToRegex(pattern: string): RegExp {
+	let regexStr = '';
+	let i = 0;
+	while (i < pattern.length) {
+		const ch = pattern[i]!;
+		if (ch === '*' && pattern[i + 1] === '*') {
+			// **/ → optional path prefix; ** at end → anything
+			if (pattern[i + 2] === '/') {
+				regexStr += '(.*/)?';
+				i += 3;
+			} else {
+				regexStr += '.*';
+				i += 2;
+			}
+		} else if (ch === '*') {
+			regexStr += '[^/]*';
+			i++;
+		} else if (ch === '?') {
+			regexStr += '[^/]';
+			i++;
+		} else if ('.+^${}|[\\]()'.includes(ch)) {
+			// Escape regex metacharacters that appear in file paths
+			regexStr += `\\${ch}`;
+			i++;
+		} else {
+			regexStr += ch;
+			i++;
+		}
+	}
+	return new RegExp(`^${regexStr}$`);
+}
+
+/**
+ * Reads `.docignore` from the repo root and returns compiled RegExp matchers.
+ *
+ * Each non-empty, non-comment line is treated as a gitignore-style glob.
+ * Lines starting with `#` (comments) or `!` (negation — unsupported) are skipped.
+ *
+ * @returns Array of RegExps for the active ignore patterns, or `[]` if no file found
+ */
+function loadDocIgnorePatterns(): RegExp[] {
+	const ignoreFile = path.join(REPO_ROOT, '.docignore');
+	let content: string;
+	try {
+		content = readFileSync(ignoreFile, 'utf-8');
+	} catch {
+		return []; // No .docignore present — nothing to exclude
+	}
+	return content
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0 && !line.startsWith('#') && !line.startsWith('!'))
+		.map(globToRegex);
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** Human-readable category for a declaration. */
@@ -70,7 +144,13 @@ interface FileResult {
 // ── File walking ──────────────────────────────────────────────────────────────
 
 function shouldSkip(p: string): boolean {
-	return SKIP_PATTERNS.some((re) => re.test(p));
+	if (SKIP_PATTERNS.some((re) => re.test(p))) return true;
+	if (docIgnorePatterns.length > 0) {
+		// .docignore patterns are repo-relative; normalize separators for cross-platform
+		const rel = path.relative(REPO_ROOT, p).replaceAll('\\', '/');
+		if (docIgnorePatterns.some((re) => re.test(rel))) return true;
+	}
+	return false;
 }
 
 function walkTs(dir: string): string[] {
@@ -289,6 +369,9 @@ function coveragePct(covered: number, total: number): number {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 function main(): void {
+	// Load .docignore exclusions before any file walking
+	docIgnorePatterns = loadDocIgnorePatterns();
+
 	const args = process.argv.slice(2);
 
 	// --fail-under=<number>  exit 1 if overall coverage is below this %
