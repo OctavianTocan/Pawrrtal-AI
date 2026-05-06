@@ -33,7 +33,7 @@ import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
-import { getDesktopPlatformSync } from '@/lib/desktop';
+import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
@@ -219,25 +219,6 @@ function HelpMenu(): React.JSX.Element {
 const MAC_TRAFFIC_LIGHT_RESERVE_PX = 80;
 
 /**
- * Track whether the renderer is running inside the macOS Electron shell
- * so the header can reserve space for the system traffic-light buttons.
- *
- * Starts `false` so the SSR pass and the first client render agree
- * (avoids a hydration mismatch); flips on mount once `window.aiNexus`
- * is readable.
- *
- * @returns `true` only when the Electron preload bridge reports
- * `process.platform === 'darwin'`.
- */
-function useIsMacDesktop(): boolean {
-	const [isMacDesktop, setIsMacDesktop] = React.useState(false);
-	React.useEffect(() => {
-		setIsMacDesktop(getDesktopPlatformSync() === 'darwin');
-	}, []);
-	return isMacDesktop;
-}
-
-/**
  * Top-bar chrome rendered as a full-width overlay above the sidebar and content.
  * Lives outside the sidebar so its controls (sidebar trigger, history, workspace
  * selector) stay in their original screen positions even when the sidebar is
@@ -248,10 +229,14 @@ function AppHeader(): React.JSX.Element {
 	return (
 		<header
 			className={cn(
-				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pt-1 pr-3 outline-none focus:outline-none focus-visible:outline-none',
-				// Default web/Windows/Linux padding; macOS desktop gets extra
-				// left padding to clear the traffic-light buttons.
-				isMacDesktop ? '' : 'pl-3'
+				// On macOS the controls' vertical centerline has to match the
+				// traffic-light centerline (≈14px from the window top under
+				// `hiddenInset`). Header buttons are 28px tall, so anchoring
+				// them to `items-start` with no top padding puts their center
+				// at y=14 — flush with the system buttons. Web/Windows/Linux
+				// keep the original `items-center` rhythm with `pt-1`.
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
+				isMacDesktop ? 'items-start pt-0' : 'items-center pt-1 pl-3'
 			)}
 			style={isMacDesktop ? { paddingLeft: MAC_TRAFFIC_LIGHT_RESERVE_PX } : undefined}
 		>
