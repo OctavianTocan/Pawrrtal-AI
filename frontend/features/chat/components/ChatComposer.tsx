@@ -138,7 +138,10 @@ function AnimatedComposerPlaceholder({
 
 	return (
 		<div
-			className="pointer-events-none absolute top-3 left-3 z-10 pr-6 text-[14px] leading-6 text-muted-foreground/70"
+			// `top-2` matches the textarea's `pt-2` so the placeholder sits on
+			// the same baseline as the user's first line of text; `top-3` left
+			// the placeholder a pixel off when the textarea was tightened.
+			className="pointer-events-none absolute top-2 left-3 z-10 pr-6 text-[14px] leading-6 text-muted-foreground/70"
 			aria-hidden="true"
 		>
 			<span className="composer-placeholder-enter block" key={text}>
@@ -242,15 +245,22 @@ export function ChatComposer({
 			</PromptInputAttachments>
 			<div className="relative w-full self-stretch">
 				<AnimatedComposerPlaceholder isVisible={!hasContent} text={placeholder} />
+				{/* `min-h-11` (44px) + `pt-2` lets a one-line draft sit
+				    comfortably without the textarea reading as a tall card on
+				    its own. The placeholder absolutely-positioned at `top-3`
+				    is shifted to `top-2` to track this in the parent. */}
 				<PromptInputTextarea
 					aria-label={placeholder}
-					className="max-h-48 min-h-14 w-full overflow-y-auto px-3 pt-3 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
+					className="max-h-48 min-h-11 w-full overflow-y-auto px-3 pt-2 pb-1 text-[14px] leading-6 outline-none placeholder:text-transparent focus-visible:outline-none"
 					onChange={onUpdateMessage}
 					placeholder=""
 					value={message.content}
 				/>
 			</div>
-			<PromptInputFooter className="min-h-9 px-1.5 pb-1.5">
+			{/* `min-h-8` (32px) + `py-1` keeps the controls vertically
+			    centered without giving the footer the extra 4px of slack
+			    `min-h-9` was reading as. */}
+			<PromptInputFooter className="min-h-8 px-1.5 py-1">
 				<div className="flex min-w-0 flex-1 items-center gap-1">
 					<AttachButton />
 					{isRecording || isTranscribing ? (

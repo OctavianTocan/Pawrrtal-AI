@@ -108,14 +108,17 @@ export function ConnectAppsStrip({
 			<p className="min-w-0 truncate text-xs text-muted-foreground">
 				Connect your apps to get better answers
 			</p>
-			<div className="flex shrink-0 items-center gap-0">
+			{/* Tightest grouping: `size-6` (24px) hit targets with `size-3`
+			    (12px) glyphs so the lineup reads as one cluster of brand
+			    chips instead of spaced affordances. */}
+			<div className="-mr-1 flex shrink-0 items-center gap-0">
 				{CONNECT_APPS.map((app) => (
 					<Tooltip key={app.id}>
 						<TooltipTrigger asChild>
 							<button
 								aria-label={`Connect ${app.label}`}
 								className={cn(
-									'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
+									'flex size-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
 									app.colorClass ?? 'text-foreground'
 								)}
 								onClick={(event) => {
@@ -124,7 +127,7 @@ export function ConnectAppsStrip({
 								}}
 								type="button"
 							>
-								<app.Icon className="size-3.5" />
+								<app.Icon className="size-3" />
 							</button>
 						</TooltipTrigger>
 						<TooltipContent side="top">{app.label}</TooltipContent>
@@ -132,11 +135,11 @@ export function ConnectAppsStrip({
 				))}
 				<button
 					aria-label="Dismiss connect apps strip"
-					className="ml-0.5 flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+					className="ml-0.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 					onClick={handleDismiss}
 					type="button"
 				>
-					<XIcon aria-hidden="true" className="size-3.5" />
+					<XIcon aria-hidden="true" className="size-3" />
 				</button>
 			</div>
 		</InputGroupAddon>
