@@ -74,7 +74,7 @@
 	/* === 6 BASE COLORS — Mistral defaults === */
 	/* Warm cream surface (~#fff8e0). High luminance, warm chroma, sunset hue. */
 	--background: oklch(0.985 0.026 92);
-	--background-elevated: color-mix(in srgb, var(--foreground) 1.5%, var(--background));
+	--background-elevated: oklch(from var(--background) min(calc(l + 0.04), 1) c h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.18), transparent 45%),
 		radial-gradient(
@@ -183,8 +183,14 @@
 	--ring-width: 1px;
 	--ring-offset: 0px;
 
-	/* Sidebar tokens */
-	--sidebar: var(--background-elevated);
+	/* Sidebar tokens — sidebar surface matches `--background` exactly so the
+	   sidebar reads as the same canvas as the page. The chat panel uses
+	   `--background-elevated` (a derivation of `--background` mixed with 1.5%
+	   `--foreground`) so it follows the user's mental model: when foreground
+	   is dark the panel reads as a slightly darker tint of background, when
+	   foreground is light it reads as slightly lighter. Both sidebar and
+	   chat panel automatically follow whatever `--background` resolves to. */
+	--sidebar: var(--background);
 	--sidebar-foreground: var(--foreground);
 	--sidebar-primary: var(--accent);
 	--sidebar-primary-foreground: var(--background);
@@ -272,8 +278,12 @@
 	/* === 6 BASE COLORS === */
 	/* Page/workspace ~#0D1117 */
 	--background: oklch(0.205 0.012 264);
-	/* Sidebar / elevated surfaces ~#161B22 */
-	--background-elevated: oklch(0.239 0.012 264);
+	/* Chat panel surface — same formula as light mode so the panel always
+	   reads as a slight tint of the canvas toward the foreground. With a
+	   light foreground the dark canvas lifts slightly; with a dark foreground
+	   it deepens. The dark-mode hardcoded `oklch(0.239 ...)` preserved a
+	   stale hardcoded blue regardless of preset overrides. */
+	--background-elevated: oklch(from var(--background) min(calc(l + 0.04), 1) c h);
 	--background-image:
 		radial-gradient(circle at top, oklch(from var(--accent) l c h / 0.22), transparent 45%),
 		radial-gradient(
@@ -371,14 +381,13 @@
 	--input: oklch(from var(--foreground) l c h / 0.1);
 	--ring: oklch(from var(--accent) l c h / 0.45);
 
-	/* Sidebar tokens — derive from `--background` directly instead of
-	 * the shared `--background-elevated` token (which is defined in
-	 * `:root` and stays light-mode-shaped in the dark cascade), so the
-	 * sidebar surface re-tints with each preset's dark hue + chroma
-	 * just like `--card` and `--popover` do above. Lift +0.03 lightness
-	 * so it sits one notch below the cards (visual hierarchy:
-	 * background < sidebar < card < popover). */
-	--sidebar: oklch(from var(--background) calc(l + 0.03) c h);
+	/* Sidebar tokens — sidebar matches `--background` exactly so the sidebar
+	 * canvas and the page background read as one continuous surface. The
+	 * chat panel uses `--background-elevated` (derived from background +
+	 * 1.5% foreground mix) for its mild tint — so when foreground is light,
+	 * the panel reads as a slightly lighter tint of background; when
+	 * foreground is dark, slightly darker. */
+	--sidebar: var(--background);
 	--sidebar-foreground: var(--foreground);
 	--sidebar-primary: var(--accent);
 	--sidebar-primary-foreground: var(--primary-foreground);
@@ -466,6 +475,7 @@ html[data-font="inter"] {
 @theme inline {
 	/* === 6 BASE COLORS === */
 	--color-background: var(--background);
+	--color-background-elevated: var(--background-elevated);
 	--color-foreground: var(--foreground);
 	--color-accent: var(--accent);
 	--color-info: var(--info);
@@ -1492,9 +1502,11 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	box-shadow: var(--shadow-minimal);
 }
 
-/* Model menus opened from the chat composer — match the composer surface so menus don't disappear into the page background. */
+/* Model menus opened from the chat composer — share the same `--background-
+   elevated` surface as the chat panel so the dropdown reads as part of the
+   chat shell instead of the gray-cast `--foreground-5` it had before. */
 .chat-composer-dropdown-menu.popover-styled {
-	background: var(--foreground-5);
+	background: var(--background-elevated);
 	color: var(--foreground);
 	border-radius: var(--radius-surface-lg);
 	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);

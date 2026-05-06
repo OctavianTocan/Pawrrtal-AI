@@ -97,38 +97,48 @@ export function ProjectsList({
 
 	return (
 		<>
-			{/* Sidebar section header. Per DESIGN.md → Sidebar Type Baseline,
-			    the floor is 14px (`text-sm`) and visual de-emphasis goes
-			    through tone, not size. Section heads stand out by being
-			    `text-foreground font-semibold` — that's what separates
-			    "Projects" from the lighter date-group rows beneath. */}
-			<header className="group/projects-header mt-3 flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-foreground">
+			{/* Mirrors `CollapsibleGroupHeader` (the date groups in the chat
+			    list): the whole row is the click/hover target via a full-width
+			    button whose hover highlight is painted by an absolute pseudo-
+			    element — so the user can hover anywhere across the header,
+			    not just over the literal "Projects" text. The new-project
+			    affordance is layered on top as an absolutely-positioned
+			    button so it can stop propagation without breaking the row's
+			    click target (and to dodge the invalid-HTML "button inside a
+			    button" trap). Type styling matches the date-group spans:
+			    `text-sm font-medium text-muted-foreground`, no more bespoke
+			    `font-semibold + text-foreground` mismatch with the rest of
+			    the sidebar. */}
+			<header className="group/header relative mt-3">
 				<button
 					aria-expanded={!isCollapsed}
 					aria-label={isCollapsed ? 'Expand projects' : 'Collapse projects'}
-					className="flex cursor-pointer items-center gap-1.5 rounded-[4px] px-1 py-0.5 text-foreground hover:text-foreground"
+					className="relative flex w-full cursor-pointer items-center gap-1.5 px-4 py-2"
 					onClick={() => setIsCollapsed((prev) => !prev)}
 					type="button"
 				>
+					<div className="pointer-events-none absolute inset-y-0.5 left-2 right-2 rounded-[6px] transition-colors group-hover/header:bg-foreground/2" />
 					{isCollapsed ? (
-						<ChevronRight className="size-3.5" />
+						<ChevronRight className="relative size-3.5 text-muted-foreground/60" />
 					) : (
-						<ChevronDown className="size-3.5" />
+						<ChevronDown className="relative size-3.5 text-muted-foreground/60" />
 					)}
-					Projects
+					<span className="relative text-sm font-medium text-muted-foreground">
+						Projects
+					</span>
 				</button>
 				<button
 					aria-label="Create new project"
 					className={cn(
-						'ml-auto cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground',
-						'group-hover/projects-header:opacity-100 focus-visible:opacity-100'
+						'absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground',
+						'group-hover/header:opacity-100 focus-visible:opacity-100'
 					)}
-					onClick={openCreateModal}
+					onClick={(event) => {
+						event.stopPropagation();
+						openCreateModal();
+					}}
 					type="button"
 				>
-					{/* Smaller glyph (`size-3.5` = 14px) — matches the chevron and
-					    other sidebar affordances; the `size-4` plus icon was
-					    visibly oversized against 14px row text. */}
 					<FolderPlus className="size-3.5" />
 				</button>
 			</header>

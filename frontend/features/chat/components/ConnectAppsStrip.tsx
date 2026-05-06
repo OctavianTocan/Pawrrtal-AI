@@ -91,7 +91,7 @@ export function ConnectAppsStrip({
 			// `size-7` hit targets so they group as a tight horizontal lineup
 			// rather than being spaced apart by the old `size-8` + `gap-1`.
 			className={cn(
-				'relative cursor-pointer justify-between gap-3 bg-foreground-10 px-3 py-1.5 pb-1.5 font-normal transition-colors hover:bg-foreground/[0.12]',
+				'relative cursor-pointer justify-between gap-3 bg-foreground-10 px-3 py-1 pb-1 font-normal transition-colors hover:bg-foreground/[0.12]',
 				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
 				className
 			)}

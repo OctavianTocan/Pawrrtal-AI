@@ -94,8 +94,21 @@ function ChatView({
 }: ChatProps): React.JSX.Element {
 	const isEmptyConversation = chatHistory.length === 0;
 
+	// Chat panel reads `--background-elevated` directly via inline style.
+	// Inline style is used (rather than a `bg-…` Tailwind utility) because the
+	// Tailwind v4 build was not always picking up new `@theme` tokens during
+	// hot-reload, and the user observed the chat panel rendering as a stale
+	// gray on every preset. The CSS variable itself, defined in globals.css
+	// as `color-mix(in srgb, var(--foreground) 1.5%, var(--background))`,
+	// is computed live: when the AppearanceProvider rewrites `--background`
+	// or `--foreground` on `<html>`, the panel re-derives — slightly darker
+	// than the canvas when foreground is dark, slightly lighter when
+	// foreground is light, re-tinting per preset hue.
 	return (
-		<div className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-surface-lg bg-background px-4 shadow-panel-floating">
+		<div
+			className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-surface-lg px-4 shadow-panel-floating"
+			style={{ backgroundColor: 'var(--background-elevated)' }}
+		>
 			{isEmptyConversation ? (
 				<div className="mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
 					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
