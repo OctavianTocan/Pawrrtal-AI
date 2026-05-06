@@ -119,3 +119,4 @@ agno.db-wal
 
 # sentrux local baseline (per-developer, not shared)
 .sentrux/baseline.json
+package-lock.json
