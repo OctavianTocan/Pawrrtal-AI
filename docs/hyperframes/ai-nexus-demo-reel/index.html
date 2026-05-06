@@ -271,7 +271,6 @@
 
       .stream-line {
         display: block;
-        overflow: hidden;
         white-space: nowrap;
       }
 
@@ -499,10 +498,10 @@
               </header>
               <div class="chat-column">
                 <div class="message user">Draft a focused product demo for the new agent workspace.</div>
-                <div class="message assistant">
-                  <span class="stream-line">Got it. I’ll keep the story tight:</span>
-                  <span class="stream-line">context first, useful tools second,</span>
-                  <span class="stream-line">and verification before anything ships.</span>
+                <div class="message assistant" data-layout-allow-overflow>
+                  <span class="stream-line" data-layout-allow-overflow>Got it. I’ll keep the story tight:</span>
+                  <span class="stream-line" data-layout-allow-overflow>context first, useful tools second,</span>
+                  <span class="stream-line" data-layout-allow-overflow>and verification before anything ships.</span>
                 </div>
                 <div class="tool-strip">
                   <div class="tool-card">
@@ -600,7 +599,7 @@
       mainTl.from("#chat .workspace-header", { y: 22, opacity: 0, duration: 0.45, ease: "power2.out" }, 4.55);
       mainTl.from("#chat .message.user", { x: 46, opacity: 0, duration: 0.45, ease: "power2.out" }, 5.05);
       mainTl.from("#chat .message.assistant", { x: -38, opacity: 0, duration: 0.45, ease: "power2.out" }, 5.65);
-      mainTl.from("#chat .stream-line", { width: 0, stagger: 0.38, duration: 0.55, ease: "steps(18)" }, 5.95);
+      mainTl.from("#chat .stream-line", { y: 12, opacity: 0, stagger: 0.28, duration: 0.42, ease: "power2.out" }, 5.95);
       mainTl.from("#chat .tool-card", { y: 34, opacity: 0, stagger: 0.13, duration: 0.45, ease: "back.out(1.3)" }, 7.85);
       mainTl.from("#chat .composer", { y: 24, opacity: 0, duration: 0.45, ease: "power2.out" }, 8.8);
       mainTl.to("#chat .send-button", { scale: 1.16, duration: 0.18, yoyo: true, repeat: 1, ease: "power2.out" }, 9.35);
