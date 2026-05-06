@@ -4,6 +4,7 @@
  * @fileoverview Applies FOUC-safe dark-mode class before hydration and wraps the tree in {@link Providers}.
  */
 
+import { Agentation } from 'agentation';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
@@ -87,6 +88,7 @@ export default function RootLayout({
 			</head>
 			<body>
 				<Providers>{children}</Providers>
+				{process.env.NODE_ENV === 'development' && <Agentation />}
 			</body>
 		</html>
 	);
