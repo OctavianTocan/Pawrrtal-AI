@@ -41,7 +41,7 @@ export function CollapsibleGroupHeader({
 						!isCollapsed && 'rotate-90'
 					)}
 				/>
-				<span className="text-sm font-medium text-muted-foreground relative">
+				<span className="text-xs font-medium text-muted-foreground relative">
 					{label}
 					{isCollapsed ? (
 						<>

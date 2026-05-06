@@ -97,7 +97,7 @@ export function ProjectsList({
 
 	return (
 		<>
-			<header className="group/projects-header mt-2 flex items-center gap-1 px-3 py-1 text-sm font-semibold text-muted-foreground">
+			<header className="group/projects-header mt-2 flex items-center gap-1 px-3 py-1 text-xs font-semibold text-muted-foreground">
 				<button
 					aria-expanded={!isCollapsed}
 					aria-label={isCollapsed ? 'Expand projects' : 'Collapse projects'}

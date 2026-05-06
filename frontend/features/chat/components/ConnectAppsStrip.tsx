@@ -85,8 +85,13 @@ export function ConnectAppsStrip({
 		// keyboard-tab-reachable as its own element.
 		<InputGroupAddon
 			align="block-end"
+			// Tighter padding (`py-1.5`) and smaller text (`text-xs`) than the
+			// previous `py-2 + text-sm` layout — the strip was reading visually
+			// too tall against the composer above it. Brand glyphs sit in
+			// `size-7` hit targets so they group as a tight horizontal lineup
+			// rather than being spaced apart by the old `size-8` + `gap-1`.
 			className={cn(
-				'relative cursor-pointer justify-between gap-3 bg-foreground-10 px-3 py-2 font-normal transition-colors hover:bg-foreground/[0.12]',
+				'relative cursor-pointer justify-between gap-3 bg-foreground-10 px-3 py-1.5 pb-1.5 font-normal transition-colors hover:bg-foreground/[0.12]',
 				'before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-border/50',
 				className
 			)}
@@ -100,17 +105,17 @@ export function ConnectAppsStrip({
 			role="link"
 			tabIndex={0}
 		>
-			<p className="min-w-0 truncate text-sm text-muted-foreground">
+			<p className="min-w-0 truncate text-xs text-muted-foreground">
 				Connect your apps to get better answers
 			</p>
-			<div className="flex shrink-0 items-center gap-1">
+			<div className="flex shrink-0 items-center gap-0">
 				{CONNECT_APPS.map((app) => (
 					<Tooltip key={app.id}>
 						<TooltipTrigger asChild>
 							<button
 								aria-label={`Connect ${app.label}`}
 								className={cn(
-									'flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
+									'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-foreground/[0.06]',
 									app.colorClass ?? 'text-foreground'
 								)}
 								onClick={(event) => {
@@ -127,7 +132,7 @@ export function ConnectAppsStrip({
 				))}
 				<button
 					aria-label="Dismiss connect apps strip"
-					className="ml-1 flex size-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
+					className="ml-0.5 flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground"
 					onClick={handleDismiss}
 					type="button"
 				>

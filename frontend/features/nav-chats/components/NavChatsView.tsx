@@ -347,7 +347,11 @@ function NavChatsContent({
 	return (
 		<div
 			ref={navigatorRef}
-			className="min-h-0 flex-1 overflow-y-auto pt-1 outline-none"
+			// Scrolling lives on the parent wrapper in NavChatsView so the
+			// projects list and the conversation list scroll together as one
+			// group. This element keeps the listbox role + keyboard focus
+			// handling but no longer owns the overflow.
+			className="pt-1 outline-none"
 			role="listbox"
 			aria-label="Sessions"
 			aria-multiselectable="true"
@@ -458,39 +462,43 @@ export function NavChatsView({
 				onSearchClose={onSearchClose}
 				resultCount={resultCount}
 			/>
-			<div className="shrink-0">
+			{/* Single scroll container for the projects section + the
+			    conversation list so they scroll together as one group rather
+			    than the projects sticking under the search bar while the
+			    chats scroll behind them. */}
+			<div className="min-h-0 flex-1 overflow-y-auto">
 				<ProjectsList />
+				<NavChatsContent
+					isLoading={isLoading}
+					isEmpty={isEmpty}
+					isSearchActive={isSearchActive}
+					resultCount={resultCount}
+					filteredGroups={filteredGroups}
+					collapsedGroups={collapsedGroups}
+					navigatorRef={navigatorRef}
+					searchQuery={searchQuery}
+					multiSelectedIds={multiSelectedIds}
+					contentSearchResults={contentSearchResults}
+					activeChatMatchInfo={activeChatMatchInfo}
+					onToggleGroup={onToggleGroup}
+					onNewSession={onNewSession}
+					onNavigate={onNavigate}
+					onRename={onRename}
+					onDelete={onDelete}
+					onArchive={onArchive}
+					onFlag={onFlag}
+					onSetStatus={onSetStatus}
+					onMarkUnread={onMarkUnread}
+					onRegenerateTitle={onRegenerateTitle}
+					onToggleLabel={onToggleLabel}
+					onExportMarkdown={onExportMarkdown}
+					onConversationClick={onConversationClick}
+					onConversationMouseDown={onConversationMouseDown}
+					onConversationKeyDown={onConversationKeyDown}
+					registerConversationElement={registerConversationElement}
+					onNavigatorMouseDown={onNavigatorMouseDown}
+				/>
 			</div>
-			<NavChatsContent
-				isLoading={isLoading}
-				isEmpty={isEmpty}
-				isSearchActive={isSearchActive}
-				resultCount={resultCount}
-				filteredGroups={filteredGroups}
-				collapsedGroups={collapsedGroups}
-				navigatorRef={navigatorRef}
-				searchQuery={searchQuery}
-				multiSelectedIds={multiSelectedIds}
-				contentSearchResults={contentSearchResults}
-				activeChatMatchInfo={activeChatMatchInfo}
-				onToggleGroup={onToggleGroup}
-				onNewSession={onNewSession}
-				onNavigate={onNavigate}
-				onRename={onRename}
-				onDelete={onDelete}
-				onArchive={onArchive}
-				onFlag={onFlag}
-				onSetStatus={onSetStatus}
-				onMarkUnread={onMarkUnread}
-				onRegenerateTitle={onRegenerateTitle}
-				onToggleLabel={onToggleLabel}
-				onExportMarkdown={onExportMarkdown}
-				onConversationClick={onConversationClick}
-				onConversationMouseDown={onConversationMouseDown}
-				onConversationKeyDown={onConversationKeyDown}
-				registerConversationElement={registerConversationElement}
-				onNavigatorMouseDown={onNavigatorMouseDown}
-			/>
 		</div>
 	);
 }

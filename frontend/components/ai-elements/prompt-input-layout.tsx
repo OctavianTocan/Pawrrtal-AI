@@ -62,7 +62,10 @@ export type PromptInputFooterProps = Omit<ComponentProps<typeof InputGroupAddon>
 export const PromptInputFooter = ({ className, ...props }: PromptInputFooterProps) => (
 	<InputGroupAddon
 		align="block-end"
-		className={cn('justify-between gap-1', className)}
+		// Tighter vertical padding than the InputGroupAddon `block-end` default
+		// (`pb-3`); the composer footer was reading visually too tall against
+		// the textarea above it.
+		className={cn('justify-between gap-1 py-1.5 pb-1.5', className)}
 		{...props}
 	/>
 );

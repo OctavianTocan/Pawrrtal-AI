@@ -124,7 +124,10 @@ export function ProjectRow({
 					aria-hidden="true"
 					className="size-4 shrink-0 text-muted-foreground group-hover/project-row:text-foreground"
 				/>
-				<span className="min-w-0 flex-1 truncate">{name}</span>
+				{/* Explicit 14px so the project name matches the conversation
+				    row title size and doesn't drift with the parent button
+				    text-size if it's ever retuned. */}
+				<span className="min-w-0 flex-1 truncate text-[14px]">{name}</span>
 			</button>
 			<button
 				aria-label={`Rename ${name}`}
