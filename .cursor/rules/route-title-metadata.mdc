@@ -1,7 +1,7 @@
 ---
 description: Review route titles and metadata for every new page or route
-globs: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/route.ts", "src/pages/**/*.{ts,tsx}"]
-paths: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/route.ts", "src/pages/**/*.{ts,tsx}"]
+globs: ["frontend/app/**/page.tsx", "frontend/app/**/layout.tsx", "frontend/app/**/route.ts"]
+paths: ["frontend/app/**/page.tsx", "frontend/app/**/layout.tsx", "frontend/app/**/route.ts"]
 alwaysApply: false
 ---
 

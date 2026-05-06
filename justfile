@@ -85,6 +85,11 @@ pre-commit-all:
 sentrux:
     bash scripts/sentrux-check.sh
 
+# TSDoc coverage audit — report exported declarations missing JSDoc comments
+# Usage: just check-docs [path-prefix]  e.g. just check-docs frontend/lib
+check-docs *ARGS:
+    bun run scripts/check-docs.ts {{ARGS}}
+
 # Run backend tests
 test:
     uv run --project backend pytest backend/tests

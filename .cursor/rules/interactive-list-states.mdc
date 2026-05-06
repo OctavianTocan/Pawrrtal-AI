@@ -1,7 +1,7 @@
 ---
 description: Interactive lists need deliberate hover, drag, remove, and empty states before they are considered complete
-globs: ["src/**/*.tsx"]
-paths: ["src/**/*.tsx"]
+globs: ["frontend/**/*.tsx"]
+paths: ["frontend/**/*.tsx"]
 alwaysApply: false
 ---
 

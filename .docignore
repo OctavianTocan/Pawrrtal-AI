@@ -1,0 +1,21 @@
+# .docignore — TSDoc coverage exclusions
+#
+# Paths listed here are skipped by `just check-docs` / `bun run lint:docs`.
+# Format: one pattern per line, repo-root relative, gitignore-style globs.
+#
+#   frontend/components/ai-elements/   — skip a whole directory
+#   frontend/components/ui/button.tsx  — skip a single file
+#   frontend/components/ui/**          — skip everything under a directory
+#   **/*.generated.ts                  — skip by filename pattern
+#
+# Blank lines and lines starting with # are ignored.
+
+# ── Primitive / design-system component libraries ────────────────────────────
+# These are low-level headless components (shadcn-style) where each exported
+# sub-component (Root, Trigger, Content…) mirrors the upstream API surface.
+# Documenting each forwarder would be noise rather than signal.
+frontend/components/ai-elements/**
+frontend/components/ui/**
+
+# ── Auto-generated and declaration files ─────────────────────────────────────
+**/*.d.ts

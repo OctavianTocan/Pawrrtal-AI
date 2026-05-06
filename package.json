@@ -9,6 +9,7 @@
 		"commit": "bun run commit.ts",
 		"lint:policies": "bun run check-policies.mjs",
 		"lint:file-lines": "node scripts/check-file-lines.mjs",
+		"lint:docs": "bun run scripts/check-docs.ts",
 		"design:lint": "bunx @google/design.md lint DESIGN.md",
 		"design:diff": "bunx @google/design.md diff",
 		"design:export:css": "bunx @google/design.md export --format css-tailwind DESIGN.md",

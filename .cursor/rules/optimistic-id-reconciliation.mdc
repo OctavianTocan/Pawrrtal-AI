@@ -1,7 +1,7 @@
 ---
 description: Optimistic entities need collision-proof client identities and one-to-one reconciliation
-globs: ["src/**/*.ts", "src/**/*.tsx"]
-paths: ["src/**/*.ts", "src/**/*.tsx"]
+globs: ["frontend/**/*.ts", "frontend/**/*.tsx"]
+paths: ["frontend/**/*.ts", "frontend/**/*.tsx"]
 alwaysApply: false
 ---
 

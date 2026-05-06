@@ -1,0 +1,155 @@
+name: Tests
+
+# Runs the unit-test suites that previously only ran on developer machines.
+# Two parallel jobs:
+#   - frontend: Vitest (`bun run test`)
+#   - backend:  pytest (`uv run pytest`) against in-memory SQLite
+# Stagehand E2E lives in its own workflow (.github/workflows/stagehand-e2e.yml)
+# because it costs LLM tokens and runs on a different cadence.
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/tests.yml'
+  push:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/tests.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend Vitest
+    runs-on: [self-hosted, ainexus]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Vitest
+        id: test
+        working-directory: frontend
+        run: |
+          set +e
+          bun run test 2>&1 | tee ../frontend-test-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat ../frontend-test-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          TEST_OUTPUT: ${{ steps.test.outputs.output }}
+        with:
+          script: |
+            const output = process.env.TEST_OUTPUT || '';
+            const body = [
+              '### Frontend Vitest failed',
+              '',
+              'One or more frontend unit tests failed. Reproduce locally with `cd frontend && bun run test`.',
+              '',
+              '<details><summary>output (last 6000 chars)</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  backend:
+    name: Backend pytest
+    runs-on: [self-hosted, ainexus]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run pytest
+        id: test
+        working-directory: backend
+        run: |
+          set +e
+          uv run pytest 2>&1 | tee ../backend-test-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat ../backend-test-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          TEST_OUTPUT: ${{ steps.test.outputs.output }}
+        with:
+          script: |
+            const output = process.env.TEST_OUTPUT || '';
+            const body = [
+              '### Backend pytest failed',
+              '',
+              'One or more backend unit tests failed. Reproduce locally with `cd backend && uv run pytest`.',
+              '',
+              '<details><summary>output (last 6000 chars)</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
