@@ -174,6 +174,13 @@ function createWindow(targetUrl: string): BrowserWindow {
 		title: 'AI Nexus',
 		backgroundColor: '#F7F4ED',
 		titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+		// Pin the traffic-light inset so the renderer can align its
+		// header controls to a known Y. With 12px-diameter buttons and
+		// y=14 the button center sits at y=20, matching a 32px-tall row
+		// that's `items-center` inside the 40px AppHeader (h-10).
+		// Bumping the row height OR this inset MUST be done in lockstep
+		// or the controls drift out of alignment with the system buttons.
+		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 14 } } : {}),
 		show: false,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),

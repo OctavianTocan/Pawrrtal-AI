@@ -226,21 +226,35 @@ const MAC_TRAFFIC_LIGHT_RESERVE_PX = 80;
  */
 function AppHeader(): React.JSX.Element {
 	const isMacDesktop = useIsMacDesktop();
+
 	return (
 		<header
 			className={cn(
-				// On macOS the controls' vertical centerline has to match the
-				// traffic-light centerline (≈14px from the window top under
-				// `hiddenInset`). Header buttons are 28px tall, so anchoring
-				// them to `items-start` with no top padding puts their center
-				// at y=14 — flush with the system buttons. Web/Windows/Linux
-				// keep the original `items-center` rhythm with `pt-1`.
-				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
-				isMacDesktop ? 'items-start pt-0' : 'items-center pt-1 pl-3'
+				// `items-center` keeps the 32px-tall control row vertically
+				// centered in the 40px header. Combined with the pinned
+				// `trafficLightPosition: { x: 16, y: 14 }` set in the Electron
+				// shell, that puts both row centers at y=20 from the window
+				// top — the system buttons and our controls share a baseline.
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
+				// On macOS the entire header acts as a window-drag surface
+				// (matches the muscle memory built up by every native Mac
+				// app — title bar = drag handle). Control clusters opt back
+				// out below so clicks still land on buttons; the gap between
+				// clusters is the user-facing drag handle.
+				isMacDesktop ? '[-webkit-app-region:drag]' : 'pl-3'
 			)}
 			style={isMacDesktop ? { paddingLeft: MAC_TRAFFIC_LIGHT_RESERVE_PX } : undefined}
 		>
-			<div className="flex min-w-0 flex-1 items-center gap-2">
+			{/* Left control cluster — `no-drag` so clicks land on the
+			    individual buttons instead of being intercepted as window
+			    drags. Sized to its content (no `flex-1`) so the middle
+			    space is left as a draggable gutter. */}
+			<div
+				className={cn(
+					'flex items-center gap-2',
+					isMacDesktop && '[-webkit-app-region:no-drag]'
+				)}
+			>
 				<SidebarTrigger className="cursor-pointer" />
 				<AppHistoryControls />
 				<Separator
@@ -248,22 +262,35 @@ function AppHeader(): React.JSX.Element {
 					className="ml-1 data-vertical:h-4 data-vertical:self-auto"
 				/>
 				<WorkspaceSelector />
-				<div className="ml-auto flex items-center gap-1">
-					<Button
-						aria-label="Create new item"
-						className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
-						size="icon-xs"
-						type="button"
-						variant="ghost"
-					>
-						<PlusIcon aria-hidden="true" className="size-4" />
-					</Button>
-					<Separator
-						orientation="vertical"
-						className="mx-1 data-vertical:h-4 data-vertical:self-auto"
-					/>
-					<HelpMenu />
-				</div>
+			</div>
+
+			{/* Spacer that consumes the leftover width and stays inside
+			    the header's drag region — this is the user-facing handle
+			    they can grab to move the window. */}
+			<div className="min-w-0 flex-1" />
+
+			{/* Right control cluster — also `no-drag` so the +/help
+			    buttons keep working. */}
+			<div
+				className={cn(
+					'flex items-center gap-1',
+					isMacDesktop && '[-webkit-app-region:no-drag]'
+				)}
+			>
+				<Button
+					aria-label="Create new item"
+					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
+					size="icon-xs"
+					type="button"
+					variant="ghost"
+				>
+					<PlusIcon aria-hidden="true" className="size-4" />
+				</Button>
+				<Separator
+					orientation="vertical"
+					className="mx-1 data-vertical:h-4 data-vertical:self-auto"
+				/>
+				<HelpMenu />
 			</div>
 		</header>
 	);
