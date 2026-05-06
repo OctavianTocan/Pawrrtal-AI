@@ -81,6 +81,16 @@ interface PermissionPromptResponse {
 
 const desktopApi = {
 	// --- existing surface ---------------------------------------------------
+	/**
+	 * Host platform exposed synchronously so the renderer can make layout
+	 * decisions (e.g. reserve space for the macOS traffic-light buttons
+	 * under `titleBarStyle: 'hiddenInset'`) on first paint, without having
+	 * to round-trip through `desktop:get-platform` and re-render.
+	 *
+	 * Sandboxed preloads still get access to `process.platform`, so this
+	 * is safe to read at preload-load time.
+	 */
+	platform: process.platform,
 	openExternal: (url: string): Promise<void> => ipcRenderer.invoke('desktop:open-external', url),
 	showOpenFolderDialog: (): Promise<string | null> =>
 		ipcRenderer.invoke('desktop:open-folder-dialog'),

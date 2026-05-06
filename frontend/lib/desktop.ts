@@ -117,6 +117,12 @@ interface PermissionsBridge {
 }
 
 interface DesktopBridge {
+	/**
+	 * Host platform string, exposed synchronously by the preload script so
+	 * the renderer can make layout decisions (e.g. reserve space for macOS
+	 * traffic-light buttons) without an async IPC round-trip on first paint.
+	 */
+	platform: NodeJS.Platform;
 	openExternal: (url: string) => Promise<void>;
 	showOpenFolderDialog: () => Promise<string | null>;
 	getPlatform: () => Promise<NodeJS.Platform>;
@@ -171,6 +177,22 @@ export async function showOpenFolderDialog(): Promise<string | null> {
 export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
 	if (window.aiNexus) return window.aiNexus.getPlatform();
 	return 'web';
+}
+
+/**
+ * Synchronous platform getter intended for layout decisions that have to
+ * run on first paint (e.g. reserving space for the macOS traffic-light
+ * buttons). Returns `null` when not in Electron or during SSR.
+ *
+ * Components that read this MUST gate it behind `useEffect` so the
+ * initial render matches the SSR output and React doesn't blow up with
+ * a hydration mismatch.
+ *
+ * @returns The Electron host platform, or `null` on web / SSR.
+ */
+export function getDesktopPlatformSync(): NodeJS.Platform | null {
+	if (typeof window === 'undefined') return null;
+	return window.aiNexus?.platform ?? null;
 }
 
 /** Resolve the desktop app version, or `null` on web. */

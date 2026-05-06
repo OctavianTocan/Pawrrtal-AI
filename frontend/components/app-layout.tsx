@@ -33,6 +33,8 @@ import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
+import { getDesktopPlatformSync } from '@/lib/desktop';
+import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
@@ -206,14 +208,53 @@ function HelpMenu(): React.JSX.Element {
 }
 
 /**
+ * Width reserved for the macOS traffic-light buttons (close / minimize /
+ * maximize) when running in the Electron desktop shell with
+ * `titleBarStyle: 'hiddenInset'`. The buttons live inside the
+ * BrowserWindow content area, so the header's leftmost controls have to
+ * start past them or they get drawn underneath. Apple's HIG places the
+ * buttons in the first ~70px; we round up to 80px to give the
+ * SidebarTrigger a comfortable gap.
+ */
+const MAC_TRAFFIC_LIGHT_RESERVE_PX = 80;
+
+/**
+ * Track whether the renderer is running inside the macOS Electron shell
+ * so the header can reserve space for the system traffic-light buttons.
+ *
+ * Starts `false` so the SSR pass and the first client render agree
+ * (avoids a hydration mismatch); flips on mount once `window.aiNexus`
+ * is readable.
+ *
+ * @returns `true` only when the Electron preload bridge reports
+ * `process.platform === 'darwin'`.
+ */
+function useIsMacDesktop(): boolean {
+	const [isMacDesktop, setIsMacDesktop] = React.useState(false);
+	React.useEffect(() => {
+		setIsMacDesktop(getDesktopPlatformSync() === 'darwin');
+	}, []);
+	return isMacDesktop;
+}
+
+/**
  * Top-bar chrome rendered as a full-width overlay above the sidebar and content.
  * Lives outside the sidebar so its controls (sidebar trigger, history, workspace
  * selector) stay in their original screen positions even when the sidebar is
  * hidden — the sidebar visually extends underneath this header.
  */
 function AppHeader(): React.JSX.Element {
+	const isMacDesktop = useIsMacDesktop();
 	return (
-		<header className="absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 px-3 pt-1 outline-none focus:outline-none focus-visible:outline-none">
+		<header
+			className={cn(
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pt-1 pr-3 outline-none focus:outline-none focus-visible:outline-none',
+				// Default web/Windows/Linux padding; macOS desktop gets extra
+				// left padding to clear the traffic-light buttons.
+				isMacDesktop ? '' : 'pl-3'
+			)}
+			style={isMacDesktop ? { paddingLeft: MAC_TRAFFIC_LIGHT_RESERVE_PX } : undefined}
+		>
 			<div className="flex min-w-0 flex-1 items-center gap-2">
 				<SidebarTrigger className="cursor-pointer" />
 				<AppHistoryControls />

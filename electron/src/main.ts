@@ -48,6 +48,109 @@ let mainWindow: BrowserWindow | undefined;
 const isDev = process.env.ELECTRON_DEV === '1' || !app.isPackaged;
 
 /**
+ * Inline splash HTML loaded into the BrowserWindow before the dev /
+ * standalone Next.js server is reachable. Shipping it as a `data:` URL
+ * keeps the desktop bundle a single TS source — no asset copy step —
+ * and means the window paints something immediately even when the
+ * server is still booting (which can take up to 60s on a cold dev start).
+ *
+ * Without this, launching `just electron-dev` without a running dev
+ * server presents the user with a silent dock icon and no window for
+ * 60 seconds. The splash makes the wait observable.
+ *
+ * @returns A self-contained `data:text/html` URL safe to pass to
+ *          `BrowserWindow.loadURL`.
+ */
+function buildSplashDataUrl(): string {
+	// IMPORTANT: do NOT set `-webkit-app-region: drag` here. macOS reads
+	// drag regions at the OS level and Chromium has a known quirk where
+	// they can persist after navigating away from the page that declared
+	// them — the next page's clicks get eaten as "drag the window" while
+	// keyboard focus still works. The window stays draggable via the
+	// reserved area around the traffic lights under `hiddenInset`, so we
+	// don't need an explicit drag region for the splash.
+	const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>AI Nexus</title>
+<style>
+	html, body { margin: 0; padding: 0; height: 100%; }
+	body {
+		background: #F7F4ED;
+		color: #2a2a2a;
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+		display: flex; align-items: center; justify-content: center;
+		-webkit-font-smoothing: antialiased;
+	}
+	.box { text-align: center; padding: 24px 32px; }
+	.spinner {
+		width: 28px; height: 28px;
+		border: 2px solid rgba(0,0,0,0.12);
+		border-top-color: #2a2a2a;
+		border-radius: 50%;
+		margin: 0 auto 14px;
+		animation: spin 0.9s linear infinite;
+	}
+	@keyframes spin { to { transform: rotate(360deg); } }
+	h1 { font-size: 14px; font-weight: 500; margin: 0 0 4px; }
+	p  { font-size: 12px; opacity: 0.55; margin: 0; }
+</style></head>
+<body>
+	<div class="box">
+		<div class="spinner" aria-hidden="true"></div>
+		<h1>Starting AI Nexus…</h1>
+		<p>Waiting for dev server on :3001</p>
+	</div>
+</body></html>`;
+	return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
+
+/**
+ * Inline error page shown when the dev server never came up. Same
+ * rationale as the splash — keep it inline so the bundle stays single-
+ * source. Mirrors the stderr banner in `server.ts` so the user gets
+ * the same instructions regardless of whether they were watching the
+ * terminal or just the window.
+ *
+ * @param reason Underlying error message from `wait-on`.
+ * @returns A self-contained `data:text/html` URL.
+ */
+function buildErrorDataUrl(reason: string): string {
+	const safeReason = reason.replace(/[<>&]/g, '');
+	const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>AI Nexus — dev server unreachable</title>
+<style>
+	html, body { margin: 0; padding: 0; height: 100%; }
+	body {
+		background: #F7F4ED; color: #2a2a2a;
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+		display: flex; align-items: center; justify-content: center;
+		-webkit-font-smoothing: antialiased;
+	}
+	.box { max-width: 520px; padding: 24px 32px; }
+	h1 { font-size: 16px; margin: 0 0 12px; }
+	p  { font-size: 13px; line-height: 1.5; opacity: 0.7; margin: 0 0 8px; }
+	code {
+		font-family: ui-monospace, "SF Mono", Menlo, monospace;
+		font-size: 12px;
+		background: rgba(0,0,0,0.05);
+		padding: 1px 5px; border-radius: 4px;
+	}
+	.muted { opacity: 0.45; font-size: 11px; margin-top: 16px; }
+</style></head>
+<body>
+	<div class="box">
+		<h1>Couldn't reach the dev server on :3001</h1>
+		<p>Start the Next.js dev server first, then relaunch the desktop shell:</p>
+		<p><code>just dev</code> &nbsp; (terminal 1)<br /><code>just electron-dev</code> &nbsp; (terminal 2)</p>
+		<p>Or in one shot: <code>just electron-dev-full</code>.</p>
+		<p class="muted">${safeReason}</p>
+	</div>
+</body></html>`;
+	return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
+
+/**
  * Build the app's primary BrowserWindow with security defaults.
  *
  * `nodeIntegration: false` + `contextIsolation: true` + `sandbox: true`
@@ -55,6 +158,9 @@ const isDev = process.env.ELECTRON_DEV === '1' || !app.isPackaged;
  * Node, the global object is isolated from the page's, and OS sandbox
  * primitives lock the process down. All privileged ops flow through
  * the preload bridge in `preload.ts`.
+ *
+ * @param targetUrl Initial URL — pass the splash `data:` URL on first
+ *                  open and swap to the real server URL once it's up.
  */
 function createWindow(targetUrl: string): BrowserWindow {
 	const stored = windowStore.get('window');
@@ -118,10 +224,29 @@ async function bootstrap(): Promise<void> {
 	// Auto-create the default workspace root before any privileged op
 	// can run (every fs/shell handler validates against the allowlist).
 	ensureDefaultWorkspaceRoot();
-	server = await startNextServer({ isDev });
-	mainWindow = createWindow(server.url);
+
+	// Open the window with the splash *immediately* so the user gets
+	// visible feedback during the dev-server wait (which can be ≤60s).
+	// Previously the BrowserWindow wasn't created until startNextServer
+	// resolved, so a missed `just dev` invocation looked like the app
+	// silently failed to launch — only a dock icon, no window.
+	mainWindow = createWindow(buildSplashDataUrl());
 	buildApplicationMenu({ getWindow: () => mainWindow });
 	registerIpcHandlers({ getWindow: () => mainWindow });
+
+	try {
+		server = await startNextServer({ isDev });
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : String(error);
+		if (mainWindow && !mainWindow.isDestroyed()) {
+			void mainWindow.loadURL(buildErrorDataUrl(reason));
+		}
+		return;
+	}
+
+	if (mainWindow && !mainWindow.isDestroyed()) {
+		void mainWindow.loadURL(server.url);
+	}
 }
 
 // Single-instance lock: a second `open` call focuses the existing window

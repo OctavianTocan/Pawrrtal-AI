@@ -117,6 +117,14 @@ electron-dev: electron-build
 electron-dev-all: electron-build
     cd electron && bun run dev:all
 
+# Full-stack one-shot: backend + frontend + Electron in a single
+# terminal. Spawns the root dev orchestrator (`bun run dev.ts`),
+# waits for :3001 to come up, then launches the Electron shell. Use
+# this for full-stack desktop iteration when you don't want to juggle
+# multiple terminals. Ctrl-C tears the whole stack down.
+electron-dev-full: electron-build
+    cd electron && bun run dev:all:full
+
 # Build the Next.js standalone bundle the desktop app spawns at runtime.
 electron-frontend-build:
     cd frontend && bun run build
