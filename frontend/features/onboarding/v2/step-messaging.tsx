@@ -1,8 +1,8 @@
 'use client';
 
 import { Check } from 'lucide-react';
-import { useState } from 'react';
 import type * as React from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import {

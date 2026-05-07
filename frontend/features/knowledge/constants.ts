@@ -10,7 +10,7 @@
  * All sub-views of the Knowledge surface.
  *
  * Order in this object matters — the sub-sidebar groups them in the order
- * declared (My Sauna group: my-files / memory / skills, Shared group:
+ * declared (Workspace group: my-files / memory / skills, Shared group:
  * brain-access / shared-with-me / shared-by-me).
  */
 export const KNOWLEDGE_VIEWS = {

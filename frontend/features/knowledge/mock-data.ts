@@ -25,7 +25,7 @@ Madrid, 06:31. Cool morning, midweek.
 - [ ] Land the Knowledge route behind a feature flag.
 - [ ] Verify mobile bottom-sheet still respects the new pane.
 
-## Sauna's Take
+## My Take
 
 The Knowledge view is the second-most opened surface after Chat. Iterate
 on the empty state copy — "Nothing shared with you yet" reads cold, and
@@ -46,10 +46,10 @@ Madrid, 06:48. Lighter rain than yesterday, traffic the same.
 ## What I'd do first
 
 - [ ] Hook the memory cards to real observation counts.
-- [ ] Pull the Sauna Identity card above User Profile.
+- [ ] Pull the Assistant Identity card above User Profile.
 - [ ] Confirm the document viewer scroll restoration works on reload.
 
-## Sauna's Take
+## My Take
 
 You're shipping faster on UI than on the backend. That's fine for now —
 the empty states absorb the gap — but plan a backend sprint before the
@@ -97,7 +97,7 @@ last used.
 /**
  * Root file tree backing the Knowledge → My Files sub-view.
  *
- * Two top-level folders mirror the screenshots from the Sauna reference:
+ * Two top-level folders mirror the screenshots from the design reference:
  * `Misc` (long-running scratchpad) and `onboarding` (introductory docs).
  */
 export const KNOWLEDGE_FILE_TREE: FileTreeNode = {
@@ -164,7 +164,7 @@ export const KNOWLEDGE_MEMORY_CARDS: readonly MemoryCardData[] = [
 	{
 		id: 'preferences',
 		title: 'User Preferences',
-		description: 'Tone, length, formatting defaults Sauna picked up over time.',
+		description: 'Tone, length, formatting defaults AI Nexus picked up over time.',
 		tone: 'accent',
 		count: '24 entries',
 	},
@@ -185,14 +185,14 @@ export const KNOWLEDGE_MEMORY_CARDS: readonly MemoryCardData[] = [
 	{
 		id: 'tools',
 		title: 'Your Tools',
-		description: 'Connected integrations and the scopes Sauna may use.',
+		description: 'Connected integrations and the scopes the assistant may use.',
 		tone: 'info',
 		count: '6 entries',
 	},
 	{
 		id: 'identity',
-		title: 'Sauna Identity',
-		description: "Sauna's voice, tone, and persona traits as you've shaped them.",
+		title: 'Assistant Identity',
+		description: "the assistant's voice, tone, and persona traits as you've shaped them.",
 		tone: 'accent',
 		count: '5 entries',
 	},

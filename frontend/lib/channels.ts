@@ -51,9 +51,7 @@ export async function listChannels(signal?: AbortSignal): Promise<ChannelBinding
 }
 
 /** Issue a fresh one-time Telegram link code for the authenticated user. */
-export async function issueTelegramLinkCode(
-	signal?: AbortSignal,
-): Promise<TelegramLinkCode> {
+export async function issueTelegramLinkCode(signal?: AbortSignal): Promise<TelegramLinkCode> {
 	const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.channels.telegramLink}`, {
 		method: 'POST',
 		credentials: 'include',
@@ -62,7 +60,7 @@ export async function issueTelegramLinkCode(
 	if (response.status === 503) {
 		const detail = (await response.json().catch(() => ({}))) as { detail?: string };
 		throw new ChannelNotConfiguredError(
-			detail.detail ?? 'Telegram channel is not configured on this deployment.',
+			detail.detail ?? 'Telegram channel is not configured on this deployment.'
 		);
 	}
 	if (!response.ok) {

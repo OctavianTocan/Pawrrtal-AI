@@ -3,7 +3,7 @@
 /**
  * Brain access sub-view.
  *
- * Top: a card inviting another user to access this Sauna's brain — avatar
+ * Top: a card inviting another user to access this workspace's brain — avatar
  * with a plus, heading, description, and an email + permission picker row.
  * Below: tabs that switch between "Shared by me" and "Shared with me",
  * each currently showing the same empty state.
@@ -66,8 +66,8 @@ export function BrainAccessPanel(): ReactNode {
 							Share brain access
 						</h3>
 						<p className="text-[13px] leading-relaxed text-muted-foreground">
-							Invite teammates to your Sauna. They can read your saved files, memory,
-							and skills — you control the level of access.
+							Invite teammates to your workspace. They can read your saved files,
+							memory, and skills — you control the level of access.
 						</p>
 					</div>
 				</div>
@@ -116,13 +116,13 @@ export function BrainAccessPanel(): ReactNode {
 						icon={UsersIcon}
 						title={
 							activeTab === 'shared-by-me'
-								? 'You haven’t shared your Sauna yet.'
+								? 'You haven’t shared your workspace yet.'
 								: 'Nothing shared with you yet.'
 						}
 						description={
 							activeTab === 'shared-by-me'
-								? 'Invite a teammate above to give them access to your Sauna brain.'
-								: 'When someone shares their Sauna with you, it’ll show up here.'
+								? 'Invite a teammate above to give them access to your workspace brain.'
+								: 'When someone shares their workspace with you, it’ll show up here.'
 						}
 					/>
 				</div>

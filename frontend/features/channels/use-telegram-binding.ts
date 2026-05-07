@@ -20,9 +20,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
 	type ChannelBinding,
 	ChannelNotConfiguredError,
-	type TelegramLinkCode,
 	issueTelegramLinkCode,
 	listChannels,
+	type TelegramLinkCode,
 	unlinkTelegram,
 } from '@/lib/channels';
 

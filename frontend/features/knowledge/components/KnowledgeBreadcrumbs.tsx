@@ -3,7 +3,7 @@
 /**
  * Pill-style breadcrumb rendered at the top of the file/file-list panes.
  *
- * Sauna's breadcrumb is a row of soft pills with no chevron between them —
+ * The breadcrumb is a row of soft pills with no chevron between them —
  * inactive segments render as muted text on transparent background, the
  * trailing (active) segment gets a soft `--foreground-5` pill so it reads
  * as "you are here" without a separator glyph.

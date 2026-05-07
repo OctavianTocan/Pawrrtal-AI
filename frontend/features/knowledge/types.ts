@@ -2,7 +2,7 @@
  * Type definitions for the Knowledge feature.
  *
  * The Knowledge surface is a multi-view file/folder browser inspired by
- * Sauna's Knowledge panel. All shapes here describe in-memory mock data —
+ * the Knowledge panel. All shapes here describe in-memory mock data —
  * there is no backend integration yet. Once a real source materialises,
  * these types stay as-is and only the data fetcher swaps.
  */

@@ -3,7 +3,7 @@
 /**
  * Pure presentation shell for the Knowledge surface.
  *
- * Layout shape (Sauna.ai reference, images #31–#33, #35, #45):
+ * Layout shape (AI Nexus.ai reference, images #31–#33, #35, #45):
  *
  * - The chat-inset slot hosts TWO sibling elevated panels with a small gap
  *   between them. Each panel is its own rounded-`surface-lg` card with the
@@ -158,7 +158,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 	}
 
 	if (activeView === KNOWLEDGE_VIEWS.memory) {
-		// Sauna's Memory landing keeps the cards in a centered column inside
+		// the Memory landing keeps the cards in a centered column inside
 		// the content panel — there's no separate right "preview" pane. We
 		// drop the previous 320px split column + empty right pane in favor
 		// of a single max-width column that matches reference image #45.
@@ -183,7 +183,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 			<EmptyState
 				icon={SparklesIcon}
 				title="Skills coming soon"
-				description="Reusable skills will live here once the Sauna skills runtime ships."
+				description="Reusable skills will live here once the the skills runtime ships."
 			/>
 		);
 	}
@@ -197,7 +197,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 			<EmptyState
 				icon={FileTextIcon}
 				title="Nothing shared with you yet."
-				description="When someone gives you access to their Sauna, their files will land here."
+				description="When someone gives you access to their workspace, their files will land here."
 				action={{ label: 'Start sharing', onClick: onShareFromEmptyState }}
 			/>
 		);
@@ -208,7 +208,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 			<EmptyState
 				icon={UsersIcon}
 				title="You haven’t shared anything yet."
-				description="Invite a teammate to share files, memory, and skills from your Sauna."
+				description="Invite a teammate to share files, memory, and skills from your workspace."
 				action={{ label: 'Start sharing', onClick: onShareFromEmptyState }}
 			/>
 		);
@@ -228,13 +228,16 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
  * Top-level shell. Renders the sub-sidebar and the active content section as
  * TWO separate elevated panels with a small gap between them.
  *
- * The outer wrapper has no background — the page background
- * (`bg-sidebar` from `AppLayout`) supplies the warm surround the panels
- * sit on top of.
+ * The outer wrapper has no background AND no `overflow-hidden` — the page
+ * background (`bg-sidebar` from `AppLayout`) supplies the warm surround,
+ * and we deliberately let the panels' drop shadows paint outside this
+ * wrapper. The earlier `overflow-hidden` clipped the elevated-panel
+ * shadows flush against the wrapper's edges, making the cards read as
+ * flat-on-flat against the cream page background.
  */
 export function KnowledgeView(props: KnowledgeViewProps): ReactNode {
 	return (
-		<div className="flex h-full min-h-0 w-full min-w-0 gap-3 overflow-hidden">
+		<div className="flex h-full min-h-0 w-full min-w-0 gap-3">
 			<aside
 				className={`${PANEL_SURFACE_CLASSNAME} w-[224px] shrink-0`}
 				style={PANEL_SURFACE_STYLE}

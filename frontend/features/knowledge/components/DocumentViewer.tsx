@@ -9,7 +9,7 @@
  * renderer the chat surface uses, centered in a comfortable column.
  *
  * The chrome here intentionally avoids a horizontal divider line — the
- * Sauna reference (image 33, image 35) draws the boundary with whitespace
+ * design reference (image 33, image 35) draws the boundary with whitespace
  * + the column's left border. Adding a hard rule made the panel feel
  * busier than the reference.
  */

@@ -84,7 +84,7 @@ export function KnowledgePageHeader(): ReactNode {
 				{/*
 				 * Grouped chip — one rounded container with vertical dividers
 				 * between segments so it reads as a single affordance rather
-				 * than three separate pills. Matches Sauna's visual: amber
+				 * than three separate pills. Matches the visual: amber
 				 * "Working", green "Review", neutral "Suggested".
 				 */}
 				<div className="inline-flex items-center rounded-full border border-border bg-background-elevated">

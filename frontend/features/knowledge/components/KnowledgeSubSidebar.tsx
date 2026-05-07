@@ -4,9 +4,9 @@
  * Inner sub-sidebar rendered to the left of the Knowledge content area.
  *
  * Distinct from the global app sidebar (which still owns conversations).
- * This sub-sidebar groups Knowledge sub-views under two headings — "My
- * Sauna" (personal) and "Shared" — and surfaces a prominent rounded-pill
- * "New +" button at the top.
+ * This sub-sidebar groups Knowledge sub-views under two headings —
+ * "Workspace" (personal) and "Shared" — and surfaces a prominent
+ * rounded-pill "New +" button at the top.
  */
 
 import {
@@ -35,7 +35,7 @@ interface SubSidebarGroup {
 
 const SUB_SIDEBAR_GROUPS: readonly SubSidebarGroup[] = [
 	{
-		label: 'My Sauna',
+		label: 'Workspace',
 		items: [
 			{ id: KNOWLEDGE_VIEWS.myFiles, label: 'My Files', icon: FolderIcon },
 			{ id: KNOWLEDGE_VIEWS.memory, label: 'Memory', icon: BrainIcon },

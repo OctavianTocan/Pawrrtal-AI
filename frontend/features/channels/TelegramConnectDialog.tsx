@@ -25,12 +25,7 @@
 import { Check, Copy, ExternalLink } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/toast';
 import { useTelegramBinding } from './use-telegram-binding';
 
@@ -107,7 +102,8 @@ export function TelegramConnectDialog({
 				<div className="space-y-3 text-sm text-muted-foreground">
 					<p>{state.error ?? 'Telegram is not configured on this deployment.'}</p>
 					<p>
-						Set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_BOT_USERNAME</code> in
+						Set <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_BOT_USERNAME</code>{' '}
+						in
 						<code> backend/.env</code>, restart the backend, and try again.
 					</p>
 				</div>
@@ -159,7 +155,9 @@ export function TelegramConnectDialog({
 					<div className="flex items-center justify-between text-xs text-muted-foreground">
 						<span>
 							Code expires in{' '}
-							<span className="font-mono text-foreground">{countdownLabel ?? '…'}</span>
+							<span className="font-mono text-foreground">
+								{countdownLabel ?? '…'}
+							</span>
 						</span>
 						<button
 							className="cursor-pointer underline-offset-4 hover:underline"
