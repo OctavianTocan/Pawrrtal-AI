@@ -614,19 +614,8 @@ html[data-font="inter"] {
 	--animate-dropdown-close: dropdown-close 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes dropdown-open {
-	from {
-		opacity: 0;
-		transform: scale(0.95);
-	}
-}
-
-@keyframes dropdown-close {
-	to {
-		opacity: 0;
-		transform: scale(0.95);
-	}
-}
+/* Keyframes consolidated near the end of this file under the
+   "Animations" section. */
 
 /* Global styles */
 @layer base {
@@ -870,12 +859,20 @@ html[data-font="inter"] {
 		box-shadow: var(--shadow-panel-floating);
 	}
 
-	/* Unified popover styling */
+	/* Unified popover styling.
+	 *
+	 * Background uses a translucent mix (88% / 12% transparent) so the global
+	 * `backdrop-filter: blur(8px)` reads through softly. This gives every
+	 * dropdown / popover / context menu a frosted-glass quality without
+	 * needing scenic mode. Scenic mode bumps the blur further (see scenic
+	 * overrides below). */
 	.popover-styled {
-		background: var(--background);
+		background: color-mix(in srgb, var(--background) 88%, transparent);
 		color: var(--foreground);
 		border-radius: 8px;
 		border: none;
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
 		box-shadow:
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px,
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px,
@@ -886,6 +883,30 @@ html[data-font="inter"] {
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 12px 12px 0px,
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 24px 24px 0px;
 	}
+}
+
+/* Prompt-input textarea scroll fade.
+ *
+ * When content exceeds the textarea's max-height it scrolls vertically; the
+ * `useScrollEdges` hook in the component sets `data-scroll-up='true'` /
+ * `data-scroll-down='true'` while there's more content out of view.
+ * `mask-image` here drops alpha at the corresponding edge so the fade
+ * suggests "more content above/below" without rendering a hard scrollbar
+ * stripe. The fade height is 16 px, tuned to feel ambient rather than busy. */
+[data-prompt-textarea][data-scroll-up='true']:not([data-scroll-down='true']) {
+	mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%);
+}
+[data-prompt-textarea][data-scroll-down='true']:not([data-scroll-up='true']) {
+	mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%);
+}
+[data-prompt-textarea][data-scroll-up='true'][data-scroll-down='true'] {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		black 16px,
+		black calc(100% - 16px),
+		transparent 100%
+	);
 }
 
 /* Draggable title bar region */
@@ -961,33 +982,21 @@ html.dark[data-scenic] .fullscreen-overlay-background {
    DISABLE ANIMATIONS FOR RADIX OVERLAYS
 ============================================================================= */
 
-[data-radix-dialog-overlay] {
-	animation: none !important;
-}
-
+/* All Radix overlay surfaces (dialog, popover, select, tooltip, context menu,
+ * alert dialog) ship default animations that we override with our own
+ * Tailwind animate-* utilities driven by data-state. Disabling the built-in
+ * animations centrally avoids visual double-up.
+ *
+ * dropdown-menu intentionally NOT in this list: it's controlled per-component
+ * via the `data-[state=open/closed]:animate-*` variants in
+ * `components/ui/dropdown-menu.tsx`. */
+[data-radix-dialog-overlay],
 [role="dialog"][data-state],
-[data-radix-dialog-content] {
-	animation: none !important;
-}
-
-/* dropdown-menu: animation controlled via data-[state=open/closed]: variants */
-
-[data-radix-popover-content] {
-	animation: none !important;
-}
-
-[data-radix-select-content] {
-	animation: none !important;
-}
-
-[data-radix-tooltip-content] {
-	animation: none !important;
-}
-
-[data-radix-context-menu-content] {
-	animation: none !important;
-}
-
+[data-radix-dialog-content],
+[data-radix-popover-content],
+[data-radix-select-content],
+[data-radix-tooltip-content],
+[data-radix-context-menu-content],
 [data-radix-alert-dialog-overlay],
 [data-radix-alert-dialog-content] {
 	animation: none !important;
@@ -1120,27 +1129,8 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation-delay: 0.2s;
 }
 
-@keyframes spinner-grid {
-	0%,
-	70%,
-	100% {
-		transform: scale3d(0.5, 0.5, 1);
-	}
-	35% {
-		transform: scale3d(0, 0, 1);
-	}
-}
-
-@keyframes toast-in {
-	from {
-		opacity: 0;
-		transform: scale(0.75);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
-}
+/* spinner-grid + toast-in keyframes moved to the consolidated
+   Animations section near the end of this file. */
 
 /* =============================================================================
    WAVEFORM SCROLL — used by the dictation timeline in features/chat
@@ -1150,27 +1140,13 @@ html.dark[data-scenic] .fullscreen-overlay-background {
  * the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
  * the seam at -50% lands on identical content, hiding the wrap.
  */
-@keyframes waveform-scroll {
-	from {
-		transform: translateX(0);
-	}
-	to {
-		transform: translateX(-50%);
-	}
-}
+/* waveform-scroll keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SHIMMER ANIMATION FOR OPTIMISTIC UI
 ============================================================================= */
 
-@keyframes shimmer {
-	0% {
-		background-position: -200% 0;
-	}
-	100% {
-		background-position: 200% 0;
-	}
-}
+/* shimmer keyframes moved to the consolidated Animations section. */
 
 .animate-shimmer {
 	position: relative;
@@ -1200,14 +1176,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
    carry through automatically.
 ============================================================================= */
 
-@keyframes thinking-gradient-flow {
-	0% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
-}
+/* thinking-gradient-flow keyframes moved to the consolidated Animations section. */
 
 .thinking-gradient-text {
 	background: linear-gradient(
@@ -1234,14 +1203,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 }
 
-@keyframes shimmer-loading {
-	0% {
-		transform: translateX(-100%);
-	}
-	100% {
-		transform: translateX(100%);
-	}
-}
+/* shimmer-loading keyframes moved to the consolidated Animations section. */
 
 .animate-shimmer-loading {
 	animation: shimmer-loading 1.2s linear infinite;
@@ -1251,52 +1213,19 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: shimmer-text 1.2s ease-in-out infinite;
 }
 
-@keyframes shimmer-text {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.5;
-	}
-}
+/* shimmer-text keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SHAKE ANIMATION
 ============================================================================= */
 
-@keyframes shake {
-	0%,
-	100% {
-		transform: translateX(0);
-	}
-	10%,
-	30%,
-	50%,
-	70%,
-	90% {
-		transform: translateX(-2px);
-	}
-	20%,
-	40%,
-	60%,
-	80% {
-		transform: translateX(2px);
-	}
-}
+/* shake keyframes moved to the consolidated Animations section. */
 
 .animate-shake {
 	animation: shake 0.4s ease-in-out;
 }
 
-@keyframes editPopoverFadeIn {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
-}
+/* editPopoverFadeIn keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SONNER TOAST OVERRIDES
@@ -1388,60 +1317,49 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 		0 0 0 2px rgba(var(--foreground-rgb), 0.18) !important;
 }
 
-/* Tinted toast backgrounds */
+/* Tinted toast backgrounds.
+ *
+ * Each `data-type` sets a `--toast-tint` custom property pointing at the
+ * matching semantic-color RGB triple, then the shared rules below paint
+ * the gradient + title color from that variable. Dark mode just bumps
+ * the tint alpha. This replaces 6 nearly-identical background blocks. */
 [data-sonner-toast][data-type="error"] {
+	--toast-tint: var(--destructive-rgb);
+}
+[data-sonner-toast][data-type="warning"] {
+	--toast-tint: var(--info-rgb);
+}
+[data-sonner-toast][data-type="success"] {
+	--toast-tint: var(--success-rgb);
+}
+
+[data-sonner-toast][data-type="error"],
+[data-sonner-toast][data-type="warning"],
+[data-sonner-toast][data-type="success"] {
 	background:
-		linear-gradient(rgba(var(--destructive-rgb), 0.07), rgba(var(--destructive-rgb), 0.07)),
+		linear-gradient(rgba(var(--toast-tint), 0.07), rgba(var(--toast-tint), 0.07)),
 		oklch(from var(--popover) l c h / 0.8) !important;
 }
 
 [data-sonner-toast][data-type="error"] [data-title],
-[data-sonner-toast][data-type="error"] [data-description] {
+[data-sonner-toast][data-type="error"] [data-description],
+[data-sonner-toast][data-type="warning"] [data-title],
+[data-sonner-toast][data-type="warning"] [data-description],
+[data-sonner-toast][data-type="success"] [data-title],
+[data-sonner-toast][data-type="success"] [data-description] {
 	color: color-mix(
 		in srgb,
 		rgb(var(--foreground-rgb)) 70%,
-		rgb(var(--destructive-rgb))
+		rgb(var(--toast-tint))
 	) !important;
 }
 
-[data-sonner-toast][data-type="warning"] {
-	background:
-		linear-gradient(rgba(var(--info-rgb), 0.07), rgba(var(--info-rgb), 0.07)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
-[data-sonner-toast][data-type="warning"] [data-title],
-[data-sonner-toast][data-type="warning"] [data-description] {
-	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--info-rgb))) !important;
-}
-
-[data-sonner-toast][data-type="success"] {
-	background:
-		linear-gradient(rgba(var(--success-rgb), 0.07), rgba(var(--success-rgb), 0.07)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
-[data-sonner-toast][data-type="success"] [data-title],
-[data-sonner-toast][data-type="success"] [data-description] {
-	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--success-rgb))) !important;
-}
-
-/* Dark mode: stronger tints */
-.dark [data-sonner-toast][data-type="error"] {
-	background:
-		linear-gradient(rgba(var(--destructive-rgb), 0.15), rgba(var(--destructive-rgb), 0.15)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
-.dark [data-sonner-toast][data-type="warning"] {
-	background:
-		linear-gradient(rgba(var(--info-rgb), 0.15), rgba(var(--info-rgb), 0.15)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
+/* Dark mode: stronger tints (alpha 0.15 vs 0.07). */
+.dark [data-sonner-toast][data-type="error"],
+.dark [data-sonner-toast][data-type="warning"],
 .dark [data-sonner-toast][data-type="success"] {
 	background:
-		linear-gradient(rgba(var(--success-rgb), 0.15), rgba(var(--success-rgb), 0.15)),
+		linear-gradient(rgba(var(--toast-tint), 0.15), rgba(var(--toast-tint), 0.15)),
 		oklch(from var(--popover) l c h / 0.8) !important;
 }
 
@@ -1461,27 +1379,8 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-@keyframes onboarding-panel-enter {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes composer-placeholder-enter {
-	from {
-		opacity: 0;
-		transform: translateY(4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
+/* onboarding-panel-enter + composer-placeholder-enter keyframes moved to
+   the consolidated Animations section. */
 
 @media (prefers-reduced-motion: reduce) {
 	.onboarding-panel {
@@ -1550,4 +1449,158 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	border-radius: var(--radius-surface-lg);
 	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
 	box-shadow: var(--shadow-minimal);
+}
+
+/* =============================================================================
+   ANIMATIONS — consolidated keyframes
+   -----------------------------------------------------------------------------
+   All `@keyframes` definitions live here in one section. The selectors that
+   *consume* these animations (e.g. `.animate-shimmer`, `.thinking-gradient-text`,
+   `[data-state=open]:animate-dropdown-open`) stay co-located with their
+   surrounding component CSS above; only the keyframe definitions are pooled
+   here so the file has a single discoverable home for motion vocabulary.
+
+   Order: overlay open/close → loading + indicators → entry effects.
+============================================================================= */
+
+/* --- Overlay open / close ------------------------------------------------- */
+
+@keyframes dropdown-open {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+@keyframes dropdown-close {
+	to {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+/* --- Loading + status indicators ----------------------------------------- */
+
+@keyframes spinner-grid {
+	0%,
+	70%,
+	100% {
+		transform: scale3d(0.5, 0.5, 1);
+	}
+	35% {
+		transform: scale3d(0, 0, 1);
+	}
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: scale(0.75);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* Translates the doubled bar strip leftward by exactly half its width so
+   the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
+   the seam at -50% lands on identical content, hiding the wrap. */
+@keyframes waveform-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+@keyframes thinking-gradient-flow {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+@keyframes shimmer-loading {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes shimmer-text {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	10%,
+	30%,
+	50%,
+	70%,
+	90% {
+		transform: translateX(-2px);
+	}
+	20%,
+	40%,
+	60%,
+	80% {
+		transform: translateX(2px);
+	}
+}
+
+/* --- Entry effects ------------------------------------------------------- */
+
+@keyframes editPopoverFadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes onboarding-panel-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes composer-placeholder-enter {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }

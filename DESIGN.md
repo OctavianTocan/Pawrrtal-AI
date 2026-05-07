@@ -486,8 +486,41 @@ This is the only place in the system that breaks the flat default.
 ## Motion
 
 The system prefers **transform-based animation** over property animation
-that triggers layout. Two specific animation patterns are load-bearing
-enough to call out.
+that triggers layout. Three patterns are load-bearing enough to call out.
+
+### Open / close timing
+
+Overlays (dropdowns, popovers, tooltips, context menus) follow Linear-snappy
+timing — fast enough to feel responsive, slow enough to read.
+
+| Direction | Duration | Easing                                          |
+| --------- | -------- | ----------------------------------------------- |
+| Open      | 140 ms   | `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) |
+| Close     | 100 ms   | `cubic-bezier(0.7, 0, 0.84, 0)` (ease-in-quint) |
+
+Close is always faster than open. Open is "reveal slowly enough to read";
+close is "get out of my way."
+
+Animate **opacity + scale + y + `filter: blur(8 px)`** on enter/exit. The blur
+transition makes overlays feel like they're coming into focus rather than
+abruptly appearing — element starts blurry and out-of-place, focuses into
+clarity. 8 px is the sweet spot: enough to read as motion without making the
+contents unreadable mid-transition. Reduced-motion (see below) collapses to
+opacity-only.
+
+Larger surfaces use proportionally longer durations:
+
+| Surface                       | Open   | Close  |
+| ----------------------------- | ------ | ------ |
+| Tooltips, popovers, dropdowns | 140 ms | 100 ms |
+| Sheets, drawers               | 220 ms | 180 ms |
+| Modals                        | 260 ms | 200 ms |
+| Full-screen overlays          | 320 ms | 240 ms |
+
+Implementation: `@octavian-tocan/react-dropdown`'s `DropdownRoot` defaults
+match the overlay row above. Other Motion call sites (access-request banner,
+shimmer, etc.) tune to their own surface needs but follow the open-slower /
+close-faster discipline.
 
 ### Sidebar Open / Close
 
@@ -524,7 +557,9 @@ fall back to the prose below for behavioral notes.
 
 - **`popover`** — Used by all menu containers via the `popover-styled`
   utility class. 8px radius (`rounded.md`), `shadow-modal-small`, no border.
-  In scenic mode, gains a 24px backdrop blur.
+  Always renders with an **8 px backdrop blur** and an **88% background tint**
+  so background content reads through softly (frosted-glass surface).
+  Scenic mode bumps the blur to 24 px for the heavier glass effect.
 - **`chat-composer`** — The message input surface. Soft (`shadow-minimal`),
   no border on focus (the shadow alone defines the edge). Dropdowns opened
   from the composer (e.g. model picker) inherit `chat-composer-dropdown-menu`
