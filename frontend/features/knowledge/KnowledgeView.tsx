@@ -79,6 +79,13 @@ export interface KnowledgeViewProps {
 	onNew: () => void;
 	/** Fired by the empty-state CTA on Shared views. */
 	onShareFromEmptyState: () => void;
+
+	/**
+	 * When set, this node is rendered _instead of_ the normal `KnowledgeContent`
+	 * router. Used by the container to show loading spinners or error banners
+	 * while still keeping the sub-sidebar interactive.
+	 */
+	contentOverride?: ReactNode;
 }
 
 /**
@@ -253,7 +260,7 @@ export function KnowledgeView(props: KnowledgeViewProps): ReactNode {
 				className={`${PANEL_SURFACE_CLASSNAME} flex-1 min-w-0`}
 				style={PANEL_SURFACE_STYLE}
 			>
-				<KnowledgeContent {...props} />
+				{props.contentOverride ?? <KnowledgeContent {...props} />}
 			</section>
 		</div>
 	);
