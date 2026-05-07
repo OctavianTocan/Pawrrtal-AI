@@ -15,6 +15,12 @@ export default defineConfig({
 			),
 		},
 	},
+	// Vitest doesn't force NODE_ENV=test by default; React 19 loads its
+	// production bundle (no React.act) when NODE_ENV=production.  Explicitly
+	// set it here so @testing-library/react can call React.act correctly.
+	define: {
+		'process.env.NODE_ENV': JSON.stringify('test'),
+	},
 	test: {
 		environment: 'jsdom',
 		exclude: [
