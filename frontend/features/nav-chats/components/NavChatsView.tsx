@@ -1,11 +1,13 @@
 import { Inbox, Search } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import type {
 	KeyboardEvent as ReactKeyboardEvent,
 	MouseEvent as ReactMouseEvent,
 	RefObject,
 } from 'react';
-import { Fragment } from 'react';
+import { Fragment, useRef } from 'react';
 import { ProjectsList } from '@/features/projects/components/ProjectsList';
+import { useScrollEdges } from '@/hooks/use-scroll-edges';
 import type { ConversationGroup } from '@/lib/conversation-groups';
 import { highlightMatch } from '@/lib/highlight-match';
 import type { Conversation, ConversationStatus } from '@/lib/types';
@@ -18,6 +20,15 @@ import { ConversationSidebarItem } from './ConversationSidebarItem';
 import { ConversationsEmptyState } from './ConversationsEmptyState';
 import { SearchCountBadge } from './SearchCountBadge';
 import { SectionHeader } from './SectionHeader';
+
+/** Enter duration (s) for the date-group expand. DESIGN.md → Motion → Open/close timing. */
+const GROUP_EXPAND_ENTER_DURATION = 0.14;
+/** Exit duration (s) for the date-group collapse. DESIGN.md → Motion → Open/close timing. */
+const GROUP_EXPAND_EXIT_DURATION = 0.1;
+/** ease-out-expo — same curve used by the dropdown enter motion. */
+const GROUP_EXPAND_ENTER_EASE = [0.16, 1, 0.3, 1] as const;
+/** ease-in-quint — same curve used by the dropdown exit motion. */
+const GROUP_EXPAND_EXIT_EASE = [0.7, 0, 0.84, 0] as const;
 
 export interface NavChatsViewProps {
 	/** Current search input value. */
@@ -375,37 +386,90 @@ function NavChatsContent({
 							) : (
 								<SectionHeader label={group.label} />
 							)}
-							{isCollapsed
-								? null
-								: group.items.map((conversation, index) => (
-										<ConversationRow
-											key={conversation.id}
-											conversation={conversation}
-											index={index}
-											visibleIndex={flatIndexMap.get(conversation.id) ?? 0}
-											isSearchActive={isSearchActive}
-											searchQuery={searchQuery}
-											multiSelectedIds={multiSelectedIds}
-											contentSearchResults={contentSearchResults}
-											activeChatMatchInfo={activeChatMatchInfo}
-											onConversationClick={onConversationClick}
-											onConversationMouseDown={onConversationMouseDown}
-											onConversationKeyDown={onConversationKeyDown}
-											registerConversationElement={
-												registerConversationElement
-											}
-											onNavigate={onNavigate}
-											onRename={onRename}
-											onDelete={onDelete}
-											onArchive={onArchive}
-											onFlag={onFlag}
-											onSetStatus={onSetStatus}
-											onMarkUnread={onMarkUnread}
-											onRegenerateTitle={onRegenerateTitle}
-											onToggleLabel={onToggleLabel}
-											onExportMarkdown={onExportMarkdown}
-										/>
-									))}
+							{/* Animate the group's items in/out on collapse/expand.
+							    Mounting an `AnimatePresence` per group gives each
+							    group its own enter/exit lifecycle so collapsing
+							    "Today" doesn't disturb "Yesterday". The wrapper is
+							    intentionally plain `motion.div` (not `motion.li`)
+							    because the parent `<ul>` already contains a mix of
+							    `<li>` (header) and `<div>` (rows) — the listbox role
+							    on the outer parent finds row `role="option"`s
+							    regardless of intermediate wrappers. Height
+							    animation needs `overflow: hidden` so collapsing
+							    rows don't paint outside the wrapper while motion
+							    interpolates `height: auto → 0`. `motion-reduce` is
+							    honored automatically: motion's reduce-motion logic
+							    collapses height/opacity to instantaneous when the
+							    user has prefers-reduced-motion set. */}
+							<AnimatePresence initial={false}>
+								{!isCollapsed && (
+									<motion.div
+										key={`${group.key}-items`}
+										initial={{ height: 0, opacity: 0 }}
+										animate={{
+											height: 'auto',
+											opacity: 1,
+											transition: {
+												height: {
+													duration: GROUP_EXPAND_ENTER_DURATION,
+													ease: GROUP_EXPAND_ENTER_EASE,
+												},
+												opacity: {
+													duration: GROUP_EXPAND_ENTER_DURATION * 0.85,
+													ease: GROUP_EXPAND_ENTER_EASE,
+												},
+											},
+										}}
+										exit={{
+											height: 0,
+											opacity: 0,
+											transition: {
+												height: {
+													duration: GROUP_EXPAND_EXIT_DURATION,
+													ease: GROUP_EXPAND_EXIT_EASE,
+												},
+												opacity: {
+													duration: GROUP_EXPAND_EXIT_DURATION * 0.85,
+													ease: GROUP_EXPAND_EXIT_EASE,
+												},
+											},
+										}}
+										style={{ overflow: 'hidden' }}
+									>
+										{group.items.map((conversation, index) => (
+											<ConversationRow
+												key={conversation.id}
+												conversation={conversation}
+												index={index}
+												visibleIndex={
+													flatIndexMap.get(conversation.id) ?? 0
+												}
+												isSearchActive={isSearchActive}
+												searchQuery={searchQuery}
+												multiSelectedIds={multiSelectedIds}
+												contentSearchResults={contentSearchResults}
+												activeChatMatchInfo={activeChatMatchInfo}
+												onConversationClick={onConversationClick}
+												onConversationMouseDown={onConversationMouseDown}
+												onConversationKeyDown={onConversationKeyDown}
+												registerConversationElement={
+													registerConversationElement
+												}
+												onNavigate={onNavigate}
+												onRename={onRename}
+												onDelete={onDelete}
+												onArchive={onArchive}
+												onFlag={onFlag}
+												onSetStatus={onSetStatus}
+												onMarkUnread={onMarkUnread}
+												onRegenerateTitle={onRegenerateTitle}
+												onToggleLabel={onToggleLabel}
+												onExportMarkdown={onExportMarkdown}
+											/>
+										))}
+									</motion.div>
+								)}
+							</AnimatePresence>
 						</Fragment>
 					);
 				})}
@@ -456,6 +520,14 @@ export function NavChatsView({
 	registerConversationElement,
 	onNavigatorMouseDown,
 }: NavChatsViewProps): React.JSX.Element {
+	// Drives the top/bottom mask-fade gradient on the scroll container —
+	// same pattern the prompt textarea uses (`[data-prompt-textarea]` rules
+	// in globals.css). The hook reports `canScrollUp` / `canScrollDown` so
+	// the CSS can show the gradient only at edges that actually have hidden
+	// content, instead of always rendering both edges.
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const { canScrollUp, canScrollDown } = useScrollEdges(scrollRef);
+
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<ConversationSearchHeader
@@ -469,8 +541,18 @@ export function NavChatsView({
 			    than the projects sticking under the search bar while the
 			    chats scroll behind them. `scrollbar-hover` fades the
 			    webkit scrollbar in when an ancestor `.group` element is
-			    hovered (the sidebar shell — see app-layout.tsx). */}
-			<div className="scrollbar-hover min-h-0 flex-1 overflow-y-auto">
+			    hovered (the sidebar shell — see app-layout.tsx).
+			    `data-nav-chats-scroll` + the `data-scroll-up` / `data-scroll-down`
+			    attributes drive the top/bottom fade gradients in globals.css
+			    so list rows softly fade out when there's more content above
+			    or below the visible window. */}
+			<div
+				ref={scrollRef}
+				data-nav-chats-scroll=""
+				data-scroll-up={canScrollUp ? 'true' : 'false'}
+				data-scroll-down={canScrollDown ? 'true' : 'false'}
+				className="scrollbar-hover min-h-0 flex-1 overflow-y-auto"
+			>
 				<ProjectsList />
 				<NavChatsContent
 					isLoading={isLoading}

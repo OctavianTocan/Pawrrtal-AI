@@ -75,7 +75,7 @@ export function SelectButton({
 		<DropdownMenu<SelectButtonOption>
 			asChild
 			usePortal
-			align="end"
+			align="start"
 			placement="bottom"
 			items={options}
 			getItemKey={(option) => option.id}

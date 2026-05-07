@@ -11,10 +11,18 @@
 
 'use client';
 
-import type { MenuItemDef } from '@octavian-tocan/react-dropdown';
-import { DropdownMenuDef } from '@octavian-tocan/react-dropdown';
+import {
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownPanelMenu,
+	DropdownSubmenu,
+	DropdownSubmenuContent,
+	DropdownSubmenuTrigger,
+} from '@octavian-tocan/react-dropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+	ChevronRightIcon,
 	ChevronsUpDownIcon,
 	DownloadIcon,
 	GiftIcon,
@@ -27,7 +35,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { toast } from '@/lib/toast';
@@ -80,6 +88,10 @@ function getInitials(name: string): string {
 	return `${first}${second}`.toUpperCase();
 }
 
+/** Shared className for the Language / Learn-more submenu trigger rows. */
+const SUBMENU_TRIGGER_CLASSNAME =
+	'flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-2 py-1.5 text-sm hover:bg-foreground/[0.04]';
+
 /**
  * Sidebar profile button + account dropdown.
  *
@@ -88,6 +100,13 @@ function getInitials(name: string): string {
  * sidebar contents. The previous early-return-on-collapse caused the
  * chip to vanish the instant the user clicked the toggle, before the
  * 200ms slide had even started — visually jarring.
+ *
+ * Uses `DropdownPanelMenu` with JSX `DropdownSubmenu` children for the
+ * Language / Learn-more entries so those open as side flyouts. The
+ * earlier `DropdownMenuDef`/`MenuItemDef` data-driven variant rendered
+ * submenus as inline accordions, which caused a noticeable
+ * "parent collapses → reopen with the sub auto-expanded" stutter
+ * every time the user clicked a submenu trigger.
  *
  * @param user - Identity rendered in the trigger and dropdown header.
  */
@@ -104,9 +123,6 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 	 * the next session never sees the previous user's data, and routes to
 	 * /login. The logout endpoint clears the JWT cookie server-side; the
 	 * cache wipe is the client-side complement.
-	 *
-	 * Wrapped in useCallback so `menuItems` can declare it as a dependency
-	 * without recreating the items array on every render.
 	 */
 	const handleLogout = useCallback(async (): Promise<void> => {
 		try {
@@ -122,84 +138,6 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 			router.replace('/login');
 		}
 	}, [fetcher, queryClient, router]);
-
-	const menuItems = useMemo<readonly MenuItemDef[]>(
-		() => [
-			{ type: 'label', text: user.email },
-			{
-				type: 'action',
-				id: 'settings',
-				label: 'Settings',
-				icon: <SettingsIcon aria-hidden="true" className="size-4" />,
-				shortcut: '⇧⌘,',
-				onClick: () => router.push('/settings'),
-			},
-			{
-				type: 'submenu',
-				id: 'language',
-				label: 'Language',
-				icon: <GlobeIcon aria-hidden="true" className="size-4" />,
-				children: LANGUAGE_OPTIONS.map((opt) => ({
-					type: 'action' as const,
-					id: opt.id,
-					label: opt.label,
-					onClick: noop,
-				})),
-			},
-			{
-				type: 'action',
-				id: 'help',
-				label: 'Get help',
-				icon: <HelpCircleIcon aria-hidden="true" className="size-4" />,
-				onClick: noop,
-			},
-			{ type: 'separator' },
-			{
-				type: 'action',
-				id: 'plans',
-				label: 'View all plans',
-				icon: <LayoutGridIcon aria-hidden="true" className="size-4" />,
-				onClick: noop,
-			},
-			{
-				type: 'action',
-				id: 'apps',
-				label: 'Get apps and extensions',
-				icon: <DownloadIcon aria-hidden="true" className="size-4" />,
-				onClick: noop,
-			},
-			{
-				type: 'action',
-				id: 'gift',
-				label: 'Gift AI Nexus',
-				icon: <GiftIcon aria-hidden="true" className="size-4" />,
-				onClick: noop,
-			},
-			{
-				type: 'submenu',
-				id: 'learn-more',
-				label: 'Learn more',
-				icon: <InfoIcon aria-hidden="true" className="size-4" />,
-				children: LEARN_MORE_LINKS.map((link) => ({
-					type: 'action' as const,
-					id: link.id,
-					label: link.label,
-					onClick: noop,
-				})),
-			},
-			{ type: 'separator' },
-			{
-				type: 'action',
-				id: 'logout',
-				label: 'Log out',
-				icon: <LogOutIcon aria-hidden="true" className="size-4" />,
-				onClick: () => {
-					void handleLogout();
-				},
-			},
-		],
-		[user.email, router, handleLogout]
-	);
 
 	const trigger = (
 		<div
@@ -237,22 +175,99 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 		// trigger button to swallow it — this lets the trigger's hover paint
 		// a clean fully-rounded pill that actually fills the visible row.
 		<div className="shrink-0 border-t border-foreground/8 p-2">
-			<DropdownMenuDef
-				trigger={trigger}
-				items={menuItems}
-				placement="top"
+			<DropdownPanelMenu
+				asChild
 				usePortal
+				placement="top"
 				// `popover-styled` provides the project's themed background,
-				// border, layered shadow, and (after the motion overhaul)
-				// global backdrop-filter blur. Without it the consumer's
-				// className REPLACES the package's `bg-white` default and the
-				// dropdown renders transparent — letting the sidebar bleed
-				// through. The `min-w-[var(--radix-dropdown-menu-trigger-width)]`
-				// constraint that used to live here was dead code: the variable
-				// is Radix-only, never set by our package.
+				// border, layered shadow, and global backdrop-filter blur.
+				// Without it the consumer's className REPLACES the package's
+				// `bg-white` default and the dropdown renders transparent —
+				// letting the sidebar bleed through.
 				contentClassName="popover-styled p-1 w-64"
 				onOpenChange={setIsOpen}
-			/>
+				trigger={trigger}
+			>
+				<DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+					{user.email}
+				</DropdownMenuLabel>
+				<DropdownMenuItem
+					className="justify-between"
+					onSelect={() => router.push('/settings')}
+				>
+					<span className="flex items-center gap-2">
+						<SettingsIcon aria-hidden="true" className="size-4" />
+						Settings
+					</span>
+					<span className="text-xs tracking-widest text-muted-foreground">⇧⌘,</span>
+				</DropdownMenuItem>
+				{/*
+				 * Side-flyout submenu — replaces the inline-accordion variant the
+				 * data-driven menu used. The earlier accordion collapsed the parent
+				 * on click and reopened it with `language` auto-expanded, which read
+				 * as a UI stutter every time.
+				 */}
+				<DropdownSubmenu>
+					<DropdownSubmenuTrigger className={SUBMENU_TRIGGER_CLASSNAME}>
+						<GlobeIcon aria-hidden="true" className="size-4" />
+						<span className="flex-1 text-left">Language</span>
+						<ChevronRightIcon
+							aria-hidden="true"
+							className="size-3.5 text-muted-foreground"
+						/>
+					</DropdownSubmenuTrigger>
+					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
+						{LANGUAGE_OPTIONS.map((opt) => (
+							<DropdownMenuItem key={opt.id} onSelect={noop}>
+								{opt.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownSubmenuContent>
+				</DropdownSubmenu>
+				<DropdownMenuItem onSelect={noop}>
+					<HelpCircleIcon aria-hidden="true" className="size-4" />
+					Get help
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onSelect={noop}>
+					<LayoutGridIcon aria-hidden="true" className="size-4" />
+					View all plans
+				</DropdownMenuItem>
+				<DropdownMenuItem onSelect={noop}>
+					<DownloadIcon aria-hidden="true" className="size-4" />
+					Get apps and extensions
+				</DropdownMenuItem>
+				<DropdownMenuItem onSelect={noop}>
+					<GiftIcon aria-hidden="true" className="size-4" />
+					Gift AI Nexus
+				</DropdownMenuItem>
+				<DropdownSubmenu>
+					<DropdownSubmenuTrigger className={SUBMENU_TRIGGER_CLASSNAME}>
+						<InfoIcon aria-hidden="true" className="size-4" />
+						<span className="flex-1 text-left">Learn more</span>
+						<ChevronRightIcon
+							aria-hidden="true"
+							className="size-3.5 text-muted-foreground"
+						/>
+					</DropdownSubmenuTrigger>
+					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
+						{LEARN_MORE_LINKS.map((link) => (
+							<DropdownMenuItem key={link.id} onSelect={noop}>
+								{link.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownSubmenuContent>
+				</DropdownSubmenu>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					onSelect={() => {
+						void handleLogout();
+					}}
+				>
+					<LogOutIcon aria-hidden="true" className="size-4" />
+					Log out
+				</DropdownMenuItem>
+			</DropdownPanelMenu>
 		</div>
 	);
 }

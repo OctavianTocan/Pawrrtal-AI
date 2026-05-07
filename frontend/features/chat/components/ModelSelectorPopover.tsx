@@ -301,7 +301,7 @@ export function ModelSelectorPopover({
 							asChild
 							usePortal
 							placement="top"
-							align="end"
+							align="start"
 							// Submenu rows handle their own selection + closeDropdown,
 							// so the root menu's onSelect is unused but required.
 							closeOnSelect={false}
@@ -359,7 +359,7 @@ export function ModelSelectorPopover({
 													/>
 												)}
 											</DropdownSubmenuTrigger>
-											<DropdownSubmenuContent className="popover-styled p-1 min-w-64">
+											<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-64">
 												{models.map((model) => (
 													<ModelRow
 														key={model.id}
@@ -389,7 +389,7 @@ export function ModelSelectorPopover({
 												className="size-3.5 shrink-0 text-muted-foreground"
 											/>
 										</DropdownSubmenuTrigger>
-										<DropdownSubmenuContent className="popover-styled p-1 min-w-32">
+										<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-32">
 											{REASONING_OPTIONS.map((option) => (
 												<ReasoningRow
 													key={option.id}

@@ -32,17 +32,36 @@ const newsreader = Newsreader({
  * in `globals.css`). Flex is the primary face; Google Sans covers environments
  * where Flex subsets differ. Both expose CSS variables for `var(...)` chains.
  */
+/**
+ * `adjustFontFallback: false` opts out of Next.js's automatic
+ * size-adjusted fallback generation. Next.js can't find override
+ * metric values for `Google Sans Flex` / `Google Sans` in its
+ * built-in font database, so without this flag Next.js emits the
+ *   "Failed to find font override values for font `Google Sans Flex`"
+ *   "Skipping generating a fallback font."
+ * pair of warnings on every dev start.
+ *
+ * The CLS impact is bounded by the rest of the
+ * `--font-sans-stack` chain in `globals.css` — the cascade falls
+ * back to "Helvetica Neue" / `sans-serif`, which both have similar
+ * x-heights to Google Sans, so the layout shift between fallback
+ * and web font is minimal in practice. Once Next.js ships override
+ * metrics for Google Sans (or we bump to a future version that
+ * does), this flag can be removed.
+ */
 const googleSansFlex = Google_Sans_Flex({
 	subsets: ['latin'],
 	weight: 'variable',
 	variable: '--font-google-sans-flex-loaded',
 	display: 'swap',
+	adjustFontFallback: false,
 });
 const googleSans = Google_Sans({
 	subsets: ['latin'],
 	weight: 'variable',
 	variable: '--font-google-sans-loaded',
 	display: 'swap',
+	adjustFontFallback: false,
 });
 
 /**

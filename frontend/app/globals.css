@@ -861,13 +861,17 @@ html[data-font="inter"] {
 
 	/* Unified popover styling.
 	 *
-	 * Background uses a translucent mix (88% / 12% transparent) so the global
-	 * `backdrop-filter: blur(8px)` reads through softly. This gives every
-	 * dropdown / popover / context menu a frosted-glass quality without
-	 * needing scenic mode. Scenic mode bumps the blur further (see scenic
-	 * overrides below). */
+	 * Background uses a translucent mix (95% / 5% transparent) so the global
+	 * `backdrop-filter: blur(8px)` reads through softly without making the
+	 * panel itself feel see-through. Earlier 88% caused sidebar conversation
+	 * rows and chat content to bleed up through the menu when a row sat
+	 * directly underneath, hurting readability of the menu items themselves.
+	 * Scenic mode keeps its more-transparent base so background photography
+	 * is still visible — see the `html[data-scenic] .popover-styled`
+	 * override below.
+	 */
 	.popover-styled {
-		background: color-mix(in srgb, var(--background) 88%, transparent);
+		background: color-mix(in srgb, var(--background) 95%, transparent);
 		color: var(--foreground);
 		border-radius: 8px;
 		border: none;
@@ -893,18 +897,44 @@ html[data-font="inter"] {
  * `mask-image` here drops alpha at the corresponding edge so the fade
  * suggests "more content above/below" without rendering a hard scrollbar
  * stripe. The fade height is 16 px, tuned to feel ambient rather than busy. */
-[data-prompt-textarea][data-scroll-up='true']:not([data-scroll-down='true']) {
+[data-prompt-textarea][data-scroll-up="true"]:not([data-scroll-down="true"]) {
 	mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%);
 }
-[data-prompt-textarea][data-scroll-down='true']:not([data-scroll-up='true']) {
+[data-prompt-textarea][data-scroll-down="true"]:not([data-scroll-up="true"]) {
 	mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%);
 }
-[data-prompt-textarea][data-scroll-up='true'][data-scroll-down='true'] {
+[data-prompt-textarea][data-scroll-up="true"][data-scroll-down="true"] {
 	mask-image: linear-gradient(
 		to bottom,
 		transparent 0,
 		black 16px,
 		black calc(100% - 16px),
+		transparent 100%
+	);
+}
+
+/* Sidebar conversation-list scroll fade.
+ *
+ * Mirror of the prompt-textarea pattern above: `useScrollEdges` (wired in
+ * `NavChatsView`) writes `data-scroll-up='true'` / `data-scroll-down='true'`
+ * whenever there's more content out of view in each direction.
+ * `mask-image` softens the alpha at the corresponding edge so list rows
+ * fade as they approach the viewport top/bottom instead of being chopped
+ * at a hard line. The fade is taller (20 px) than the textarea's 16 px
+ * because conversation rows are taller than a single text line, so the
+ * eye needs more runway to read the fade as ambient rather than a clip. */
+[data-nav-chats-scroll][data-scroll-up="true"]:not([data-scroll-down="true"]) {
+	mask-image: linear-gradient(to bottom, transparent 0, black 20px, black 100%);
+}
+[data-nav-chats-scroll][data-scroll-down="true"]:not([data-scroll-up="true"]) {
+	mask-image: linear-gradient(to bottom, black 0, black calc(100% - 20px), transparent 100%);
+}
+[data-nav-chats-scroll][data-scroll-up="true"][data-scroll-down="true"] {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		black 20px,
+		black calc(100% - 20px),
 		transparent 100%
 	);
 }
@@ -961,6 +991,12 @@ html[data-scenic] .shadow-strong > * {
 }
 
 html[data-scenic] .popover-styled {
+	/* Scenic keeps the original ~88% alpha so the user's chosen background
+	   image is still visible behind the menu. The opaque 95% used in
+	   default mode would defeat the "glass on photography" look that
+	   scenic exists to deliver. The stronger 24px blur compensates for
+	   the lower alpha so menu text stays readable over busy backgrounds. */
+	background: color-mix(in srgb, var(--background) 88%, transparent);
 	backdrop-filter: blur(24px);
 	-webkit-backdrop-filter: blur(24px);
 }
@@ -1347,11 +1383,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 [data-sonner-toast][data-type="warning"] [data-description],
 [data-sonner-toast][data-type="success"] [data-title],
 [data-sonner-toast][data-type="success"] [data-description] {
-	color: color-mix(
-		in srgb,
-		rgb(var(--foreground-rgb)) 70%,
-		rgb(var(--toast-tint))
-	) !important;
+	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--toast-tint))) !important;
 }
 
 /* Dark mode: stronger tints (alpha 0.15 vs 0.07). */

@@ -513,9 +513,16 @@ Larger surfaces use proportionally longer durations:
 | Surface                       | Open   | Close  |
 | ----------------------------- | ------ | ------ |
 | Tooltips, popovers, dropdowns | 140 ms | 100 ms |
+| Submenu chains                | 80 ms  | 60 ms  |
 | Sheets, drawers               | 220 ms | 180 ms |
 | Modals                        | 260 ms | 200 ms |
 | Full-screen overlays          | 320 ms | 240 ms |
+
+Submenus run faster than root overlays so cursor traversal between
+sibling submenu triggers (e.g. Anthropic → OpenAI → Google in the
+model picker) doesn't visibly overlap two panels — the previous
+panel finishes exiting before the next one finishes entering.
+Easing inherits from the root so the family stays cohesive.
 
 Implementation: `@octavian-tocan/react-dropdown`'s `DropdownRoot` defaults
 match the overlay row above. Other Motion call sites (access-request banner,
@@ -557,9 +564,11 @@ fall back to the prose below for behavioral notes.
 
 - **`popover`** — Used by all menu containers via the `popover-styled`
   utility class. 8px radius (`rounded.md`), `shadow-modal-small`, no border.
-  Always renders with an **8 px backdrop blur** and an **88% background tint**
-  so background content reads through softly (frosted-glass surface).
-  Scenic mode bumps the blur to 24 px for the heavier glass effect.
+  Default mode: **8 px backdrop blur** and a **95% background tint** so the
+  panel surface reads as solid (the lower 88% used previously caused
+  busy sidebar / chat content to bleed through and hurt readability).
+  Scenic mode keeps the more-transparent **88% tint + 24 px blur** so the
+  user's chosen background image is still visible behind the menu.
 - **`chat-composer`** — The message input surface. Soft (`shadow-minimal`),
   no border on focus (the shadow alone defines the edge). Dropdowns opened
   from the composer (e.g. model picker) inherit `chat-composer-dropdown-menu`

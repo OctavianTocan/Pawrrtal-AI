@@ -287,6 +287,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 				<TooltipTrigger asChild>
 					<span className="inline-flex">
 						<DropdownMenu
+							align="start"
 							closeOnSelect
 							usePortal
 							// Match ModelSelectorPopover's surface — `popover-styled` provides
