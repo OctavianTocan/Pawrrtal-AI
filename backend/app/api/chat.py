@@ -11,10 +11,14 @@ from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pathlib import Path
+
 from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
+from app.core.tools.workspace_files import make_workspace_tools
+from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -149,6 +153,21 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_llm(model_id)
 
+        # Resolve the user's default workspace and build file tools.
+        # Non-fatal: if no workspace exists yet (e.g. new user who hasn't
+        # completed onboarding) the agent runs without file access tools.
+        workspace_tools = []
+        try:
+            workspace = await get_default_workspace(user.id, session)
+            if workspace is not None:
+                root = Path(workspace.path)
+                if root.exists():
+                    workspace_tools = make_workspace_tools(root)
+        except Exception:
+            logger.exception(
+                "CHAT_WORKSPACE_TOOLS_ERR rid=%s user_id=%s", rid, user.id
+            )
+
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes for each LLM event, then done.
 
@@ -170,6 +189,7 @@ def get_chat_router() -> APIRouter:
                         request.conversation_id,
                         user.id,
                         history=history,
+                        tools=workspace_tools or None,
                     ):
                         event_count += 1
                         aggregator.apply(event)

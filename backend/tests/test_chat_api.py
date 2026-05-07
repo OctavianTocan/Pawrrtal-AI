@@ -14,7 +14,13 @@ class FakeProvider:
         self.events = events
 
     async def stream(
-        self, question: str, conversation_id: object, user_id: object
+        self,
+        question: str,
+        conversation_id: object,
+        user_id: object,
+        history: object = None,
+        tools: object = None,
+        system_prompt: object = None,
     ) -> AsyncIterator[dict[str, str]]:
         for event in self.events:
             yield event
@@ -95,7 +101,13 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
 
     class FailingProvider:
         async def stream(
-            self, question: str, conversation_id: object, user_id: object
+            self,
+            question: str,
+            conversation_id: object,
+            user_id: object,
+            history: object = None,
+            tools: object = None,
+            system_prompt: object = None,
         ) -> AsyncIterator[dict[str, str]]:
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}

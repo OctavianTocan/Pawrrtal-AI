@@ -198,6 +198,8 @@ class ClaudeLLM:
         user_id: uuid.UUID,
         history: list[dict[str, str]]
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
+        tools: object | None = None,  # ignored: Claude SDK manages its own tool surface
+        system_prompt: str | None = None,  # ignored: Claude SDK manages its own system prompt
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 

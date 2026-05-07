@@ -218,8 +218,21 @@ class GeminiLLM:
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         history: list[dict[str, str]] | None = None,
+        tools: list[AgentTool] | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
-        """Run the agent loop and translate AgentEvents → StreamEvents for the frontend."""
+        """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
+
+        Args:
+            question: The current user message.
+            conversation_id: Used for logging; not persisted inside this method.
+            user_id: Authenticated user UUID (used for logging).
+            history: Prior messages oldest-first as ``{role, content}`` dicts.
+            tools: Optional list of AgentTools to make available this turn
+                (e.g. workspace file tools built by ``make_workspace_tools``).
+            system_prompt: Override the default system prompt.  When ``None``
+                the built-in ``_SYSTEM_PROMPT`` constant is used.
+        """
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
         for m in history or []:
@@ -237,9 +250,9 @@ class GeminiLLM:
                 )
 
         context = AgentContext(
-            system_prompt=_SYSTEM_PROMPT,
+            system_prompt=system_prompt or _SYSTEM_PROMPT,
             messages=prior,
-            tools=[],  # TODO: wire filesystem + MCP tools here
+            tools=list(tools or []),
         )
         prompt = UserMessage(role="user", content=question)
         config = AgentLoopConfig(convert_to_llm=_identity_convert)

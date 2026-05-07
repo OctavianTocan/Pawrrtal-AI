@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+
+if TYPE_CHECKING:
+    from app.core.agent_loop.types import AgentTool
 
 
 class StreamEvent(TypedDict, total=False):
@@ -36,6 +39,8 @@ class AILLM(Protocol):
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         history: list[dict[str, str]] | None = None,
+        tools: list["AgentTool"] | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -55,5 +60,11 @@ class AILLM(Protocol):
                      ``content`` keys.  Providers that manage their own
                      history (e.g. ClaudeLLM via ``resume``) may ignore
                      this.
+            tools: Optional workspace-scoped AgentTools (read_file, write_file,
+                     list_dir) to make available this turn.  Providers that
+                     manage their own tool surface (e.g. ClaudeLLM) may ignore
+                     this parameter.
+            system_prompt: Optional override for the provider's default system
+                     prompt.  When ``None`` the provider uses its own default.
         """
         ...
