@@ -12,7 +12,9 @@ from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
 from app.api.auth import get_auth_router
+from app.api.channels import get_channels_router
 from app.api.chat import get_chat_router
+from app.integrations.telegram import telegram_lifespan
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
@@ -45,7 +47,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
-    yield
+    # Bring the Telegram channel up alongside the HTTP server when a bot
+    # token is configured. The context manager yields None and is a no-op
+    # when the channel is disabled, so this stays safe for stripped-down
+    # deployments (CI, ephemeral previews, ...). Stash the service on
+    # `app.state` so the webhook route can hand updates to aiogram.
+    async with telegram_lifespan() as telegram_service:
+        app.state.telegram_service = telegram_service
+        yield
 
 
 # --- App & Middleware --------------------------------------------------------
@@ -104,6 +113,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_oauth_router(),
+    )
+    fastapi_app.include_router(
+        get_channels_router(),
     )
 
     return fastapi_app

@@ -1,8 +1,10 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { useState } from 'react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
+import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import {
 	MESSAGING_CHANNELS,
 	type MessagingChannelId,
@@ -32,8 +34,22 @@ export function StepMessaging({
 }: StepMessagingProps): React.JSX.Element {
 	const connected = profile.connectedChannels ?? [];
 	const hasOne = connected.length > 0;
+	// Telegram is the first channel with a real backend behind it; the
+	// rest are still visual-only chips. When the user clicks Connect on
+	// the Telegram row we pop the binding dialog instead of toggling the
+	// chip directly, then add the chip once the bind succeeds.
+	const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
+
+	const markChannelConnected = (id: MessagingChannelId): void => {
+		if (connected.includes(id)) return;
+		onPatch({ connectedChannels: [...connected, id] });
+	};
 
 	const toggleChannel = (id: MessagingChannelId): void => {
+		if (id === 'telegram') {
+			setTelegramDialogOpen(true);
+			return;
+		}
 		const next = connected.includes(id)
 			? connected.filter((entry) => entry !== id)
 			: [...connected, id];
@@ -99,6 +115,11 @@ export function StepMessaging({
 					);
 				})}
 			</div>
+			<TelegramConnectDialog
+				onConnected={() => markChannelConnected('telegram')}
+				onOpenChange={setTelegramDialogOpen}
+				open={telegramDialogOpen}
+			/>
 		</OnboardingShell>
 	);
 }

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { ArchivedChatsSection } from './sections/ArchivedChatsSection';
+import { ChannelsSection } from './sections/ChannelsSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { IntegrationsSection } from './sections/IntegrationsSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
@@ -27,6 +28,7 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
 	if (activeId === 'integrations') return <IntegrationsSection />;
+	if (activeId === 'channels') return <ChannelsSection />;
 	if (activeId === 'archived-chats') return <ArchivedChatsSection />;
 	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
