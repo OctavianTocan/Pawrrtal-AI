@@ -48,4 +48,8 @@ EXPOSE 8000
 # Run Alembic migrations then start the server.
 # `alembic upgrade head` is idempotent; if the DB is already current
 # it exits 0 immediately without making any changes.
+# In the docker-compose dev stack this CMD is overridden by the compose
+# command so --reload is active and the source volume mount is writable.
+# For production (Railway / plain Docker run) this CMD runs migrations
+# then starts uvicorn without reload.
 CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]

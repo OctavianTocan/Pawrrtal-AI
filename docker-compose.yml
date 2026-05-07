@@ -57,11 +57,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Override the production CMD: run migrations (with retry) then start
+    # uvicorn with --reload so source-mount edits apply immediately.
+    command: >
+      sh -c '
+        until alembic upgrade head; do
+          echo "[docker-compose] alembic failed, retrying in 2s…" && sleep 2;
+        done &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      '
     volumes:
-      # Mount the backend source so code changes are reflected without
-      # a full rebuild.  Alembic migrations and static assets still go
-      # through the image layer; only Python source is hot-mounted.
-      - ./backend/app:/app/app:ro
+      # Mount the backend source for hot-reload: uvicorn --reload detects
+      # file changes inside the container and restarts the worker in-place.
+      # New files in the image layer (e.g. alembic versions) still require
+      # `docker compose build backend` + restart.
+      - ./backend/app:/app/app
       # Workspace data lives outside the container so it persists across
       # restarts and is not wiped by `docker compose down`.
       - workspace_data:/data/workspaces

@@ -28,7 +28,13 @@ The backend will be live at **http://localhost:8000** and PostgreSQL will be
 exposed at **localhost:5432** (credentials: `nexus` / `nexus_dev`, database `nexus`).
 
 Database migrations run automatically on every backend start via
-`alembic upgrade head` — no manual step needed.
+`alembic upgrade head` (with a retry loop in case postgres isn't
+fully accepting connections right as the healthcheck passes) — no
+manual step needed.
+
+The dev stack starts uvicorn with `--reload` and mounts `./backend/app`
+into the container, so Python edits take effect on the next request
+without a rebuild.
 
 ## Frontend
 
