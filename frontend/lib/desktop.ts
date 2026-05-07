@@ -118,6 +118,16 @@ interface PermissionsBridge {
 
 interface DesktopBridge {
 	/**
+	 * macOS-only: mirrors `titleBarStyle` from `electron/src/window-chrome.ts`.
+	 * Undefined on Windows/Linux and on web.
+	 */
+	macTitleBarStyle?: 'default' | 'hidden' | 'hiddenInset' | 'customButtonsOnHover' | undefined;
+	/**
+	 * Extra left padding (px) for the in-app toolbar when macOS uses overlay
+	 * traffic lights; always `0` when `macTitleBarStyle === 'default'`.
+	 */
+	trafficLightLeftInsetPx: number;
+	/**
 	 * Host platform string, exposed synchronously by the preload script so
 	 * the renderer can make layout decisions (e.g. reserve space for macOS
 	 * traffic-light buttons) without an async IPC round-trip on first paint.
@@ -181,8 +191,8 @@ export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
 
 /**
  * Synchronous platform getter intended for layout decisions that have to
- * run on first paint (e.g. reserving space for the macOS traffic-light
- * buttons). Returns `null` when not in Electron or during SSR.
+ * run on first paint (e.g. macOS Electron drag chrome). Returns `null` when
+ * not in Electron or during SSR.
  *
  * Components that read this MUST gate it behind `useEffect` so the
  * initial render matches the SSR output and React doesn't blow up with
@@ -193,6 +203,16 @@ export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
 export function getDesktopPlatformSync(): NodeJS.Platform | null {
 	if (typeof window === 'undefined') return null;
 	return window.aiNexus?.platform ?? null;
+}
+
+/**
+ * Left inset (px) reserved for macOS overlay traffic lights when Electron uses
+ * a non-`default` title bar style. Always `0` on web, SSR, and when the shell
+ * uses the native title strip (`default`).
+ */
+export function getTrafficLightLeftInsetPxSync(): number {
+	if (typeof window === 'undefined') return 0;
+	return window.aiNexus?.trafficLightLeftInsetPx ?? 0;
 }
 
 /** Resolve the desktop app version, or `null` on web. */

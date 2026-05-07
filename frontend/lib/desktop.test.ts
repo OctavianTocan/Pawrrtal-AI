@@ -50,6 +50,9 @@ describe('lib/desktop (web shell — no aiNexus bridge)', () => {
 describe('lib/desktop (Electron shell — bridge present)', () => {
 	beforeEach(() => {
 		(window as unknown as { aiNexus: unknown }).aiNexus = {
+			platform: 'darwin',
+			macTitleBarStyle: 'default',
+			trafficLightLeftInsetPx: 0,
 			openExternal: vi.fn().mockResolvedValue(undefined),
 			showOpenFolderDialog: vi.fn().mockResolvedValue('/Users/me/Code'),
 			getPlatform: vi.fn().mockResolvedValue('darwin' as NodeJS.Platform),
@@ -187,6 +190,9 @@ describe('lib/desktop privileged-op wrappers (web fallbacks)', () => {
 describe('lib/desktop privileged-op wrappers (Electron bridge present)', () => {
 	beforeEach(() => {
 		(window as unknown as { aiNexus: unknown }).aiNexus = {
+			platform: 'darwin',
+			macTitleBarStyle: 'default',
+			trafficLightLeftInsetPx: 0,
 			openExternal: vi.fn(),
 			showOpenFolderDialog: vi.fn(),
 			getPlatform: vi.fn(),

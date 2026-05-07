@@ -37,13 +37,11 @@ web equivalents (`window.open`, no-op handlers) when not in Electron.
 
 ### macOS window chrome
 
-On Darwin we use **`titleBarStyle: 'hidden'`** plus **`trafficLightPosition`**
-(see `electron/src/main.ts`). Prefer **`hidden`** over **`hiddenInset`**:
-Electron documents **`hiddenInset`** as an **alternate** chrome style (traffic
-lights more inset from the edge); they read smaller next to native apps and
-typical **`hidden`** Electron windows. **`trafficLightPosition`** must stay in
-lockstep with the frontend header padding (`AppHeader` in
-`frontend/components/app-layout.tsx`).
+We use **`titleBarStyle: 'default'`** so close / minimize / zoom are drawn by
+the **standard AppKit title bar** at full system size. **`hidden`** and
+**`hiddenInset`** paint Chromium overlay controls in the web content region —
+they look visibly smaller than Finder / Safari (trade-off: one native title
+strip above the page instead of embedding controls in the custom header row).
 
 ## Quick start
 

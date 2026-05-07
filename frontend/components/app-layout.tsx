@@ -38,7 +38,7 @@ import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
-import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
+import { useMacDesktopChrome } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
@@ -227,42 +227,33 @@ function HelpMenu(): React.JSX.Element {
 }
 
 /**
- * Width reserved for the macOS traffic-light buttons (close / minimize /
- * maximize) when running in the Electron desktop shell with
- * `titleBarStyle: 'hidden'`. The system buttons paint over the
- * BrowserWindow content area, so the header's leftmost controls have to
- * start past them or they get drawn underneath. Apple's HIG places the
- * buttons in the first ~70px; we round up to 80px to give the
- * SidebarTrigger a comfortable gap.
- */
-const MAC_TRAFFIC_LIGHT_RESERVE_PX = 80;
-
-/**
  * Top-bar chrome rendered as a full-width overlay above the sidebar and content.
  * Lives outside the sidebar so its controls (sidebar trigger, history, workspace
  * selector) stay in their original screen positions even when the sidebar is
  * hidden — the sidebar visually extends underneath this header.
+ *
+ * macOS Electron: when `electron/src/window-chrome.ts` uses **`default`**, the
+ * native title strip holds full-size traffic lights and web content starts below
+ * it — no extra horizontal inset. With **`hidden`** / **`hiddenInset`**, overlay
+ * controls sit inside the page; `trafficLightLeftInsetPx` from the preload bridge
+ * pushes this header right so controls do not sit under the lights.
  */
 function AppHeader(): React.JSX.Element {
-	const isMacDesktop = useIsMacDesktop();
+	const { isMacDesktop, trafficLightLeftInsetPx } = useMacDesktopChrome();
+	const headerPadLeftPx = trafficLightLeftInsetPx > 0 ? trafficLightLeftInsetPx : undefined;
 
 	return (
 		<header
 			className={cn(
-				// `items-center` keeps the 32px-tall control row vertically
-				// centered in the 40px header. Combined with the pinned
-				// `trafficLightPosition: { x: 16, y: 14 }` set in the Electron
-				// shell, that puts both row centers at y=20 from the window
-				// top — the system buttons and our controls share a baseline.
-				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
-				// On macOS the entire header acts as a window-drag surface
-				// (matches the muscle memory built up by every native Mac
-				// app — title bar = drag handle). Control clusters opt back
-				// out below so clicks still land on buttons; the gap between
-				// clusters is the user-facing drag handle.
-				isMacDesktop ? '[-webkit-app-region:drag]' : 'pl-3'
+				// Toolbar strip: same horizontal rhythm as web (`pl-3`) unless overlay
+				// traffic lights require a larger left inset from the preload bridge.
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 py-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
+				headerPadLeftPx === undefined && 'pl-3',
+				// On macOS Electron the custom header remains a drag surface for
+				// window moves (native bar is also draggable).
+				isMacDesktop && '[-webkit-app-region:drag]'
 			)}
-			style={isMacDesktop ? { paddingLeft: MAC_TRAFFIC_LIGHT_RESERVE_PX } : undefined}
+			style={headerPadLeftPx !== undefined ? { paddingLeft: headerPadLeftPx } : undefined}
 		>
 			{/* Left control cluster — `no-drag` so clicks land on the
 			    individual buttons instead of being intercepted as window

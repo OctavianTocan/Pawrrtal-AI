@@ -211,6 +211,9 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 - When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
 - When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
+- When a UI fix establishes a reusable pattern (disabled controls, overlays, menus, etc.), capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
+- Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
+- Electron desktop distribution should plan for an in-app update prompt flow so everyday users are not manually reinstalling each new build.
 
 ## Learned Workspace Facts
 
@@ -218,6 +221,10 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 - Frontend → backend cookie auth works because both run on the same host (`localhost`); cookies ignore ports, so `Set-Cookie` from `:8000` is visible to fetches from `:3001` with `credentials: 'include'`. Use `COOKIE_SAMESITE=lax` and `COOKIE_SECURE=false` in dev.
 - Post-login navigation in `LoginForm` must use `window.location.replace('/')` (full-page navigation), not `router.push`. Client-side navigation keeps React in the same turn so authed queries (`NavChats`, etc.) can fire before the browser commits the `Set-Cookie` response, causing a 401 → redirect-to-login race. This is especially visible on Safari and when onboarding UI adds heavier post-login hydration.
 - In staging/production the backend API lives on an `api.*` subdomain; the Next.js dev-login proxy (`/api/dev-login`) must call `cookies.set` with an explicit `domain` sourced from the `AUTH_COOKIE_DOMAIN` env var (or inferred by stripping `api.` from `NEXT_PUBLIC_API_URL`). Forwarding the upstream `Set-Cookie` verbatim omits `Domain`, making the cookie host-only for the proxy origin and invisible to API requests on the subdomain — Safari enforces this strictly where Chrome may appear to work.
+- Canonical application font stack (with fallbacks): `Google Sans Flex`, `Google Sans`, `Helvetica Neue`, `sans-serif`; keep `DESIGN.md` and `frontend/app/globals.css` aligned when this changes.
+- The deployed FastAPI backend for remote usage is hosted on Railway; local development still targets plain `localhost` per the ports above unless you intentionally run against that remote URL.
+- Custom React hooks use consistent `use-*` naming for modules and exports (for example `use-login-mutations.ts`).
+- When adding or extending GitHub Actions workflows, follow the repository pattern of running jobs on the team’s custom GitHub runner rather than assuming default hosted runners only.
 
 
 

@@ -24,6 +24,7 @@ import { registerIpcHandlers } from './ipc';
 import { createStore } from './lib/typed-store';
 import { buildApplicationMenu } from './menu';
 import { type StartedServer, startNextServer } from './server';
+import { MACOS_TITLE_BAR_STYLE } from './window-chrome';
 import { ensureDefaultWorkspaceRoot } from './workspace';
 
 /** Persisted BrowserWindow geometry saved via {@link windowStore}. */
@@ -67,9 +68,8 @@ function buildSplashDataUrl(): string {
 	// drag regions at the OS level and Chromium has a known quirk where
 	// they can persist after navigating away from the page that declared
 	// them — the next page's clicks get eaten as "drag the window" while
-	// keyboard focus still works. The window stays draggable via the
-	// reserved area around the traffic lights under `titleBarStyle:
-	// 'hidden'`, so we don't need an explicit drag region for the splash.
+	// keyboard focus still works. With `titleBarStyle: 'default'` the native
+	// title bar is draggable; we don't need `-webkit-app-region: drag` here.
 	const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <title>AI Nexus</title>
@@ -174,16 +174,15 @@ function createWindow(targetUrl: string): BrowserWindow {
 		minHeight: 480,
 		title: 'AI Nexus',
 		backgroundColor: '#F7F4ED',
-		// Use `hidden` (not `hiddenInset`). Electron documents `hiddenInset`
-		// as an "alternative look" with traffic lights more inset from the
-		// edge — they read smaller/weaker vs native apps and vs `hidden`.
-		// `hidden` matches the standard overlay controls; pair with
-		// `trafficLightPosition` so the shell and AppHeader stay aligned.
-		titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
-		// Pin position so the renderer can align header controls. Calibrated
-		// for a 40px-tall AppHeader (`h-10`) with `items-center` on the
-		// control row — tweak x/y in lockstep if either changes.
-		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 14 } } : {}),
+		frame: true,
+		// See `window-chrome.ts`: overlay styles (`hidden` / `hiddenInset`) paint
+		// Chromium traffic lights inside the page — they look smaller than native
+		// AppKit controls; `default` keeps full-size buttons in the standard strip.
+		...(process.platform === 'darwin'
+			? {
+					titleBarStyle: MACOS_TITLE_BAR_STYLE,
+				}
+			: {}),
 		show: false,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),
