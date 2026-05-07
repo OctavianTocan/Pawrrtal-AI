@@ -84,7 +84,7 @@ const desktopApi = {
 	/**
 	 * Host platform exposed synchronously so the renderer can make layout
 	 * decisions (e.g. reserve space for the macOS traffic-light buttons
-	 * under `titleBarStyle: 'hiddenInset'`) on first paint, without having
+	 * under `titleBarStyle: 'hidden'`) on first paint, without having
 	 * to round-trip through `desktop:get-platform` and re-render.
 	 *
 	 * Sandboxed preloads still get access to `process.platform`, so this

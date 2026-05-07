@@ -35,6 +35,16 @@ The renderer is the same Next.js app you get on the web — it has
 feature it goes through `frontend/lib/desktop.ts`, which falls back to
 web equivalents (`window.open`, no-op handlers) when not in Electron.
 
+### macOS window chrome
+
+On Darwin we use **`titleBarStyle: 'hidden'`** plus **`trafficLightPosition`**
+(see `electron/src/main.ts`). Prefer **`hidden`** over **`hiddenInset`**:
+Electron documents **`hiddenInset`** as an **alternate** chrome style (traffic
+lights more inset from the edge); they read smaller next to native apps and
+typical **`hidden`** Electron windows. **`trafficLightPosition`** must stay in
+lockstep with the frontend header padding (`AppHeader` in
+`frontend/components/app-layout.tsx`).
+
 ## Quick start
 
 ### Dev (against the running Next.js dev server)

@@ -229,7 +229,7 @@ function HelpMenu(): React.JSX.Element {
 /**
  * Width reserved for the macOS traffic-light buttons (close / minimize /
  * maximize) when running in the Electron desktop shell with
- * `titleBarStyle: 'hiddenInset'`. The buttons live inside the
+ * `titleBarStyle: 'hidden'`. The system buttons paint over the
  * BrowserWindow content area, so the header's leftmost controls have to
  * start past them or they get drawn underneath. Apple's HIG places the
  * buttons in the first ~70px; we round up to 80px to give the
@@ -251,7 +251,7 @@ function AppHeader(): React.JSX.Element {
 			className={cn(
 				// `items-center` keeps the 32px-tall control row vertically
 				// centered in the 40px header. Combined with the pinned
-				// `trafficLightPosition: { x: 16, y: 14 }` set in the Electron
+				// `trafficLightPosition: { x: 16, y: 12 }` set in the Electron
 				// shell, that puts both row centers at y=20 from the window
 				// top — the system buttons and our controls share a baseline.
 				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',

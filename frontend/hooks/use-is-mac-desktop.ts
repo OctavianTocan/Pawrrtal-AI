@@ -6,7 +6,7 @@ import { getDesktopPlatformSync } from '@/lib/desktop';
 /**
  * Track whether the renderer is running inside the macOS Electron shell
  * so layouts can reserve space for the system traffic-light buttons that
- * `titleBarStyle: 'hiddenInset'` parks inside the BrowserWindow content
+ * `titleBarStyle: 'hidden'` parks inside the BrowserWindow content
  * area (~80px wide × 28px tall in the top-left).
  *
  * Starts `false` so the SSR pass and the first client render agree

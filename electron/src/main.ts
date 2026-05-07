@@ -68,8 +68,8 @@ function buildSplashDataUrl(): string {
 	// they can persist after navigating away from the page that declared
 	// them — the next page's clicks get eaten as "drag the window" while
 	// keyboard focus still works. The window stays draggable via the
-	// reserved area around the traffic lights under `hiddenInset`, so we
-	// don't need an explicit drag region for the splash.
+	// reserved area around the traffic lights under `titleBarStyle:
+	// 'hidden'`, so we don't need an explicit drag region for the splash.
 	const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <title>AI Nexus</title>
@@ -174,14 +174,16 @@ function createWindow(targetUrl: string): BrowserWindow {
 		minHeight: 480,
 		title: 'AI Nexus',
 		backgroundColor: '#F7F4ED',
-		titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-		// Pin the traffic-light inset so the renderer can align its
-		// header controls to a known Y. With 12px-diameter buttons and
-		// y=14 the button center sits at y=20, matching a 32px-tall row
-		// that's `items-center` inside the 40px AppHeader (h-10).
-		// Bumping the row height OR this inset MUST be done in lockstep
-		// or the controls drift out of alignment with the system buttons.
-		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 14 } } : {}),
+		// Use `hidden` (not `hiddenInset`). Electron documents `hiddenInset`
+		// as an "alternative look" with traffic lights more inset from the
+		// edge — they read smaller/weaker vs native apps and vs `hidden`.
+		// `hidden` matches the standard overlay controls; pair with
+		// `trafficLightPosition` so the shell and AppHeader stay aligned.
+		titleBarStyle: process.platform === 'darwin' ? 'hidden' : 'default',
+		// Pin position so the renderer can align header controls. Calibrated
+		// for a 40px-tall AppHeader (`h-10`) with `items-center` on the
+		// control row — tweak x/y in lockstep if either changes.
+		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 12 } } : {}),
 		show: false,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),

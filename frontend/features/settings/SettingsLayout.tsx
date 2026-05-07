@@ -57,7 +57,7 @@ export function SettingsLayout(): React.JSX.Element {
 			    instead of stamping a hard `foreground/8` line.
 			    On macOS desktop the top padding is doubled so the
 			    "Back to app" button clears the system traffic-light
-			    buttons that `titleBarStyle: 'hiddenInset'` parks inside
+			    buttons that `titleBarStyle: 'hidden'` parks inside
 			    the BrowserWindow content area. */}
 			<aside
 				className={cn(
