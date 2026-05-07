@@ -164,6 +164,8 @@ export function OnboardingFlow({
 		setStep('identity');
 	}, []);
 
+	// Listen for the generic "open the flow" event — gated by listenForOpenEvent
+	// so embedders that manage their own open state can opt out.
 	useEffect(() => {
 		if (!listenForOpenEvent) return;
 		// Honor the same E2E skip flag for the event-driven open path so
@@ -177,21 +179,22 @@ export function OnboardingFlow({
 			setOpen(true);
 		};
 		window.addEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
+		return () => window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
+	}, [listenForOpenEvent]);
 
-		// Deep-link to the server step when the workspace modal dispatches
-		// OPEN_ONBOARDING_SERVER_STEP_EVENT ("Connect to remote server" button).
+	// Always listen for the server-step deep-link event — this is an explicit
+	// user action ("Connect to remote server" button) and must work regardless
+	// of the listenForOpenEvent flag.  E2E skip still applies.
+	useEffect(() => {
+		if (shouldSkipOnboardingForE2E()) return;
 		const serverHandler = (): void => {
 			setProfile(loadPersonalizationProfile());
 			setStep('server');
 			setOpen(true);
 		};
 		window.addEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
-
-		return () => {
-			window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
-			window.removeEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
-		};
-	}, [listenForOpenEvent]);
+		return () => window.removeEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
+	}, []);
 
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>

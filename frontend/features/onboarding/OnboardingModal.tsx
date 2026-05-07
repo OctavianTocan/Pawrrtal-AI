@@ -99,7 +99,10 @@ export function OnboardingModal({
 						<OnboardingWelcomeStep onContinue={() => setStep('create')} />
 					) : null}
 					{step === 'create' ? (
-						<OnboardingCreateWorkspaceStep onPickLocal={() => setStep('local')} />
+						<OnboardingCreateWorkspaceStep
+							onPickLocal={() => setStep('local')}
+							onClose={() => setOpen(false)}
+						/>
 					) : null}
 					{step === 'local' ? (
 						<OnboardingLocalWorkspaceStep

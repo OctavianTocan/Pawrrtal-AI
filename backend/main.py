@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
@@ -121,6 +122,11 @@ def create_app() -> FastAPI:
     fastapi_app.include_router(
         get_workspace_router(),
     )
+
+    @fastapi_app.get("/api/v1/health", tags=["health"], include_in_schema=False)
+    async def health_check() -> JSONResponse:
+        """Lightweight liveness probe used by the onboarding step-server verify button."""
+        return JSONResponse({"status": "ok"})
 
     return fastapi_app
 
