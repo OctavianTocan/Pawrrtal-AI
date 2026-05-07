@@ -1,7 +1,7 @@
 ---
 # ai-nexus-gvsb
 title: 'Backend pytest fails to collect: test_providers_and_schemas.py imports stale GeminiLLM'
-status: todo
+status: completed
 type: bug
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - backend
     - stale-test
 created_at: 2026-05-06T17:09:28Z
-updated_at: 2026-05-06T17:09:28Z
+updated_at: 2026-05-07T16:21:34Z
 ---
 
 ## Problem
@@ -39,3 +39,7 @@ Discovered while wiring `tests.yml` into CI (`ai-nexus-anju`). The new workflow 
 ## Notes
 
 - This bean blocks the backend job in `tests.yml` from going green. Until it lands, `tests.yml` will be red on every PR that touches `backend/**`.
+
+## Summary of Changes
+
+Fixed in commit `e49d664` (chore(types): green up mypy and biome backlog). The import was renamed from `agno_provider.GeminiLLM` → `gemini_provider.GeminiLLM` in `backend/tests/test_providers_and_schemas.py`. `uv run mypy` now reports 0 errors across 70 source files, including this test.

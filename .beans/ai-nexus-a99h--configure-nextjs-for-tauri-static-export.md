@@ -1,11 +1,11 @@
 ---
 # ai-nexus-a99h
 title: Configure Next.js for Tauri static export
-status: todo
+status: scrapped
 type: task
 priority: high
 created_at: 2026-03-04T22:13:03Z
-updated_at: 2026-03-04T22:13:03Z
+updated_at: 2026-05-07T16:25:47Z
 parent: ai-nexus-8ty6
 blocked_by:
     - ai-nexus-i0co
@@ -28,3 +28,7 @@ Configure Next.js to support both dev mode (with Tauri devUrl) and production st
 - Next.js 16 App Router with static export has limitations (no SSR, no API routes)
 - Our frontend is already client-side rendered with React Query, so this should be mostly fine
 - The backend URL needs to be configurable at runtime (not baked into build)
+
+## Reasons for Scrapping
+
+User confirmed 2026-05-07: anything Tauri-related can go away. The desktop direction is Electron (`electron/` shell exists, README is Electron-only).

@@ -1,7 +1,7 @@
 ---
 # ai-nexus-tzau
 title: 'Audit follow-ups: trim ci/ rules with RN flavor + decide thirdear-cursor snapshot'
-status: todo
+status: scrapped
 type: task
 priority: low
 tags:
@@ -9,7 +9,7 @@ tags:
     - tooling
     - tech-debt
 created_at: 2026-05-06T17:17:40Z
-updated_at: 2026-05-06T17:17:40Z
+updated_at: 2026-05-07T16:25:47Z
 ---
 
 ## Context
@@ -54,3 +54,7 @@ Three Cursor rules use `alwaysApply: true` (`check-solutions-first.mdc`, `no-bac
 - [ ] Decision recorded for the `ci/` rules (delete-many or rewrite-many).
 - [ ] Decision recorded for `thirdear-cursor/` snapshot.
 - [ ] If applicable, ADR in `docs/decisions/` capturing why we trimmed the vendored set.
+
+## Reasons for Scrapping
+
+User confirmed 2026-05-07: this one can go.

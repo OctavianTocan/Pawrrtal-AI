@@ -1,11 +1,11 @@
 ---
 # ai-nexus-8omf
 title: Migrate router hooks in all components
-status: todo
+status: scrapped
 type: task
 priority: high
 created_at: 2026-03-26T17:29:00Z
-updated_at: 2026-03-26T17:29:00Z
+updated_at: 2026-05-07T16:25:21Z
 parent: ai-nexus-id67
 blocked_by:
     - ai-nexus-ow61
@@ -38,3 +38,7 @@ Files that directly import next/navigation need the import swapped.
 
 ## Note
 This can run in parallel with Tasks 2-4 since it only needs @tanstack/react-router installed (Task 1). But verifying the full app requires Task 4 (entry point) to be done.
+
+## Reasons for Scrapping
+
+User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. Closing the cluster — see ai-nexus-id67.

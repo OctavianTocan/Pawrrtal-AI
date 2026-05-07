@@ -1,7 +1,7 @@
 ---
 # ai-nexus-6ve4
 title: Configure subdomain auth and CORS for local Portless and production
-status: todo
+status: scrapped
 type: task
 priority: high
 tags:
@@ -12,7 +12,7 @@ tags:
     - CORS
     - Portless
 created_at: 2026-03-16T17:15:24Z
-updated_at: 2026-03-16T17:22:15Z
+updated_at: 2026-05-07T16:21:28Z
 parent: ai-nexus-sx1v
 blocked_by:
     - ai-nexus-bsgu
@@ -172,3 +172,7 @@ This avoids ambiguous comma-splitting behavior in environment parsing.
 
 - `ai-nexus-bsgu` covers configurable CORS origins only
 - this bean expands that work to include cookie-domain strategy, Portless local subdomains, and production subdomain deployment
+
+## Reasons for Scrapping
+
+Portless was removed from local dev — see ai-nexus-7xpf. The 'remote backend' direction now lives under ai-nexus-yfa2 (Vercel + VPS) rather than subdomain Portless.

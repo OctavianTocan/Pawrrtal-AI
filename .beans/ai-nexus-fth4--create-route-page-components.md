@@ -1,11 +1,11 @@
 ---
 # ai-nexus-fth4
 title: Create route page components
-status: todo
+status: scrapped
 type: task
 priority: high
 created_at: 2026-03-26T17:28:38Z
-updated_at: 2026-03-26T17:28:38Z
+updated_at: 2026-05-07T16:25:21Z
 parent: ai-nexus-id67
 blocked_by:
     - ai-nexus-hogv
@@ -35,3 +35,7 @@ Plan Task 4. Convert all 6 Next.js pages to client components for TanStack Route
 - [ ] Create dev-access-requests-page.tsx — copy existing page
 - [ ] Verify: tsc --noEmit
 - [ ] Commit
+
+## Reasons for Scrapping
+
+User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. Closing the cluster — see ai-nexus-id67.
