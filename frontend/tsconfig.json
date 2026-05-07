@@ -39,5 +39,15 @@
 		"**/*.mts",
 		".next/dev/types/**/*.ts"
 	],
-	"exclude": ["node_modules"]
+	"exclude": [
+		"node_modules",
+		"lib/react-dropdown/src/__stories__",
+		"lib/react-dropdown/src/__storybook__",
+		"lib/react-dropdown/src/__tests__",
+		"lib/react-dropdown/src/test-utils",
+		"lib/react-dropdown/lostpixel.config.ts",
+		"lib/react-dropdown/tsup.config.ts",
+		"lib/react-dropdown/vitest.config.ts",
+		"lib/react-dropdown/vitest.setup.ts"
+	]
 }

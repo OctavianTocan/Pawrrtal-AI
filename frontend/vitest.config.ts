@@ -11,7 +11,16 @@ export default defineConfig({
 	},
 	test: {
 		environment: 'jsdom',
-		exclude: ['**/.next/**', '**/node_modules/**', '**/e2e/**'],
+		exclude: [
+			'**/.next/**',
+			'**/node_modules/**',
+			'**/e2e/**',
+			// react-dropdown owns its own vitest config (globals enabled). When
+			// the frontend's runner picks them up, the bare `describe/it/expect`
+			// references fail to resolve. Run package tests via:
+			//   `cd lib/react-dropdown && bunx vitest run`
+			'lib/react-dropdown/**',
+		],
 		globals: false,
 		setupFiles: ['./test/setup.ts'],
 		coverage: {
@@ -31,6 +40,9 @@ export default defineConfig({
 				'**/.next/**',
 				'components/ui/**',
 				'app/**',
+				// Coverage for the vendored react-dropdown package is owned by
+				// its own vitest config in lib/react-dropdown/.
+				'lib/react-dropdown/**',
 			],
 		},
 	},

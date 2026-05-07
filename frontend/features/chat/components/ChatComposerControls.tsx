@@ -15,11 +15,11 @@ import {
 	SquareIcon,
 } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
 import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 import {
 	CHAT_STORAGE_KEYS,
@@ -266,32 +266,42 @@ function isSafetyMode(value: unknown): value is SafetyMode {
 
 /** Renders the auto-review/safety permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
-	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
 		storageKey: CHAT_STORAGE_KEYS.safetyMode,
 		defaultValue: DEFAULT_SAFETY_MODE,
 		validate: isSafetyMode,
 	});
+	// Same hook ModelSelectorPopover uses — keeps the tooltip suppressed during
+	// the dropdown's closing window so a focus-return on the trigger doesn't
+	// fire `Tooltip.onOpenChange(true)` with `data-state="instant-open"` while
+	// the dropdown is still mid-fade.
+	const { menuOpen, tooltipOpen, handleMenuOpenChange, handleTooltipOpenChange } =
+		useTooltipDropdown();
 
 	const activeMeta = SAFETY_MODE_META[safetyMode];
 	const ActiveIcon = activeMeta.Icon;
 
 	return (
 		<TooltipProvider disableHoverableContent>
-			{/* Suppress tooltip while dropdown is open — react-dropdown has no Radix FocusScope,
-			    so focus never returns to the trigger; a simple boolean guard is enough. */}
-			<Tooltip delayDuration={300} open={dropdownOpen ? false : undefined}>
+			<Tooltip delayDuration={300} onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
 				<TooltipTrigger asChild>
 					<span className="inline-flex">
 						<DropdownMenu
 							closeOnSelect
 							usePortal
-							contentClassName="bg-popover border border-border rounded-lg p-1 min-w-[208px] mb-2"
+							// Match ModelSelectorPopover's surface — `popover-styled` provides
+							// the project's elevated background, layered shadow, and themed
+							// border; `chat-composer-dropdown-menu` overrides the surface to
+							// `--background-elevated` and the radius to `--radius-surface-lg`
+							// so the dropdown reads as part of the chat shell.
+							contentClassName="chat-composer-dropdown-menu popover-styled p-1 min-w-[208px]"
 							getItemDisplay={(mode) => SAFETY_MODE_META[mode].label}
 							getItemKey={(mode) => mode}
+							// Marks advanced modes so a divider is rendered ABOVE the first
+							// one (the package emits the separator before the marked item).
 							getItemSeparator={(mode) => SAFETY_MODE_ADVANCED.has(mode)}
 							items={SAFETY_MODE_ORDER}
-							onOpenChange={setDropdownOpen}
+							onOpenChange={handleMenuOpenChange}
 							onSelect={setSafetyMode}
 							placement="top"
 							renderItem={(mode, _isSelected, onSelect) => (
@@ -305,7 +315,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 								<Button
 									className={cn(
 										'h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal hover:bg-foreground/[0.04]',
-										dropdownOpen && 'bg-foreground/[0.04]',
+										menuOpen && 'bg-foreground/[0.04]',
 										activeMeta.colorClass
 									)}
 									type="button"

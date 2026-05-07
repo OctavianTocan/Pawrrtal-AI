@@ -6,6 +6,12 @@
 			"sourceType": "github",
 			"computedHash": "fb5f5a85b48db9b410595b02b84fdf48f7299b9f8e1dcd5964001fb3d9705808"
 		},
+		"animate-text": {
+			"source": "pixel-point/animate-text",
+			"sourceType": "github",
+			"skillPath": "skills/animate-text/SKILL.md",
+			"computedHash": "7724b6f42dc2c33a98d48ca592402aed596830a55d469e83b3c5970d478e25ed"
+		},
 		"biome-js": {
 			"source": "paulrberg/agent-skills",
 			"sourceType": "github",
