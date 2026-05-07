@@ -1,39 +1,35 @@
 'use client';
 
 /**
- * Pill-style breadcrumb rendered above each folder/file pane.
+ * Pill-style breadcrumb rendered at the top of the file/file-list panes.
  *
- * Shows the path from "My Files" down to the current location. Each crumb
- * except the trailing one is a button that navigates to that ancestor; the
- * trailing crumb is plain text to indicate "you are here".
+ * Sauna's breadcrumb is a row of soft pills with no chevron between them —
+ * inactive segments render as muted text on transparent background, the
+ * trailing (active) segment gets a soft `--foreground-5` pill so it reads
+ * as "you are here" without a separator glyph.
  */
 
-import { ChevronRightIcon } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { KnowledgeBreadcrumb } from '../path-utils';
 
 interface KnowledgeBreadcrumbsProps {
+	/** Breadcrumb segments — first is the root, last is the current location. */
 	crumbs: readonly KnowledgeBreadcrumb[];
+	/** Fired when a non-current crumb is clicked. */
 	onNavigate: (path: string) => void;
 }
 
 /**
  * Pure presentation. The container builds the crumb list via
  * `buildBreadcrumbs(...)` from `path-utils` and translates `onNavigate`
- * into a `router.push` with the appropriate query string.
+ * into a `router.replace` with the appropriate query string.
  */
 export function KnowledgeBreadcrumbs({ crumbs, onNavigate }: KnowledgeBreadcrumbsProps): ReactNode {
 	return (
-		<nav aria-label="Knowledge breadcrumb" className="flex flex-wrap items-center gap-1">
+		<nav aria-label="Knowledge breadcrumb" className="flex flex-wrap items-center gap-0.5">
 			{crumbs.map((crumb, index) => (
 				<Fragment key={`${crumb.path}-${index.toString()}`}>
-					{index > 0 ? (
-						<ChevronRightIcon
-							aria-hidden="true"
-							className="size-3.5 text-muted-foreground"
-						/>
-					) : null}
 					{crumb.isCurrent ? (
 						<span
 							className="rounded-md bg-foreground-5 px-2 py-1 text-[13px] font-medium text-foreground"

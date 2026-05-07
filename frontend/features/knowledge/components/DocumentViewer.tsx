@@ -3,10 +3,15 @@
 /**
  * Document viewer rendered when the user opens a `.md` file from My Files.
  *
- * Replaces the folder list with a header (filename + actions + close) and a
- * scrollable body that renders the file's markdown source through
- * `Streamdown` — the same renderer the chat surface uses, so prose styling
- * stays consistent across the app.
+ * Self-contained card chrome: small filename label on the top-left, a
+ * "Publish" pill chip with a chevron (single grouped affordance) plus a
+ * close button on the top-right. The document body is the same prose
+ * renderer the chat surface uses, centered in a comfortable column.
+ *
+ * The chrome here intentionally avoids a horizontal divider line — the
+ * Sauna reference (image 33, image 35) draws the boundary with whitespace
+ * + the column's left border. Adding a hard rule made the panel feel
+ * busier than the reference.
  */
 
 import {
@@ -18,7 +23,6 @@ import {
 	ChevronDownIcon,
 	CopyIcon,
 	DownloadIcon,
-	FileTextIcon,
 	SendIcon,
 	UserPlusIcon,
 	XIcon,
@@ -27,34 +31,26 @@ import type { ReactNode } from 'react';
 import { Streamdown } from 'streamdown';
 
 interface DocumentViewerProps {
+	/** Filename label shown at the top-left of the viewer chrome. */
 	filename: string;
+	/** Markdown source rendered inside the body. */
 	markdown: string;
+	/** Fired when the user clicks the close button. */
 	onClose: () => void;
 }
 
 /**
- * Pure presentation. The container decides what the close button does
- * (typically: drop the trailing `.md` segment from the URL path).
+ * Pure presentation. The container decides what the close button does —
+ * typically: drop the trailing `.md` segment from the URL path so the
+ * file list column survives the close.
  */
 export function DocumentViewer({ filename, markdown, onClose }: DocumentViewerProps): ReactNode {
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<header className="flex shrink-0 items-center gap-2 border-b border-border px-5 py-3">
-				<FileTextIcon
-					aria-hidden="true"
-					className="size-4 shrink-0 text-muted-foreground"
-				/>
-				<h2 className="flex-1 truncate text-[13px] font-medium text-foreground">
+			<header className="flex shrink-0 items-center gap-2 px-4 py-2">
+				<span className="flex-1 truncate text-[12px] text-muted-foreground">
 					{filename}
-				</h2>
-
-				<button
-					type="button"
-					className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full bg-foreground-5 px-2.5 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-10"
-				>
-					<SendIcon aria-hidden="true" className="size-3.5" />
-					Publish
-				</button>
+				</span>
 
 				<DropdownPanelMenu
 					asChild
@@ -64,10 +60,11 @@ export function DocumentViewer({ filename, markdown, onClose }: DocumentViewerPr
 					trigger={
 						<button
 							type="button"
-							aria-label="Document actions"
-							className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-foreground-5 hover:text-foreground"
+							className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-full bg-foreground-5 pr-1.5 pl-3 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-10"
 						>
-							<ChevronDownIcon aria-hidden="true" className="size-4" />
+							<SendIcon aria-hidden="true" className="size-3.5" />
+							Publish
+							<ChevronDownIcon aria-hidden="true" className="size-3.5" />
 						</button>
 					}
 				>
@@ -109,8 +106,8 @@ export function DocumentViewer({ filename, markdown, onClose }: DocumentViewerPr
 			 * in tailwind.config). `min-h-0` lets the flex child shrink so the
 			 * scroll container is the inner div, not the page.
 			 */}
-			<div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
-				<article className="prose prose-sm max-w-[680px] mx-auto text-foreground">
+			<div className="min-h-0 flex-1 overflow-y-auto px-8 pb-10">
+				<article className="prose prose-sm mx-auto max-w-[680px] text-foreground">
 					<Streamdown>{markdown}</Streamdown>
 				</article>
 			</div>

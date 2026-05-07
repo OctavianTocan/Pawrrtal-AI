@@ -3,11 +3,15 @@
 /**
  * Folder/file browser for the "My Files" Knowledge sub-view.
  *
- * Layout: breadcrumb + select-toggle row at the top, scrollable list below.
- * Selection state lives entirely inside this component because nothing else
- * in the app cares about which rows are checked. When the user toggles
- * "Select", the trailing column collapses and a checkbox appears at the
- * leading edge of every row.
+ * Layout: a breadcrumb pill row at the top (no chevrons) and a vertical
+ * list of folder/file rows below. Used when the current folder is NOT a
+ * leaf — i.e. it contains at least one sub-folder. Leaf folders take the
+ * three-column shape and render through `KnowledgeFileListColumn`
+ * + `DocumentViewer` in `KnowledgeView`.
+ *
+ * Selection state lives entirely inside this component because nothing
+ * else cares about which rows are checked. Toggling "Select" turns the
+ * trailing column into a checkbox.
  */
 
 import { CheckSquare2Icon, FolderIcon } from 'lucide-react';
@@ -66,7 +70,7 @@ export function MyFilesPanel({
 	if (!currentNode || currentNode.kind !== 'folder') {
 		return (
 			<div className="flex h-full flex-col">
-				<div className="flex items-center justify-between gap-2 px-5 py-3">
+				<div className="flex h-12 items-center justify-between gap-2 px-3">
 					<KnowledgeBreadcrumbs crumbs={crumbs} onNavigate={onNavigateBreadcrumb} />
 				</div>
 				<EmptyState
@@ -82,7 +86,7 @@ export function MyFilesPanel({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<div className="flex items-center justify-between gap-2 px-5 py-3">
+			<div className="flex h-12 shrink-0 items-center justify-between gap-2 px-3">
 				<KnowledgeBreadcrumbs crumbs={crumbs} onNavigate={onNavigateBreadcrumb} />
 				<div className="flex items-center gap-2">
 					{selectionMode ? (
@@ -93,10 +97,10 @@ export function MyFilesPanel({
 					<button
 						type="button"
 						onClick={handleToggleSelect}
-						className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-5"
+						className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[12px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground-5 hover:text-foreground"
 					>
 						<CheckSquare2Icon aria-hidden="true" className="size-3.5" />
-						{selectionMode ? 'Cancel' : 'Select Files'}
+						{selectionMode ? 'Cancel' : 'Select'}
 					</button>
 				</div>
 			</div>
