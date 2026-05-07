@@ -240,16 +240,16 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					<LayoutGridIcon aria-hidden="true" className="size-4" />
 					View all plans
 				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={noop}>
+				<DropdownMenuItem disabled onSelect={noop}>
 					<DownloadIcon aria-hidden="true" className="size-4" />
 					Get apps and extensions
 				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={noop}>
+				<DropdownMenuItem disabled onSelect={noop}>
 					<GiftIcon aria-hidden="true" className="size-4" />
 					Gift AI Nexus
 				</DropdownMenuItem>
 				<DropdownSubmenu>
-					<DropdownSubmenuTrigger className={SUBMENU_TRIGGER_CLASSNAME}>
+					<DropdownSubmenuTrigger disabled className={SUBMENU_TRIGGER_CLASSNAME}>
 						<InfoIcon aria-hidden="true" className="size-4" />
 						<span className="flex-1 text-left">Learn more</span>
 						<ChevronRightIcon
@@ -259,7 +259,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					</DropdownSubmenuTrigger>
 					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
 						{LEARN_MORE_LINKS.map((link) => (
-							<DropdownMenuItem key={link.id} onSelect={noop}>
+							<DropdownMenuItem key={link.id} disabled onSelect={noop}>
 								{link.label}
 							</DropdownMenuItem>
 						))}

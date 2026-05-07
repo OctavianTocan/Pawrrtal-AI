@@ -179,6 +179,10 @@ components:
   divider:
     backgroundColor: "{colors.border}"
     height: 1px
+  dropdown-menu-item-disabled:
+    backgroundColor: "Muted tray — Tailwind `bg-muted/50` (theme token `--muted`, see globals.css)"
+    textColor: "{colors.muted-foreground}"
+    rounded: "{rounded.sm}"
   metadata:
     textColor: "{colors.muted-foreground}"
     typography: caption
@@ -581,6 +585,53 @@ Component tokens record the **typed surfaces** in the chat workspace. Use the
 front matter as the source of truth for backgrounds, text colors, and radii;
 fall back to the prose below for behavioral notes.
 
+### Menu primitives (`@octavian-tocan/react-dropdown`)
+
+Panel-style dropdowns (sidebar profile menu, composer attachment menus, etc.)
+use **`DropdownMenuItem`** from **`@octavian-tocan/react-dropdown`**. The
+implementation is vendored at **`frontend/lib/react-dropdown`** (`package.json`
+`link:` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
+
+**Tailwind v4 scanning:** Default row chrome lives in
+**`frontend/lib/react-dropdown/src/DropdownPanelItems.tsx`**
+(`DEFAULT_ITEM_CLASSNAME`). Tailwind only emits utilities for class names it
+**scans**. Those files sit outside `app/` / `features/`, so
+**`frontend/app/globals.css`** registers the package explicitly:
+
+```css
+@source "../lib/react-dropdown/src";
+```
+
+(Path is relative to `app/globals.css`.) If you add utilities only inside
+`lib/react-dropdown/` and styles “do nothing” at runtime, verify the compiled
+CSS contains those classes—missing **`@source`** is the usual cause.
+
+**Disabled rows:** Pass **`disabled`** on **`DropdownMenuItem`**. Visuals rely on
+native **`:disabled`** Tailwind variants (`disabled:*`) on the underlying
+`<button>`. Disabled rows keep a **steady `bg-muted/50` tray** (same fill on
+`:hover` / `:focus` / `:active` so they never flash the enabled
+**`hover:bg-foreground/[0.03]`** wash), **`text-muted-foreground`**, and softer
+default Lucide icons
+(`disabled:[&>svg:not([class*='text-'])]:text-muted-foreground/55`). Enabled
+rows stay flat until hover—so unavailable actions read unambiguously.
+
+**Disabled submenu triggers:** **`DropdownSubmenuTrigger`** accepts **`disabled`**.
+Implementation merges the shared **`MENU_ROW_DISABLED_VISUAL_CLASSNAME`** module
+(`frontend/lib/react-dropdown/src/menu-row-disabled-visual.ts`) with item rows,
+skips hover-scheduled open and keyboard open, and sets **`disabled`** on the
+underlying `<button>`. Sub-items inside the flyout still use **`DropdownMenuItem
+disabled`** as usual (they remain unreachable when the trigger is disabled).
+
+The write-up in **`docs/solutions/ui-bugs/dropdown-disabled-menu-items-not-visually-distinct.md`**
+captures the full diagnosis (scan gap + contrast strategy) for future debugging.
+
+- **`dropdown-menu-item-disabled`** — Unavailable **`DropdownMenuItem`** rows
+  (`disabled` prop). **Surface:** `bg-muted/50` row tray, **`text-muted-foreground`**
+  labels, **4px** row radius (`rounded.sm`) inside the panel. **Do not** recreate
+  one-off disabled styling at call sites unless the default is insufficient—fix
+  **`DEFAULT_ITEM_CLASSNAME`** instead. See **Menu primitives
+  (`@octavian-tocan/react-dropdown`)** above for **`@source`** and file paths.
+
 - **`popover`** — Used by all menu containers via the `popover-styled`
   utility class. 8px radius (`rounded.md`), `shadow-modal-small`, no border.
   Default mode: **8 px backdrop blur** and a **95% background tint** so the
@@ -681,6 +732,12 @@ fall back to the prose below for behavioral notes.
 - **Trust the 16px root.** All Tailwind sizing utilities resolve to clean
   pixels; you should rarely need a literal `px` value outside 1px borders
   and a handful of icon-sized affordances.
+- **Register linked UI packages with Tailwind.** Packages resolved under
+  `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
+  `frontend/lib/react-dropdown`) often define Tailwind class strings. Add an
+  `@source` path in `frontend/app/globals.css` for each such package so those
+  utilities are emitted—see **Menu primitives (`@octavian-tocan/react-dropdown`)**
+  under **Components**.
 
 - **Bump up, never down, the sidebar text scale.** The 14px floor is
   load-bearing for the sidebar's legibility under the warm low-contrast
