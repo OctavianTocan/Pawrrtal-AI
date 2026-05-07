@@ -22,7 +22,6 @@ import {
 } from '@octavian-tocan/react-dropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-	ChevronRightIcon,
 	ChevronsUpDownIcon,
 	DownloadIcon,
 	GiftIcon,
@@ -218,10 +217,6 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					<DropdownSubmenuTrigger className={SUBMENU_TRIGGER_CLASSNAME}>
 						<GlobeIcon aria-hidden="true" className="size-4" />
 						<span className="flex-1 text-left">Language</span>
-						<ChevronRightIcon
-							aria-hidden="true"
-							className="size-3.5 text-muted-foreground"
-						/>
 					</DropdownSubmenuTrigger>
 					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
 						{LANGUAGE_OPTIONS.map((opt) => (
@@ -252,10 +247,6 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					<DropdownSubmenuTrigger disabled className={SUBMENU_TRIGGER_CLASSNAME}>
 						<InfoIcon aria-hidden="true" className="size-4" />
 						<span className="flex-1 text-left">Learn more</span>
-						<ChevronRightIcon
-							aria-hidden="true"
-							className="size-3.5 text-muted-foreground"
-						/>
 					</DropdownSubmenuTrigger>
 					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
 						{LEARN_MORE_LINKS.map((link) => (

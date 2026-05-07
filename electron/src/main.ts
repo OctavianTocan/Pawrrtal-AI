@@ -183,7 +183,7 @@ function createWindow(targetUrl: string): BrowserWindow {
 		// Pin position so the renderer can align header controls. Calibrated
 		// for a 40px-tall AppHeader (`h-10`) with `items-center` on the
 		// control row — tweak x/y in lockstep if either changes.
-		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 12 } } : {}),
+		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 14 } } : {}),
 		show: false,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),

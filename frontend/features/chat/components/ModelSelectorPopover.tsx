@@ -342,7 +342,10 @@ export function ModelSelectorPopover({
 										selectedModel.provider === row.provider;
 									return (
 										<DropdownSubmenu>
-											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
+											<DropdownSubmenuTrigger
+												showChevron={false}
+												className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+											>
 												<ProviderLogo provider={row.provider} />
 												<span className="min-w-0 flex-1 truncate text-left">
 													{PROVIDER_LABELS[row.provider]}
@@ -384,10 +387,6 @@ export function ModelSelectorPopover({
 													Extended reasoning depth
 												</span>
 											</div>
-											<ChevronRightIcon
-												aria-hidden="true"
-												className="size-3.5 shrink-0 text-muted-foreground"
-											/>
 										</DropdownSubmenuTrigger>
 										<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-32">
 											{REASONING_OPTIONS.map((option) => (
