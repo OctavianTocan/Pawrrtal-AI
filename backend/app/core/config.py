@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -71,7 +71,9 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     # Where Google redirects back to after auth. Must be an authorized
     # redirect URI on the OAuth client. Default targets local dev.
-    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
+    google_oauth_redirect_uri: str = (
+        "http://localhost:8000/api/v1/auth/oauth/google/callback"
+    )
 
     # --- OAuth: Apple ---
     # Apple Sign In requires four pieces: services ID (acts as client_id),
@@ -81,7 +83,9 @@ class Settings(BaseSettings):
     apple_oauth_team_id: str = ""
     apple_oauth_key_id: str = ""
     apple_oauth_private_key: str = ""
-    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
+    apple_oauth_redirect_uri: str = (
+        "http://localhost:8000/api/v1/auth/oauth/apple/callback"
+    )
 
     # Where to send the user after a successful OAuth sign-in. Override in
     # production to point at the deployed frontend (e.g. https://app/...).
@@ -109,10 +113,27 @@ class Settings(BaseSettings):
     # so the receiving FastAPI route can drop forgeries.
     telegram_webhook_secret: str = ""
 
+    @field_validator("telegram_bot_username", mode="before")
+    @classmethod
+    def _strip_telegram_at_prefix(cls, value: object) -> object:
+        """Forgive a leading ``@`` in ``TELEGRAM_BOT_USERNAME``.
+
+        Telegram deep links are ``https://t.me/<username>``; an ``@``
+        produces ``t.me/@username`` which Telegram redirects to its
+        homepage instead of the bot. Humans frequently paste the
+        ``@``-prefixed handle into ``.env``, so we normalize once at the
+        config boundary instead of forcing every consumer to remember.
+        """
+        if isinstance(value, str):
+            return value.lstrip("@")
+        return value
+
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
-        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
+        secure = (
+            self.cookie_secure if self.cookie_secure is not None else self.is_production
+        )
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."

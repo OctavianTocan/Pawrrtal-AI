@@ -21,6 +21,7 @@ Handler states
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 
@@ -31,6 +32,12 @@ from app.crud.channel import (
     get_user_id_for_external,
     redeem_link_code,
 )
+
+# Loose match for the link-code shape (8 chars from the look-alike-free
+# alphabet defined in app.crud.channel). Used to distinguish "user pasted
+# a code" from "user is talking to an unbound bot" so we can redeem the
+# former and nudge the latter.
+_CODE_SHAPE = re.compile(r"^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$")
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +165,29 @@ async def handle_plain_message(
         session=session,
     )
     if nexus_user_id is None:
+        # The not-bound nudge tells the user to "send me the code" — so
+        # if a plain message looks like one, try to redeem it here
+        # instead of forcing them through the /start deep link. We only
+        # match the exact code shape so we don't accidentally treat
+        # arbitrary chatter as a redemption attempt.
+        candidate = text.strip().upper()
+        if _CODE_SHAPE.fullmatch(candidate):
+            binding = await redeem_link_code(
+                code=candidate,
+                provider=PROVIDER,
+                external_user_id=str(sender.user_id),
+                external_chat_id=str(sender.chat_id),
+                display_handle=sender.username or sender.full_name,
+                session=session,
+            )
+            if binding is not None:
+                logger.info(
+                    "TELEGRAM_BIND_OK_VIA_PLAIN external_user_id=%s nexus_user_id=%s",
+                    sender.user_id,
+                    binding.user_id,
+                )
+                return _BIND_OK_MESSAGE
+            return _BIND_BAD_CODE_MESSAGE
         return _NOT_BOUND_MESSAGE
 
     conversation_id = await get_or_create_telegram_conversation(

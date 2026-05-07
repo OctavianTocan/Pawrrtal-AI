@@ -53,7 +53,17 @@ export function TelegramConnectDialog({
 			setSecondsLeft(null);
 			return undefined;
 		}
-		const expiresAt = new Date(state.pendingCode.expires_at).getTime();
+		// Backend emits naive UTC ISO strings (no `Z`/offset). Per the
+		// ECMAScript spec, `new Date()` reads tz-less date-time forms as
+		// LOCAL time, which puts `expires_at` in the past for any user
+		// east of UTC and immediately fires `cancelConnect()` below.
+		// Append `Z` only when no offset is already present so we keep
+		// working if the backend ever switches to tz-aware timestamps.
+		const rawExpiry = state.pendingCode.expires_at;
+		const normalizedExpiry = /[zZ]|[+-]\d\d:?\d\d$/.test(rawExpiry)
+			? rawExpiry
+			: `${rawExpiry}Z`;
+		const expiresAt = new Date(normalizedExpiry).getTime();
 		const tick = (): void => {
 			const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
 			setSecondsLeft(remaining);
@@ -134,9 +144,21 @@ export function TelegramConnectDialog({
 				<div className="space-y-4">
 					<p className="text-sm text-muted-foreground">
 						Open Telegram, send the code below to{' '}
-						<span className="font-medium text-foreground">
-							@{state.pendingCode.bot_username ?? 'the Nexus bot'}
-						</span>
+						{state.pendingCode.bot_username ? (
+							<a
+								className="cursor-pointer font-medium text-foreground underline-offset-4 hover:underline"
+								href={
+									state.pendingCode.deep_link ??
+									`https://t.me/${state.pendingCode.bot_username}`
+								}
+								rel="noreferrer"
+								target="_blank"
+							>
+								@{state.pendingCode.bot_username}
+							</a>
+						) : (
+							<span className="font-medium text-foreground">the Nexus bot</span>
+						)}
 						, and we'll connect this account.
 					</p>
 					<div className="flex items-center justify-between gap-2 rounded-xl border border-foreground/10 bg-foreground/[0.04] px-4 py-3">
