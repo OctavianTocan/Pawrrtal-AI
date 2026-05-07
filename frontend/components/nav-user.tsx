@@ -11,6 +11,8 @@
 
 'use client';
 
+import type { MenuItemDef } from '@octavian-tocan/react-dropdown';
+import { DropdownMenuDef } from '@octavian-tocan/react-dropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import {
 	ChevronsUpDownIcon,
@@ -25,19 +27,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -75,6 +66,11 @@ const LEARN_MORE_LINKS = [
 	{ id: 'status', label: 'Status' },
 ] as const satisfies ReadonlyArray<{ id: string; label: string }>;
 
+/** Stub for menu items whose actions are not yet implemented. */
+function noop(): void {
+	// Intentionally empty — placeholder for unimplemented menu actions.
+}
+
 /** First letter of each space-separated word, capped at two — for AvatarFallback. */
 function getInitials(name: string): string {
 	const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -99,14 +95,20 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 	const router = useRouter();
 	const fetcher = useAuthedFetch();
 	const queryClient = useQueryClient();
+	// Tracks dropdown open state so we can apply the active background on the
+	// trigger button — replaces Radix's automatic `aria-expanded` Tailwind variant.
+	const [isOpen, setIsOpen] = useState(false);
 
 	/**
 	 * Calls the FastAPI-Users logout route, clears every cached query so
 	 * the next session never sees the previous user's data, and routes to
 	 * /login. The logout endpoint clears the JWT cookie server-side; the
 	 * cache wipe is the client-side complement.
+	 *
+	 * Wrapped in useCallback so `menuItems` can declare it as a dependency
+	 * without recreating the items array on every render.
 	 */
-	const handleLogout = async (): Promise<void> => {
+	const handleLogout = useCallback(async (): Promise<void> => {
 		try {
 			await fetcher('/auth/jwt/logout', { method: 'POST' });
 		} catch (error) {
@@ -119,13 +121,115 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 			queryClient.clear();
 			router.replace('/login');
 		}
-	};
+	}, [fetcher, queryClient, router]);
+
+	const menuItems = useMemo<readonly MenuItemDef[]>(
+		() => [
+			{ type: 'label', text: user.email },
+			{
+				type: 'action',
+				id: 'settings',
+				label: 'Settings',
+				icon: <SettingsIcon aria-hidden="true" className="size-4" />,
+				shortcut: '⇧⌘,',
+				onClick: () => router.push('/settings'),
+			},
+			{
+				type: 'submenu',
+				id: 'language',
+				label: 'Language',
+				icon: <GlobeIcon aria-hidden="true" className="size-4" />,
+				children: LANGUAGE_OPTIONS.map((opt) => ({
+					type: 'action' as const,
+					id: opt.id,
+					label: opt.label,
+					onClick: noop,
+				})),
+			},
+			{
+				type: 'action',
+				id: 'help',
+				label: 'Get help',
+				icon: <HelpCircleIcon aria-hidden="true" className="size-4" />,
+				onClick: noop,
+			},
+			{ type: 'separator' },
+			{
+				type: 'action',
+				id: 'plans',
+				label: 'View all plans',
+				icon: <LayoutGridIcon aria-hidden="true" className="size-4" />,
+				onClick: noop,
+			},
+			{
+				type: 'action',
+				id: 'apps',
+				label: 'Get apps and extensions',
+				icon: <DownloadIcon aria-hidden="true" className="size-4" />,
+				onClick: noop,
+			},
+			{
+				type: 'action',
+				id: 'gift',
+				label: 'Gift AI Nexus',
+				icon: <GiftIcon aria-hidden="true" className="size-4" />,
+				onClick: noop,
+			},
+			{
+				type: 'submenu',
+				id: 'learn-more',
+				label: 'Learn more',
+				icon: <InfoIcon aria-hidden="true" className="size-4" />,
+				children: LEARN_MORE_LINKS.map((link) => ({
+					type: 'action' as const,
+					id: link.id,
+					label: link.label,
+					onClick: noop,
+				})),
+			},
+			{ type: 'separator' },
+			{
+				type: 'action',
+				id: 'logout',
+				label: 'Log out',
+				icon: <LogOutIcon aria-hidden="true" className="size-4" />,
+				onClick: () => {
+					void handleLogout();
+				},
+			},
+		],
+		[user.email, router, handleLogout]
+	);
+
+	const trigger = (
+		<div
+			className={cn(
+				'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
+				'transition-[background-color,color] duration-150',
+				'hover:bg-foreground/[0.07]',
+				isOpen && 'bg-foreground/[0.09]',
+				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
+			)}
+		>
+			<Avatar className="size-7 shrink-0">
+				{user.avatar ? <AvatarImage alt={user.name} src={user.avatar} /> : null}
+				<AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+			</Avatar>
+			<div className="flex min-w-0 flex-1 flex-col leading-tight">
+				<span className="truncate text-sm font-medium text-foreground">{user.name}</span>
+				<span className="truncate text-sm text-muted-foreground">{user.plan}</span>
+			</div>
+			<ChevronsUpDownIcon
+				aria-hidden="true"
+				className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+			/>
+		</div>
+	);
 
 	// Desktop relies on the parent `<ResizablePanel>`'s `overflow:hidden`
 	// to clip the chip out as the panel slides to zero width — keeping
 	// the component mounted lets it participate in the slide animation
 	// instead of disappearing instantly.
-
 	return (
 		// Top border = the requested separator above the profile row.
 		// Using `border-foreground/8` (faint) so it reads as a divider, not a
@@ -133,111 +237,13 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 		// trigger button to swallow it — this lets the trigger's hover paint
 		// a clean fully-rounded pill that actually fills the visible row.
 		<div className="shrink-0 border-t border-foreground/8 p-2">
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<button
-						aria-label="Open account menu"
-						className={cn(
-							'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
-							'transition-[background-color,color] duration-150',
-							'hover:bg-foreground/[0.07] aria-expanded:bg-foreground/[0.09]',
-							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
-						)}
-						type="button"
-					>
-						<Avatar className="size-7 shrink-0">
-							{user.avatar ? <AvatarImage alt={user.name} src={user.avatar} /> : null}
-							<AvatarFallback className="text-xs">
-								{getInitials(user.name)}
-							</AvatarFallback>
-						</Avatar>
-						<div className="flex min-w-0 flex-1 flex-col leading-tight">
-							<span className="truncate text-sm font-medium text-foreground">
-								{user.name}
-							</span>
-							<span className="truncate text-sm text-muted-foreground">
-								{user.plan}
-							</span>
-						</div>
-						<ChevronsUpDownIcon
-							aria-hidden="true"
-							className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-						/>
-					</button>
-				</DropdownMenuTrigger>
-
-				<DropdownMenuContent
-					align="start"
-					className="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"
-					side="top"
-					sideOffset={8}
-				>
-					<DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
-
-					<DropdownMenuItem onSelect={() => router.push('/settings')}>
-						<SettingsIcon aria-hidden="true" />
-						Settings
-						<DropdownMenuShortcut>⇧⌘,</DropdownMenuShortcut>
-					</DropdownMenuItem>
-
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<GlobeIcon aria-hidden="true" />
-							Language
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="min-w-40">
-							{LANGUAGE_OPTIONS.map((option) => (
-								<DropdownMenuItem key={option.id}>{option.label}</DropdownMenuItem>
-							))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-
-					<DropdownMenuItem>
-						<HelpCircleIcon aria-hidden="true" />
-						Get help
-					</DropdownMenuItem>
-
-					<DropdownMenuSeparator />
-
-					<DropdownMenuItem>
-						<LayoutGridIcon aria-hidden="true" />
-						View all plans
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<DownloadIcon aria-hidden="true" />
-						Get apps and extensions
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<GiftIcon aria-hidden="true" />
-						Gift AI Nexus
-					</DropdownMenuItem>
-
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<InfoIcon aria-hidden="true" />
-							Learn more
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="min-w-40">
-							{LEARN_MORE_LINKS.map((link) => (
-								<DropdownMenuItem key={link.id}>{link.label}</DropdownMenuItem>
-							))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-
-					<DropdownMenuSeparator />
-
-					<DropdownMenuItem
-						className="cursor-pointer"
-						onSelect={(event) => {
-							event.preventDefault();
-							void handleLogout();
-						}}
-					>
-						<LogOutIcon aria-hidden="true" />
-						Log out
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+			<DropdownMenuDef
+				trigger={trigger}
+				items={menuItems}
+				placement="top"
+				contentClassName="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"
+				onOpenChange={setIsOpen}
+			/>
 		</div>
 	);
 }

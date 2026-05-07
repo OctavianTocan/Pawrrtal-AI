@@ -1,11 +1,11 @@
 ---
 # ai-nexus-6d31
 title: Adopt @octavian-tocan/react-dropdown for data-driven select pickers
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-05-04T18:10:12Z
-updated_at: 2026-05-04T18:33:08Z
+updated_at: 2026-05-07T04:30:09Z
 ---
 
 Adopt @octavian-tocan/react-dropdown alongside (not replacing) Radix DropdownMenu. Pattern: project wrapper at components/ui/, mirrors how ResponsiveModal wraps @octavian-tocan/react-overlay. Use it for select-style data-driven pickers (items array + getKey/getDisplay), NOT for JSX-children action menus.
@@ -42,10 +42,36 @@ Don't touch this menu in the react-dropdown migration.
 
 
 
-## Update — scope nearly evaporated
+## Updated direction: discriminated-union item model
 
-After designing the ModelSelectorPopover redesign (bean ai-nexus-ql8a), the only previously-identified 'good fit' for react-dropdown was ModelSelectorPopover. That redesign uses sub-menus + secondary description rows + checkmarks, none of which fit react-dropdown's flat items API.
+User confirmed Path B: expand react-dropdown to support discriminated-union items, then convert AutoReviewSelector AND NavUser to use it.
 
-ChatComposerControls remains the only marginal candidate (mode picker with .map), but it has DropdownMenuSeparator between primary/advanced groups — also marginal.
+### New item model
+- `'label'` — non-clickable (email header)
+- `'action'` — clickable, optional shortcut + icon + per-item onClick
+- `'submenu'` — nested children (Language, Learn more)
+- `'separator'` — visual divider
 
-Recommendation: pause this bean. Don't install react-dropdown until a clean items-array select picker appears in product. The visual style we want (provider-grouped, sub-menus, in-menu controls) is squarely in Radix DropdownMenu's lane.
+### Local package
+- Source at `frontend/lib/react-dropdown/src/`
+- tsconfig path alias: `@octavian-tocan/react-dropdown` → `./lib/react-dropdown/src/index.ts`
+
+### Targets
+- `frontend/features/chat/components/ChatComposerControls.tsx` — AutoReviewSelector
+- `frontend/components/nav-user.tsx` — NavUser profile dropdown
+
+## Todo
+- [x] Fetch react-dropdown v1.1.0 source from GitHub and set up local checkout
+- [x] Add tsconfig path alias
+- [x] Add discriminated-union MenuItemDef type + rendering to the package
+- [x] Convert AutoReviewSelector
+- [x] Convert NavUser
+- [x] Run bun run check
+
+## Summary of Changes
+
+- Added MenuItemDef discriminated union type to react-dropdown types.ts
+- Created DropdownMenuDef.tsx wrapping DropdownMenu with accordion submenu support
+- Exported DropdownMenuDef and MenuItemDef from index.ts
+- Converted nav-user.tsx from Radix DropdownMenu to DropdownMenuDef
+- All checks pass: zero new tsc errors, Biome clean

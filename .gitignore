@@ -120,3 +120,7 @@ agno.db-wal
 # sentrux local baseline (per-developer, not shared)
 .sentrux/baseline.json
 package-lock.json
+
+# react-dropdown local checkout — nested git repo, push changes back via
+# frontend/lib/react-dropdown/ independently of ai-nexus history.
+frontend/lib/react-dropdown/

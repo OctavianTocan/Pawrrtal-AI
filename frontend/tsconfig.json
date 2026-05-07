@@ -25,7 +25,9 @@
 			}
 		],
 		"paths": {
-			"@/*": ["./*"]
+			"@/*": ["./*"],
+			"@octavian-tocan/react-dropdown": ["./lib/react-dropdown/src/index.ts"],
+			"@octavian-tocan/react-dropdown/*": ["./lib/react-dropdown/src/*"]
 		},
 		"esModuleInterop": true
 	},
