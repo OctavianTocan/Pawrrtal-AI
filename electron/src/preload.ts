@@ -15,8 +15,6 @@
 
 import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron';
 
-import { MACOS_TITLE_BAR_STYLE, MACOS_TRAFFIC_LIGHT_LEFT_INSET_PX } from './window-chrome';
-
 interface OkBase {
 	ok: true;
 	[key: string]: unknown;
@@ -81,24 +79,8 @@ interface PermissionPromptResponse {
 	scope: 'once' | 'session' | 'always';
 }
 
-const trafficLightLeftInsetPx =
-	process.platform === 'darwin' && MACOS_TITLE_BAR_STYLE !== 'default'
-		? MACOS_TRAFFIC_LIGHT_LEFT_INSET_PX
-		: 0;
-
 const desktopApi = {
 	// --- existing surface ---------------------------------------------------
-	/**
-	 * Mirror of {@link MACOS_TITLE_BAR_STYLE} in `window-chrome.ts` — exposed so
-	 * the renderer can reserve horizontal inset when overlay traffic lights draw
-	 * in web content (`hidden` / `hiddenInset`).
-	 */
-	macTitleBarStyle: process.platform === 'darwin' ? MACOS_TITLE_BAR_STYLE : undefined,
-	/**
-	 * Extra left padding (px) for the in-app toolbar when macOS uses overlay
-	 * window controls; `0` when `macTitleBarStyle === 'default'` (native strip).
-	 */
-	trafficLightLeftInsetPx,
 	/**
 	 * Host platform exposed synchronously so the renderer can make layout
 	 * decisions on first paint for the macOS Electron shell (e.g. drag regions),

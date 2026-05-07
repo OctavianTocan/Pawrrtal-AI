@@ -38,7 +38,7 @@ import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context
 import { NavChats } from '@/features/nav-chats/NavChats';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
-import { useMacDesktopChrome } from '@/hooks/use-is-mac-desktop';
+import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
@@ -232,28 +232,22 @@ function HelpMenu(): React.JSX.Element {
  * selector) stay in their original screen positions even when the sidebar is
  * hidden — the sidebar visually extends underneath this header.
  *
- * macOS Electron: when `electron/src/window-chrome.ts` uses **`default`**, the
- * native title strip holds full-size traffic lights and web content starts below
- * it — no extra horizontal inset. With **`hidden`** / **`hiddenInset`**, overlay
- * controls sit inside the page; `trafficLightLeftInsetPx` from the preload bridge
- * pushes this header right so controls do not sit under the lights.
+ * macOS Electron uses the **native title bar** (`titleBarStyle: 'default'` in
+ * `electron/src/window-chrome.ts`): full-size traffic lights live in the system
+ * strip above the web view, so this row does not need extra left inset. If you
+ * switch to `hidden` / `hiddenInset`, pad this header in the layout yourself.
  */
 function AppHeader(): React.JSX.Element {
-	const { isMacDesktop, trafficLightLeftInsetPx } = useMacDesktopChrome();
-	const headerPadLeftPx = trafficLightLeftInsetPx > 0 ? trafficLightLeftInsetPx : undefined;
+	const isMacDesktop = useIsMacDesktop();
 
 	return (
 		<header
 			className={cn(
-				// Toolbar strip: same horizontal rhythm as web (`pl-3`) unless overlay
-				// traffic lights require a larger left inset from the preload bridge.
-				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 py-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
-				headerPadLeftPx === undefined && 'pl-3',
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 py-0 pr-3 pl-3 outline-none focus:outline-none focus-visible:outline-none',
 				// On macOS Electron the custom header remains a drag surface for
 				// window moves (native bar is also draggable).
 				isMacDesktop && '[-webkit-app-region:drag]'
 			)}
-			style={headerPadLeftPx !== undefined ? { paddingLeft: headerPadLeftPx } : undefined}
 		>
 			{/* Left control cluster — `no-drag` so clicks land on the
 			    individual buttons instead of being intercepted as window

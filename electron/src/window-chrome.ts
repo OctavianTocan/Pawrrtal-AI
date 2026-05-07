@@ -1,13 +1,11 @@
 /**
- * Single source of truth for macOS BrowserWindow chrome options and matching
- * renderer inset math. Keep {@link MACOS_TITLE_BAR_STYLE} aligned with
- * `BrowserWindow` in `main.ts` — `preload.ts` imports these values so the
- * frontend can reserve space when overlay traffic lights draw inside the web
- * content region (`hidden` / `hiddenInset`).
+ * macOS `titleBarStyle` for `BrowserWindow` — edit here only; keep in sync with
+ * `createWindow` in `main.ts` (single place to switch chrome strategy).
  *
- * Use **`default`** for full-size AppKit traffic lights (standard macOS title
- * strip above the page). Overlay styles paint smaller Chromium-emulated
- * controls — see `electron/README.md`.
+ * **`default`** — full-size AppKit traffic lights in the standard title strip
+ * above the page. **`hidden`** / **`hiddenInset`** draw smaller overlay controls
+ * inside the web view; if you switch to those, add matching left padding to the
+ * in-app header in the frontend yourself — we do not mirror this into preload.
  */
 
 import type { BrowserWindowConstructorOptions } from 'electron';
@@ -15,9 +13,3 @@ import type { BrowserWindowConstructorOptions } from 'electron';
 /** Must match `titleBarStyle` passed to `BrowserWindow` on darwin. */
 export const MACOS_TITLE_BAR_STYLE: NonNullable<BrowserWindowConstructorOptions['titleBarStyle']> =
 	'default';
-
-/**
- * Horizontal padding for the in-app toolbar when traffic lights overlay web
- * content (non-`default` styles). Tune if Apple/Electron shift standard spacing.
- */
-export const MACOS_TRAFFIC_LIGHT_LEFT_INSET_PX = 78;
