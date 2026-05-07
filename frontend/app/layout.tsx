@@ -6,7 +6,7 @@
 
 import { Agentation } from 'agentation';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
+import { Geist, Geist_Mono, Google_Sans, Google_Sans_Flex, Newsreader } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
@@ -23,6 +23,24 @@ const newsreader = Newsreader({
 	subsets: ['latin'],
 	weight: ['400', '500', '600'],
 	variable: '--font-display-loaded',
+	display: 'swap',
+});
+
+/**
+ * Google Sans Flex + Google Sans — default UI sans stack (`--font-sans-stack`
+ * in `globals.css`). Flex is the primary face; Google Sans covers environments
+ * where Flex subsets differ. Both expose CSS variables for `var(...)` chains.
+ */
+const googleSansFlex = Google_Sans_Flex({
+	subsets: ['latin'],
+	weight: 'variable',
+	variable: '--font-google-sans-flex-loaded',
+	display: 'swap',
+});
+const googleSans = Google_Sans({
+	subsets: ['latin'],
+	weight: 'variable',
+	variable: '--font-google-sans-loaded',
 	display: 'swap',
 });
 
@@ -62,7 +80,7 @@ export default function RootLayout({
 		<html
 			lang="en"
 			suppressHydrationWarning
-			className={`${newsreader.variable} ${geist.variable} ${geistMono.variable}`}
+			className={`${newsreader.variable} ${googleSansFlex.variable} ${googleSans.variable} ${geist.variable} ${geistMono.variable}`}
 		>
 			{/*
 				suppressHydrationWarning is required because the blocking theme script

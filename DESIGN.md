@@ -4,7 +4,10 @@ name: AI Nexus
 description: >
   Craft Agents-inspired chat interface with a flat, editorial aesthetic. Six
   semantic colors, neutral interpolation variants, and a 16px-rooted Tailwind v4
-  scale. Dual-theme (light + dark, Codex/GitHub-adjacent in dark).
+  scale. Dual-theme (light + dark, Codex/GitHub-adjacent in dark). Default UI
+  sans is Google Sans Flex, Google Sans, Helvetica Neue, sans-serif (loaded via
+  next/font in frontend/app/layout.tsx; token --font-sans-stack in
+  frontend/app/globals.css).
 colors:
   primary: "#FA520F"
   on-primary: "#FFFFFF"
@@ -34,39 +37,39 @@ typography:
     lineHeight: 1.1
     letterSpacing: -0.02em
   h2:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 1.875rem
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: -0.015em
   h3:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 1.5rem
     fontWeight: 600
     lineHeight: 1.25
     letterSpacing: -0.01em
   h4:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 1.25rem
     fontWeight: 600
     lineHeight: 1.3
   body-lg:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 1.125rem
     fontWeight: 400
     lineHeight: 1.55
   body-md:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 1rem
     fontWeight: 400
     lineHeight: 1.55
   body-sm:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 0.875rem
     fontWeight: 400
     lineHeight: 1.5
   caption:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.4
@@ -77,18 +80,18 @@ typography:
     fontWeight: 400
     lineHeight: 1.5
   sidebar-section-header:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 0.875rem
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: 0
   sidebar-row:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.35
   sidebar-group-meta:
-    fontFamily: system-ui
+    fontFamily: Google Sans Flex
     fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.35
@@ -228,10 +231,11 @@ popovers, the lot.
 
 The defaults documented in this file are the values the user gets
 when they have never customized anything (or pressed "Reset to
-defaults" in the panel). When you change a default here, change it
-in `frontend/features/appearance/defaults.ts` AND
-`frontend/app/globals.css` in the same commit so the overlay layer,
-the cascade defaults, and this spec all agree.
+defaults" in the panel). When you change a default here, change it in `frontend/app/globals.css` in the
+same commit, and keep `frontend/app/layout.tsx` (any `next/font` loaders) and
+`frontend/features/settings/sections/appearance-helpers.ts` (`DEFAULT_FONTS`)
+aligned with this spec so the cascade, settings mock defaults, and this file
+all agree.
 
 ### Neutral Interpolation (Mix Variants)
 
@@ -286,6 +290,23 @@ anchors** referenced in `globals.css`:
 
 ## Typography
 
+### Canonical UI sans stack (default)
+
+All body UI type (`--font-sans`, `--font-default`, Tailwind `font-sans`, and
+`body` in `globals.css`) resolves to this **exact** CSS stack:
+
+`Google Sans Flex, Google Sans, Helvetica Neue, sans-serif`
+
+- **Implementation:** `frontend/app/globals.css` → `--font-sans-stack` (uses
+  `var(--font-google-sans-flex-loaded, …)` and `var(--font-google-sans-loaded, …)`
+  from `next/font/google` in `frontend/app/layout.tsx`).
+- **Front matter below:** tokens labeled `fontFamily: Google Sans Flex` mean “the
+  primary face in that stack”; runtime always includes **Google Sans** and
+  **Helvetica Neue** before the generic `sans-serif` fallback.
+
+Optional **Inter** remains available via `html[data-font="inter"]` in the same
+file (prepend `"Inter"` to the stack); that path is separate from the default.
+
 Three families anchor the system:
 
 - **Newsreader** (`--font-display`) — editorial near-serif, Mistral-inspired,
@@ -294,18 +315,21 @@ Three families anchor the system:
   display token chain (`--font-display-stack`) falls back to Iowan Old
   Style → Charter → Georgia → Times so the editorial character still reads
   before the web font arrives.
-- **system-ui** (`--font-sans`) — platform sans for everything from `h2`
-  down through body, captions, and sidebar rows. **Inter** is an opt-in
-  upgrade via `<html data-font="inter">`; with Inter active, OpenType
-  features `cv01`–`cv04` and `case` switch on for slightly more geometric
-  letterforms.
+- **Google Sans Flex / Google Sans** (`--font-sans`) — default UI sans for
+  everything from `h2` down through body, captions, and sidebar rows. Loaded
+  via `next/font/google` as `Google_Sans_Flex` + `Google_Sans` in
+  `frontend/app/layout.tsx` (`--font-google-sans-flex-loaded`,
+  `--font-google-sans-loaded`), with stack fallbacks **Helvetica Neue** →
+  generic `sans-serif`. **Inter** remains an opt-in upgrade via
+  `<html data-font="inter">`; with Inter active, OpenType features `cv01`–`cv04`
+  and `case` switch on for slightly more geometric letterforms.
 - **JetBrains Mono** (`--font-mono`) — code, terminals, and the system's
   aliased serif slot. This is a chat surface, not long-form reading; mono
   doubles as serif on purpose.
 
 The contrast — editorial display + geometric sans + monospace — IS the
 brand voice. Hero headings carry near-classical character; everything below
-the page-title level relaxes to system sans for density and legibility.
+the page-title level uses Google Sans Flex for density and legibility.
 
 The root font size is **16px** — `<html>` reads `--font-size-base`, so every
 `rem`-denominated value scales off 16. Tailwind v4 utilities (`text-xs`,
@@ -318,13 +342,13 @@ clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, …).
 | --------- | --------- | ------------ | ----------- | --------------------------------- |
 | display   | 3rem      | 48px         | Newsreader  | Hero headings, marketing splash   |
 | h1        | 2.25rem   | 36px         | Newsreader  | Page titles                       |
-| h2        | 1.875rem  | 30px         | system-ui   | Section heads                     |
-| h3        | 1.5rem    | 24px         | system-ui   | Subsection / onboarding step      |
-| h4        | 1.25rem   | 20px         | system-ui   | Card titles                       |
-| body-lg   | 1.125rem  | 18px         | system-ui   | Lead paragraph, prominent body    |
-| body-md   | 1rem      | 16px         | system-ui   | Default body, chat messages       |
-| body-sm   | 0.875rem  | 14px         | system-ui   | Secondary body, metadata          |
-| caption   | 0.875rem  | 14px         | system-ui   | Labels, dense UI, group metadata  |
+| h2        | 1.875rem  | 30px         | Google Sans Flex | Section heads                     |
+| h3        | 1.5rem    | 24px         | Google Sans Flex | Subsection / onboarding step      |
+| h4        | 1.25rem   | 20px         | Google Sans Flex | Card titles                       |
+| body-lg   | 1.125rem  | 18px         | Google Sans Flex | Lead paragraph, prominent body    |
+| body-md   | 1rem      | 16px         | Google Sans Flex | Default body, chat messages       |
+| body-sm   | 0.875rem  | 14px         | Google Sans Flex | Secondary body, metadata          |
+| caption   | 0.875rem  | 14px         | Google Sans Flex | Labels, dense UI, group metadata  |
 | code      | 0.875rem  | 14px         | JetBrains Mono | Inline code, pre blocks       |
 
 Display sizes use **tighter line-height** (1.05 / 1.10) and **stronger
@@ -338,7 +362,7 @@ legibility at small sizes.
 
 The sidebar has its own subset of the type scale because rows there are
 denser than chat content but **must not** drop below 14px (`text-sm`). The
-floor is 14px because rows compete with system-ui's lower-bound legibility
+floor is 14px because rows compete with the UI sans lower-bound legibility
 under the warm low-contrast palette and routinely include status glyphs
 that would shrink with the row.
 
@@ -618,8 +642,10 @@ fall back to the prose below for behavioral notes.
   bypass the theme system and won't invert in dark mode.
 - **Don't hard-code shadow stacks.** Reach for the named shadow utilities;
   if none fit, add a new named token rather than inlining `box-shadow`.
-- **Don't introduce a new font family** without an opt-in `data-*` toggle
-  on `<html>`, mirroring how `data-font="inter"` is wired.
+- **Don't replace the default UI sans stack** casually — it is fixed to **Google
+  Sans Flex, Google Sans, Helvetica Neue, sans-serif** (see Typography). New
+  alternate families still need an opt-in `data-*` toggle on `<html>`, mirroring
+  how `data-font="inter"` is wired.
 - **Don't use the bubble radius outside chat messages.** It's the system's
   one asymmetric shape and exists to anchor bubbles to their author.
 
@@ -636,4 +662,6 @@ npx @google/design.md export --format css-tailwind DESIGN.md > theme.css
 ```
 
 The canonical token values live in `frontend/app/globals.css`. When tokens
-change there, mirror them here in the same PR.
+change there, mirror them here in the same PR. For the **UI sans stack**, also
+update `frontend/app/layout.tsx` (font loaders) and
+`frontend/features/settings/sections/appearance-helpers.ts` as needed.

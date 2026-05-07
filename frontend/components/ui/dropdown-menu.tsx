@@ -215,15 +215,24 @@ function DropdownMenuSubContent({
 	className,
 	...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+	// Portal is required: the parent DropdownMenuContent runs a
+	// `transform: scale(0.95)` animation (fill-mode: both), which makes it a
+	// CSS containing block for `position: fixed` descendants. Without a portal
+	// the SubContent — positioned via Radix's fixed-strategy Popper — is
+	// clipped by `overflow-x-hidden` on the parent Content and never appears.
+	// Rendering into document.body escapes both the containing block and the
+	// overflow clip.
 	return (
-		<DropdownMenuPrimitive.SubContent
-			data-slot="dropdown-menu-sub-content"
-			className={cn(
-				'data-[state=open]:animate-dropdown-open data-[state=closed]:animate-dropdown-close popover-styled w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-36 p-1 z-50 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden',
-				className
-			)}
-			{...props}
-		/>
+		<DropdownMenuPrimitive.Portal>
+			<DropdownMenuPrimitive.SubContent
+				data-slot="dropdown-menu-sub-content"
+				className={cn(
+					'data-[state=open]:animate-dropdown-open data-[state=closed]:animate-dropdown-close popover-styled w-fit font-sans whitespace-nowrap text-xs flex flex-col gap-0.5 min-w-36 p-1 z-50 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden',
+					className
+				)}
+				{...props}
+			/>
+		</DropdownMenuPrimitive.Portal>
 	);
 }
 

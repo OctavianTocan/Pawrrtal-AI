@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -26,6 +27,8 @@ from app.core.agent_loop import (
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.config import settings
 from .base import StreamEvent
+
+logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
     "You are a helpful AI assistant. "
@@ -95,7 +98,8 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
         gemini_tools = _build_gemini_tool_declarations(tools)
         config = gtypes.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
-            tools=gemini_tools or [],
+            # Pass None (not []) when there are no tools — some SDK versions raise on empty list.
+            tools=gemini_tools or None,
         )
 
         full_text = ""
@@ -137,10 +141,17 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
                                 )
 
         except Exception as exc:
+            # Log so the error is visible in app.log — previously swallowed silently.
+            logger.error(
+                "Gemini streaming error model=%s: %s", model_id, exc, exc_info=True
+            )
+            error_text = f"Gemini error: {exc}"
+            # Emit a text delta so the frontend shows the error instead of an empty bubble.
+            yield LLMTextDeltaEvent(type="text_delta", text=error_text)
             yield LLMDoneEvent(
                 type="done",
                 stop_reason="error",
-                content=[{"type": "text", "text": f"Gemini error: {exc}"}],
+                content=[TextContent(type="text", text=error_text)],
             )
             return
 
