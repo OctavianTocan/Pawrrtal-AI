@@ -232,7 +232,9 @@
 	--step-content-gap: 1.5rem;
 	--step-actions-margin: 2rem;
 
-	/* Fonts — Google Sans Flex → Google Sans → Helvetica; loaded in `layout.tsx` */
+	/* Fonts — Google Sans Flex → Google Sans → Helvetica; @font-face from
+	   Google Fonts `<link>` in `app/layout.tsx` (not `next/font` — avoids
+	   capsize override warnings for these families). */
 	--font-sans-stack:
 		var(--font-google-sans-flex-loaded, "Google Sans Flex"),
 		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
