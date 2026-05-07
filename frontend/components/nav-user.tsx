@@ -242,7 +242,15 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				items={menuItems}
 				placement="top"
 				usePortal
-				contentClassName="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"
+				// `popover-styled` provides the project's themed background,
+				// border, layered shadow, and (after the motion overhaul)
+				// global backdrop-filter blur. Without it the consumer's
+				// className REPLACES the package's `bg-white` default and the
+				// dropdown renders transparent — letting the sidebar bleed
+				// through. The `min-w-[var(--radix-dropdown-menu-trigger-width)]`
+				// constraint that used to live here was dead code: the variable
+				// is Radix-only, never set by our package.
+				contentClassName="popover-styled p-1 w-64"
 				onOpenChange={setIsOpen}
 			/>
 		</div>

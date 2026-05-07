@@ -8,6 +8,7 @@ import { Agentation } from 'agentation';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Google_Sans, Google_Sans_Flex, Newsreader } from 'next/font/google';
 import Script from 'next/script';
+import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -89,12 +90,11 @@ export default function RootLayout({
 				script only modifies the class list, not the DOM structure.
 			*/}
 			<head>
-				{/* System theme detection — blocking script before hydration to prevent FOUC */}
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `(function(){try{var d=document.documentElement;if(window.matchMedia('(prefers-color-scheme:dark)').matches){d.classList.add('dark')}window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(e){e.matches?d.classList.add('dark'):d.classList.remove('dark')})}catch(e){}})()`,
-					}}
-				/>
+				{/* System theme detection — blocking script before hydration to prevent FOUC.
+				    Body lives in `frontend/lib/theme-detection-script.ts` so the JSX surface
+				    here stays small and the warning suppression has a single site. */}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme detection MUST run pre-hydration; static string from a server-only module — no user input. */}
+				<script dangerouslySetInnerHTML={{ __html: THEME_DETECTION_SCRIPT }} />
 				{/* React Grab */}
 				{process.env.NODE_ENV === 'development' && (
 					<Script
