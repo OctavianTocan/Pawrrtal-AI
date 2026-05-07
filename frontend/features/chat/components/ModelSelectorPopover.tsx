@@ -214,13 +214,16 @@ export function ModelSelectorPopover({
 					isMenuClosingRef.current = true;
 					setTooltipOpen(false);
 					// Radix restores focus to the trigger in a useEffect cleanup,
-					// which fires after browser paint — well after rAF. A 150 ms
-					// setTimeout keeps the guard active long enough to absorb the
-					// focus-triggered onOpenChange(true) before clearing.
+					// which fires after browser paint. SubContent is now rendered
+					// in a Portal with its own 150 ms animate-dropdown-close exit
+					// animation — Radix Presence keeps it mounted during that
+					// animation, so its FocusScope cleanup fires at ~150 ms+.
+					// 300 ms safely outlasts both the Content FocusScope restore
+					// (~16-30 ms) and the Portal SubContent restore (~150 ms+).
 					clearTimeout(closingTimerRef.current);
 					closingTimerRef.current = setTimeout(() => {
 						isMenuClosingRef.current = false;
-					}, 150);
+					}, 300);
 				}
 			}}
 		>

@@ -68,13 +68,17 @@ onOpenChange={(open) => {
 open={menuOpen ? false : tooltipOpen}
 ```
 
-## Why 150 ms
+## Why 300 ms (not 150 ms)
 
-- Radix's `useEffect` focus restoration typically runs within 16-30 ms.
+- Radix's `useEffect` focus restoration for the main Content typically runs within 16-30 ms.
 - `requestAnimationFrame` fires at ~16 ms — too soon, the guard is cleared.
 - `setTimeout(0)` is similarly unreliable; it may batch before the next paint.
-- `setTimeout(150)` is safely past any async focus side-effect while still
-  short enough that normal hover after 150 ms works correctly.
+- **If SubContent is rendered inside a `DropdownMenuPrimitive.Portal`**, it has its own
+  `animate-dropdown-close` exit animation (150 ms). Radix's `Presence` keeps it mounted
+  during that animation, so its `FocusScope` cleanup fires at **~150 ms+** — right as a
+  150 ms guard would clear. Use **300 ms** to safely outlast the Portal SubContent restore.
+- If there is no Portal SubContent (flat dropdown, no submenus), 150 ms is sufficient.
+  Use 300 ms as the safe default whenever submenus are present.
 
 ## Where this pattern is used
 
