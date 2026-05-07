@@ -1,11 +1,11 @@
 ---
 # ai-nexus-9k23
 title: Access Request Notification Banner
-status: in-progress
+status: scrapped
 type: feature
 priority: normal
 created_at: 2026-03-13T05:38:38Z
-updated_at: 2026-03-13T05:41:24Z
+updated_at: 2026-05-07T16:29:51Z
 ---
 
 Collapsible notification banner with animated expand/collapse, avatar group, approve/reject pill toggles per user. Motion v12 bouncy springs.

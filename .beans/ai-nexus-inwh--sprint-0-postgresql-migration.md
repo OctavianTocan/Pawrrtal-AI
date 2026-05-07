@@ -1,11 +1,11 @@
 ---
 # ai-nexus-inwh
 title: 'Sprint 0: PostgreSQL Migration'
-status: todo
+status: scrapped
 type: milestone
 priority: critical
 created_at: 2026-03-19T23:09:17Z
-updated_at: 2026-03-19T23:09:17Z
+updated_at: 2026-05-07T16:30:45Z
 ---
 
 # Sprint 0: PostgreSQL Migration
