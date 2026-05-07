@@ -32,7 +32,7 @@ import {
 	UserPlusIcon,
 	XIcon,
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Streamdown } from 'streamdown';
 
 interface DocumentViewerProps {
@@ -67,11 +67,15 @@ export function DocumentViewer({
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 
-	// Reset draft + clear error whenever we enter edit mode or the upstream
-	// `markdown` prop changes (e.g. after a successful save the parent updates
-	// it, making the draft match so re-entering edit mode starts from current).
+	// Seed the draft only when we *enter* edit mode (false→true transition).
+	// Using a ref to track the previous value means we don't accidentally
+	// overwrite an in-progress edit when the parent re-fetches and updates the
+	// `markdown` prop while the textarea is open.
+	const prevIsEditing = useRef(false);
 	useEffect(() => {
-		if (isEditing) {
+		const entered = isEditing && !prevIsEditing.current;
+		prevIsEditing.current = isEditing;
+		if (entered) {
 			setEditContent(markdown);
 			setSaveError(null);
 		}
@@ -226,10 +230,9 @@ export function DocumentViewer({
 							onChange={(e) => setEditContent(e.target.value)}
 							disabled={isSaving}
 							spellCheck={false}
-							className="h-full min-h-[400px] w-full resize-none rounded-md border border-border bg-background px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-60"
-							// Let the textarea grow with its content so shorter files don't
-							// have an awkward fixed-height box.
-							rows={Math.max(20, editContent.split('\n').length + 5)}
+							className="w-full resize-none rounded-md border border-border bg-background px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-60"
+							// CSS min-height avoids recalculating rows on every keystroke.
+							style={{ minHeight: '480px' }}
 						/>
 					</div>
 				</div>
