@@ -311,6 +311,105 @@ class TestWorkspaceService:
         workspaces = await list_workspaces(test_user.id, db_session)
         assert len(workspaces) == 2
 
+    @pytest.mark.anyio
+    async def test_unique_index_blocks_duplicate_default_insert(
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
+    ) -> None:
+        """Regression test for ai-nexus-pq4r.
+
+        Applies the partial unique index from migration 009 directly to the
+        in-memory test DB and verifies that a second direct INSERT of a default
+        workspace raises IntegrityError — proving the constraint actually fires
+        before the application-level recovery path is even needed.
+        """
+        from sqlalchemy import text
+        from sqlalchemy.exc import IntegrityError as SAIntegrityError
+
+        # Manually apply migration 009's partial unique index to the test DB.
+        # (conftest uses Base.metadata.create_all, not Alembic, so this
+        # would not exist otherwise.)
+        await db_session.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "uq_workspaces_one_default_per_user "
+                "ON workspaces (user_id) "
+                "WHERE is_default = true"
+            )
+        )
+        await db_session.commit()
+
+        # Create the first default workspace — must succeed.
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            ws1 = await create_workspace(test_user.id, db_session)
+            await db_session.commit()
+
+        # Attempt a second default workspace via a savepoint so the session
+        # stays alive after the expected constraint violation.
+        caught = False
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            try:
+                async with db_session.begin_nested():
+                    await create_workspace(test_user.id, db_session)
+            except SAIntegrityError:
+                caught = True
+
+        assert caught, "Expected IntegrityError from unique index — constraint is not applied"
+
+        # Only the first workspace must remain.
+        from sqlalchemy import func
+        from sqlalchemy import select as sa_select
+
+        from app.models import Workspace
+
+        count_result = await db_session.execute(
+            sa_select(func.count())
+            .select_from(Workspace)
+            .where(
+                Workspace.user_id == test_user.id,
+                Workspace.is_default.is_(True),
+            )
+        )
+        assert count_result.scalar_one() == 1
+        assert (await get_default_workspace(test_user.id, db_session)).id == ws1.id  # type: ignore[union-attr]
+
+    @pytest.mark.anyio
+    async def test_ensure_default_workspace_handles_integrity_error(
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
+    ) -> None:
+        """ensure_default_workspace must recover cleanly when a concurrent
+        request already committed the workspace (simulated via IntegrityError).
+
+        We mock ``create_workspace`` to raise ``IntegrityError`` after first
+        seeding the DB row directly, so the subsequent re-fetch in the except
+        branch has a real row to return.
+        """
+        from sqlalchemy.exc import IntegrityError as SAIntegrityError
+
+        # First, create the workspace directly so it already exists in the DB.
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            real_ws = await create_workspace(test_user.id, db_session)
+            await db_session.commit()
+
+        # Now patch create_workspace to raise IntegrityError, simulating the
+        # race where two requests both passed the "no existing workspace" check
+        # before either committed.
+        with (
+            patch("app.core.workspace.settings") as mock_settings,
+            patch(
+                "app.core.workspace.create_workspace",
+                side_effect=SAIntegrityError("mock", {}, Exception()),
+            ),
+        ):
+            mock_settings.workspace_base_dir = str(tmp_path)
+            # ensure_default_workspace should catch the IntegrityError,
+            # re-fetch, and return the already-committed row.
+            recovered_ws = await ensure_default_workspace(test_user.id, db_session)
+
+        assert recovered_ws.id == real_ws.id
+
 
 # ---------------------------------------------------------------------------
 # Workspace API
