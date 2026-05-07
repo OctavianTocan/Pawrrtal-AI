@@ -757,6 +757,28 @@ html[data-font="inter"] {
 			rgba(var(--foreground-rgb), 0.06) 0px 0px 0px 1px;
 	}
 
+	/*
+	 * Sharp-edge utility — replaces the dull `border-1px-gray` look with a
+	 * stacked 1px white inset highlight + 1px black 4% outer shadow. Adds
+	 * dimension so cards, inputs, and toggles read as physical objects
+	 * rather than flat outlines. See DESIGN.md → Elevation & Depth → Edges.
+	 *
+	 * The inset highlight uses the surface color (`--background`) at 60%
+	 * opacity in light mode and the foreground at 6% in dark mode, so the
+	 * "highlight from above" reads correctly under either palette.
+	 */
+	.shadow-edge {
+		box-shadow:
+			inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+			0 1px 0 0 rgb(0 0 0 / 0.04);
+	}
+
+	.dark .shadow-edge {
+		box-shadow:
+			inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+			0 1px 0 0 rgb(0 0 0 / 0.4);
+	}
+
 	.shadow-bottom-border {
 		box-shadow: inset 0 -1.5px 0 var(--color-border);
 	}

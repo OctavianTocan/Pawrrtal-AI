@@ -460,10 +460,49 @@ that are tuned per theme: subtle in light, stronger in dark.
 | `shadow-panel-floating`| Panels stacked over other panels (chat over sidebar).     |
 | `shadow-panel-focused` | Adds a 1px gradient inner border for the focused panel.   |
 | `shadow-tinted`        | Tinted variant; pass `--shadow-color` as `r, g, b`.       |
+| `shadow-edge`          | 1px white inset + 1px black 4% outer. Use INSTEAD of gray borders. |
 
 In **scenic mode** (`html[data-scenic]`), `shadow-middle` and `shadow-strong`
 gain a `backdrop-filter: blur(8px)` and a 1px gradient inner border, turning
 solid panels into glass.
+
+### Edges: stop using gray 1px borders
+
+Stack a **1px white inset shadow + 1px black 4% outer shadow** instead of
+a flat `border: 1px solid var(--color-border)`. The inset highlight reads
+as a top-edge sheen and the outer drop reads as a soft contact shadow —
+together they make the element feel sharper and more dimensional, the
+same way macOS, Linear, and modern iOS surfaces do, without the muddy
+look of a single hairline.
+
+In code:
+
+```css
+/* DON'T: */
+border: 1px solid var(--color-border);
+
+/* DO (use the utility): */
+@apply shadow-edge;
+
+/* Or inline the values when the utility class won't fit: */
+box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+    0 1px 0 0 rgb(0 0 0 / 0.04);
+```
+
+The dark-mode variant of the utility (`.dark .shadow-edge`) inverts the
+highlight to a low-opacity foreground tint and bumps the outer drop to
+40 % so the same affordance reads on dark surfaces.
+
+Reach for `shadow-edge` first when:
+
+- a card, input, toggle, or chip needs a visible perimeter
+- the existing `shadow-thin` is *too flat* and reads as a single line
+- the `shadow-minimal` is *too elevated* and reads as a popover
+
+Stick with `shadow-thin` (single 1px ring, no drop) when the surface is
+explicitly nested inside another bordered surface — `shadow-edge`'s outer
+drop competes with the parent's edge in that case.
 
 ## Shapes
 

@@ -53,8 +53,12 @@ interface SampleProps {
 	className: string;
 	/** Tailwind class controlling height. Defaults to `h-64`. */
 	heightClass?: string;
-	/** Mask tile size in CSS pixels. Defaults to {@link TILE_SIZE}. */
-	tileSize?: number;
+	/**
+	 * CSS ``mask-size``. Defaults to a square based on {@link TILE_SIZE}; preset
+	 * previews override with ``"<size>px auto"`` so portrait viewBoxes preserve
+	 * their aspect when tiled.
+	 */
+	maskSize?: string;
 }
 
 /**
@@ -67,7 +71,7 @@ function Sample({
 	caption,
 	className,
 	heightClass = 'h-64',
-	tileSize = TILE_SIZE,
+	maskSize = `${TILE_SIZE}px ${TILE_SIZE}px`,
 }: SampleProps): React.JSX.Element {
 	const cssUri = `url("${uri}")`;
 	return (
@@ -80,8 +84,8 @@ function Sample({
 					backgroundColor: 'currentColor',
 					maskImage: cssUri,
 					WebkitMaskImage: cssUri,
-					maskSize: `${tileSize}px ${tileSize}px`,
-					WebkitMaskSize: `${tileSize}px ${tileSize}px`,
+					maskSize,
+					WebkitMaskSize: maskSize,
 					maskRepeat: 'repeat',
 					WebkitMaskRepeat: 'repeat',
 				}}
@@ -212,7 +216,7 @@ export default function WhimsyTilePage(): React.JSX.Element {
 								caption={preset.label}
 								className="bg-background text-foreground/15"
 								heightClass="h-72"
-								tileSize={PRESET_TILE_SIZE}
+								maskSize={`${PRESET_TILE_SIZE}px auto`}
 							/>
 						))}
 					</div>

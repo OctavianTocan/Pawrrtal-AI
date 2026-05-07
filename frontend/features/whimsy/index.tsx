@@ -39,6 +39,7 @@ import {
 	Switch,
 } from '@/features/settings/primitives';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { cn } from '@/lib/utils';
 import {
 	isWhimsyPresetId,
 	WHIMSY_PRESETS,
@@ -69,6 +70,8 @@ const WHIMSY_BOUNDS = {
 	size: { min: 120, max: 360 },
 	/** Slider integer scale — internal 0-200 maps to opacity 0-0.20 (0%-20%). */
 	opacityScale: { min: 0, max: 200 },
+	/** Preset tile width in CSS pixels. Height auto-resolves from the SVG aspect. */
+	presetSize: { min: 200, max: 1200 },
 } as const;
 
 /** Multiplier applied to the slider's integer value to get the stored decimal opacity. */
@@ -92,6 +95,14 @@ export interface WhimsyConfig {
 	theme: WhimsyThemeName;
 	/** Identifier of the active preset under ``/whimsy-patterns/``. Used in ``preset`` mode. */
 	preset: WhimsyPresetId;
+	/**
+	 * Tile width in CSS pixels for ``preset`` mode. Height resolves from the
+	 * SVG's intrinsic aspect via ``mask-size: <width>px auto``. Smaller =
+	 * tighter repeats with smaller doodles; larger = bigger drawings, fewer
+	 * repeats. Procedural ``size`` doesn't translate (different SVG aspect),
+	 * so we keep this as its own field.
+	 */
+	presetSize: number;
 	/** Deterministic placement seed. Any 32-bit integer; reroll for fresh layout. */
 	seed: number;
 	/** Motifs per row/column in the placement grid. Higher = denser pattern. */
@@ -108,6 +119,7 @@ const DEFAULT_WHIMSY_CONFIG: WhimsyConfig = {
 	mode: 'generated',
 	theme: 'kawaii',
 	preset: 'pattern-1',
+	presetSize: 600,
 	seed: 42,
 	grid: 6,
 	size: 240,
@@ -138,6 +150,9 @@ function validateWhimsyConfig(value: unknown): value is WhimsyConfig {
 		(v.mode === 'generated' || v.mode === 'preset') &&
 		isWhimsyThemeName(v.theme) &&
 		isWhimsyPresetId(v.preset) &&
+		typeof v.presetSize === 'number' &&
+		v.presetSize >= WHIMSY_BOUNDS.presetSize.min &&
+		v.presetSize <= WHIMSY_BOUNDS.presetSize.max &&
 		typeof v.seed === 'number' &&
 		Number.isFinite(v.seed) &&
 		typeof v.grid === 'number' &&
@@ -178,20 +193,18 @@ export interface UseWhimsyTileResult {
 	 * rendering the overlay entirely in that case.
 	 */
 	cssUrl: string | null;
-	/** Tile dimension in pixels — pair with `mask-size`. */
-	size: number;
+	/**
+	 * Ready-to-drop ``mask-size`` value. In ``generated`` mode the source SVG
+	 * is square so this is ``"<size>px <size>px"``. In ``preset`` mode the
+	 * source SVGs are portrait (~1125×2436); we set the width and let the
+	 * height resolve from the SVG's intrinsic aspect via ``auto`` so
+	 * adjacent tiles meet edge-to-edge instead of leaving empty bands
+	 * between repeats.
+	 */
+	maskSize: string;
 	/** Stored opacity (0..1) — apply via CSS `opacity` on the overlay element. */
 	opacity: number;
 }
-
-/**
- * Tile size used for ``preset`` mode. The packaged SVGs are sized for a phone
- * screen (~1125 px wide); rendering them at the user's procedural ``size``
- * (120-360 px) shrinks the doodles into illegibility. 600 px is large enough
- * to read individual drawings on a desktop chat panel, small enough that two
- * to three repeats are visible across the panel width.
- */
-const PRESET_RENDER_SIZE = 600;
 
 /**
  * Generates a tileable mask URL from the persisted whimsy config and memoizes
@@ -228,8 +241,11 @@ export function useWhimsyTile(): UseWhimsyTileResult {
 		config.grid,
 		config.theme,
 	]);
-	const size = config.mode === 'preset' ? PRESET_RENDER_SIZE : config.size;
-	return { cssUrl, size, opacity: config.opacity };
+	const maskSize =
+		config.mode === 'preset'
+			? `${config.presetSize}px auto`
+			: `${config.size}px ${config.size}px`;
+	return { cssUrl, maskSize, opacity: config.opacity };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -254,40 +270,14 @@ const THEME_OPTIONS: readonly SelectButtonOption[] = THEME_NAMES.map((name) => (
 	description: WHIMSY_THEMES[name].join(', '),
 }));
 
-/** Mode switcher option list — generated tile vs static preset. */
-const MODE_OPTIONS: readonly SelectButtonOption[] = [
-	{
-		id: 'generated',
-		label: 'Generated tile',
-		description: 'Procedural pattern from a curated motif set. Reroll with the seed.',
-	},
-	{
-		id: 'preset',
-		label: 'Preset pattern',
-		description: 'Hand-laid SVG wallpaper. Curated, no procedural knobs.',
-	},
-];
-
 const MODE_LABELS: Record<WhimsyMode, string> = {
 	generated: 'Generated tile',
 	preset: 'Preset pattern',
 };
 
-/** Static option list for the preset dropdown — one entry per packaged SVG. */
-const PRESET_OPTIONS: readonly SelectButtonOption[] = WHIMSY_PRESETS.map((preset) => ({
-	id: preset.id,
-	label: preset.label,
-}));
-
-const PRESET_LABELS: Record<WhimsyPresetId, string> = WHIMSY_PRESETS.reduce<
-	Record<WhimsyPresetId, string>
->(
-	(acc, preset) => {
-		acc[preset.id] = preset.label;
-		return acc;
-	},
-	{} as Record<WhimsyPresetId, string>
-);
+// PRESET_OPTIONS / PRESET_LABELS were removed when the preset picker switched
+// from a dropdown to a thumbnail grid — clicking a thumbnail is faster than a
+// "Pattern 1 / Pattern 2 / …" list, and there's no useful label for a tile.
 
 /**
  * Settings → Appearance card for the whimsy texture. All controls write to the
@@ -337,34 +327,114 @@ export function WhimsySettingsCard(): React.JSX.Element {
 				description="Generated tiles are procedural and respond to the seed/density knobs below. Presets are hand-laid SVG wallpapers that ignore those knobs."
 				label="Source"
 			>
-				<SelectButton
-					activeId={config.mode}
-					ariaLabel="Whimsy mode"
-					onSelect={(id) => {
-						if (id === 'generated' || id === 'preset') {
-							setConfig((c) => ({ ...c, mode: id }));
-						}
-					}}
-					options={MODE_OPTIONS}
-					triggerLabel={MODE_LABELS[config.mode]}
-				/>
+				{/*
+				 * Two-button segmented toggle. With only two options a dropdown
+				 * is more friction than the choice merits, and the segmented
+				 * pattern surfaces the active mode without an extra click —
+				 * which also sidesteps a regression where the SelectButton's
+				 * onSelect didn't propagate the mode change reliably under
+				 * StrictMode + persisted-state validation. Theme/Preset stay
+				 * SelectButton-driven because they each have many options.
+				 */}
+				<div className="inline-flex rounded-[7px] bg-foreground/[0.04] p-0.5 text-xs font-medium">
+					{(['generated', 'preset'] as const).map((mode) => {
+						const isActive = config.mode === mode;
+						return (
+							<button
+								aria-pressed={isActive}
+								className={cn(
+									'cursor-pointer rounded-[6px] px-3 py-1 transition-colors duration-150 ease-out',
+									isActive
+										? 'bg-background text-foreground shadow-thin'
+										: 'text-muted-foreground hover:text-foreground'
+								)}
+								key={mode}
+								onClick={() => setConfig((c) => ({ ...c, mode }))}
+								type="button"
+							>
+								{MODE_LABELS[mode]}
+							</button>
+						);
+					})}
+				</div>
 			</SettingsRow>
 
 			{config.mode === 'preset' ? (
-				<SettingsRow
-					description="Pick from the bundled SVG patterns. Theme/seed/density are ignored in this mode."
-					label="Preset"
-				>
-					<SelectButton
-						activeId={config.preset}
-						ariaLabel="Whimsy preset"
-						onSelect={(id) => {
-							if (isWhimsyPresetId(id)) setConfig((c) => ({ ...c, preset: id }));
-						}}
-						options={PRESET_OPTIONS}
-						triggerLabel={PRESET_LABELS[config.preset]}
-					/>
-				</SettingsRow>
+				<>
+					<SettingsRow
+						description="Tile width in CSS pixels. Smaller = denser, larger = bigger doodles with fewer repeats. Height auto-resolves from the source SVG aspect."
+						label="Tile scale"
+					>
+						<div className="flex w-56 items-center gap-3">
+							<Slider
+								max={WHIMSY_BOUNDS.presetSize.max}
+								min={WHIMSY_BOUNDS.presetSize.min}
+								onValueChange={(values) => {
+									const next = values[0];
+									if (typeof next === 'number')
+										setConfig((c) => ({ ...c, presetSize: next }));
+								}}
+								step={20}
+								value={[config.presetSize]}
+							/>
+							<span className="w-14 text-right text-xs tabular-nums text-muted-foreground">
+								{config.presetSize}px
+							</span>
+						</div>
+					</SettingsRow>
+					<SettingsRow
+						className="items-start"
+						description="Pick from the bundled SVG patterns. Theme/seed/density are ignored in this mode. Click a thumbnail to apply it instantly."
+						label="Preset"
+					>
+						{/*
+						 * Thumbnail grid instead of a dropdown. With 33 unlabelled
+						 * "Pattern N" options the dropdown was useless even if it
+						 * worked — patterns differ visually, not by name. Also
+						 * sidesteps the SelectButton/dropdown bug tracked in the
+						 * companion bean.
+						 */}
+						<div className="grid w-72 grid-cols-4 gap-1.5">
+							{WHIMSY_PRESETS.map((preset) => {
+								const isActive = config.preset === preset.id;
+								return (
+									<button
+										aria-label={preset.label}
+										aria-pressed={isActive}
+										className={cn(
+											'group relative aspect-square cursor-pointer overflow-hidden rounded-[6px] bg-foreground/[0.04] transition-shadow duration-150',
+											'hover:bg-foreground/[0.08]',
+											isActive && 'shadow-[0_0_0_2px_var(--color-accent)]'
+										)}
+										key={preset.id}
+										onClick={() =>
+											setConfig((c) => ({ ...c, preset: preset.id }))
+										}
+										type="button"
+									>
+										<span
+											aria-hidden="true"
+											className="absolute inset-0 text-foreground/40"
+											style={{
+												backgroundColor: 'currentColor',
+												maskImage: `url("${whimsyPresetUrl(preset.id)}")`,
+												WebkitMaskImage: `url("${whimsyPresetUrl(preset.id)}")`,
+												// Each thumbnail shows ~one tile of the
+												// pattern; auto height keeps the source
+												// SVG's portrait aspect, so adjacent
+												// thumbnails read as the same family.
+												maskSize: '64px auto',
+												WebkitMaskSize: '64px auto',
+												maskRepeat: 'repeat',
+												WebkitMaskRepeat: 'repeat',
+											}}
+										/>
+									</button>
+								);
+							})}
+						</div>
+					</SettingsRow>
+				</>
 			) : (
 				<SettingsRow
 					description="Restricts which motifs the generator can pick from. Pick a curated combo."

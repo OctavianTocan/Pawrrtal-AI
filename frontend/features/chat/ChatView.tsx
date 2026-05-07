@@ -135,8 +135,8 @@ function ChatView({
 						opacity: whimsy.opacity,
 						maskImage: whimsy.cssUrl,
 						WebkitMaskImage: whimsy.cssUrl,
-						maskSize: `${whimsy.size}px ${whimsy.size}px`,
-						WebkitMaskSize: `${whimsy.size}px ${whimsy.size}px`,
+						maskSize: whimsy.maskSize,
+						WebkitMaskSize: whimsy.maskSize,
 						maskRepeat: 'repeat',
 						WebkitMaskRepeat: 'repeat',
 					}}
