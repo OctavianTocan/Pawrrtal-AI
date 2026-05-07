@@ -43,7 +43,6 @@ import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';
 import {
 	SIDEBAR_MAX_WIDTH,
@@ -56,9 +55,6 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from './ui/sidebar';
-
-/** Duration of the sidebar collapse/expand CSS transition in ms. */
-const COLLAPSE_ANIMATION_DURATION_MS = 250;
 
 /**
  * Placeholder identity rendered in the sidebar footer.
@@ -388,73 +384,120 @@ function ChatFocusShell({ children }: { children: React.ReactNode }): React.JSX.
 }
 
 /**
+ * Custom drag-resize hook for the sidebar's right-edge handle.
+ *
+ * Replaces `react-resizable-panels`' resize machinery now that the sidebar
+ * uses a fixed-width layout track + transform-based slide animation
+ * (DESIGN.md → Motion → "Sidebar Open / Close"). The handle records cursor
+ * coordinates on pointerdown, then writes the live width to a CSS variable
+ * on every move so the layout reflows in one place. On pointerup we persist
+ * the final clamped width via `setDesktopWidth`.
+ *
+ * Listening on `window` (not just the handle) is critical: the user can
+ * drag fast enough that the cursor leaves the handle's hit area, and we
+ * must keep tracking until pointerup.
+ */
+function useSidebarDragResize({
+	desktopWidth,
+	setDesktopWidth,
+	enabled,
+}: {
+	desktopWidth: number;
+	setDesktopWidth: (width: number) => void;
+	enabled: boolean;
+}): {
+	onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+	isDragging: boolean;
+} {
+	const [isDragging, setIsDragging] = React.useState(false);
+	// Captured at pointerdown so subsequent move math uses the starting baseline
+	// rather than the live width (which would create a feedback loop).
+	const dragStartRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
+
+	React.useEffect(() => {
+		if (!isDragging) return;
+		const handleMove = (event: PointerEvent): void => {
+			const start = dragStartRef.current;
+			if (!start) return;
+			const delta = event.clientX - start.startX;
+			const next = Math.min(
+				SIDEBAR_MAX_WIDTH,
+				Math.max(SIDEBAR_MIN_WIDTH, start.startWidth + delta)
+			);
+			document.documentElement.style.setProperty('--sidebar-width', `${next}px`);
+		};
+		const handleUp = (): void => {
+			const root = document.documentElement;
+			const cssWidth = root.style.getPropertyValue('--sidebar-width');
+			const numeric = Number.parseInt(cssWidth, 10);
+			if (Number.isFinite(numeric)) {
+				setDesktopWidth(numeric);
+			}
+			dragStartRef.current = null;
+			setIsDragging(false);
+		};
+		window.addEventListener('pointermove', handleMove);
+		window.addEventListener('pointerup', handleUp);
+		return () => {
+			window.removeEventListener('pointermove', handleMove);
+			window.removeEventListener('pointerup', handleUp);
+		};
+	}, [isDragging, setDesktopWidth]);
+
+	const onPointerDown = React.useCallback(
+		(event: React.PointerEvent<HTMLDivElement>): void => {
+			if (!enabled) return;
+			event.preventDefault();
+			dragStartRef.current = { startX: event.clientX, startWidth: desktopWidth };
+			setIsDragging(true);
+		},
+		[desktopWidth, enabled]
+	);
+
+	return { onPointerDown, isDragging };
+}
+
+/** Width of the resize handle's hit area on the right edge of the sidebar. */
+const SIDEBAR_HANDLE_WIDTH_PX = 8;
+
+/**
  * Sidebar content wrapper with conditional resizable layout.
- * Renders resizable panels on desktop, plain content on mobile.
+ * Renders the DESIGN.md-mandated translate-X slide on desktop and a Sheet
+ * overlay on mobile.
+ *
+ * Desktop architecture (DESIGN.md L525-545):
+ *
+ * - Outer wrapper has `width: <desktopWidth>` always (when expanded), shrinks
+ *   to `0` when collapsed; the chat panel occupies the freed layout space.
+ * - Inner panel (absolutely positioned inside the wrapper) translates
+ *   `translate-x-0` (open) ↔ `-translate-x-full` (closed) with
+ *   `transition-transform duration-200 ease-out`.
+ * - Chat panel shifts via the same width transition on the wrapper —
+ *   `flex-1` consumes the freed space — so panel + sidebar move together.
+ * - Resize handle is hidden / disabled while the panel is closed.
+ * - The `--sidebar-width` CSS variable is the single source of truth: the
+ *   drag handler writes to it, the wrapper reads from it for layout width.
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
-	const { isMobile, state, setState, desktopWidth, isDesktopWidthReady, setDesktopWidth } =
-		useSidebar();
-	const panelGroupId = React.useId();
-	const sidebarPanelRef = usePanelRef();
-	const [isSidebarTransitioning, setIsSidebarTransitioning] = React.useState(false);
-	const [initialPanelSize, setInitialPanelSize] = React.useState(desktopWidth);
+	const { isMobile, state, desktopWidth, isDesktopWidthReady, setDesktopWidth } = useSidebar();
 
-	// Guards onResize from syncing state while a programmatic collapse/expand
-	// animation is in-flight — without this, ResizeObserver fires intermediate
-	// sizes during the CSS flex-grow transition, causing a feedback loop that
-	// fights the collapse/expand.
-	const isAnimatingRef = React.useRef(false);
-	const didSyncInitialPanelSizeRef = React.useRef(false);
-	const transitionTimeoutRef = React.useRef<number | null>(null);
-
-	const beginProgrammaticResize = React.useCallback((resizePanel: () => void): void => {
-		if (transitionTimeoutRef.current !== null) {
-			window.clearTimeout(transitionTimeoutRef.current);
-		}
-
-		isAnimatingRef.current = true;
-		setIsSidebarTransitioning(true);
-
-		window.requestAnimationFrame(() => {
-			resizePanel();
-			transitionTimeoutRef.current = window.setTimeout(() => {
-				isAnimatingRef.current = false;
-				setIsSidebarTransitioning(false);
-				transitionTimeoutRef.current = null;
-			}, COLLAPSE_ANIMATION_DURATION_MS);
-		});
-	}, []);
-
-	React.useEffect(() => {
-		return () => {
-			if (transitionTimeoutRef.current !== null) {
-				window.clearTimeout(transitionTimeoutRef.current);
-			}
-		};
-	}, []);
-
+	// Live layout width: when expanded → CSS variable; when collapsed → 0.
+	// Setting `--sidebar-width` once on the documentElement lets descendants
+	// (chat margin, etc.) read it without prop drilling, and lets the drag
+	// handler animate it directly without re-rendering React on every frame.
 	React.useLayoutEffect(() => {
-		if (!isDesktopWidthReady || didSyncInitialPanelSizeRef.current) {
-			return;
-		}
-
-		didSyncInitialPanelSizeRef.current = true;
-		setInitialPanelSize(desktopWidth);
+		if (!isDesktopWidthReady) return;
+		document.documentElement.style.setProperty('--sidebar-width', `${desktopWidth}px`);
 	}, [desktopWidth, isDesktopWidthReady]);
 
-	// Drive the panel's collapse/expand from the sidebar context state
-	// so that the toggle button, keyboard shortcut, etc. all work through
-	// the library's layout engine (smooth flex transitions) instead of CSS display:none.
-	React.useEffect(() => {
-		const panel = sidebarPanelRef.current;
-		if (!panel) return;
-
-		if (state === 'collapsed' && !panel.isCollapsed()) {
-			beginProgrammaticResize(() => panel.collapse());
-		} else if (state === 'expanded' && panel.isCollapsed()) {
-			beginProgrammaticResize(() => panel.expand());
+	const isExpanded = state === 'expanded';
+	const { onPointerDown: handleResizePointerDown, isDragging: isResizing } = useSidebarDragResize(
+		{
+			desktopWidth,
+			setDesktopWidth,
+			enabled: isExpanded,
 		}
-	}, [beginProgrammaticResize, state, sidebarPanelRef]);
+	);
 
 	// Mobile: Sidebar renders as a Sheet overlay alongside main content.
 	// The Sheet portals above the absolute AppHeader, so its content does not
@@ -480,77 +523,55 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		);
 	}
 
+	// Pause layout transitions while the user is actively dragging the
+	// resize handle — without this, the chat panel's flex transition
+	// would lag the handle by 200 ms, making resizing feel rubbery.
+	const transformTransition = isResizing
+		? ''
+		: 'transition-transform duration-200 ease-out motion-reduce:transition-none';
+	const widthTransition = isResizing
+		? ''
+		: 'transition-[width] duration-200 ease-out motion-reduce:transition-none';
+
+	// Outer wrapper occupies the open width when expanded; collapses to 0 when
+	// closed so the chat panel can slide left into the freed space.
+	const outerWidth = isExpanded ? `${desktopWidth}px` : '0px';
+
 	return (
-		<ResizablePanelGroup
-			direction="horizontal"
-			id={panelGroupId}
-			className={`min-h-0 min-w-0 flex-1 ${
-				isSidebarTransitioning
-					? '[&>[data-panel]:first-child]:transition-[flex-grow] [&>[data-panel]:first-child]:duration-200 [&>[data-panel]:first-child]:ease-out'
-					: ''
-			}`}
-		>
-			<ResizablePanel
-				panelRef={sidebarPanelRef}
-				defaultSize={initialPanelSize}
-				style={{ overflow: 'hidden' }}
-				minSize={SIDEBAR_MIN_WIDTH}
-				maxSize={SIDEBAR_MAX_WIDTH}
-				collapsible={true}
-				collapsedSize={0}
-				onResize={(size) => {
-					// Skip state sync during programmatic collapse/expand animation
-					// to prevent ResizeObserver intermediate values from fighting the transition
-					if (!isAnimatingRef.current) {
-						if (size.inPixels === 0 && state !== 'collapsed') {
-							setState('collapsed');
-						} else if (size.inPixels > 0 && state !== 'expanded') {
-							setState('expanded');
-						}
-					}
-					// Always persist non-zero widths
-					if (size.inPixels > 0) {
-						setDesktopWidth(size.inPixels);
-					}
-				}}
+		<div className="relative flex min-h-0 min-w-0 flex-1">
+			{/*
+			 * Outer wrapper: always laid out at the sidebar's open width while
+			 * expanded; shrinks to 0 when collapsed. Width transitions in
+			 * lockstep with the inner panel's translate, so the chat panel
+			 * (flex-1, occupies whatever's left) glides in sync.
+			 */}
+			<div
+				className={cn('relative h-full overflow-hidden', widthTransition)}
+				style={{ width: outerWidth }}
 			>
-				{/* Content keeps min-width so layout never reflows during collapse —
-          the panel clips via overflow:hidden and the content slides out
-          of view (no fade) as the chat panel pushes leftward to fill the
-          space. Pointer events are disabled while collapsed so the
-          clipped content can't capture clicks bleeding past the
-          panel boundary.
-          The pt-10 offsets sidebar contents so they sit below the absolute
-          AppHeader; the panel itself still extends to the top of the viewport
-          so the sidebar background reads as full-height behind the header. */}
-				{/* `group` so descendants can opt into the
-				    `.group:hover .scrollbar-hover::-webkit-scrollbar-thumb`
-				    rule in `globals.css` — that's how the sidebar's listbox
-				    fades its scrollbar in only while the cursor is anywhere
-				    over the sidebar. */}
-				<SidebarFocusShell className="group bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
+				{/*
+				 * Inner panel: full open width, translates X axis from 0 → -100%
+				 * on close. Anchored absolutely so the translate doesn't fight
+				 * the outer wrapper's flex sizing. `group` for descendants that
+				 * opt into the hover-only scrollbar rule in `globals.css`. The
+				 * `pt-10` offsets sidebar contents below the absolute AppHeader.
+				 */}
+				<SidebarFocusShell
+					className={cn(
+						'group bg-sidebar text-sidebar-foreground absolute inset-y-0 left-0 flex flex-col overflow-hidden pt-10',
+						transformTransition,
+						isExpanded ? 'translate-x-0' : '-translate-x-full'
+					)}
+				>
 					{/*
-					 * Inner panel content keeps its full min-w-[240px] width
-					 * and stays anchored to the LEFT edge of the parent
-					 * react-resizable-panel. As the parent shrinks during a
-					 * collapse, content clips from the RIGHT (the side closest
-					 * to the chat panel). This matches the "the whole panel
-					 * with its full size moves left and disappears off-screen"
-					 * behavior described in DESIGN.md → Motion → "Sidebar Open
-					 * / Close": titles stay put for the duration of the slide
-					 * and only the right-side metadata gets clipped first.
-					 *
-					 * Pointer events are disabled while collapsed so the
-					 * (clipped to 0px) panel can't capture stray clicks. We
-					 * intentionally do NOT translate-x on this inner div —
-					 * a translate makes the LEFT-aligned content slide off-
-					 * screen first, leaving right-aligned metadata visible
-					 * during the slide. That created the "chat panel
-					 * approaches the row titles" creeping effect.
+					 * data-state on the inner div drives pointer-events so a
+					 * (translated-out) sidebar can't capture clicks bleeding
+					 * past it.
 					 */}
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
+						style={{ width: `${desktopWidth}px` }}
+						className="flex h-full flex-col data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
 						<SidebarHeader className="px-2 pt-0 pb-1 shrink-0">
 							<NewSessionButton />
@@ -561,52 +582,53 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<NavUser user={SIDEBAR_USER} />
 					</div>
 				</SidebarFocusShell>
-			</ResizablePanel>
 
-			{/*
-			 * Constrain the handle height to match the chat panel's visible
-			 * area: mt-10 aligns the top with the chat panel below the
-			 * AppHeader (pt-10), mb-2 aligns the bottom with the chat
-			 * panel's pb-2 gap. The flex-row Group's align:stretch default
-			 * subtracts these cross-axis margins from the handle's height,
-			 * so the drag affordance + ::after hit area only cover the
-			 * panel boundary — not the header strip or the bottom margin.
-			 * The mask gradient fades the handle line toward both ends so
-			 * it reads as a bounded divider rather than a hard edge.
-			 */}
-			{/*
-			 * after:left-0/after:translate-x-0 anchors the ::after hit area at the
-			 * left edge of the chat panel (overriding the default centered position).
-			 * after:w-12 widens the invisible grab target to 48px — all extending
-			 * rightward into the chat panel so it's reachable from inside the panel.
-			 */}
-			<ResizableHandle className="mt-10 mb-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px,black_calc(100%_-_24px),transparent)] after:left-0 after:translate-x-0 after:w-12" />
-
-			{/*
-			 * Chat panel stacks above the sidebar via z-index so its left-edge
-			 * shadow visibly casts onto the sidebar — this is what makes the
-			 * panel feel like it "closes over" the sidebar when collapsing.
-			 * overflow:visible lets the shadow escape the panel container
-			 * (react-resizable-panels otherwise clips children to the panel
-			 * box, swallowing the shadow).
-			 */}
-			<ResizablePanel
-				className="relative z-10 h-full min-w-0"
-				style={{ overflow: 'visible' }}
-			>
 				{/*
-				 * pr-2 + pb-2 leave breathing room so the floating chat
-				 * panel's right and bottom shadow layers actually paint —
-				 * without this, the panel hugs the viewport edges and the
-				 * shadow gets clipped against them. The left edge still
-				 * butts up against the sidebar so the leftward shadow
+				 * Resize handle — hidden while the sidebar is collapsed (the
+				 * user can't grab a panel they can't see). Sits at the right
+				 * edge of the inner panel; on pointerdown it captures cursor
+				 * coordinates and writes width directly to the
+				 * `--sidebar-width` CSS variable for jank-free dragging.
+				 *
+				 * The mask gradient fades the visual line toward both ends so
+				 * it reads as a bounded divider; top-10 / bottom-2 line up the
+				 * grabbable region with the chat panel's visible bounds.
+				 */}
+				{isExpanded && (
+					<div
+						aria-hidden="true"
+						onPointerDown={handleResizePointerDown}
+						className={cn(
+							'absolute top-10 bottom-2 right-0 z-20 cursor-col-resize select-none',
+							'[mask-image:linear-gradient(to_bottom,transparent,black_24px,black_calc(100%_-_24px),transparent)]'
+						)}
+						style={{ width: SIDEBAR_HANDLE_WIDTH_PX }}
+					>
+						{/* Visible 1px line centered in the 8px hit area. */}
+						<div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border" />
+					</div>
+				)}
+			</div>
+
+			{/*
+			 * Chat panel: flex-1 occupies whatever the outer sidebar wrapper
+			 * doesn't, so as the wrapper transitions from W → 0 the chat panel
+			 * widens in lockstep. Stacks above the sidebar via z-index so its
+			 * left-edge shadow can paint over the sidebar surface.
+			 * overflow:visible so the shadow escapes the panel container.
+			 */}
+			<div className="relative z-10 h-full min-w-0 flex-1" style={{ overflow: 'visible' }}>
+				{/*
+				 * pr-2 + pb-2 leave breathing room so the floating chat panel's
+				 * right and bottom shadow layers actually paint. The left edge
+				 * still butts up against the sidebar so the leftward shadow
 				 * casts onto it.
 				 */}
 				<div className="h-full min-w-0 pt-10 pr-2 pb-2 pl-2">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
-			</ResizablePanel>
-		</ResizablePanelGroup>
+			</div>
+		</div>
 	);
 }
 
