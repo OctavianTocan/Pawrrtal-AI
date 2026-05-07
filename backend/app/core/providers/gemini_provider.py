@@ -26,6 +26,7 @@ from app.core.agent_loop import (
 )
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.config import settings
+from app.core.tools.exa_search_agent import make_exa_search_tool
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -258,10 +259,20 @@ class GeminiLLM:
                     )
                 )
 
+        # Start from the caller-supplied tools (e.g. workspace file tools
+        # built by ``make_workspace_tools`` — see PR #112) so we don't
+        # silently drop them, then append the Exa web-search tool when
+        # the API key is configured.  Exa is instantiated per-request so
+        # it's trivially mockable in tests by patching
+        # ``make_exa_search_tool`` before calling ``stream()``.
+        effective_tools: list[AgentTool] = list(tools or [])
+        if settings.exa_api_key:
+            effective_tools.append(make_exa_search_tool())
+
         context = AgentContext(
             system_prompt=system_prompt or _FALLBACK_SYSTEM_PROMPT,
             messages=prior,
-            tools=list(tools or []),
+            tools=effective_tools,
         )
         prompt = UserMessage(role="user", content=question)
         config = AgentLoopConfig(convert_to_llm=_identity_convert)
