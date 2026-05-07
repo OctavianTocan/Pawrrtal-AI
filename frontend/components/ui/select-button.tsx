@@ -11,20 +11,15 @@
  * `chat-composer-dropdown-menu` so the popover skin stays consistent
  * with the model picker.
  *
- * Renders nothing for the popover frame, hover styles, or item
- * structure — those live in `<DropdownMenu>` / `<DropdownMenuItem>` so
- * theme overrides land via the shared cascade.
+ * Built on `@octavian-tocan/react-dropdown` (the vendored package). The
+ * `asChild` prop lets the consumer's `<Button>` be the actual trigger
+ * element so inline-flex layouts and ARIA semantics are preserved.
  */
 
+import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 /** A single picker option. `id` is what gets passed to `onSelect`. */
@@ -54,6 +49,11 @@ export interface SelectButtonProps {
 	className?: string;
 }
 
+/** Display label fallback used by the keyboard type-ahead. */
+function displayFor(option: SelectButtonOption): string {
+	return typeof option.label === 'string' ? option.label : option.id;
+}
+
 /**
  * DropdownMenu-driven select button.
  *
@@ -72,13 +72,22 @@ export function SelectButton({
 	className,
 }: SelectButtonProps): React.JSX.Element {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
+		<DropdownMenu<SelectButtonOption>
+			asChild
+			usePortal
+			align="end"
+			placement="bottom"
+			items={options}
+			getItemKey={(option) => option.id}
+			getItemDisplay={displayFor}
+			onSelect={(option) => onSelect(option.id)}
+			contentClassName="chat-composer-dropdown-menu popover-styled p-1.5 min-w-56"
+			trigger={
 				<Button
 					aria-label={ariaLabel}
 					className={cn(
 						'h-8 gap-1.5 rounded-[7px] border-0 bg-foreground/[0.04] px-2.5 text-xs font-medium text-foreground',
-						'hover:bg-foreground/[0.08] aria-expanded:bg-foreground/[0.10] data-[state=open]:bg-foreground/[0.10]',
+						'hover:bg-foreground/[0.08] data-[state=open]:bg-foreground/[0.10]',
 						'transition-colors duration-150 ease-out',
 						className
 					)}
@@ -92,56 +101,44 @@ export function SelectButton({
 					<span className="truncate">{triggerLabel}</span>
 					<ChevronDownIcon aria-hidden="true" className="size-3 text-muted-foreground" />
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="end"
-				className="chat-composer-dropdown-menu min-w-56 p-1.5"
-				side="bottom"
-				sideOffset={4}
-			>
-				{options.map((option) => {
-					const isActive = activeId === option.id;
-					return (
-						<DropdownMenuItem
-							className={cn(
-								// Compact-but-readable Codex rhythm: ~36px tall rows
-								// (py-2 + line-height) with a slightly chunkier corner
-								// radius so the hover/active fill reads as its own pill
-								// rather than a thin highlight strip.
-								'gap-2.5 rounded-[8px] px-3 py-2',
-								// Active row gets a tinted background — replaces the
-								// previous tiny right-edge dot, which was easy to miss
-								// against the muted chrome.
-								isActive && 'bg-foreground/[0.06]'
-							)}
-							key={option.id}
-							onSelect={() => onSelect(option.id)}
-						>
-							{option.leading ? (
-								<span aria-hidden="true" className="flex items-center">
-									{option.leading}
+			}
+			renderItem={(option, _isSelected, onItemSelect) => {
+				const isActive = activeId === option.id;
+				return (
+					<button
+						type="button"
+						className={cn(
+							// Compact-but-readable Codex rhythm: ~36 px tall rows
+							// (py-2 + line-height) with a slightly chunkier corner
+							// radius so the hover/active fill reads as its own pill
+							// rather than a thin highlight strip.
+							'flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-3 py-2 text-sm hover:bg-foreground/[0.04]',
+							isActive && 'bg-foreground/[0.06]'
+						)}
+						onClick={() => onItemSelect(option)}
+					>
+						{option.leading ? (
+							<span aria-hidden="true" className="flex items-center">
+								{option.leading}
+							</span>
+						) : null}
+						<div className="flex min-w-0 flex-1 flex-col text-left">
+							<span className="truncate text-sm text-foreground">{option.label}</span>
+							{option.description ? (
+								<span className="truncate text-pretty text-xs text-muted-foreground">
+									{option.description}
 								</span>
 							) : null}
-							<div className="flex min-w-0 flex-1 flex-col">
-								<span className="truncate text-sm text-foreground">
-									{option.label}
-								</span>
-								{option.description ? (
-									<span className="truncate text-pretty text-xs text-muted-foreground">
-										{option.description}
-									</span>
-								) : null}
-							</div>
-							{isActive ? (
-								<CheckIcon
-									aria-hidden="true"
-									className="size-3.5 shrink-0 text-foreground"
-								/>
-							) : null}
-						</DropdownMenuItem>
-					);
-				})}
-			</DropdownMenuContent>
-		</DropdownMenu>
+						</div>
+						{isActive ? (
+							<CheckIcon
+								aria-hidden="true"
+								className="size-3.5 shrink-0 text-foreground"
+							/>
+						) : null}
+					</button>
+				);
+			}}
+		/>
 	);
 }
