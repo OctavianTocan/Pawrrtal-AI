@@ -1,11 +1,11 @@
 ---
 # ai-nexus-mjru
 title: Set up pytest infrastructure and write first test suite
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-04T23:43:58Z
-updated_at: 2026-03-04T23:43:58Z
+updated_at: 2026-05-07T16:32:26Z
 ---
 
 ## Goal

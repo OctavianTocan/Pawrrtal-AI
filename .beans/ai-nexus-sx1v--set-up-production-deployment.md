@@ -1,14 +1,14 @@
 ---
 # ai-nexus-sx1v
 title: Set Up Production Deployment
-status: todo
+status: scrapped
 type: feature
 priority: normal
 tags:
     - Deployment
     - Sprint 2
 created_at: 2026-02-27T15:02:15Z
-updated_at: 2026-03-16T17:22:15Z
+updated_at: 2026-05-07T16:33:41Z
 blocked_by:
     - ai-nexus-47mi
     - ai-nexus-05rb

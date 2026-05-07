@@ -1,10 +1,11 @@
 ---
 # ai-nexus-mgm1
 title: Fix Sidebar Hydration Mismatch
-status: todo
+status: completed
 type: bug
+priority: normal
 created_at: 2026-04-09T15:05:48Z
-updated_at: 2026-04-09T15:05:48Z
+updated_at: 2026-05-07T16:33:13Z
 ---
 
 ## Context

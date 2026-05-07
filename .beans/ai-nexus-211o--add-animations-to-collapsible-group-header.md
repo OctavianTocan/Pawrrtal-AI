@@ -1,11 +1,11 @@
 ---
 # ai-nexus-211o
 title: Add animations to CollapsibleGroupHeader
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T00:51:00Z
-updated_at: 2026-03-28T00:51:00Z
+updated_at: 2026-05-07T16:34:05Z
 ---
 
 Add smooth animations for the expand/collapse transition in `CollapsibleGroupHeader`.

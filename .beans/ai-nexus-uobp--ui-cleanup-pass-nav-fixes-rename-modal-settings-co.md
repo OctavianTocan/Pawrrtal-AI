@@ -1,11 +1,11 @@
 ---
 # ai-nexus-uobp
 title: 'UI cleanup pass: nav fixes, rename modal, settings, composer placeholder'
-status: in-progress
+status: scrapped
 type: task
 priority: normal
 created_at: 2026-05-06T12:02:21Z
-updated_at: 2026-05-06T12:02:21Z
+updated_at: 2026-05-07T16:30:29Z
 ---
 
 Round 2 of inspector-driven UI fixes plus a bug fix.

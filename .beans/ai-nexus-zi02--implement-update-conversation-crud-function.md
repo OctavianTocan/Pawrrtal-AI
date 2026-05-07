@@ -1,14 +1,14 @@
 ---
 # ai-nexus-zi02
 title: Implement update_conversation CRUD Function
-status: todo
+status: scrapped
 type: task
 priority: high
 tags:
     - Backend
     - Sprint 3
 created_at: 2026-02-27T15:04:47Z
-updated_at: 2026-03-07T22:26:44Z
+updated_at: 2026-05-07T16:32:10Z
 ---
 
 Notion Task #22

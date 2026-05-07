@@ -1,14 +1,14 @@
 ---
 # ai-nexus-05rb
 title: Migrate Database to PostgreSQL
-status: todo
+status: scrapped
 type: task
 priority: high
 tags:
     - Deployment
     - Sprint 2
 created_at: 2026-02-27T15:02:15Z
-updated_at: 2026-03-04T10:01:52Z
+updated_at: 2026-05-07T16:32:13Z
 ---
 
 Notion Task #63 — Migrate the database from SQLite to PostgreSQL for production.
