@@ -2,7 +2,6 @@
 
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
@@ -15,6 +14,7 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 
 /**
@@ -198,43 +198,15 @@ export function ModelSelectorPopover({
 }: ModelSelectorPopoverProps): React.JSX.Element {
 	const selectedModel = getModelOption(selectedModelId);
 	const reasoningLabel = getReasoningLabel(selectedReasoning);
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [tooltipOpen, setTooltipOpen] = useState(false);
-	// Prevents tooltip from reopening on focus-return after dropdown close.
-	const isMenuClosingRef = useRef(false);
-	// Timer ref so we can cancel a pending guard clear if the dropdown
-	// reopens before the 150 ms window expires (avoids ref state leaks).
-	const closingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const { tooltipOpen, handleMenuOpenChange, handleTooltipOpenChange } = useTooltipDropdown();
 
 	return (
-		<DropdownMenu
-			onOpenChange={(open) => {
-				setMenuOpen(open);
-				if (!open) {
-					isMenuClosingRef.current = true;
-					setTooltipOpen(false);
-					// Radix restores focus to the trigger in a useEffect cleanup,
-					// which fires after browser paint. SubContent is now rendered
-					// in a Portal with its own 150 ms animate-dropdown-close exit
-					// animation — Radix Presence keeps it mounted during that
-					// animation, so its FocusScope cleanup fires at ~150 ms+.
-					// 300 ms safely outlasts both the Content FocusScope restore
-					// (~16-30 ms) and the Portal SubContent restore (~150 ms+).
-					clearTimeout(closingTimerRef.current);
-					closingTimerRef.current = setTimeout(() => {
-						isMenuClosingRef.current = false;
-					}, 300);
-				}
-			}}
-		>
+		<DropdownMenu onOpenChange={handleMenuOpenChange}>
 			<TooltipProvider disableHoverableContent>
 				<Tooltip
 					delayDuration={300}
-					onOpenChange={(open) => {
-						if (menuOpen || isMenuClosingRef.current) return;
-						setTooltipOpen(open);
-					}}
-					open={menuOpen ? false : tooltipOpen}
+					onOpenChange={handleTooltipOpenChange}
+					open={tooltipOpen}
 				>
 					<TooltipTrigger asChild>
 						<DropdownMenuTrigger asChild>

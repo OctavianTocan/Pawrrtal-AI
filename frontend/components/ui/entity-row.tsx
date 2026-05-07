@@ -85,7 +85,7 @@ export function EntityRow({
 	const resolvedContextMenu = contextMenuContent ?? menuContent;
 
 	const InnerContent = (
-		<div className="relative group select-none pl-2 mr-2">
+		<div className="relative group/row select-none pl-2 mr-2">
 			{(isSelected || isInMultiSelect) && (
 				<div className="absolute left-0 inset-y-0 w-[2px] bg-accent" />
 			)}
@@ -132,7 +132,7 @@ export function EntityRow({
 									className={cn(
 										menuOpen || contextMenuOpen
 											? 'invisible'
-											: 'group-hover:invisible'
+											: 'group-hover/row:invisible'
 									)}
 								>
 									{titleTrailing}
@@ -143,7 +143,7 @@ export function EntityRow({
 											'absolute inset-0 flex items-center justify-end overflow-visible',
 											menuOpen || contextMenuOpen
 												? 'opacity-100'
-												: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+												: 'opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto'
 										)}
 									>
 										<DropdownMenu modal={true} onOpenChange={setMenuOpen}>
@@ -229,7 +229,7 @@ export function EntityRow({
 						'absolute right-2 top-2 transition-opacity z-10',
 						menuOpen || contextMenuOpen
 							? 'opacity-100'
-							: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+							: 'opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto'
 					)}
 				>
 					<div className="flex items-center rounded-[8px] overflow-hidden border border-transparent hover:border-border/50">
