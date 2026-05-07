@@ -505,6 +505,8 @@ same discipline to **modal scrims**, **sheet backdrops**, and any full-bleed
 dimming—reach for **blur + gradient tint**, not **`bg-black/40`**-style solids
 unless a deliberate exception is documented.
 
+**Implementation (this repo):** Radix **Dialog**, **Alert dialog**, and **Sheet** overlays use the `.modal-scrim` utility in `frontend/app/globals.css`: **8px** backdrop blur (aligned with `.popover-styled`) plus a **vertical gradient** from ~**10%** to ~**14%** black (`rgba(0, 0, 0, 0.1)` → `rgba(0, 0, 0, 0.14)`), replacing the prior flat **`bg-black/80`** wash.
+
 ## Motion
 
 The system prefers **transform-based animation** over property animation
