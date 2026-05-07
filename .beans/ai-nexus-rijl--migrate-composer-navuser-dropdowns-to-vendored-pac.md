@@ -1,11 +1,11 @@
 ---
 # ai-nexus-rijl
 title: Migrate composer + NavUser dropdowns to vendored package, retire Radix DropdownMenu
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-05-07T09:31:02Z
-updated_at: 2026-05-07T10:33:52Z
+updated_at: 2026-05-07T11:26:45Z
 ---
 
 After all package work lands (asChild, align, flyout submenus, headless hook), unify dropdown library across the app.
@@ -91,3 +91,28 @@ The session prioritized landing the headless `useDropdown` hook (bean ai-nexus-a
 4. Delete `frontend/components/ui/dropdown-menu.tsx` and `bun remove @radix-ui/react-dropdown-menu`.
 
 API surface needed by consumers (verified via `grep`): Item, Separator, Sub, SubTrigger, SubContent, Shortcut, Label. CheckboxItem / RadioItem / RadioGroup / Group / Portal are NOT used outside the wrapper file and can be skipped on day one.
+
+## Completion summary 2026-05-07
+
+All remaining migration work landed:
+
+- DropdownContextMenu primitive built in `@octavian-tocan/react-dropdown` (Phase A).
+- Panel-mode JSX surface (`DropdownPanelMenu` + `DropdownMenuItem`/`Label`/`Separator`/`Shortcut`) built so consumers can render arbitrary JSX item trees (Phase B).
+- Six consumers migrated to the vendored package + the polymorphic `menu-context.tsx` provider:
+  - `frontend/components/ui/menu-context.tsx`
+  - `frontend/components/ui/entity-row.tsx`
+  - `frontend/components/ai-elements/prompt-input-attachments.tsx`
+  - `frontend/components/ai-elements/open-in-chat.tsx`
+  - `frontend/components/ai-elements/prompt-input-layout.tsx`
+  - `frontend/features/nav-chats/components/ConversationSidebarItemView.tsx`
+- Two more consumers found via grep and migrated:
+  - `frontend/components/new-session-button.tsx`
+  - `frontend/components/app-layout.tsx` (WorkspaceSelector + HelpMenu)
+- Deleted `frontend/components/ui/dropdown-menu.tsx` and `frontend/components/ui/context-menu.tsx`.
+- `radix-ui` umbrella stays for other primitives (Dialog, Tooltip, Sheet, etc.); only the dropdown-menu and context-menu surfaces moved.
+
+### Verification
+
+- Frontend `bunx tsc --noEmit` clean.
+- Package vitest: 152 → 174 passing (152 pre-existing + 8 panel + 7 context-menu + 7 useToggleState).
+- Frontend vitest: 309 passing + same 3 pre-existing settings failures (one previously hidden behind a vitest-resolve error, surfaced by the `@octavian-tocan/react-dropdown` alias added to `vitest.config.ts`).

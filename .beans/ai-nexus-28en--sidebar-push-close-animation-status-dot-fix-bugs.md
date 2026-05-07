@@ -1,11 +1,11 @@
 ---
 # ai-nexus-28en
 title: Sidebar 'push' close animation + status dot + fix bugs
-status: in-progress
+status: completed
 type: bug
 priority: high
 created_at: 2026-05-04T21:23:27Z
-updated_at: 2026-05-07T10:33:35Z
+updated_at: 2026-05-07T11:26:54Z
 ---
 
 Cluster of UX bugs surfaced after the right-click menu overhaul.
@@ -37,3 +37,23 @@ The current implementation animates flex-grow on a `ResizablePanelGroup` with `c
 The bean's checkbox is therefore inaccurate and the underlying work was deferred in this session — converting the sidebar slot away from `react-resizable-panels`'s collapse API while keeping the drag-resize handle working when open is a substantial layout refactor that risks regressing the existing sidebar-resize / focus-shell / mobile-drawer wiring.
 
 Status: bean stays in-progress; the DESIGN.md-aligned slide rework is its own follow-up. Mark-unread is also still deferred.
+
+## Completion summary 2026-05-07
+
+The DESIGN.md-aligned sidebar slide rework landed in `frontend/components/app-layout.tsx`:
+
+- `ResizablePanelGroup` / `ResizablePanel` removed.
+- Outer wrapper has `width: <desktopWidth>` while expanded, collapses to `0` while closed; the chat panel is `flex-1` and absorbs the freed space.
+- Inner panel is `position: absolute` and translates `translate-x-0` (open) ↔ `-translate-x-full` (closed) with `transition-transform duration-200 ease-out`.
+- Custom `useSidebarDragResize` hook writes width to a `--sidebar-width` CSS variable on `documentElement` during drag (no React re-render per frame), then persists the final clamped width via `setDesktopWidth` on pointerup.
+- Resize handle hidden / disabled while collapsed.
+- `motion-reduce:transition-none` on every transitioning element.
+- Mobile drawer (Sheet overlay) untouched.
+
+### Verification
+
+- Frontend `bunx tsc --noEmit` clean.
+- Frontend vitest: 309 passing (no regression).
+- The "creep" effect the bean documented is gone — the chat panel and sidebar now translate together at full width without re-flowing the sidebar contents on every frame.
+
+Mark-unread remains deferred to its own bean (see `ai-nexus-p9xy`); it was scoped out of this round per the original bean.

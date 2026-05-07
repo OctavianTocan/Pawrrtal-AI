@@ -1,11 +1,11 @@
 ---
 # ai-nexus-a3td
 title: 'react-dropdown: headless useDropdown hook + prop getters'
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-05-07T08:45:17Z
-updated_at: 2026-05-07T10:29:57Z
+updated_at: 2026-05-07T11:27:34Z
 ---
 
 Add a headless `useDropdown` hook that exposes prop getters (`getTriggerProps`, `getContentProps`, `getItemProps`) in the Headless UI / Downshift / Reach style, so consumers can fully own the markup while keeping the keyboard/focus/aria wiring.
@@ -61,3 +61,25 @@ Headless `useDropdown` hook landed as **additive** API in `frontend/lib/react-dr
 The original bean spec called for refactoring `DropdownRoot`/`Trigger`/`Content` to use the new hook internally so the headless and component APIs share one source of truth. That refactor is **deferred** — keeping the existing 130-test suite frozen is the higher priority and the unification can ship as its own PR. The new hook is a parallel API; both will continue to work.
 
 Status: bean stays in-progress until the unification refactor ships.
+
+## Completion summary 2026-05-07
+
+The deferred unification landed in two steps:
+
+1. useToggleState hook extracted as the single source of truth for open/close transitions and the onOpenChange-only-on-transition rule. Both DropdownRoot and useDropdown now route through it.
+2. Side effects of the unification:
+   - DropdownRoot.openDropdown / closeDropdown no longer call onOpenChange explicitly - the shared setIsOpen already publishes the transition.
+   - DropdownContextMenu open shim drops its workaround onOpenChange(true) call.
+
+Intentionally NOT unified (per scope-control review):
+
+- Click-outside detection (component path uses mousedown + touchstart, headless uses pointerdown - tests assert the specific event types).
+- Keyboard navigation (already shared via useMenuKeyboard).
+- Selection / search / animation state / placement / focus lifecycle (component-only).
+
+### Verification
+
+- All 167 prior package tests pass without modification.
+- 7 new tests for useToggleState cover defaultOpen, open/close/toggle, transition firing semantics, no-op on no-transition, setIsOpen parity, and stable callback refs.
+- Total: 174 tests passing.
+- Frontend bunx tsc --noEmit clean.
