@@ -17,9 +17,17 @@ import { StepContext } from './step-context';
 import { StepIdentity } from './step-identity';
 import { StepMessaging } from './step-messaging';
 import { StepPersonality } from './step-personality';
+import { StepServer } from './step-server';
 
 /** Browser event used by app chrome to open the onboarding flow. */
 export const OPEN_ONBOARDING_FLOW_EVENT = 'pawrrtal:open-onboarding-flow';
+
+/**
+ * Browser event that opens the onboarding flow directly at the server
+ * configuration step. Dispatched by the workspace-creation modal when the
+ * user clicks "Connect to remote server".
+ */
+export const OPEN_ONBOARDING_SERVER_STEP_EVENT = 'ai-nexus:open-onboarding-server-step';
 
 /**
  * Localstorage flag + query-string param that suppress the auto-open
@@ -43,7 +51,7 @@ export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'pawrrtal:e2e-skip-onboarding';
 export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
 
 /** Wizard step IDs in render order. */
-const STEP_IDS = ['identity', 'context', 'personality', 'messaging'] as const;
+const STEP_IDS = ['identity', 'server', 'context', 'personality', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 /**
@@ -169,7 +177,20 @@ export function OnboardingFlow({
 			setOpen(true);
 		};
 		window.addEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
-		return () => window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
+
+		// Deep-link to the server step when the workspace modal dispatches
+		// OPEN_ONBOARDING_SERVER_STEP_EVENT ("Connect to remote server" button).
+		const serverHandler = (): void => {
+			setProfile(loadPersonalizationProfile());
+			setStep('server');
+			setOpen(true);
+		};
+		window.addEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
+
+		return () => {
+			window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
+			window.removeEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
+		};
 	}, [listenForOpenEvent]);
 
 	return (
@@ -182,6 +203,14 @@ export function OnboardingFlow({
 						<StepIdentity
 							onContinue={goNext}
 							onPatch={patchProfile}
+							profile={profile}
+						/>
+					) : null}
+					{step === 'server' ? (
+						<StepServer
+							onContinue={goNext}
+							onPatch={patchProfile}
+							onSkip={goNext}
 							profile={profile}
 						/>
 					) : null}

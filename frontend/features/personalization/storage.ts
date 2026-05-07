@@ -92,6 +92,13 @@ export interface PersonalizationProfile {
 	connectedChannels?: MessagingChannelId[];
 	/** Custom instructions surfaced in the Personalization settings section. */
 	customInstructions?: string;
+	/**
+	 * Optional URL of a self-hosted AI Nexus backend, e.g.
+	 * `https://nexus.mycompany.com`. When set the frontend will prefer
+	 * this over the default same-origin API base. Empty or absent means
+	 * "use the hosted / same-origin server".
+	 */
+	remoteServerUrl?: string;
 }
 
 /** Fallback used when nothing is persisted yet. */
