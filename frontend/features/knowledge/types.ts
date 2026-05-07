@@ -54,6 +54,51 @@ export type MemoryCardTone = 'info' | 'success' | 'accent' | 'destructive' | 'fo
  * Real implementations will swap `count` for a live observation count and
  * route the click to a dedicated detail page.
  */
+// ---------------------------------------------------------------------------
+// Workspace API shapes
+// ---------------------------------------------------------------------------
+
+/**
+ * Workspace summary returned by `GET /api/v1/workspaces`.
+ * Mirrors the backend `WorkspaceRead` Pydantic schema.
+ */
+export interface WorkspaceRead {
+	id: string;
+	name: string;
+	slug: string;
+	is_default: boolean;
+	created_at: string;
+}
+
+/**
+ * One entry in the flat node list from `GET /api/v1/workspaces/:id/tree`.
+ * Mirrors `WorkspaceFileNode` on the backend.
+ */
+export interface WorkspaceApiNode {
+	name: string;
+	/** Workspace-relative POSIX path, e.g. `memory/note.md`. */
+	path: string;
+	is_dir: boolean;
+	/** Byte size; `null` for directories. */
+	size: number | null;
+}
+
+/** Response envelope from `GET /api/v1/workspaces/:id/tree`. */
+export interface WorkspaceTreeApiResponse {
+	workspace_id: string;
+	nodes: WorkspaceApiNode[];
+}
+
+/** Response from `GET /api/v1/workspaces/:id/files/:path`. */
+export interface WorkspaceFileApiResponse {
+	path: string;
+	content: string;
+}
+
+// ---------------------------------------------------------------------------
+// Memory card shapes
+// ---------------------------------------------------------------------------
+
 export interface MemoryCardData {
 	/** Stable identifier — used as the React key and any future routing slug. */
 	id: string;

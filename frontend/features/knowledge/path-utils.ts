@@ -8,7 +8,7 @@
  */
 
 import { KNOWLEDGE_FILE_EXTENSION, KNOWLEDGE_PATH_SEPARATOR } from './constants';
-import type { FileTreeNode } from './types';
+import type { FileTreeNode, WorkspaceApiNode } from './types';
 
 /**
  * Splits a `?path=` value into trimmed, non-empty segments.
@@ -76,6 +76,69 @@ export interface KnowledgeBreadcrumb {
 	path: string;
 	/** True for the trailing crumb — usually styled differently and not focusable. */
 	isCurrent: boolean;
+}
+
+/**
+ * Converts the flat `WorkspaceApiNode[]` list returned by
+ * `GET /api/v1/workspaces/:id/tree` into the recursive {@link FileTreeNode}
+ * tree the Knowledge UI consumes.
+ *
+ * The backend emits nodes in depth-first order with directories before their
+ * children, so we can build the tree in a single linear pass using a
+ * `Map<path, FolderNode>` as an accumulator.
+ *
+ * @param nodes    - Flat list of workspace file-tree nodes from the API.
+ * @param rootName - Display label for the implicit root (default: `"My Files"`).
+ */
+export function flatNodesToTree(
+	nodes: readonly WorkspaceApiNode[],
+	rootName = 'My Files'
+): FileTreeNode {
+	type FolderNode = FileTreeNode & { kind: 'folder' };
+
+	const root: FolderNode = {
+		kind: 'folder',
+		name: rootName,
+		updatedLabel: '',
+		children: [],
+	};
+
+	// Map from workspace-relative path to the corresponding in-memory folder node.
+	// The empty-string key is the implicit root.
+	const folderMap = new Map<string, FolderNode>();
+	folderMap.set('', root);
+
+	for (const node of nodes) {
+		// Determine the parent folder's path
+		const lastSlash = node.path.lastIndexOf('/');
+		const parentPath = lastSlash === -1 ? '' : node.path.slice(0, lastSlash);
+		const parent = folderMap.get(parentPath);
+
+		// Skip orphaned nodes (shouldn’t happen with a well-formed API response).
+		if (!parent) continue;
+
+		if (node.is_dir) {
+			const folder: FolderNode = {
+				kind: 'folder',
+				name: node.name,
+				updatedLabel: '',
+				children: [],
+			};
+			parent.children.push(folder);
+			folderMap.set(node.path, folder);
+		} else {
+			// File content is not embedded — it’s fetched lazily by
+			// `useWorkspaceFile` when the user opens the document.
+			parent.children.push({
+				kind: 'file',
+				name: node.name,
+				updatedLabel: '',
+				markdown: '',
+			});
+		}
+	}
+
+	return root;
 }
 
 /**
