@@ -1,11 +1,11 @@
 ---
 # ai-nexus-s8na
 title: 'Whimsy generator: richer motif library + collision-safe placer for recognisable doodles'
-status: todo
+status: in-progress
 type: feature
 priority: normal
 created_at: 2026-05-07T16:29:36Z
-updated_at: 2026-05-07T16:29:36Z
+updated_at: 2026-05-07T16:52:29Z
 ---
 
 ## Context
@@ -25,13 +25,23 @@ A generator that takes a **theme** and produces a tile that — at a glance — 
 
 ### 1. Build a richer motif library
 
-Two paths, pick the cheaper one in research:
+**Don't trace the reference images.** Tried mentally — Potrace on a packed reference returns one giant tangle (no segmentation), and Potrace traces filled regions, not strokes, so each line becomes a donut. Centerline tracers (autotrace, vtracer) handle line art better but still can't separate touching glyphs without manual cleanup. The reference images become a **style guide** (which themes, which glyphs, how dense) and an **acceptance bar** (does the tile read as cats-and-dogs at thumbnail size?), not the literal source.
 
-**A. Extract from reference images.** Trace bitmaps to SVG via Potrace (``potrace`` cli, or ``imagetracerjs`` in browser/node); split the resulting SVG into per-glyph ``<path>`` elements; manually clean. Output: a JSON manifest per theme listing ``{ id, paths, bbox, recommendedScale }``.
+**Curate from permissive icon packs**, one source per theme to keep visual register coherent. Each pack ships one icon per SVG file with clean stroke-only paths; we fetch from ``raw.githubusercontent.com`` (allowed in our sandbox), parse the path data, and emit a TS motif library at build time.
 
-**B. Hand-curate from open-licensed icon packs.** Sources: noun-project free tier (CC0 only), tabler-icons (MIT), Hugeicons (free tier), or doodle-icons style packs. Audit each for licence; pick a single source per theme to keep visual register coherent.
+| Source | Licence | Vibe | Notes |
+| --- | --- | --- | --- |
+| Iconoir | MIT | hand-drawn-ish | Closest match to the reference doodle vibe |
+| Tabler Icons | MIT | clean line | 5,000+ icons, broad coverage of the categories we want |
+| Lucide | ISC | uniform stroke | Already a project dep |
+| Phosphor | MIT | varied weights | Multi-weight system; `light` weight matches reference |
+| Iconify community | per-icon | mixed | Filter by licence; only consume CC0/MIT |
 
-Per-theme target: 30–60 motifs, mix of small (4u radius), medium (8u), large (14u) so the placer can produce visual hierarchy.
+For the ``catsAndDogs`` theme, Iconoir + Tabler cover ~80% of the reference glyphs (cat, dog, paw, fish, bone, ball, balloon, ice-cream). The 20% gap (sleeping-cat-with-zzz, fishbone-half-eaten, the specific dog-house style) gets either skipped, replaced with closest equivalent, or hand-drawn in a follow-up bean. Same approach across the other themes.
+
+Per-theme target: 12–20 motifs minimum (dense enough for variety), mix of small (4–6u), medium (8–10u), large (14–18u) bboxes so the placer can produce visual hierarchy. `paths` field stores raw SVG path data (``d`` attributes), `bbox` stores the icon's natural bbox in user units, `stroke` flag indicates whether the path is stroke-only (most icon packs) so the renderer keeps `fill='none' stroke='currentColor'` instead of filling.
+
+**Provenance ledger.** Every motif manifest entry records `source` (e.g. `'iconoir/regular/cat'`), `license` (`'MIT'`), and `hash` of the original SVG so we can audit + re-fetch on upstream updates.
 
 ### 2. Bbox, not radius
 

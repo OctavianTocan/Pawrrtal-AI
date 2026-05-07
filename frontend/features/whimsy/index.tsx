@@ -40,6 +40,12 @@ import {
 } from '@/features/settings/primitives';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import {
+	isWhimsyPresetId,
+	WHIMSY_PRESETS,
+	type WhimsyPresetId,
+	whimsyPresetUrl,
+} from '@/lib/whimsy-presets';
+import {
 	generateWhimsyTile,
 	svgToDataUri,
 	WHIMSY_THEMES,
@@ -68,12 +74,24 @@ const WHIMSY_BOUNDS = {
 /** Multiplier applied to the slider's integer value to get the stored decimal opacity. */
 const OPACITY_SLIDER_DIVISOR = 1000;
 
+/**
+ * Selects between the procedural tile generator and a pre-laid-out SVG
+ * preset. ``generated`` honours ``theme``/``seed``/``grid``; ``preset``
+ * honours ``preset`` (a static SVG file under ``/whimsy-patterns/``) and
+ * ignores the procedural knobs.
+ */
+export type WhimsyMode = 'generated' | 'preset';
+
 /** User-tunable parameters for the whimsy texture overlay. */
 export interface WhimsyConfig {
 	/** When false, the texture overlay is not rendered at all. */
 	enabled: boolean;
-	/** Curated motif set name; one of {@link WHIMSY_THEMES}'s keys. */
+	/** Source of the texture — procedurally generated tile or a static preset. */
+	mode: WhimsyMode;
+	/** Curated motif set name; one of {@link WHIMSY_THEMES}'s keys. Used in ``generated`` mode. */
 	theme: WhimsyThemeName;
+	/** Identifier of the active preset under ``/whimsy-patterns/``. Used in ``preset`` mode. */
+	preset: WhimsyPresetId;
 	/** Deterministic placement seed. Any 32-bit integer; reroll for fresh layout. */
 	seed: number;
 	/** Motifs per row/column in the placement grid. Higher = denser pattern. */
@@ -87,7 +105,9 @@ export interface WhimsyConfig {
 /** Default config — matches the values originally hardcoded in `ChatView`. */
 const DEFAULT_WHIMSY_CONFIG: WhimsyConfig = {
 	enabled: true,
+	mode: 'generated',
 	theme: 'kawaii',
+	preset: 'pattern-1',
 	seed: 42,
 	grid: 6,
 	size: 240,
@@ -104,14 +124,20 @@ function isWhimsyThemeName(value: unknown): value is WhimsyThemeName {
 /**
  * Validates the on-disk shape. Rejects anything outside the slider bounds so a
  * stale persisted value (e.g. after we tighten a range) silently falls back to
- * the default instead of leaving the UI stuck on an invalid state.
+ * the default instead of leaving the UI stuck on an invalid state. Pre-mode
+ * persisted blobs (no ``mode`` / ``preset``) fail this guard; the
+ * ``usePersistedState`` hook then replaces them with ``DEFAULT_WHIMSY_CONFIG``,
+ * which is the safest one-shot migration since neither field had a meaningful
+ * prior value.
  */
 function validateWhimsyConfig(value: unknown): value is WhimsyConfig {
 	if (!value || typeof value !== 'object') return false;
 	const v = value as Partial<Record<keyof WhimsyConfig, unknown>>;
 	return (
 		typeof v.enabled === 'boolean' &&
+		(v.mode === 'generated' || v.mode === 'preset') &&
 		isWhimsyThemeName(v.theme) &&
+		isWhimsyPresetId(v.preset) &&
 		typeof v.seed === 'number' &&
 		Number.isFinite(v.seed) &&
 		typeof v.grid === 'number' &&
@@ -159,14 +185,33 @@ export interface UseWhimsyTileResult {
 }
 
 /**
+ * Tile size used for ``preset`` mode. The packaged SVGs are sized for a phone
+ * screen (~1125 px wide); rendering them at the user's procedural ``size``
+ * (120-360 px) shrinks the doodles into illegibility. 600 px is large enough
+ * to read individual drawings on a desktop chat panel, small enough that two
+ * to three repeats are visible across the panel width.
+ */
+const PRESET_RENDER_SIZE = 600;
+
+/**
  * Generates a tileable mask URL from the persisted whimsy config and memoizes
  * it on every input that affects the SVG. Cheap to call from any component;
  * regenerates only when the user changes a relevant setting.
+ *
+ * In ``preset`` mode the URL is a static asset under ``/whimsy-patterns/``
+ * and the returned ``size`` is fixed at {@link PRESET_RENDER_SIZE} —
+ * ignoring the user's ``size`` slider, which is meaningful only for the
+ * procedural generator. In ``generated`` mode we build a tile in-memory and
+ * inline it as a data URI (cheaper round-trip and lets the seed/density
+ * knobs drive the SVG live).
  */
 export function useWhimsyTile(): UseWhimsyTileResult {
 	const [config] = useWhimsyConfig();
 	const cssUrl = useMemo(() => {
 		if (!config.enabled) return null;
+		if (config.mode === 'preset') {
+			return `url("${whimsyPresetUrl(config.preset)}")`;
+		}
 		const svg = generateWhimsyTile({
 			size: config.size,
 			seed: config.seed,
@@ -174,8 +219,17 @@ export function useWhimsyTile(): UseWhimsyTileResult {
 			motifs: WHIMSY_THEMES[config.theme],
 		});
 		return `url("${svgToDataUri(svg)}")`;
-	}, [config.enabled, config.size, config.seed, config.grid, config.theme]);
-	return { cssUrl, size: config.size, opacity: config.opacity };
+	}, [
+		config.enabled,
+		config.mode,
+		config.preset,
+		config.size,
+		config.seed,
+		config.grid,
+		config.theme,
+	]);
+	const size = config.mode === 'preset' ? PRESET_RENDER_SIZE : config.size;
+	return { cssUrl, size, opacity: config.opacity };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,6 +253,41 @@ const THEME_OPTIONS: readonly SelectButtonOption[] = THEME_NAMES.map((name) => (
 	label: THEME_LABELS[name],
 	description: WHIMSY_THEMES[name].join(', '),
 }));
+
+/** Mode switcher option list — generated tile vs static preset. */
+const MODE_OPTIONS: readonly SelectButtonOption[] = [
+	{
+		id: 'generated',
+		label: 'Generated tile',
+		description: 'Procedural pattern from a curated motif set. Reroll with the seed.',
+	},
+	{
+		id: 'preset',
+		label: 'Preset pattern',
+		description: 'Hand-laid SVG wallpaper. Curated, no procedural knobs.',
+	},
+];
+
+const MODE_LABELS: Record<WhimsyMode, string> = {
+	generated: 'Generated tile',
+	preset: 'Preset pattern',
+};
+
+/** Static option list for the preset dropdown — one entry per packaged SVG. */
+const PRESET_OPTIONS: readonly SelectButtonOption[] = WHIMSY_PRESETS.map((preset) => ({
+	id: preset.id,
+	label: preset.label,
+}));
+
+const PRESET_LABELS: Record<WhimsyPresetId, string> = WHIMSY_PRESETS.reduce<
+	Record<WhimsyPresetId, string>
+>(
+	(acc, preset) => {
+		acc[preset.id] = preset.label;
+		return acc;
+	},
+	{} as Record<WhimsyPresetId, string>
+);
 
 /**
  * Settings → Appearance card for the whimsy texture. All controls write to the
@@ -245,89 +334,132 @@ export function WhimsySettingsCard(): React.JSX.Element {
 			</SettingsRow>
 
 			<SettingsRow
-				description="Restricts which motifs the generator can pick from. Pick a curated combo."
-				label="Theme"
+				description="Generated tiles are procedural and respond to the seed/density knobs below. Presets are hand-laid SVG wallpapers that ignore those knobs."
+				label="Source"
 			>
 				<SelectButton
-					activeId={config.theme}
-					ariaLabel="Whimsy theme"
+					activeId={config.mode}
+					ariaLabel="Whimsy mode"
 					onSelect={(id) => {
-						if (isWhimsyThemeName(id)) setConfig((c) => ({ ...c, theme: id }));
+						if (id === 'generated' || id === 'preset') {
+							setConfig((c) => ({ ...c, mode: id }));
+						}
 					}}
-					options={THEME_OPTIONS}
-					triggerLabel={THEME_LABELS[config.theme]}
+					options={MODE_OPTIONS}
+					triggerLabel={MODE_LABELS[config.mode]}
 				/>
 			</SettingsRow>
 
-			<SettingsRow
-				description="Layout randomness. Same seed always renders the same tile; reroll for a new scatter."
-				label="Seed"
-			>
-				<div className="flex items-center gap-2">
-					<Input
-						aria-label="Whimsy seed"
-						className="w-28 text-right text-sm tabular-nums"
-						onChange={(event) => {
-							const next = Number.parseInt(event.target.value, 10);
-							if (Number.isFinite(next)) setConfig((c) => ({ ...c, seed: next }));
+			{config.mode === 'preset' ? (
+				<SettingsRow
+					description="Pick from the bundled SVG patterns. Theme/seed/density are ignored in this mode."
+					label="Preset"
+				>
+					<SelectButton
+						activeId={config.preset}
+						ariaLabel="Whimsy preset"
+						onSelect={(id) => {
+							if (isWhimsyPresetId(id)) setConfig((c) => ({ ...c, preset: id }));
 						}}
-						type="number"
-						value={config.seed}
+						options={PRESET_OPTIONS}
+						triggerLabel={PRESET_LABELS[config.preset]}
 					/>
-					<Button
-						aria-label="Randomize seed"
-						className="cursor-pointer"
-						onClick={randomizeSeed}
-						size="icon-xs"
-						type="button"
-						variant="ghost"
+				</SettingsRow>
+			) : (
+				<SettingsRow
+					description="Restricts which motifs the generator can pick from. Pick a curated combo."
+					label="Theme"
+				>
+					<SelectButton
+						activeId={config.theme}
+						ariaLabel="Whimsy theme"
+						onSelect={(id) => {
+							if (isWhimsyThemeName(id)) setConfig((c) => ({ ...c, theme: id }));
+						}}
+						options={THEME_OPTIONS}
+						triggerLabel={THEME_LABELS[config.theme]}
+					/>
+				</SettingsRow>
+			)}
+
+			{config.mode === 'generated' ? (
+				<>
+					<SettingsRow
+						description="Layout randomness. Same seed always renders the same tile; reroll for a new scatter."
+						label="Seed"
 					>
-						<Shuffle aria-hidden="true" />
-					</Button>
-				</div>
-			</SettingsRow>
+						<div className="flex items-center gap-2">
+							<Input
+								aria-label="Whimsy seed"
+								className="w-28 text-right text-sm tabular-nums"
+								onChange={(event) => {
+									const next = Number.parseInt(event.target.value, 10);
+									if (Number.isFinite(next))
+										setConfig((c) => ({ ...c, seed: next }));
+								}}
+								type="number"
+								value={config.seed}
+							/>
+							<Button
+								aria-label="Randomize seed"
+								className="cursor-pointer"
+								onClick={randomizeSeed}
+								size="icon-xs"
+								type="button"
+								variant="ghost"
+							>
+								<Shuffle aria-hidden="true" />
+							</Button>
+						</div>
+					</SettingsRow>
 
-			<SettingsRow
-				description="Motifs per row/column inside one tile. Higher = denser pattern."
-				label="Density"
-			>
-				<div className="flex w-56 items-center gap-3">
-					<Slider
-						max={WHIMSY_BOUNDS.grid.max}
-						min={WHIMSY_BOUNDS.grid.min}
-						onValueChange={(values) => {
-							const next = values[0];
-							if (typeof next === 'number') setConfig((c) => ({ ...c, grid: next }));
-						}}
-						step={1}
-						value={[config.grid]}
-					/>
-					<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-						{config.grid}×{config.grid}
-					</span>
-				</div>
-			</SettingsRow>
+					<SettingsRow
+						description="Motifs per row/column inside one tile. Higher = denser pattern."
+						label="Density"
+					>
+						<div className="flex w-56 items-center gap-3">
+							<Slider
+								max={WHIMSY_BOUNDS.grid.max}
+								min={WHIMSY_BOUNDS.grid.min}
+								onValueChange={(values) => {
+									const next = values[0];
+									if (typeof next === 'number')
+										setConfig((c) => ({ ...c, grid: next }));
+								}}
+								step={1}
+								value={[config.grid]}
+							/>
+							<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+								{config.grid}×{config.grid}
+							</span>
+						</div>
+					</SettingsRow>
+				</>
+			) : null}
 
-			<SettingsRow
-				description="Pixels per repeating tile. Smaller tiles repeat more often, so motifs feel denser without changing the grid."
-				label="Tile size"
-			>
-				<div className="flex w-56 items-center gap-3">
-					<Slider
-						max={WHIMSY_BOUNDS.size.max}
-						min={WHIMSY_BOUNDS.size.min}
-						onValueChange={(values) => {
-							const next = values[0];
-							if (typeof next === 'number') setConfig((c) => ({ ...c, size: next }));
-						}}
-						step={20}
-						value={[config.size]}
-					/>
-					<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-						{config.size}px
-					</span>
-				</div>
-			</SettingsRow>
+			{config.mode === 'generated' ? (
+				<SettingsRow
+					description="Pixels per repeating tile. Smaller tiles repeat more often, so motifs feel denser without changing the grid."
+					label="Tile size"
+				>
+					<div className="flex w-56 items-center gap-3">
+						<Slider
+							max={WHIMSY_BOUNDS.size.max}
+							min={WHIMSY_BOUNDS.size.min}
+							onValueChange={(values) => {
+								const next = values[0];
+								if (typeof next === 'number')
+									setConfig((c) => ({ ...c, size: next }));
+							}}
+							step={20}
+							value={[config.size]}
+						/>
+						<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+							{config.size}px
+						</span>
+					</div>
+				</SettingsRow>
+			) : null}
 
 			<SettingsRow
 				description="How visible the texture is over the chat panel. The default is 3.5%."
