@@ -7,12 +7,17 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname),
-			// Match the tsconfig "paths" mapping so vitest can resolve the
-			// vendored react-dropdown package the same way Next.js does.
-			'@octavian-tocan/react-dropdown': path.resolve(
-				__dirname,
-				'lib/react-dropdown/src/index.ts'
-			),
+			// Use the local vendored package when it exists; fall back to the
+			// manual __mocks__ stub so tests work in ephemeral checkouts where
+			// the lib/react-dropdown subpackage hasn't been set up.
+			'@octavian-tocan/react-dropdown': (() => {
+				const vendored = path.resolve(__dirname, 'lib/react-dropdown/src/index.ts');
+				const stub = path.resolve(__dirname, '__mocks__/@octavian-tocan/react-dropdown.tsx');
+				return require('fs').existsSync(vendored) ? vendored : stub;
+			})(),
+			// streamdown is ESM-only; inline it so vite can transform it, or
+			// use the plain-text stub in environments where ESM interop is tricky.
+			streamdown: path.resolve(__dirname, '__mocks__/streamdown.tsx'),
 		},
 	},
 	// Vitest doesn't force NODE_ENV=test by default; React 19 loads its
