@@ -191,9 +191,10 @@ components:
 ## Overview
 
 AI Nexus is a chat-first AI workspace with a **Craft Agents-inspired** visual
-language: warm, flat, and editorial. Surfaces are matte (no gradients on UI
-chrome by default); hierarchy comes from typography, neutral interpolation,
-and a single brand accent.
+language: warm, flat, and editorial. Surfaces are matte (**no decorative gradients on
+buttons/cards**); hierarchy comes from typography, neutral interpolation, and a single
+brand accent. **Overlay / frosted stacks** (blur + tint—see **Overlay & frosted surfaces**)
+are the exception to flat matte chrome.
 
 The system is dual-theme. Light mode is a warm, low-chroma palette with a
 subdued purple accent; dark mode is **Codex/GitHub-adjacent** (`#0D1117`
@@ -487,6 +488,23 @@ visually attaches to its author edge:
 User messages tail toward the right; assistant messages tail toward the left.
 This is the only place in the system that breaks the flat default.
 
+## Overlay & frosted surfaces
+
+**Direction:** Use **background blur** (`backdrop-filter` / stack blur) **plus**
+a **subtle tint**—for example a **linear gradient** with roughly **10–15% black**
+(or theme-equivalent stops)—**instead of** a **simple flat opacity overlay** (such
+as a single dark layer at **~40% opacity** over the viewport).
+
+Blur puts the scene behind the glass; the gradient adds controlled depth without
+turning the stack into a flat muddy wash. That reads **refined and glass-like**;
+uniform opacity alone reads **flat** and dull.
+
+**In practice:** Prefer the same pattern already described for **`popover`**
+(menu panels): blur strength + percentage tint on the panel surface. Apply the
+same discipline to **modal scrims**, **sheet backdrops**, and any full-bleed
+dimming—reach for **blur + gradient tint**, not **`bg-black/40`**-style solids
+unless a deliberate exception is documented.
+
 ## Motion
 
 The system prefers **transform-based animation** over property animation
@@ -639,6 +657,8 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
   busy sidebar / chat content to bleed through and hurt readability).
   Scenic mode keeps the more-transparent **88% tint + 24 px blur** so the
   user's chosen background image is still visible behind the menu.
+  Aligns with **Overlay & frosted surfaces**—avoid swapping this for a **flat
+  opacity-only** dim.
 - **`chat-composer`** — The message input surface. Soft (`shadow-minimal`),
   no border on focus (the shadow alone defines the edge). Dropdowns opened
   from the composer (e.g. model picker) inherit `chat-composer-dropdown-menu`
@@ -732,6 +752,9 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
 - **Trust the 16px root.** All Tailwind sizing utilities resolve to clean
   pixels; you should rarely need a literal `px` value outside 1px borders
   and a handful of icon-sized affordances.
+- **Prefer frosted overlays over flat opacity washes.** For scrims and stacked
+  glass surfaces, use **backdrop blur + subtle gradient tint** (~10–15% black
+  equivalent)—not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
 - **Register linked UI packages with Tailwind.** Packages resolved under
   `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
   `frontend/lib/react-dropdown`) often define Tailwind class strings. Add an
@@ -754,9 +777,14 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
 
 ### Don't
 
-- **Don't introduce gradients on UI chrome.** The matte aesthetic is
-  load-bearing. Background image gradients on the page itself are fine and
-  intentional (`--background-image`).
+- **Don't put decorative gradients on matte UI chrome** (buttons, cards, flat
+  panels). The editorial surface is load-bearing. **Exception:** **overlay /
+  scrim / frosted panels** may use a **controlled linear gradient** as part of
+  **blur + tint** (see **Overlay & frosted surfaces**)—that is not “decorative chrome,”
+  it is depth for glass stacks.
+- **Don't use flat opacity-only viewport dims** (e.g. uniform **40% black**) as the
+  default scrim pattern when blur + gradient tint can carry the effect—see **Overlay &
+  frosted surfaces**.
 - **Don't add new `--radius-*` tokens.** Use the existing scale or use 0.
 - **Don't use `text-gray-*` or any literal Tailwind color utility.** They
   bypass the theme system and won't invert in dark mode.
