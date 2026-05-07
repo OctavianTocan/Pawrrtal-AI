@@ -25,6 +25,13 @@ node_modules/
 /private
 .private
 
+# Generated user workspaces (created by seed_workspace at runtime).
+# Default ``WORKSPACE_BASE_DIR=/data/workspaces`` is overridden in
+# local .env to ``./workspaces``, which lands at the repo root or
+# under backend/ depending on cwd. Both are runtime artefacts.
+workspaces/
+backend/workspaces/
+
 # testing & coverage
 /coverage
 coverage/
