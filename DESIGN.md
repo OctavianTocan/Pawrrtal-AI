@@ -549,6 +549,25 @@ Implementation contract:
 - The resize handle is disabled / hidden while the panel is closed; the
   user can't grab a panel they can't see.
 
+### Tooltip Reveal Delay
+
+Every tooltip across the app uses the **same** hover delay before it
+becomes visible: **500 ms**. The single source of truth is
+`TOOLTIP_DEFAULT_DELAY_MS` exported from
+`frontend/components/ui/tooltip.tsx`; it is applied as the
+`<TooltipProvider delayDuration>` default, so per-call sites do **not**
+re-pass a number.
+
+500 ms reads as "I noticed you paused on this control" without firing
+on cursor fly-throughs — a user can scan an entire toolbar at speed
+without any tip popping; lingering on a single icon resolves the tip.
+Override per-call only when a surface explicitly needs a different
+cadence (none currently do).
+
+The earlier value was 300 ms, applied inconsistently — some call sites
+re-passed `delayDuration={300}` (matching the default) while others
+relied on the provider default, which made future timing tweaks fragile.
+
 ### Reduced Motion
 
 Honor `prefers-reduced-motion: reduce` on every animation longer than

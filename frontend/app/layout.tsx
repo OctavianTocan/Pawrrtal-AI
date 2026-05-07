@@ -111,8 +111,9 @@ export default function RootLayout({
 			<head>
 				{/* System theme detection — blocking script before hydration to prevent FOUC.
 				    Body lives in `frontend/lib/theme-detection-script.ts` so the JSX surface
-				    here stays small and the warning suppression has a single site. */}
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: theme detection MUST run pre-hydration; static string from a server-only module — no user input. */}
+				    here stays small. The `noDangerouslySetInnerHtml` rule is silenced for
+				    this file via biome.json's `frontend/app/layout.tsx` override (the
+				    body is a static string from a server-only module — no user input). */}
 				<script dangerouslySetInnerHTML={{ __html: THEME_DETECTION_SCRIPT }} />
 				{/* React Grab */}
 				{process.env.NODE_ENV === 'development' && (

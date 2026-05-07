@@ -45,8 +45,6 @@ import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import {
-	SIDEBAR_MAX_WIDTH,
-	SIDEBAR_MIN_WIDTH,
 	Sidebar,
 	SidebarContent,
 	SidebarHeader,
@@ -384,83 +382,6 @@ function ChatFocusShell({ children }: { children: React.ReactNode }): React.JSX.
 }
 
 /**
- * Custom drag-resize hook for the sidebar's right-edge handle.
- *
- * Replaces `react-resizable-panels`' resize machinery now that the sidebar
- * uses a fixed-width layout track + transform-based slide animation
- * (DESIGN.md → Motion → "Sidebar Open / Close"). The handle records cursor
- * coordinates on pointerdown, then writes the live width to a CSS variable
- * on every move so the layout reflows in one place. On pointerup we persist
- * the final clamped width via `setDesktopWidth`.
- *
- * Listening on `window` (not just the handle) is critical: the user can
- * drag fast enough that the cursor leaves the handle's hit area, and we
- * must keep tracking until pointerup.
- */
-function useSidebarDragResize({
-	desktopWidth,
-	setDesktopWidth,
-	enabled,
-}: {
-	desktopWidth: number;
-	setDesktopWidth: (width: number) => void;
-	enabled: boolean;
-}): {
-	onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
-	isDragging: boolean;
-} {
-	const [isDragging, setIsDragging] = React.useState(false);
-	// Captured at pointerdown so subsequent move math uses the starting baseline
-	// rather than the live width (which would create a feedback loop).
-	const dragStartRef = React.useRef<{ startX: number; startWidth: number } | null>(null);
-
-	React.useEffect(() => {
-		if (!isDragging) return;
-		const handleMove = (event: PointerEvent): void => {
-			const start = dragStartRef.current;
-			if (!start) return;
-			const delta = event.clientX - start.startX;
-			const next = Math.min(
-				SIDEBAR_MAX_WIDTH,
-				Math.max(SIDEBAR_MIN_WIDTH, start.startWidth + delta)
-			);
-			document.documentElement.style.setProperty('--sidebar-width', `${next}px`);
-		};
-		const handleUp = (): void => {
-			const root = document.documentElement;
-			const cssWidth = root.style.getPropertyValue('--sidebar-width');
-			const numeric = Number.parseInt(cssWidth, 10);
-			if (Number.isFinite(numeric)) {
-				setDesktopWidth(numeric);
-			}
-			dragStartRef.current = null;
-			setIsDragging(false);
-		};
-		window.addEventListener('pointermove', handleMove);
-		window.addEventListener('pointerup', handleUp);
-		return () => {
-			window.removeEventListener('pointermove', handleMove);
-			window.removeEventListener('pointerup', handleUp);
-		};
-	}, [isDragging, setDesktopWidth]);
-
-	const onPointerDown = React.useCallback(
-		(event: React.PointerEvent<HTMLDivElement>): void => {
-			if (!enabled) return;
-			event.preventDefault();
-			dragStartRef.current = { startX: event.clientX, startWidth: desktopWidth };
-			setIsDragging(true);
-		},
-		[desktopWidth, enabled]
-	);
-
-	return { onPointerDown, isDragging };
-}
-
-/** Width of the resize handle's hit area on the right edge of the sidebar. */
-const SIDEBAR_HANDLE_WIDTH_PX = 8;
-
-/**
  * Sidebar content wrapper with conditional resizable layout.
  * Renders the DESIGN.md-mandated translate-X slide on desktop and a Sheet
  * overlay on mobile.
@@ -491,13 +412,11 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 	}, [desktopWidth, isDesktopWidthReady]);
 
 	const isExpanded = state === 'expanded';
-	const { onPointerDown: handleResizePointerDown, isDragging: isResizing } = useSidebarDragResize(
-		{
-			desktopWidth,
-			setDesktopWidth,
-			enabled: isExpanded,
-		}
-	);
+	// Drag-handle resize was removed in 2026-05; the previous implementation
+	// caused jank under fast cursor moves. Will be reintroduced as part of
+	// a dedicated rewrite. `setDesktopWidth` from `useSidebar` stays available
+	// for any future re-introduction (e.g. via keyboard or settings).
+	void setDesktopWidth;
 
 	// Mobile: Sidebar renders as a Sheet overlay alongside main content.
 	// The Sheet portals above the absolute AppHeader, so its content does not
@@ -523,15 +442,10 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		);
 	}
 
-	// Pause layout transitions while the user is actively dragging the
-	// resize handle — without this, the chat panel's flex transition
-	// would lag the handle by 200 ms, making resizing feel rubbery.
-	const transformTransition = isResizing
-		? ''
-		: 'transition-transform duration-200 ease-out motion-reduce:transition-none';
-	const widthTransition = isResizing
-		? ''
-		: 'transition-[width] duration-200 ease-out motion-reduce:transition-none';
+	const transformTransition =
+		'transition-transform duration-200 ease-out motion-reduce:transition-none';
+	const widthTransition =
+		'transition-[width] duration-200 ease-out motion-reduce:transition-none';
 
 	// Outer wrapper occupies the open width when expanded; collapses to 0 when
 	// closed so the chat panel can slide left into the freed space.
@@ -584,30 +498,12 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 				</SidebarFocusShell>
 
 				{/*
-				 * Resize handle — hidden while the sidebar is collapsed (the
-				 * user can't grab a panel they can't see). Sits at the right
-				 * edge of the inner panel; on pointerdown it captures cursor
-				 * coordinates and writes width directly to the
-				 * `--sidebar-width` CSS variable for jank-free dragging.
-				 *
-				 * The mask gradient fades the visual line toward both ends so
-				 * it reads as a bounded divider; top-10 / bottom-2 line up the
-				 * grabbable region with the chat panel's visible bounds.
+				 * Resize handle removed (2026-05). The previous implementation
+				 * felt rubbery under fast cursor moves and the visual divider
+				 * confused users into trying to drag a panel that didn't yet
+				 * have a usable handle. Width is fixed at the persisted value;
+				 * a proper handle will return in a future rewrite.
 				 */}
-				{isExpanded && (
-					<div
-						aria-hidden="true"
-						onPointerDown={handleResizePointerDown}
-						className={cn(
-							'absolute top-10 bottom-2 right-0 z-20 cursor-col-resize select-none',
-							'[mask-image:linear-gradient(to_bottom,transparent,black_24px,black_calc(100%_-_24px),transparent)]'
-						)}
-						style={{ width: SIDEBAR_HANDLE_WIDTH_PX }}
-					>
-						{/* Visible 1px line centered in the 8px hit area. */}
-						<div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border" />
-					</div>
-				)}
 			</div>
 
 			{/*

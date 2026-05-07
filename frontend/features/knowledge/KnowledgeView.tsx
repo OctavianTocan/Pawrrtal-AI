@@ -3,36 +3,54 @@
 /**
  * Pure presentation shell for the Knowledge surface.
  *
- * Layout shape (matches the Sauna.ai reference):
+ * Layout shape (Sauna.ai reference, images #31–#33, #35, #45):
  *
- * - Top of the chat-inset slot is a full-width page header (avatar + title +
- *   status chips + Select Files). The header sits ABOVE the rounded card on
- *   the page background, so the warm sidebar surface peeks through around
- *   the card edges.
- * - Below the header is a single rounded-`surface-lg` card with a 1px
- *   border tinted slightly darker than the page background. The card hosts
- *   the entire Knowledge surface — sub-sidebar on the left, content area
- *   on the right.
- * - The content area itself can be one or two columns. A leaf folder
- *   (every child is a file) renders the file-list column plus an optional
- *   document viewer card; everything else renders a single content column.
+ * - The chat-inset slot hosts TWO sibling elevated panels with a small gap
+ *   between them. Each panel is its own rounded-`surface-lg` card with the
+ *   `shadow-panel-floating` token + `--background-elevated` surface so it
+ *   reads as a separate surface "standing on" the cream page background
+ *   instead of one wide card with internal dividers.
+ * - The left panel hosts the Knowledge sub-sidebar (`KnowledgeSubSidebar`).
+ *   Its surface chrome is provided here, so the inner component is just the
+ *   group + row tree.
+ * - The right panel hosts the active sub-view (file browser, file list +
+ *   document viewer column, memory grid, brain access, shared empty
+ *   states). The page-level header strip ("Knowledge / Working / Review …")
+ *   was removed at the user's request — the sub-sidebar's "New +" button
+ *   carries the only top-of-surface affordance now.
  *
  * This component is pure — all hooks live in {@link KnowledgeContainer}.
  */
 
 import { BookOpenIcon, FileTextIcon, SparklesIcon, UsersIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { BrainAccessPanel } from './components/BrainAccessPanel';
 import { DocumentViewer } from './components/DocumentViewer';
 import { EmptyState } from './components/EmptyState';
 import { KnowledgeFileListColumn } from './components/KnowledgeFileListColumn';
-import { KnowledgePageHeader } from './components/KnowledgePageHeader';
 import { KnowledgeSubSidebar } from './components/KnowledgeSubSidebar';
 import { MemoryCardList } from './components/MemoryCardList';
 import { MyFilesPanel } from './components/MyFilesPanel';
 import { KNOWLEDGE_VIEWS } from './constants';
 import type { KnowledgeBreadcrumb } from './path-utils';
 import type { FileTreeNode, KnowledgeViewId, MemoryCardData } from './types';
+
+/**
+ * Shared surface for both Knowledge panels. Mirrors the chat panel's
+ * `shadow-panel-floating` + `--background-elevated` chrome — same token
+ * family the home/chat panel uses, so Knowledge no longer feels like a
+ * different design system from the rest of the app.
+ *
+ * Inline style for the background mirrors `frontend/features/chat/ChatView.tsx`
+ * — the `bg-background-elevated` Tailwind utility was observed to occasionally
+ * miss hot-reload re-derivations during preset switching.
+ */
+const PANEL_SURFACE_CLASSNAME =
+	'relative flex min-h-0 flex-col overflow-hidden rounded-surface-lg shadow-panel-floating';
+
+const PANEL_SURFACE_STYLE: CSSProperties = {
+	backgroundColor: 'var(--background-elevated)',
+};
 
 export interface KnowledgeViewProps {
 	/** Currently-selected sub-view; drives the sub-sidebar highlight + right pane. */
@@ -109,7 +127,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 						activeFileName={openFile?.name ?? null}
 						onOpenFile={(name) => onOpenChild(name, 'file')}
 					/>
-					<div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-border/60 bg-background">
+					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						{openFile ? (
 							<DocumentViewer
 								filename={openFile.name}
@@ -140,22 +158,22 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 	}
 
 	if (activeView === KNOWLEDGE_VIEWS.memory) {
-		// Centered card column — Sauna keeps Memory cards in a narrow column
-		// in the middle of the surface. Right pane stays empty until a card
-		// is wired to a detail route.
+		// Sauna's Memory landing keeps the cards in a centered column inside
+		// the content panel — there's no separate right "preview" pane. We
+		// drop the previous 320px split column + empty right pane in favor
+		// of a single max-width column that matches reference image #45.
 		return (
-			<div className="flex min-h-0 min-w-0 flex-1">
-				<div className="flex min-h-0 w-[320px] shrink-0 flex-col border-r border-border/60">
-					<div className="flex h-12 shrink-0 items-center px-5">
-						<span className="rounded-md bg-foreground-5 px-2.5 py-1 text-[13px] font-medium text-foreground">
-							Memory
-						</span>
-					</div>
-					<div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+			<div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+				<div className="flex h-12 shrink-0 items-center px-5">
+					<span className="rounded-md bg-foreground-5 px-2.5 py-1 text-[13px] font-medium text-foreground">
+						Memory
+					</span>
+				</div>
+				<div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+					<div className="mx-auto w-full max-w-[560px]">
 						<MemoryCardList cards={memoryCards} />
 					</div>
 				</div>
-				<div className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-background" />
 			</div>
 		);
 	}
@@ -207,29 +225,33 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 }
 
 /**
- * Top-level shell. Renders the page header above a single rounded card
- * containing the sub-sidebar + content area.
+ * Top-level shell. Renders the sub-sidebar and the active content section as
+ * TWO separate elevated panels with a small gap between them.
  *
- * The outer wrapper is `bg-transparent` because the page background
- * (`bg-sidebar` from `AppLayout`) provides the warm cream surround the
- * design relies on.
+ * The outer wrapper has no background — the page background
+ * (`bg-sidebar` from `AppLayout`) supplies the warm surround the panels
+ * sit on top of.
  */
 export function KnowledgeView(props: KnowledgeViewProps): ReactNode {
 	return (
-		<div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden">
-			<KnowledgePageHeader />
-
-			<div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-surface-lg border border-border bg-background-elevated shadow-minimal">
+		<div className="flex h-full min-h-0 w-full min-w-0 gap-3 overflow-hidden">
+			<aside
+				className={`${PANEL_SURFACE_CLASSNAME} w-[224px] shrink-0`}
+				style={PANEL_SURFACE_STYLE}
+			>
 				<KnowledgeSubSidebar
 					activeView={props.activeView}
 					onSelectView={props.onSelectView}
 					onNew={props.onNew}
 				/>
+			</aside>
 
-				<section className="flex min-h-0 min-w-0 flex-1 flex-col">
-					<KnowledgeContent {...props} />
-				</section>
-			</div>
+			<section
+				className={`${PANEL_SURFACE_CLASSNAME} flex-1 min-w-0`}
+				style={PANEL_SURFACE_STYLE}
+			>
+				<KnowledgeContent {...props} />
+			</section>
 		</div>
 	);
 }

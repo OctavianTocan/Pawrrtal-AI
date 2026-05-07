@@ -294,7 +294,7 @@ export function ModelSelectorPopover({
 
 	return (
 		<TooltipProvider disableHoverableContent>
-			<Tooltip delayDuration={300} onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
+			<Tooltip onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
 				<TooltipTrigger asChild>
 					<span className="inline-flex">
 						<DropdownMenu<RootRow>

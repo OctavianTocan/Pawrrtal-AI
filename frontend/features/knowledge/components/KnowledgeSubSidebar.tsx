@@ -71,11 +71,14 @@ export function KnowledgeSubSidebar({
 	onNew,
 }: KnowledgeSubSidebarProps): ReactNode {
 	return (
-		<aside className="flex w-[208px] shrink-0 flex-col gap-3 border-r border-border/60 bg-foreground-2 p-3">
+		// Surface chrome (rounded card + shadow + bg) is provided by the
+		// containing panel in `KnowledgeView` — this component just paints
+		// the row tree inside it.
+		<div className="flex h-full min-h-0 w-full flex-col gap-3 p-3">
 			<button
 				type="button"
 				onClick={onNew}
-				className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-foreground-5 text-[13px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-10"
+				className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-foreground-10 text-[13px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground/15"
 			>
 				New
 				<PlusIcon aria-hidden="true" className="size-4" />
@@ -109,6 +112,6 @@ export function KnowledgeSubSidebar({
 					})}
 				</div>
 			))}
-		</aside>
+		</div>
 	);
 }

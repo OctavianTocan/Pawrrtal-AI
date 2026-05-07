@@ -179,6 +179,13 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				asChild
 				usePortal
 				placement="top"
+				// Anchor the panel's LEFT edge to the trigger's LEFT edge so it
+				// grows up-and-to-the-right. The default `align="end"` (right-edge
+				// anchored) overflows off-screen left because the trigger sits at
+				// the very bottom-left of the viewport (sidebar footer) — the
+				// menu's right edge would land mid-trigger, pushing its left
+				// edge into negative X. See image #36 for the prior bug.
+				align="start"
 				// `popover-styled` provides the project's themed background,
 				// border, layered shadow, and global backdrop-filter blur.
 				// Without it the consumer's className REPLACES the package's

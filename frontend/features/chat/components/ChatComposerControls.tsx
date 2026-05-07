@@ -188,7 +188,7 @@ export function AttachButton(): React.JSX.Element {
 /** Renders the compact plan-mode trigger used in the composer toolbar. */
 export function PlanButton(): React.JSX.Element {
 	return (
-		<Tooltip delayDuration={300}>
+		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
 					className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
@@ -283,7 +283,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 
 	return (
 		<TooltipProvider disableHoverableContent>
-			<Tooltip delayDuration={300} onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
+			<Tooltip onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
 				<TooltipTrigger asChild>
 					<span className="inline-flex">
 						<DropdownMenu

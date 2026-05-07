@@ -106,7 +106,15 @@ export function TasksView(props: TasksViewProps): ReactNode {
 	} = props;
 
 	return (
-		<div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden rounded-[14px] border border-border bg-background shadow-minimal">
+		// Match the chat home panel: `rounded-surface-lg`, `shadow-panel-floating`,
+		// background = `--background-elevated`. Inline style mirrors `ChatView` —
+		// the Tailwind `bg-background-elevated` utility was observed to skip
+		// hot-reload re-derivations during preset switching, so we anchor the
+		// var directly. See `frontend/features/chat/ChatView.tsx`.
+		<div
+			className="relative flex h-full min-h-0 w-full min-w-0 overflow-hidden rounded-surface-lg shadow-panel-floating"
+			style={{ backgroundColor: 'var(--background-elevated)' }}
+		>
 			<TasksSubSidebar
 				activeView={activeView}
 				activeProjectId={activeProjectId}

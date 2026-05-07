@@ -152,6 +152,88 @@ function AnimatedComposerPlaceholder({
 }
 
 /**
+ * Props for the right-side toolbar cluster.
+ *
+ * Both `selectedModelId` and `selectedReasoning` are derived from
+ * {@link ChatComposerProps} so the cluster can never drift away from the
+ * model picker's literal-union typing.
+ */
+interface ComposerSendClusterProps {
+	isRecording: boolean;
+	isTranscribing: boolean;
+	isLoading: ChatComposerProps['isLoading'];
+	hasContent: boolean;
+	selectedModelId: ChatComposerProps['selectedModelId'];
+	selectedReasoning: ChatComposerProps['selectedReasoning'];
+	onSelectModel: ChatComposerProps['onSelectModel'];
+	onSelectReasoning: ChatComposerProps['onSelectReasoning'];
+	onStartRecording: () => void;
+}
+
+/**
+ * Right-side toolbar cluster (model picker + mic + submit) extracted out of
+ * `ChatComposer` so the parent stays under the project's 120-line function
+ * budget. Pure presentation — receives every input as a prop.
+ */
+function ComposerSendCluster({
+	isRecording,
+	isTranscribing,
+	isLoading,
+	hasContent,
+	selectedModelId,
+	selectedReasoning,
+	onSelectModel,
+	onSelectReasoning,
+	onStartRecording,
+}: ComposerSendClusterProps): React.JSX.Element {
+	return (
+		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
+			<ModelSelectorPopover
+				selectedModelId={selectedModelId}
+				selectedReasoning={selectedReasoning}
+				onSelectModel={onSelectModel}
+				onSelectReasoning={onSelectReasoning}
+			/>
+			<ComposerTooltip
+				content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+			>
+				<Button
+					aria-label="Start voice input"
+					aria-pressed={isRecording}
+					className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
+					disabled={isTranscribing}
+					onClick={onStartRecording}
+					size="icon-sm"
+					type="button"
+					variant="ghost"
+				>
+					<MicIcon
+						aria-hidden="true"
+						className={cn('size-3.5', isTranscribing && 'animate-pulse')}
+					/>
+				</Button>
+			</ComposerTooltip>
+			<ComposerTooltip content={isTranscribing ? 'Wait for transcription' : 'Send message'}>
+				<PromptInputSubmit
+					// Match the mic + model-selector siblings on this row at size-8
+					// (32 px). The previous size-9 (36 px) made the submit pill
+					// visually heavier than the rest of the toolbar.
+					className="size-8 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
+					disabled={!hasContent || isLoading || isTranscribing}
+					status={isLoading ? 'streaming' : 'ready'}
+				>
+					{isLoading ? (
+						<SquareIcon aria-hidden="true" className="size-2.5 fill-current" />
+					) : (
+						<ArrowUpIcon aria-hidden="true" className="size-3.5" />
+					)}
+				</PromptInputSubmit>
+			</ComposerTooltip>
+		</div>
+	);
+}
+
+/**
  * Renders the main chat input island with inline controls and a model selector.
  */
 export function ChatComposer({
@@ -284,58 +366,17 @@ export function ChatComposer({
 						)}
 					</div>
 
-					<div
-						className={cn(
-							'ml-auto flex shrink-0 items-center gap-1',
-							isRecording && 'hidden'
-						)}
-					>
-						<ModelSelectorPopover
-							selectedModelId={selectedModelId}
-							selectedReasoning={selectedReasoning}
-							onSelectModel={onSelectModel}
-							onSelectReasoning={onSelectReasoning}
-						/>
-						<ComposerTooltip
-							content={
-								isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'
-							}
-						>
-							<Button
-								aria-label="Start voice input"
-								aria-pressed={isRecording}
-								className="size-8 rounded-full text-muted-foreground hover:bg-foreground/[0.08] hover:text-foreground"
-								disabled={isTranscribing}
-								onClick={startRecording}
-								size="icon-sm"
-								type="button"
-								variant="ghost"
-							>
-								<MicIcon
-									aria-hidden="true"
-									className={cn('size-3.5', isTranscribing && 'animate-pulse')}
-								/>
-							</Button>
-						</ComposerTooltip>
-						<ComposerTooltip
-							content={isTranscribing ? 'Wait for transcription' : 'Send message'}
-						>
-							<PromptInputSubmit
-								className="size-9 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
-								disabled={!hasContent || isLoading || isTranscribing}
-								status={isLoading ? 'streaming' : 'ready'}
-							>
-								{isLoading ? (
-									<SquareIcon
-										aria-hidden="true"
-										className="size-2.5 fill-current"
-									/>
-								) : (
-									<ArrowUpIcon aria-hidden="true" className="size-3.5" />
-								)}
-							</PromptInputSubmit>
-						</ComposerTooltip>
-					</div>
+					<ComposerSendCluster
+						isRecording={isRecording}
+						isTranscribing={isTranscribing}
+						isLoading={isLoading}
+						hasContent={hasContent}
+						selectedModelId={selectedModelId}
+						selectedReasoning={selectedReasoning}
+						onSelectModel={onSelectModel}
+						onSelectReasoning={onSelectReasoning}
+						onStartRecording={startRecording}
+					/>
 				</PromptInputFooter>
 			</PromptInput>
 			{showConnectAppsStrip ? <ConnectAppsStrip onDismiss={onDismissConnectApps} /> : null}

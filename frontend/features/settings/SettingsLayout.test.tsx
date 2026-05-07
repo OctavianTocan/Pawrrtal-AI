@@ -52,9 +52,13 @@ describe('SettingsLayout', () => {
 	});
 
 	it('switches the right pane to Appearance when the rail item is clicked', () => {
-		const { getByRole, getByText } = renderWithQuery(<SettingsLayout />);
+		const { getByRole, getAllByText } = renderWithQuery(<SettingsLayout />);
 		fireEvent.click(getByRole('button', { name: 'Appearance' }));
-		expect(getByText('Theme')).toBeTruthy();
+		// Multiple "Theme" labels render once the Appearance section mounts
+		// (section header + theme-mode toggle aria-label). Asserting at
+		// least one is present is enough to confirm the right pane swapped
+		// — the previous `getByText` blew up on multiple matches.
+		expect(getAllByText('Theme').length).toBeGreaterThan(0);
 	});
 
 	it('switches the right pane to Usage when the rail item is clicked', () => {
