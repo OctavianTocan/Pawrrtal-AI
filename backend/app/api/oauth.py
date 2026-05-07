@@ -69,7 +69,13 @@ def _apple_configured() -> bool:
 
 async def _login_or_create_user(email: str, session: AsyncSession) -> User:
     """Look up a user by email; create one if missing."""
-    stmt = select(User).where(User.email == email)
+    # ``User.email`` runs through the SQLAlchemy descriptor at runtime —
+    # ``==`` returns a ``ColumnElement[bool]``. fastapi-users' base class
+    # declares ``email: str`` before the ``Mapped[str]`` column override,
+    # so mypy sees a plain bool and rejects ``where()``. Reach the column
+    # via ``__table__.c.<name>`` to bypass the descriptor confusion
+    # without a type-ignore.
+    stmt = select(User).where(User.__table__.c.email == email)
     result = await session.execute(stmt)
     user = result.scalar_one_or_none()
     if user is not None:
@@ -128,7 +134,9 @@ async def _exchange_google_code(code: str) -> str:
 
     email = userinfo.get("email")
     if not email:
-        raise HTTPException(status_code=502, detail="Google account has no verified email.")
+        raise HTTPException(
+            status_code=502, detail="Google account has no verified email."
+        )
     return email
 
 

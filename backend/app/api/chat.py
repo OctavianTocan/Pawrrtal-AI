@@ -22,7 +22,10 @@ from app.crud.chat_message import (
     finalize_assistant_message,
     get_messages_for_conversation,
 )
-from app.crud.conversation import get_conversation_service, update_conversation_model_service
+from app.crud.conversation import (
+    get_conversation_service,
+    update_conversation_model_service,
+)
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
@@ -89,7 +92,9 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(user.id, session, request.conversation_id)
+        conversation = await get_conversation_service(
+            user.id, session, request.conversation_id
+        )
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -182,6 +187,7 @@ def get_chat_router() -> APIRouter:
                     yield error_event
 
             from app.channels.base import ChannelMessage  # noqa: PLC0415
+
             channel_message: ChannelMessage = {
                 "user_id": user.id,
                 "conversation_id": request.conversation_id,

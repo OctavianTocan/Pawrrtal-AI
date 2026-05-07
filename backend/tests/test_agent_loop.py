@@ -6,6 +6,7 @@ Test structure mirrors pi-mono/packages/agent/test/agent-loop.test.ts
 
 RED phase: all tests fail until loop.py and types.py are implemented.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -36,6 +37,7 @@ from app.core.agent_loop.loop import agent_loop
 # Helpers — mock primitives matching Pi's test helpers
 # ---------------------------------------------------------------------------
 
+
 def make_user_message(text: str) -> UserMessage:
     return UserMessage(role="user", content=text)
 
@@ -51,8 +53,12 @@ def make_text_content(text: str) -> TextContent:
     return TextContent(type="text", text=text)
 
 
-def make_tool_call_content(tool_call_id: str, name: str, arguments: dict[str, Any]) -> ToolCallContent:
-    return ToolCallContent(type="toolCall", tool_call_id=tool_call_id, name=name, arguments=arguments)
+def make_tool_call_content(
+    tool_call_id: str, name: str, arguments: dict[str, Any]
+) -> ToolCallContent:
+    return ToolCallContent(
+        type="toolCall", tool_call_id=tool_call_id, name=name, arguments=arguments
+    )
 
 
 def make_tool_result_content(text: str) -> ToolResultContent:
@@ -101,6 +107,7 @@ def make_mock_stream(*responses: AssistantMessage):
 # Test 1: basic turn, no tools (mirrors "should emit events with AgentMessage types")
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_emits_full_event_sequence_for_simple_turn() -> None:
     """A single user prompt with no tool calls emits the full lifecycle event sequence."""
@@ -138,6 +145,7 @@ async def test_agent_loop_emits_full_event_sequence_for_simple_turn() -> None:
 # Test 2: text deltas stream through during turn
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_streams_text_deltas() -> None:
     """Text delta events from the stream_fn are forwarded as agent events."""
@@ -162,6 +170,7 @@ async def test_agent_loop_streams_text_deltas() -> None:
 # (mirrors "should apply transformContext before convertToLlm")
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_applies_transform_context_before_convert() -> None:
     """transformContext prunes history before the LLM sees it."""
@@ -171,7 +180,9 @@ async def test_agent_loop_applies_transform_context_before_convert() -> None:
         make_user_message("old 2"),
         make_assistant_message([make_text_content("old reply 2")]),
     ]
-    context = AgentContext(system_prompt="You are helpful.", messages=old_messages, tools=[])
+    context = AgentContext(
+        system_prompt="You are helpful.", messages=old_messages, tools=[]
+    )
     prompt = make_user_message("new message")
 
     seen_by_llm: list[list[AgentMessage]] = []
@@ -206,6 +217,7 @@ async def test_agent_loop_applies_transform_context_before_convert() -> None:
 # (mirrors "should handle tool calls and results")
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_executes_tool_calls_and_loops() -> None:
     """When the assistant returns a tool call, the loop executes it and calls the LLM again."""
@@ -226,7 +238,9 @@ async def test_agent_loop_executes_tool_calls_and_loops() -> None:
         execute=echo_execute,
     )
 
-    context = AgentContext(system_prompt="You are helpful.", messages=[], tools=[echo_tool])
+    context = AgentContext(
+        system_prompt="You are helpful.", messages=[], tools=[echo_tool]
+    )
     prompt = make_user_message("Echo hello")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
 
@@ -267,6 +281,7 @@ async def test_agent_loop_executes_tool_calls_and_loops() -> None:
 # Test 5: shouldStopAfterTurn stops the loop early
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_respects_should_stop_after_turn() -> None:
     """shouldStopAfterTurn returning True exits after the first turn."""
@@ -293,6 +308,7 @@ async def test_agent_loop_respects_should_stop_after_turn() -> None:
 # Test 6: existing messages in context are included in LLM call
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
 async def test_agent_loop_includes_existing_context_messages() -> None:
     """Prior messages in context are passed to the LLM (multi-turn continuity)."""
@@ -300,7 +316,9 @@ async def test_agent_loop_includes_existing_context_messages() -> None:
         make_user_message("What is 2+2?"),
         make_assistant_message([make_text_content("4")]),
     ]
-    context = AgentContext(system_prompt="You are helpful.", messages=prior_messages, tools=[])
+    context = AgentContext(
+        system_prompt="You are helpful.", messages=prior_messages, tools=[]
+    )
     prompt = make_user_message("And 3+3?")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
 

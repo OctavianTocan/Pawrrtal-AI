@@ -196,7 +196,8 @@ class ClaudeLLM:
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
-        history: list[dict[str, str]] | None = None,  # ignored: Claude SDK handles session continuity via `resume`
+        history: list[dict[str, str]]
+        | None = None,  # ignored: Claude SDK handles session continuity via `resume`
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -250,7 +251,9 @@ class ClaudeLLM:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
+            yield _error_event(
+                "Failed to parse a JSON message from the Claude Code CLI."
+            )
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes

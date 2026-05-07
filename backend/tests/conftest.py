@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -60,7 +61,7 @@ async def db_session(test_user: User) -> AsyncGenerator[AsyncSession]:
 
 
 @pytest.fixture
-def app_with_overrides(db_session: AsyncSession, test_user: User) -> Generator[object]:
+def app_with_overrides(db_session: AsyncSession, test_user: User) -> Generator[FastAPI]:
     """Create a FastAPI app with auth and database dependencies overridden."""
     app = create_app()
 
@@ -76,7 +77,7 @@ def app_with_overrides(db_session: AsyncSession, test_user: User) -> Generator[o
 
 
 @pytest.fixture
-async def client(app_with_overrides: object) -> AsyncGenerator[AsyncClient]:
+async def client(app_with_overrides: FastAPI) -> AsyncGenerator[AsyncClient]:
     """Provide an async HTTP client for the overridden FastAPI app."""
     transport = ASGITransport(app=app_with_overrides)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:

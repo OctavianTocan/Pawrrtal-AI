@@ -2,6 +2,7 @@
 
 Uses a mock StreamFn — no real Gemini API calls.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -26,8 +27,10 @@ from app.core.providers.base import StreamEvent
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_text_stream_fn(text: str):
     """StreamFn that yields a single text response."""
+
     async def stream_fn(
         messages: list[AgentMessage], tools: list[AgentTool]
     ) -> AsyncIterator[LLMEvent]:
@@ -37,6 +40,7 @@ def _make_text_stream_fn(text: str):
             stop_reason="stop",
             content=[TextContent(type="text", text=text)],
         )
+
     return stream_fn
 
 
@@ -59,7 +63,14 @@ def _make_tool_then_text_stream_fn(tool_name: str, tool_args: dict, final_text: 
             yield LLMDoneEvent(
                 type="done",
                 stop_reason="tool_use",
-                content=[ToolCallContent(type="toolCall", tool_call_id="call-0", name=tool_name, arguments=tool_args)],
+                content=[
+                    ToolCallContent(
+                        type="toolCall",
+                        tool_call_id="call-0",
+                        name=tool_name,
+                        arguments=tool_args,
+                    )
+                ],
             )
         else:
             yield LLMTextDeltaEvent(type="text_delta", text=final_text)
@@ -76,8 +87,11 @@ def _make_tool_then_text_stream_fn(tool_name: str, tool_args: dict, final_text: 
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.anyio
-async def test_gemini_provider_yields_delta_events_from_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_gemini_provider_yields_delta_events_from_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """GeminiLLM.stream() translates agent_loop text_deltas to StreamEvent deltas."""
     from app.core.providers.gemini_provider import GeminiLLM
 
@@ -99,7 +113,9 @@ async def test_gemini_provider_yields_delta_events_from_loop(monkeypatch: pytest
 
 
 @pytest.mark.anyio
-async def test_gemini_provider_passes_history_to_loop(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_gemini_provider_passes_history_to_loop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Prior messages in history are included in what the StreamFn sees."""
     from app.core.providers.gemini_provider import GeminiLLM
 
@@ -111,7 +127,8 @@ async def test_gemini_provider_passes_history_to_loop(monkeypatch: pytest.Monkey
         seen_messages.append(list(messages))
         yield LLMTextDeltaEvent(type="text_delta", text="ok")
         yield LLMDoneEvent(
-            type="done", stop_reason="stop",
+            type="done",
+            stop_reason="stop",
             content=[TextContent(type="text", text="ok")],
         )
 
@@ -141,7 +158,7 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Tool call lifecycle events are translated to StreamEvents correctly."""
-    from app.core.providers.gemini_provider import GeminiLLM, AgentContext, AgentLoopConfig, AgentTool
+    from app.core.providers.gemini_provider import GeminiLLM, AgentTool
 
     executed: list[str] = []
 
@@ -152,21 +169,29 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     echo_tool = AgentTool(
         name="echo",
         description="Echo",
-        parameters={"type": "object", "properties": {"value": {"type": "string"}}, "required": ["value"]},
+        parameters={
+            "type": "object",
+            "properties": {"value": {"type": "string"}},
+            "required": ["value"],
+        },
         execute=echo_execute,
     )
 
     provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(
-        provider, "_stream_fn",
-        _make_tool_then_text_stream_fn("echo", {"value": "hi"}, "Done!")
+        provider,
+        "_stream_fn",
+        _make_tool_then_text_stream_fn("echo", {"value": "hi"}, "Done!"),
     )
 
     # Patch the context creation to inject the echo tool
-    original_stream = provider.stream
-
     async def patched_stream(question, conversation_id, user_id, history=None):
-        from app.core.agent_loop import agent_loop, AgentContext, AgentLoopConfig, UserMessage
+        from app.core.agent_loop import (
+            agent_loop,
+            AgentContext,
+            AgentLoopConfig,
+            UserMessage,
+        )
         from app.core.providers.gemini_provider import _identity_convert, _SYSTEM_PROMPT
 
         prior = [
@@ -187,9 +212,18 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
             if etype == "text_delta":
                 yield StreamEvent(type="delta", content=event.get("text", ""))
             elif etype == "tool_call_start":
-                yield StreamEvent(type="tool_use", name=event.get("name", ""), input={}, tool_use_id=event.get("tool_call_id", ""))
+                yield StreamEvent(
+                    type="tool_use",
+                    name=event.get("name", ""),
+                    input={},
+                    tool_use_id=event.get("tool_call_id", ""),
+                )
             elif etype == "tool_result":
-                yield StreamEvent(type="tool_result", content=event.get("content", ""), tool_use_id=event.get("tool_call_id", ""))
+                yield StreamEvent(
+                    type="tool_result",
+                    content=event.get("content", ""),
+                    tool_use_id=event.get("tool_call_id", ""),
+                )
 
     events: list[StreamEvent] = []
     async for event in patched_stream("Echo hi", uuid4(), uuid4()):

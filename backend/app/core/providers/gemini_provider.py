@@ -48,7 +48,11 @@ def _build_gemini_tool_declarations(
         gtypes.FunctionDeclaration(
             name=t.name,
             description=t.description,
-            parameters=t.parameters,
+            # ``AgentTool.parameters`` is a raw JSON Schema dict; the
+            # SDK's ``parameters`` field expects a ``Schema`` model
+            # (Pydantic coerces a dict at runtime, mypy doesn't).
+            # Validating into a Schema makes the conversion explicit.
+            parameters=gtypes.Schema.model_validate(t.parameters),
         )
         for t in tools
     ]
@@ -65,13 +69,15 @@ def _build_gemini_contents(
         if not role:
             continue  # skip tool_result messages; Gemini uses function_response parts
         if msg["role"] in {"user", "assistant"}:
-            text = (
-                msg["content"]
-                if isinstance(msg["content"], str)
-                else " ".join(
-                    b.get("text", "") for b in msg["content"] if b.get("type") == "text"
-                )
-            )
+            content = msg["content"]
+            if isinstance(content, str):
+                text = content
+            else:
+                # ``content`` is a ``list[TextContent | ToolCallContent]``;
+                # only TextContent has a ``text`` field. Narrow on
+                # ``type == "text"`` so mypy resolves the union and
+                # ``b["text"]`` types as ``str``.
+                text = " ".join(b["text"] for b in content if b["type"] == "text")
             if text.strip():
                 contents.append(
                     gtypes.Content(
@@ -95,7 +101,11 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
         contents = _build_gemini_contents(messages)
-        gemini_tools = _build_gemini_tool_declarations(tools)
+        # ``GenerateContentConfig.tools`` is typed as the wider union
+        # ``list[Tool | Callable | mcp.Tool | ClientSession] | None``;
+        # ``list`` is invariant, so we widen the local list at this seam
+        # rather than make the helper return the wide type.
+        gemini_tools: list[Any] | None = _build_gemini_tool_declarations(tools)
         config = gtypes.GenerateContentConfig(
             system_instruction=_SYSTEM_PROMPT,
             # Pass None (not []) when there are no tools — some SDK versions raise on empty list.
@@ -106,11 +116,16 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
         tool_calls: list[dict[str, Any]] = []
 
         try:
-            async for chunk in client.aio.models.generate_content_stream(
+            # google-genai's async ``generate_content_stream`` returns
+            # an awaitable that resolves to an ``AsyncIterator`` (per the
+            # SDK's own docstring example). The earlier code relied on
+            # the implicit-coroutine-as-iter pattern; mypy 1.x rejects it.
+            stream = await client.aio.models.generate_content_stream(
                 model=model_id,
                 contents=contents,
                 config=config,
-            ):
+            )
+            async for chunk in stream:
                 # Text delta
                 if chunk.text:
                     yield LLMTextDeltaEvent(type="text_delta", text=chunk.text)
@@ -124,18 +139,23 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
                         for part in candidate.content.parts:
                             if part.function_call:
                                 fc = part.function_call
-                                tool_call_id = f"call-{fc.name}-{len(tool_calls)}"
+                                # ``fc.name`` is typed as ``str | None`` by
+                                # the SDK; the API never returns nameless
+                                # function calls in practice, but we
+                                # default to the empty string for typing.
+                                fn_name = fc.name or ""
+                                tool_call_id = f"call-{fn_name}-{len(tool_calls)}"
                                 args = dict(fc.args) if fc.args else {}
                                 yield LLMToolCallEvent(
                                     type="tool_call",
                                     tool_call_id=tool_call_id,
-                                    name=fc.name,
+                                    name=fn_name,
                                     arguments=args,
                                 )
                                 tool_calls.append(
                                     {
                                         "tool_call_id": tool_call_id,
-                                        "name": fc.name,
+                                        "name": fn_name,
                                         "arguments": args,
                                     }
                                 )
@@ -226,27 +246,27 @@ class GeminiLLM:
 
         try:
             async for event in agent_loop([prompt], context, config, self._stream_fn):
-                etype = event["type"]
+                # Narrow the AgentEvent union by its discriminant so TypedDict
+                # field access types as ``str`` instead of ``object``.
+                if event["type"] == "text_delta":
+                    yield StreamEvent(type="delta", content=event["text"])
 
-                if etype == "text_delta":
-                    yield StreamEvent(type="delta", content=event.get("text", ""))  # type: ignore[arg-type]
-
-                elif etype == "tool_call_start":
+                elif event["type"] == "tool_call_start":
                     yield StreamEvent(
                         type="tool_use",
-                        name=event.get("name", ""),  # type: ignore[arg-type]
+                        name=event["name"],
                         input={},
-                        tool_use_id=event.get("tool_call_id", ""),  # type: ignore[arg-type]
+                        tool_use_id=event["tool_call_id"],
                     )
 
-                elif etype == "tool_result":
+                elif event["type"] == "tool_result":
                     yield StreamEvent(
                         type="tool_result",
-                        content=event.get("content", ""),  # type: ignore[arg-type]
-                        tool_use_id=event.get("tool_call_id", ""),  # type: ignore[arg-type]
+                        content=event["content"],
+                        tool_use_id=event["tool_call_id"],
                     )
 
-                elif etype == "agent_end":
+                elif event["type"] == "agent_end":
                     pass  # loop complete — chat.py sends [DONE]
 
         except Exception as exc:

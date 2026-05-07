@@ -182,7 +182,13 @@ def _build_user_md(p: "UserPersonalization | None") -> str:
     if p.custom_instructions:
         lines += ["", "## Custom Instructions", "", p.custom_instructions]
 
-    lines += ["", "---", "", "_Update this file as you evolve what you need from your agent._", ""]
+    lines += [
+        "",
+        "---",
+        "",
+        "_Update this file as you evolve what you need from your agent._",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -195,6 +201,7 @@ def _build_soul_md(p: "UserPersonalization | None") -> str:
 # ---------------------------------------------------------------------------
 # Filesystem helpers
 # ---------------------------------------------------------------------------
+
 
 def _workspace_path(workspace_id: uuid.UUID) -> Path:
     """Return the absolute path for a workspace directory."""
@@ -240,6 +247,7 @@ def seed_workspace(
 # ---------------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------------
+
 
 async def get_default_workspace(
     user_id: uuid.UUID,

@@ -338,7 +338,7 @@ class WorkspaceFileNode(BaseModel):
     """A single node in a workspace file-tree response."""
 
     name: str
-    path: str          # workspace-relative path, e.g. "memory/2026-05-06.md"
+    path: str  # workspace-relative path, e.g. "memory/2026-05-06.md"
     is_dir: bool
     size: int | None = None  # None for directories
 

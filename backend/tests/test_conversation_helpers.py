@@ -1,15 +1,17 @@
 """Unit tests for conversation API helper functions."""
 
 from datetime import datetime
-from types import SimpleNamespace
 from uuid import uuid4
 
 from app.api.conversations import _normalize_generated_title, _serialize_chat_message
+from app.models import ChatMessage
 
 
 def test_normalize_generated_title_collapses_valid_title() -> None:
     """Generated titles are stripped, unquoted, and whitespace-normalized."""
-    assert _normalize_generated_title('"  Build   a test suite  "') == "Build a test suite"
+    assert (
+        _normalize_generated_title('"  Build   a test suite  "') == "Build a test suite"
+    )
 
 
 def test_normalize_generated_title_rejects_provider_error_text() -> None:
@@ -24,7 +26,7 @@ def test_normalize_generated_title_rejects_long_titles() -> None:
 
 def test_serialize_chat_message_passes_through_optional_fields() -> None:
     """ChatMessage rows project all rich fields onto the API shape."""
-    row = SimpleNamespace(
+    row = ChatMessage(
         id=uuid4(),
         conversation_id=uuid4(),
         user_id=uuid4(),
@@ -32,7 +34,9 @@ def test_serialize_chat_message_passes_through_optional_fields() -> None:
         role="assistant",
         content="hello",
         thinking="reasoning",
-        tool_calls=[{"id": "t1", "name": "web_search", "input": {}, "status": "completed"}],
+        tool_calls=[
+            {"id": "t1", "name": "web_search", "input": {}, "status": "completed"}
+        ],
         timeline=[
             {"kind": "thinking", "text": "reasoning"},
             {"kind": "tool", "toolCallId": "t1"},
@@ -55,7 +59,7 @@ def test_serialize_chat_message_passes_through_optional_fields() -> None:
 
 def test_serialize_chat_message_drops_unknown_status() -> None:
     """An unexpected assistant_status value falls back to None instead of crashing."""
-    row = SimpleNamespace(
+    row = ChatMessage(
         id=uuid4(),
         conversation_id=uuid4(),
         user_id=uuid4(),

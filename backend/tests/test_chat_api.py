@@ -37,7 +37,9 @@ async def test_chat_streams_provider_events(
 ) -> None:
     """Chat streams provider events as SSE frames and terminates with DONE."""
     conversation_id = uuid4()
-    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"})
+    await client.post(
+        f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"}
+    )
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
         lambda _model_id: FakeProvider([{"type": "delta", "content": "hello"}]),
@@ -59,7 +61,9 @@ async def test_chat_persists_requested_model_id(
 ) -> None:
     """Chat stores the requested model on the conversation."""
     conversation_id = uuid4()
-    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Model"})
+    await client.post(
+        f"/api/v1/conversations/{conversation_id}", json={"title": "Model"}
+    )
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
         lambda _model_id: FakeProvider([{"type": "delta", "content": "ok"}]),
@@ -85,7 +89,9 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
 ) -> None:
     """Provider exceptions are emitted as stream-level error events."""
     conversation_id = uuid4()
-    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Error"})
+    await client.post(
+        f"/api/v1/conversations/{conversation_id}", json={"title": "Error"}
+    )
 
     class FailingProvider:
         async def stream(

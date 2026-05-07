@@ -13,10 +13,10 @@ The loop owns:
 Each provider supplies a StreamFn — the only provider-specific code.
 The loop never imports any provider SDK directly.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from copy import deepcopy
 
 from .types import (
     AgentContext,
@@ -27,10 +27,6 @@ from .types import (
     AgentStartEvent,
     AgentTool,
     AssistantMessage,
-    LLMDoneEvent,
-    LLMEvent,
-    LLMTextDeltaEvent,
-    LLMToolCallEvent,
     MessageEndEvent,
     MessageStartEvent,
     StreamFn,
@@ -90,7 +86,9 @@ async def agent_loop(
         yield MessageStartEvent(type="message_start", message=prompt)
         yield MessageEndEvent(type="message_end", message=prompt)
 
-    async for event in _run_loop(current_messages, context.tools, new_messages, config, stream_fn):
+    async for event in _run_loop(
+        current_messages, context.tools, new_messages, config, stream_fn
+    ):
         yield event
 
 
@@ -122,31 +120,28 @@ async def _run_loop(
         stop_reason = "stop"
 
         async for llm_event in stream_fn(llm_messages, tools):
+            # Narrow the LLMEvent union by its ``type`` discriminant so
+            # field access types correctly without an ``assert isinstance``
+            # + ``# type: ignore`` dance (and so bandit B101 stays clean).
             if llm_event["type"] == "text_delta":
-                assert isinstance(llm_event, dict)
-                typed_delta: LLMTextDeltaEvent = llm_event  # type: ignore[assignment]
-                yield TextDeltaEvent(type="text_delta", text=typed_delta["text"])
+                yield TextDeltaEvent(type="text_delta", text=llm_event["text"])
 
             elif llm_event["type"] == "tool_call":
-                assert isinstance(llm_event, dict)
-                typed_tc: LLMToolCallEvent = llm_event  # type: ignore[assignment]
                 yield ToolCallStartEvent(
                     type="tool_call_start",
-                    tool_call_id=typed_tc["tool_call_id"],
-                    name=typed_tc["name"],
+                    tool_call_id=llm_event["tool_call_id"],
+                    name=llm_event["name"],
                 )
                 yield ToolCallEndEvent(
                     type="tool_call_end",
-                    tool_call_id=typed_tc["tool_call_id"],
-                    name=typed_tc["name"],
-                    arguments=typed_tc["arguments"],
+                    tool_call_id=llm_event["tool_call_id"],
+                    name=llm_event["name"],
+                    arguments=llm_event["arguments"],
                 )
 
             elif llm_event["type"] == "done":
-                assert isinstance(llm_event, dict)
-                typed_done: LLMDoneEvent = llm_event  # type: ignore[assignment]
-                assistant_content = typed_done["content"]
-                stop_reason = typed_done["stop_reason"]
+                assistant_content = llm_event["content"]
+                stop_reason = llm_event["stop_reason"]
 
         # Build the AssistantMessage for this turn.
         assistant_msg = AssistantMessage(
@@ -165,7 +160,11 @@ async def _run_loop(
             tool_map = {t.name: t for t in tools}
 
             for tc in tool_calls:
-                assert tc["type"] == "toolCall"
+                # Already filtered by ``b["type"] == "toolCall"`` above,
+                # but mypy doesn't carry that narrowing through the list
+                # comp — this if-branch tells the checker explicitly.
+                if tc["type"] != "toolCall":
+                    continue
                 tool = tool_map.get(tc["name"])
                 is_error = False
                 result_text: str
@@ -224,13 +223,11 @@ async def _run_loop(
 def _make_context_snapshot(
     messages: list[AgentMessage],
     tools: list[AgentTool],
-) -> object:
-    """Lightweight stand-in for AgentContext passed to shouldStopAfterTurn."""
-    # Avoid importing AgentContext circularly; just return an object with
-    # the fields shouldStopAfterTurn callbacks typically inspect.
-    class _Snapshot:
-        def __init__(self) -> None:
-            self.messages = messages
-            self.tools = tools
+) -> AgentContext:
+    """Build an AgentContext snapshot for the shouldStopAfterTurn callback.
 
-    return _Snapshot()
+    ``system_prompt`` isn't surfaced to stop predicates today (callers
+    inspect ``messages``/``tools``), so we pass an empty string rather
+    than threading it through an extra parameter.
+    """
+    return AgentContext(system_prompt="", messages=messages, tools=tools)

@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.core.providers.agno_provider import GeminiLLM
+from app.core.providers.gemini_provider import GeminiLLM
 from app.core.providers.claude_provider import ClaudeLLM
 from app.core.providers.factory import resolve_llm
 from app.schemas import ConversationCreate, ConversationUpdate, UserCreate

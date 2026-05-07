@@ -77,12 +77,16 @@ async def _exa_search_tool(args: dict[str, Any]) -> dict[str, Any]:
     query = str(args.get("query") or "").strip()
     if not query:
         return {
-            "content": [{"type": "text", "text": "Web search requires a non-empty query."}],
+            "content": [
+                {"type": "text", "text": "Web search requires a non-empty query."}
+            ],
             "is_error": True,
         }
 
     requested = args.get("num_results")
-    num_results = int(requested) if isinstance(requested, (int, float)) else DEFAULT_NUM_RESULTS
+    num_results = (
+        int(requested) if isinstance(requested, (int, float)) else DEFAULT_NUM_RESULTS
+    )
 
     result = await exa_search(query, num_results=num_results)
     text = format_results_as_markdown(result)

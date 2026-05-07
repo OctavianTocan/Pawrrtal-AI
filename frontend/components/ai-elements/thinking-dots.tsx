@@ -26,7 +26,11 @@
  */
 export function ThinkingDots() {
 	return (
-		<span className="inline-flex items-center gap-[3px]" aria-label="Thinking">
+		// `role="status"` makes the otherwise generic <span> a live
+		// region so screen readers announce the loading state, and lets
+		// us attach `aria-label` (which Biome rightly rejects on a
+		// role-less <span>).
+		<span aria-label="Thinking" className="inline-flex items-center gap-[3px]" role="status">
 			{/* Each dot is a filled circle; delay staggers the bounce phase. */}
 			{[0, 150, 300].map((delay) => (
 				<span

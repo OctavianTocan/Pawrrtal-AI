@@ -37,13 +37,21 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    is_flagged: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    is_unread: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -76,7 +84,9 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -162,7 +172,9 @@ class APIKey(Base):
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     provider: Mapped[str] = mapped_column(String(50))
     encrypted_key: Mapped[str] = mapped_column(
         StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
@@ -245,7 +257,9 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -255,7 +269,9 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)

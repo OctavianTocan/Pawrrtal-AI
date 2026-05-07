@@ -14,7 +14,7 @@ assert that:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -87,7 +87,7 @@ def force_resume_session(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _patch_query(
     monkeypatch: pytest.MonkeyPatch,
-    fake: Callable[..., AsyncIterator[Any]] | Callable[..., Awaitable[None]],
+    fake: Callable[..., AsyncIterator[Any]],
 ) -> list[ClaudeAgentOptions]:
     """Replace ``claude_provider.query`` with ``fake`` and capture the options used.
 
@@ -136,7 +136,9 @@ async def _collect(
     conversation_id: UUID,
     user_id: UUID,
 ) -> list[StreamEvent]:
-    return [event async for event in provider.stream(question, conversation_id, user_id)]
+    return [
+        event async for event in provider.stream(question, conversation_id, user_id)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +258,9 @@ class TestEventsFromMessage:
             model="claude",
         )
         events = list(_events_from_message(message))
-        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}]
+        assert events == [
+            {"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}
+        ]
 
     def test_assistant_mixed_blocks_preserve_order(self) -> None:
         """Multiple blocks in one message should yield events in order."""
@@ -290,7 +294,9 @@ class TestEventsFromMessage:
             content=[ToolResultBlock(tool_use_id="tu_1", content="ok")],
         )
         events = list(_events_from_message(message))
-        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}]
+        assert events == [
+            {"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}
+        ]
 
     def test_user_message_with_string_content_emits_nothing(self) -> None:
         """Plain string user messages are echoes — no events should be emitted."""
@@ -839,7 +845,9 @@ class TestFactory:
         assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token == "from-config"
 
-    def test_resolve_llm_omits_token_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resolve_llm_omits_token_when_blank(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A blank token in settings must coerce to ``None`` so we don't forward an empty value."""
         from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 

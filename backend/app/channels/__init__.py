@@ -9,6 +9,7 @@ This package provides:
 - ``resolve_channel(surface)`` — look up a Channel by surface name.
 - ``registered_surfaces()`` — introspect active channel registrations.
 """
+
 from .base import Channel, ChannelMessage, ChannelResponse
 from .registry import registered_surfaces, resolve_channel
 from .sse import SSEChannel, surface_from_header

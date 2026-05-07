@@ -73,7 +73,9 @@ async def generate_message(stat: str, diff: str) -> str:
     prompt = COMMIT_PROMPT.format(stat=stat, diff=diff)
     response = await client.aio.models.generate_content(
         model=COMMIT_AGENT_MODEL,
-        contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+        contents=[
+            types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+        ],
     )
     text = (response.text or "").strip()
     if not text:

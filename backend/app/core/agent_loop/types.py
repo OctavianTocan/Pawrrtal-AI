@@ -9,6 +9,7 @@ Key separation:
   - LLMEvent: what providers emit while streaming
   - AgentEvent: what the loop emits to callers
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Coroutine
@@ -19,6 +20,7 @@ from typing import Any, Literal, TypedDict
 # ---------------------------------------------------------------------------
 # Content blocks (inside messages)
 # ---------------------------------------------------------------------------
+
 
 class TextContent(TypedDict):
     type: Literal["text"]
@@ -40,6 +42,7 @@ class ToolResultContent(TypedDict):
 # ---------------------------------------------------------------------------
 # Agent-level messages (what the loop accumulates)
 # ---------------------------------------------------------------------------
+
 
 class UserMessage(TypedDict):
     role: Literal["user"]
@@ -66,6 +69,7 @@ AgentMessage = UserMessage | AssistantMessage | ToolResultMessage
 # LLM-level events (what StreamFn implementations yield)
 # ---------------------------------------------------------------------------
 
+
 class LLMTextDeltaEvent(TypedDict):
     type: Literal["text_delta"]
     text: str
@@ -90,6 +94,7 @@ LLMEvent = LLMTextDeltaEvent | LLMToolCallEvent | LLMDoneEvent
 # ---------------------------------------------------------------------------
 # Agent-level events (what agent_loop() yields to callers)
 # ---------------------------------------------------------------------------
+
 
 class AgentStartEvent(TypedDict):
     type: Literal["agent_start"]
@@ -163,6 +168,7 @@ AgentEvent = (
 # Tool definition
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AgentTool:
     """A callable tool the agent can invoke.
@@ -170,6 +176,7 @@ class AgentTool:
     ``execute`` receives the tool_call_id and keyword arguments matching
     the JSON schema parameters.  It must return a string result.
     """
+
     name: str
     description: str
     parameters: dict[str, Any]  # JSON schema object
@@ -180,9 +187,11 @@ class AgentTool:
 # Agent context and loop config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AgentContext:
     """Shared state passed into and mutated by the agent loop."""
+
     system_prompt: str
     messages: list[AgentMessage]
     tools: list[AgentTool] = field(default_factory=list)
@@ -216,6 +225,7 @@ class AgentLoopConfig:
     should_stop_after_turn: optional — sync predicate; return True to stop
         the loop after the current turn even if more tool calls are pending.
     """
+
     convert_to_llm: Callable[[list[AgentMessage]], list[AgentMessage]]
     transform_context: TransformContextFn | None = None
     should_stop_after_turn: ShouldStopFn | None = None

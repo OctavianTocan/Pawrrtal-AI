@@ -14,39 +14,42 @@ Covers:
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from types import SimpleNamespace
-
 from app.core.workspace import (
     _build_soul_md,
     _build_user_md,
-    _workspace_path,
     create_workspace,
     ensure_default_workspace,
     get_default_workspace,
     list_workspaces,
     seed_workspace,
 )
-from app.models import Workspace
+from app.db import User
+from app.models import UserPersonalization
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_personalization(**kwargs) -> SimpleNamespace:
-    """Build a lightweight UserPersonalization stub (not persisted).
 
-    Returns a SimpleNamespace so attribute access works the same as the ORM
-    model without needing a database session.
+def _make_personalization(**kwargs: Any) -> UserPersonalization:
+    """Build an unpersisted UserPersonalization for the workspace seeders.
+
+    The seeders only read attributes — they never call session methods —
+    so we can instantiate the ORM model directly without a session and
+    feed it to ``seed_workspace`` / ``_build_*_md`` with full type
+    fidelity.
     """
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         user_id=uuid.uuid4(),
         name="Tavi",
         role="Engineer",
@@ -57,9 +60,9 @@ def _make_personalization(**kwargs) -> SimpleNamespace:
         custom_instructions=None,
         chatgpt_context=None,
         connected_channels=None,
-        updated_at=None,
+        updated_at=datetime.now(timezone.utc),
     )
-    return SimpleNamespace(**{**defaults, **kwargs})
+    return UserPersonalization(**{**defaults, **kwargs})
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +147,9 @@ class TestSeedWorkspace:
         soul = (root / "SOUL.md").read_text()
         assert "analytical" in soul.lower()
 
-    def test_falls_back_to_balanced_soul_for_unknown_personality(self, tmp_path: Path) -> None:
+    def test_falls_back_to_balanced_soul_for_unknown_personality(
+        self, tmp_path: Path
+    ) -> None:
         ws_id = uuid.uuid4()
         p = _make_personalization(personality="goblin")
         with patch("app.core.workspace.settings") as mock_settings:
@@ -155,7 +160,9 @@ class TestSeedWorkspace:
         # Balanced soul is the fallback.
         assert "SOUL.md" in soul
 
-    def test_seed_without_personalization_writes_placeholder_user_md(self, tmp_path: Path) -> None:
+    def test_seed_without_personalization_writes_placeholder_user_md(
+        self, tmp_path: Path
+    ) -> None:
         ws_id = uuid.uuid4()
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -172,7 +179,9 @@ class TestSeedWorkspace:
 
 class TestBuildUserMd:
     def test_includes_name_role_company(self) -> None:
-        p = _make_personalization(name="Bob", role="CTO", company_website="https://acme.com")
+        p = _make_personalization(
+            name="Bob", role="CTO", company_website="https://acme.com"
+        )
         md = _build_user_md(p)
         assert "Bob" in md
         assert "CTO" in md
@@ -195,7 +204,9 @@ class TestBuildUserMd:
 
 
 class TestBuildSoulMd:
-    @pytest.mark.parametrize("personality", ["analytical", "creative", "direct", "balanced"])
+    @pytest.mark.parametrize(
+        "personality", ["analytical", "creative", "direct", "balanced"]
+    )
     def test_known_personalities_return_content(self, personality: str) -> None:
         p = _make_personalization(personality=personality)
         md = _build_soul_md(p)
@@ -220,7 +231,7 @@ class TestBuildSoulMd:
 class TestWorkspaceService:
     @pytest.mark.anyio
     async def test_create_workspace_adds_db_row(
-        self, db_session: AsyncSession, test_user: object, tmp_path: Path
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -234,7 +245,7 @@ class TestWorkspaceService:
 
     @pytest.mark.anyio
     async def test_create_workspace_seeds_filesystem(
-        self, db_session: AsyncSession, test_user: object, tmp_path: Path
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -247,14 +258,14 @@ class TestWorkspaceService:
 
     @pytest.mark.anyio
     async def test_get_default_workspace_returns_none_when_absent(
-        self, db_session: AsyncSession, test_user: object
+        self, db_session: AsyncSession, test_user: User
     ) -> None:
         result = await get_default_workspace(test_user.id, db_session)
         assert result is None
 
     @pytest.mark.anyio
     async def test_get_default_workspace_returns_existing(
-        self, db_session: AsyncSession, test_user: object, tmp_path: Path
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -267,7 +278,7 @@ class TestWorkspaceService:
 
     @pytest.mark.anyio
     async def test_ensure_default_workspace_is_idempotent(
-        self, db_session: AsyncSession, test_user: object, tmp_path: Path
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -280,14 +291,14 @@ class TestWorkspaceService:
 
     @pytest.mark.anyio
     async def test_list_workspaces_empty_for_new_user(
-        self, db_session: AsyncSession, test_user: object
+        self, db_session: AsyncSession, test_user: User
     ) -> None:
         workspaces = await list_workspaces(test_user.id, db_session)
         assert workspaces == []
 
     @pytest.mark.anyio
     async def test_list_workspaces_returns_all(
-        self, db_session: AsyncSession, test_user: object, tmp_path: Path
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -318,7 +329,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -337,7 +348,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -364,7 +375,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -381,7 +392,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -397,7 +408,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -423,7 +434,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -451,7 +462,7 @@ class TestWorkspaceAPI:
         self,
         client: AsyncClient,
         db_session: AsyncSession,
-        test_user: object,
+        test_user: User,
         tmp_path: Path,
     ) -> None:
         with patch("app.core.workspace.settings") as mock_settings:
@@ -459,8 +470,6 @@ class TestWorkspaceAPI:
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
 
-        resp = await client.get(
-            f"/api/v1/workspaces/{ws.id}/files/../../../etc/passwd"
-        )
+        resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/../../../etc/passwd")
         # Either 400 (traversal blocked) or 404 (path normalised to inside workspace).
         assert resp.status_code in (400, 404)

@@ -12,7 +12,12 @@ import asyncio
 
 from agno.tools.toolkit import Toolkit
 
-from .exa_search import DEFAULT_NUM_RESULTS, MAX_NUM_RESULTS, exa_search, format_results_as_markdown
+from .exa_search import (
+    DEFAULT_NUM_RESULTS,
+    MAX_NUM_RESULTS,
+    exa_search,
+    format_results_as_markdown,
+)
 
 
 class ExaTools(Toolkit):

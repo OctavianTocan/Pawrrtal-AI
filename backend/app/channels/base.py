@@ -28,11 +28,12 @@ Planned
 - ``TelegramChannel`` — aiogram polling/webhook + progressive message edits.
 - ``MobileChannel`` — SSE + APNs/FCM push for background delivery.
 """
+
 from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any, Literal, Protocol, TypedDict
+from typing import Any, Protocol, TypedDict
 
 from app.core.providers.base import StreamEvent
 

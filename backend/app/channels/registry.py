@@ -19,6 +19,7 @@ Extending
 When a new channel adapter is added, import it here and register it via
 ``_REGISTRY``.  No other file needs to change.
 """
+
 from __future__ import annotations
 
 from .base import Channel

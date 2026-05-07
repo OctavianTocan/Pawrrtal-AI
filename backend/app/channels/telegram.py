@@ -135,7 +135,11 @@ class TelegramChannel:
 
         # No bytes to yield — delivery is a side-effect only.
         return
-        yield  # noqa: unreachable — makes this an async generator as the protocol requires
+        # The bare ``yield`` below is unreachable but required: it makes
+        # this function an async generator (the Channel.deliver protocol
+        # signature), so callers can ``async for`` over it even though we
+        # only ever side-effect through ``edit_message_text``.
+        yield
 
 
 async def _safe_edit(

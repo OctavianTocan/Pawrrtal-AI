@@ -64,9 +64,7 @@ async def test_link_issues_code_with_deep_link(
     body: dict[str, Any] = response.json()
     assert body["code"]
     assert body["bot_username"] == "ainexus_test_bot"
-    assert body["deep_link"] == (
-        f"https://t.me/ainexus_test_bot?start={body['code']}"
-    )
+    assert body["deep_link"] == (f"https://t.me/ainexus_test_bot?start={body['code']}")
     assert "expires_at" in body
 
 
@@ -140,9 +138,8 @@ async def test_plain_message_nudges_unknown_users(
 ) -> None:
     """A Telegram user with no binding gets the onboarding nudge, not a chat reply."""
     sender = TelegramSender(user_id=111, chat_id=111, username=None, full_name=None)
-    reply = await handle_plain_message(
-        sender=sender, text="hello", session=db_session
-    )
+    reply = await handle_plain_message(sender=sender, text="hello", session=db_session)
+    assert isinstance(reply, str)
     assert "don't recognize" in reply.lower()
 
 
@@ -150,7 +147,7 @@ async def test_plain_message_acks_bound_users(
     db_session: AsyncSession,
     test_user: User,
 ) -> None:
-    """A bound user's message is currently acked (BEAN: streaming reply lands next)."""
+    """A bound user's message returns a TelegramTurnContext for LLM routing."""
     code, _ = await issue_link_code(
         user_id=test_user.id, provider=PROVIDER, session=db_session
     )
@@ -160,7 +157,10 @@ async def test_plain_message_acks_bound_users(
     reply = await handle_plain_message(
         sender=sender, text="how's it going", session=db_session
     )
-    assert "Working on a reply" in reply
+    # Bound users no longer get a string ack — they get a routing context
+    # the bot dispatcher hands to the LLM pipeline.
+    assert not isinstance(reply, str)
+    assert reply.nexus_user_id == test_user.id
 
 
 async def test_unbind_removes_binding(
@@ -182,4 +182,5 @@ async def test_unbind_removes_binding(
     reply = await handle_plain_message(
         sender=sender, text="still here?", session=db_session
     )
+    assert isinstance(reply, str)
     assert "don't recognize" in reply.lower()

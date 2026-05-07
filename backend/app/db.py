@@ -23,7 +23,9 @@ MAX_RETRIES = 5
 RETRY_DELAY_SECONDS = 5
 
 
-engine_kwargs = {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
+engine_kwargs = (
+    {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
+)
 
 
 class Base(DeclarativeBase):

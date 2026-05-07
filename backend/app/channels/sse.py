@@ -20,6 +20,7 @@ This matches the existing format the frontend's ``EventSource`` parser
 expects, so the channel is a drop-in replacement for the previous inline
 ``event_stream()`` generator in ``chat.py``.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,7 +28,7 @@ from collections.abc import AsyncIterator
 
 from app.core.providers.base import StreamEvent
 
-from .base import Channel, ChannelMessage
+from .base import ChannelMessage
 
 # Sentinel surface names recognized by the registry.
 SURFACE_WEB = "web"

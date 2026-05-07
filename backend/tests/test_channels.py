@@ -6,6 +6,7 @@ Covers:
 - ``registered_surfaces`` — introspection
 - ``SSEChannel.deliver`` — SSE frame encoding
 """
+
 from __future__ import annotations
 
 import json
@@ -135,7 +136,7 @@ class TestSSEChannelDeliver:
         for chunk, event in zip(chunks[:2], events, strict=True):
             assert chunk.startswith(b"data: ")
             assert chunk.endswith(b"\n\n")
-            payload = json.loads(chunk[len("data: "):].strip())
+            payload = json.loads(chunk[len("data: ") :].strip())
             assert payload == event
 
     @pytest.mark.anyio
@@ -154,7 +155,9 @@ class TestSSEChannelDeliver:
         }
 
         chunks = []
-        async for chunk in channel.deliver(_make_stream([{"type": "delta", "content": "x"}]), msg):
+        async for chunk in channel.deliver(
+            _make_stream([{"type": "delta", "content": "x"}]), msg
+        ):
             chunks.append(chunk)
 
         assert chunks[-1] == b"data: [DONE]\n\n"
@@ -195,5 +198,7 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        async for chunk in channel.deliver(_make_stream([{"type": "delta", "content": "y"}]), msg):
+        async for chunk in channel.deliver(
+            _make_stream([{"type": "delta", "content": "y"}]), msg
+        ):
             assert isinstance(chunk, bytes)

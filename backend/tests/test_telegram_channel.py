@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app.channels import resolve_channel
+from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
+from app.core.providers.base import StreamEvent
 from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
@@ -33,24 +35,26 @@ from app.integrations.telegram.handlers import (
 # ---------------------------------------------------------------------------
 
 
-async def _stream(*events) -> AsyncIterator:
+async def _stream(*events: StreamEvent) -> AsyncIterator[StreamEvent]:
     for event in events:
         yield event
 
 
-def _make_channel_message(bot, chat_id: int = 123, message_id: int = 456) -> dict:
-    return {
-        "user_id": uuid.uuid4(),
-        "conversation_id": uuid.uuid4(),
-        "text": "hello",
-        "surface": "telegram",
-        "model_id": None,
-        "metadata": {
+def _make_channel_message(
+    bot: AsyncMock, chat_id: int = 123, message_id: int = 456
+) -> ChannelMessage:
+    return ChannelMessage(
+        user_id=uuid.uuid4(),
+        conversation_id=uuid.uuid4(),
+        text="hello",
+        surface="telegram",
+        model_id=None,
+        metadata={
             "bot": bot,
             "chat_id": chat_id,
             "message_id": message_id,
         },
-    }
+    )
 
 
 def _make_bot() -> AsyncMock:
@@ -82,6 +86,7 @@ class TestTelegramRegistry:
 
     def test_registered_surface_included(self) -> None:
         from app.channels import registered_surfaces
+
         assert "telegram" in registered_surfaces()
 
 
@@ -137,7 +142,7 @@ class TestTelegramChannelDeliver:
         msg = _make_channel_message(bot, chat_id=1, message_id=2)
         channel = TelegramChannel()
 
-        events = [
+        events: list[StreamEvent] = [
             {"type": "delta", "content": "Hello"},
             {"type": "delta", "content": ", "},
             {"type": "delta", "content": "world"},
@@ -156,7 +161,7 @@ class TestTelegramChannelDeliver:
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
-        events = [
+        events: list[StreamEvent] = [
             {"type": "thinking", "content": "reasoning..."},
             {"type": "delta", "content": "answer"},
             {"type": "tool_use", "name": "search", "input": {}},
@@ -170,14 +175,14 @@ class TestTelegramChannelDeliver:
     async def test_not_modified_error_swallowed(self) -> None:
         """TelegramBadRequest: message is not modified must not propagate."""
         bot = _make_bot()
-        bot.edit_message_text.side_effect = Exception("TelegramBadRequest: message is not modified")
+        bot.edit_message_text.side_effect = Exception(
+            "TelegramBadRequest: message is not modified"
+        )
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
         # Should not raise.
-        async for _ in channel.deliver(
-            _stream({"type": "delta", "content": "x"}), msg
-        ):
+        async for _ in channel.deliver(_stream({"type": "delta", "content": "x"}), msg):
             pass
 
     async def test_other_errors_logged_not_raised(self) -> None:
@@ -187,9 +192,7 @@ class TestTelegramChannelDeliver:
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
-        async for _ in channel.deliver(
-            _stream({"type": "delta", "content": "x"}), msg
-        ):
+        async for _ in channel.deliver(_stream({"type": "delta", "content": "x"}), msg):
             pass  # Must not raise
 
 

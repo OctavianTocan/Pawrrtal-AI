@@ -76,7 +76,9 @@ def build_telegram_service() -> "TelegramService":
     from aiogram.filters import CommandStart  # noqa: PLC0415
 
     if not settings.telegram_bot_token:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN must be set to start the Telegram service.")
+        raise RuntimeError(
+            "TELEGRAM_BOT_TOKEN must be set to start the Telegram service."
+        )
 
     bot = Bot(
         token=settings.telegram_bot_token,
