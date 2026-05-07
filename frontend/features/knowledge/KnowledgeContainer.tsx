@@ -31,6 +31,7 @@ import { type ReactNode, useCallback, useMemo } from 'react';
 import { DEFAULT_KNOWLEDGE_VIEW, KNOWLEDGE_QUERY_KEYS, KNOWLEDGE_VIEWS } from './constants';
 import { useWorkspaceFile } from './hooks/use-workspace-file';
 import { useWorkspaceTree } from './hooks/use-workspace-tree';
+import { useWriteWorkspaceFile } from './hooks/use-write-workspace-file';
 import { KnowledgeView, type KnowledgeViewProps } from './KnowledgeView';
 import { KNOWLEDGE_MEMORY_CARDS } from './mock-data';
 import {
@@ -155,6 +156,9 @@ export function KnowledgeContainer(): ReactNode {
 		openFilePath
 	);
 
+	// Mutation: write (create or replace) the currently-open file.
+	const { mutateAsync: writeFile } = useWriteWorkspaceFile(workspaceId);
+
 	// ── Tree navigation ───────────────────────────────────────────────────────
 
 	const folderSegments = useMemo(
@@ -227,6 +231,15 @@ export function KnowledgeContainer(): ReactNode {
 		navigate(KNOWLEDGE_VIEWS.myFiles, joinKnowledgePath(folderSegments));
 	}, [folderSegments, navigate]);
 
+	/** Save an edited file back to the workspace via PUT. */
+	const handleSaveFile = useCallback<NonNullable<KnowledgeViewProps['onSaveFile']>>(
+		async (newContent: string) => {
+			if (!openFilePath) throw new Error('No file is currently open.');
+			await writeFile({ filePath: openFilePath, content: newContent });
+		},
+		[openFilePath, writeFile]
+	);
+
 	const handleNew = useCallback<KnowledgeViewProps['onNew']>(() => {
 		// TODO: open a "create file/folder" modal scoped to the current folder.
 		// For now navigate to the root of My Files so something visibly changes.
@@ -254,6 +267,7 @@ export function KnowledgeContainer(): ReactNode {
 				onOpenChild={handleOpenChild}
 				openFile={null}
 				onCloseFile={handleCloseFile}
+				onSaveFile={handleSaveFile}
 				memoryCards={KNOWLEDGE_MEMORY_CARDS}
 				onNew={handleNew}
 				onShareFromEmptyState={handleShareFromEmptyState}
@@ -273,6 +287,7 @@ export function KnowledgeContainer(): ReactNode {
 				onOpenChild={handleOpenChild}
 				openFile={null}
 				onCloseFile={handleCloseFile}
+				onSaveFile={handleSaveFile}
 				memoryCards={KNOWLEDGE_MEMORY_CARDS}
 				onNew={handleNew}
 				onShareFromEmptyState={handleShareFromEmptyState}
@@ -306,6 +321,7 @@ export function KnowledgeContainer(): ReactNode {
 			onOpenChild={handleOpenChild}
 			openFile={openFile}
 			onCloseFile={handleCloseFile}
+				onSaveFile={handleSaveFile}
 			memoryCards={KNOWLEDGE_MEMORY_CARDS}
 			onNew={handleNew}
 			onShareFromEmptyState={handleShareFromEmptyState}
