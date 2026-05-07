@@ -1,11 +1,11 @@
 ---
 # ai-nexus-8hop
 title: Fix @octavian-tocan/react-dropdown — selection not propagating reliably
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-05-07T17:25:21Z
-updated_at: 2026-05-07T17:25:21Z
+updated_at: 2026-05-07T17:35:35Z
 ---
 
 ## Symptoms
@@ -59,3 +59,18 @@ The vendored library at ``frontend/lib/react-dropdown/`` (``@octavian-tocan/reac
 ## Workaround note
 
 The whimsy bypass (segmented buttons + thumbnail grid) is fine UX for this one feature, but we cannot keep replacing every dropdown that breaks. The library has to actually work — model selectors, permission modes, and user-profile menus are too central to the app to bypass.
+
+## Summary of Changes
+
+Fixed in commit `e1a77cb` (feat/whimsy-doodles).
+
+**Root cause** — DropdownRoot (the imperative API used by DropdownMenu, SelectButton, and most consumers) calls useClickOutside(dropdownRef, closeDropdown, isOpen) where dropdownRef is the wrapper <div> containing the trigger. With usePortal: true the DropdownContent is rendered into document.body — outside that wrapper. useClickOutside listens on mousedown/touchstart and checks dropdownRef.current.contains(target); portaled-option clicks fail that test, fire closeDropdown(), and the option unmounts before click (let alone onClick) reaches it.
+
+**Fix** —
+
+1. frontend/lib/react-dropdown/src/DropdownContent.tsx tags the rendered content with data-dropdown-portal-content="true".
+2. frontend/lib/react-dropdown/src/DropdownContext.tsx extends useClickOutside to recognise any ancestor carrying that attribute as "inside" the dropdown.
+
+The second outside-click implementation in useDropdown.ts (the headless hook) was already correct — it checks both triggerRef and contentRef. The patch makes the imperative API match the headless semantics without threading a content ref through context.
+
+**Surfaces unblocked**: every dropdown that uses usePortal: true (Settings, chat composer permission mode, user profile menu, model selector, whimsy preset picker before it was rebuilt as a thumbnail grid). Whimsy preset picker stays a thumbnail grid because the visual UX is better, but the bypass workarounds for SelectButton are no longer needed elsewhere.
