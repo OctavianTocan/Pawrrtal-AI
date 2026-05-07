@@ -311,6 +311,42 @@ class TestWorkspaceService:
         workspaces = await list_workspaces(test_user.id, db_session)
         assert len(workspaces) == 2
 
+    @pytest.mark.anyio
+    async def test_ensure_default_workspace_handles_integrity_error(
+        self, db_session: AsyncSession, test_user: User, tmp_path: Path
+    ) -> None:
+        """ensure_default_workspace must recover cleanly when a concurrent
+        request already committed the workspace (simulated via IntegrityError).
+
+        We mock ``create_workspace`` to raise ``IntegrityError`` after first
+        seeding the DB row directly, so the subsequent re-fetch in the except
+        branch has a real row to return.
+        """
+        from sqlalchemy.exc import IntegrityError as SAIntegrityError
+
+        # First, create the workspace directly so it already exists in the DB.
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            real_ws = await create_workspace(test_user.id, db_session)
+            await db_session.commit()
+
+        # Now patch create_workspace to raise IntegrityError, simulating the
+        # race where two requests both passed the "no existing workspace" check
+        # before either committed.
+        with (
+            patch("app.core.workspace.settings") as mock_settings,
+            patch(
+                "app.core.workspace.create_workspace",
+                side_effect=SAIntegrityError("mock", {}, Exception()),
+            ),
+        ):
+            mock_settings.workspace_base_dir = str(tmp_path)
+            # ensure_default_workspace should catch the IntegrityError,
+            # re-fetch, and return the already-committed row.
+            recovered_ws = await ensure_default_workspace(test_user.id, db_session)
+
+        assert recovered_ws.id == real_ws.id
+
 
 # ---------------------------------------------------------------------------
 # Workspace API

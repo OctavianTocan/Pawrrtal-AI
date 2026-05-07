@@ -26,15 +26,19 @@ service is idempotent — calling it again on an existing workspace is a no-op.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+
+log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from app.models import UserPersonalization, Workspace
@@ -321,17 +325,48 @@ async def ensure_default_workspace(
 ) -> "Workspace":
     """Return the existing default workspace or create one.
 
-    Safe to call multiple times — only creates the workspace on the first
-    call.  Uses ``get_default_workspace`` as the idempotency guard.
+    Safe to call multiple times — idempotent against both normal duplicate
+    calls and the React StrictMode double-effect pattern.
+
+    Strategy:
+    1. Fast-path: look up an existing default workspace and return it.
+    2. Slow-path: create one.  If two concurrent requests both pass step 1
+       before either has committed, the partial unique index
+       ``uq_workspaces_one_default_per_user`` makes the second INSERT raise
+       an ``IntegrityError``.  We catch that, roll back the failed nested
+       savepoint, and re-fetch — which now finds the row the first request
+       committed.
     """
     existing = await get_default_workspace(user_id, session)
     if existing is not None:
         return existing
-    return await create_workspace(
-        user_id=user_id,
-        session=session,
-        name="Main",
-        slug="main",
-        is_default=True,
-        personalization=personalization,
-    )
+
+    try:
+        # Use a savepoint so a constraint violation only rolls back this
+        # nested transaction, not the whole outer session.
+        async with session.begin_nested():
+            ws = await create_workspace(
+                user_id=user_id,
+                session=session,
+                name="Main",
+                slug="main",
+                is_default=True,
+                personalization=personalization,
+            )
+        return ws
+    except IntegrityError:
+        # Another concurrent request already inserted the default workspace.
+        # The savepoint was rolled back automatically; re-fetch the winner.
+        log.warning(
+            "ensure_default_workspace: IntegrityError for user %s — "
+            "concurrent insert detected, re-fetching existing row.",
+            user_id,
+        )
+        result = await get_default_workspace(user_id, session)
+        if result is None:
+            # Should never happen: the constraint fired but no row exists.
+            raise RuntimeError(
+                f"ensure_default_workspace: could not find default workspace "
+                f"for user {user_id} after IntegrityError"
+            ) from None
+        return result
