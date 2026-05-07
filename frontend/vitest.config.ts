@@ -7,6 +7,12 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname),
+			// Match the tsconfig "paths" mapping so vitest can resolve the
+			// vendored react-dropdown package the same way Next.js does.
+			'@octavian-tocan/react-dropdown': path.resolve(
+				__dirname,
+				'lib/react-dropdown/src/index.ts'
+			),
 		},
 	},
 	test: {

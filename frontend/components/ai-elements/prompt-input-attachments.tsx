@@ -6,11 +6,11 @@
 
 'use client';
 
+import { DropdownMenuItem } from '@octavian-tocan/react-dropdown';
 import type { FileUIPart } from 'ai';
 import { ImageIcon, PaperclipIcon, XIcon } from 'lucide-react';
 import { type ComponentProps, Fragment, type HTMLAttributes, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { usePromptInputAttachments } from './prompt-input-context';
 import {

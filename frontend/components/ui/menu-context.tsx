@@ -4,27 +4,47 @@ import { createContext, useContext, type ReactNode } from 'react';
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubTrigger,
-	DropdownMenuSubContent,
-} from '@/components/ui/dropdown-menu';
-import {
-	ContextMenuItem,
-	ContextMenuSeparator,
-	ContextMenuSub,
-	ContextMenuSubTrigger,
-	ContextMenuSubContent,
-} from '@/components/ui/context-menu';
+	DropdownSubmenu,
+	DropdownSubmenuTrigger,
+	DropdownSubmenuContent,
+} from '@octavian-tocan/react-dropdown';
 
+/**
+ * Polymorphic menu primitives shared by `DropdownPanelMenu` and
+ * `DropdownContextMenu`.
+ *
+ * Both menus host the same `DropdownRoot` context, so the same vendored
+ * `DropdownMenuItem` / `DropdownSubmenu` JSX primitives render identically
+ * inside either kind of menu. The `MenuComponentsContext` therefore exposes a
+ * single set of components — there's no longer a need to swap between Radix
+ * `Dropdown*` and Radix `Context*` flavors as the previous implementation did.
+ *
+ * The provider components are kept (`DropdownMenuProvider` and
+ * `ContextMenuProvider`) so existing consumer code that wraps menu trees in
+ * one of them keeps working unchanged.
+ */
 type MenuComponents = {
-	MenuItem: typeof DropdownMenuItem | typeof ContextMenuItem;
-	MenuSeparator: typeof DropdownMenuSeparator | typeof ContextMenuSeparator;
-	MenuSub: typeof DropdownMenuSub | typeof ContextMenuSub;
-	MenuSubTrigger: typeof DropdownMenuSubTrigger | typeof ContextMenuSubTrigger;
-	MenuSubContent: typeof DropdownMenuSubContent | typeof ContextMenuSubContent;
+	MenuItem: typeof DropdownMenuItem;
+	MenuSeparator: typeof DropdownMenuSeparator;
+	MenuSub: typeof DropdownSubmenu;
+	MenuSubTrigger: typeof DropdownSubmenuTrigger;
+	MenuSubContent: typeof DropdownSubmenuContent;
 };
 
 const MenuComponentsContext = createContext<MenuComponents | null>(null);
+
+/**
+ * Stable shared mapping. Both providers point at the same vendored primitives
+ * because `DropdownPanelMenu` and `DropdownContextMenu` use identical JSX item
+ * APIs — there's no flavor distinction to bridge.
+ */
+const VENDORED_MENU_COMPONENTS: MenuComponents = {
+	MenuItem: DropdownMenuItem,
+	MenuSeparator: DropdownMenuSeparator,
+	MenuSub: DropdownSubmenu,
+	MenuSubTrigger: DropdownSubmenuTrigger,
+	MenuSubContent: DropdownSubmenuContent,
+};
 
 /**
  * Returns the polymorphic menu primitives (MenuItem, MenuSeparator, etc.)
@@ -46,15 +66,7 @@ export function useMenuComponents(): MenuComponents {
 /** Provides dropdown-flavoured menu components to child menu content. */
 export function DropdownMenuProvider({ children }: { children: ReactNode }): React.JSX.Element {
 	return (
-		<MenuComponentsContext.Provider
-			value={{
-				MenuItem: DropdownMenuItem,
-				MenuSeparator: DropdownMenuSeparator,
-				MenuSub: DropdownMenuSub,
-				MenuSubTrigger: DropdownMenuSubTrigger,
-				MenuSubContent: DropdownMenuSubContent,
-			}}
-		>
+		<MenuComponentsContext.Provider value={VENDORED_MENU_COMPONENTS}>
 			{children}
 		</MenuComponentsContext.Provider>
 	);
@@ -63,15 +75,7 @@ export function DropdownMenuProvider({ children }: { children: ReactNode }): Rea
 /** Provides context-menu-flavoured menu components to child menu content. */
 export function ContextMenuProvider({ children }: { children: ReactNode }): React.JSX.Element {
 	return (
-		<MenuComponentsContext.Provider
-			value={{
-				MenuItem: ContextMenuItem,
-				MenuSeparator: ContextMenuSeparator,
-				MenuSub: ContextMenuSub,
-				MenuSubTrigger: ContextMenuSubTrigger,
-				MenuSubContent: ContextMenuSubContent,
-			}}
-		>
+		<MenuComponentsContext.Provider value={VENDORED_MENU_COMPONENTS}>
 			{children}
 		</MenuComponentsContext.Provider>
 	);
