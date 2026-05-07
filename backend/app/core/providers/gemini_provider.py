@@ -1,4 +1,5 @@
 """Google Gemini provider — StreamFn adapter for the agent loop."""
+
 from __future__ import annotations
 
 import uuid
@@ -13,6 +14,7 @@ from app.core.agent_loop import (
     AgentLoopConfig,
     AgentMessage,
     AgentTool,
+    AssistantMessage,
     LLMDoneEvent,
     LLMEvent,
     LLMTextDeltaEvent,
@@ -21,8 +23,9 @@ from app.core.agent_loop import (
     UserMessage,
     agent_loop,
 )
+from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.config import settings
-from .base import AILLM, StreamEvent
+from .base import StreamEvent
 
 _SYSTEM_PROMPT = (
     "You are a helpful AI assistant. "
@@ -126,7 +129,11 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
                                     arguments=args,
                                 )
                                 tool_calls.append(
-                                    {"tool_call_id": tool_call_id, "name": fc.name, "arguments": args}
+                                    {
+                                        "tool_call_id": tool_call_id,
+                                        "name": fc.name,
+                                        "arguments": args,
+                                    }
                                 )
 
         except Exception as exc:
@@ -140,8 +147,6 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
         # Determine stop reason
         stop_reason = "tool_use" if tool_calls else "stop"
 
-        # Build the done content
-        from app.core.agent_loop.types import TextContent, ToolCallContent
         content: list[TextContent | ToolCallContent] = []
         if full_text:
             content.append(TextContent(type="text", text=full_text))
@@ -184,11 +189,21 @@ class GeminiLLM:
         history: list[dict[str, str]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend."""
-        prior: list[AgentMessage] = [
-            AgentMessage(role=m["role"], content=m["content"])  # type: ignore[call-overload]
-            for m in (history or [])
-            if m.get("role") in {"user", "assistant"}
-        ]
+        # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
+        prior: list[AgentMessage] = []
+        for m in history or []:
+            role = m.get("role")
+            content = m.get("content", "")
+            if role == "user":
+                prior.append(UserMessage(role="user", content=content))
+            elif role == "assistant":
+                prior.append(
+                    AssistantMessage(
+                        role="assistant",
+                        content=[TextContent(type="text", text=content)],
+                        stop_reason="stop",
+                    )
+                )
 
         context = AgentContext(
             system_prompt=_SYSTEM_PROMPT,

@@ -26,13 +26,32 @@ def _now() -> datetime:
 async def get_messages_for_conversation(
     session: AsyncSession,
     conversation_id: uuid.UUID,
+    limit: int | None = None,
 ) -> list[ChatMessage]:
-    """Return every chat message for a conversation in insertion order.
+    """Return chat messages for a conversation in insertion order.
 
     Ordering is by `ordinal` rather than `created_at` so a regenerate that
     overwrites an existing row in place stays in the same slot, which keeps
     the rendered list stable.
+
+    Args:
+        session: Async database session.
+        conversation_id: Conversation to query.
+        limit: If given, return only the most recent *limit* messages.
+            Useful for capping the context window sent to the LLM.
     """
+    if limit is not None:
+        # Fetch the tail (DESC + LIMIT), then reverse in Python so the
+        # caller still receives rows in ascending ordinal order.
+        result = await session.execute(
+            select(ChatMessage)
+            .where(ChatMessage.conversation_id == conversation_id)
+            .order_by(ChatMessage.ordinal.desc())
+            .limit(limit)
+        )
+        rows = list(result.scalars().all())
+        rows.reverse()
+        return rows
     result = await session.execute(
         select(ChatMessage)
         .where(ChatMessage.conversation_id == conversation_id)
@@ -44,7 +63,9 @@ async def get_messages_for_conversation(
 async def _next_ordinal(session: AsyncSession, conversation_id: uuid.UUID) -> int:
     """Return the next free ordinal for a conversation, starting at 0."""
     result = await session.execute(
-        select(func.max(ChatMessage.ordinal)).where(ChatMessage.conversation_id == conversation_id)
+        select(func.max(ChatMessage.ordinal)).where(
+            ChatMessage.conversation_id == conversation_id
+        )
     )
     current_max = result.scalar()
     return 0 if current_max is None else current_max + 1

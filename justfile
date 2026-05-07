@@ -10,9 +10,9 @@ dev:
 commit:
     cd backend && uv run python -m app.cli.commit
 
-# Push with GitHub auth switching
+# Push to remote
 push:
-    bash scripts/push.sh
+    git push
 
 # Lint check (read-only) — Biome (JS/TS) + custom policies + ruff (Python)
 lint: lint-py

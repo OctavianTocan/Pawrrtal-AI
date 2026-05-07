@@ -1,4 +1,5 @@
 """Lightweight Gemini helpers for one-off, non-streaming calls."""
+
 from __future__ import annotations
 
 from google import genai
@@ -6,7 +7,7 @@ from google.genai import types
 
 from app.core.config import settings
 
-_DEFAULT_MODEL = "gemini-2.5-flash-preview-05-20"
+_DEFAULT_MODEL = "gemini-2.0-flash"
 _client: genai.Client | None = None
 
 
@@ -27,6 +28,8 @@ async def generate_text_once(prompt: str, model_id: str = _DEFAULT_MODEL) -> str
     client = _get_client()
     response = await client.aio.models.generate_content(
         model=model_id,
-        contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
+        contents=[
+            types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+        ],
     )
     return (response.text or "").strip()
