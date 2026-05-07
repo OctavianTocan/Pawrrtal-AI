@@ -241,6 +241,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				trigger={trigger}
 				items={menuItems}
 				placement="top"
+				usePortal
 				contentClassName="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"
 				onOpenChange={setIsOpen}
 			/>

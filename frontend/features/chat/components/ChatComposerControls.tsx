@@ -285,6 +285,7 @@ export function AutoReviewSelector(): React.JSX.Element {
 					<span className="inline-flex">
 						<DropdownMenu
 							closeOnSelect
+							usePortal
 							contentClassName="bg-popover border border-border rounded-lg p-1 min-w-[208px] mb-2"
 							getItemDisplay={(mode) => SAFETY_MODE_META[mode].label}
 							getItemKey={(mode) => mode}
