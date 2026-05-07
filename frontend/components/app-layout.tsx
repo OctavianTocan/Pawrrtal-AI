@@ -11,6 +11,11 @@
 'use client';
 
 import {
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownPanelMenu,
+} from '@octavian-tocan/react-dropdown';
+import {
 	ArrowLeftIcon,
 	ArrowRightIcon,
 	BookOpenIcon,
@@ -38,13 +43,6 @@ import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from './ui/dropdown-menu';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';
 import {
@@ -145,8 +143,12 @@ function AppHistoryControls(): React.JSX.Element {
 
 function WorkspaceSelector(): React.JSX.Element {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
+		<DropdownPanelMenu
+			asChild
+			usePortal
+			align="start"
+			contentClassName="popover-styled p-1 min-w-56"
+			trigger={
 				<Button
 					aria-label="Select workspace"
 					className="h-7 gap-2 rounded-[7px] border border-foreground/10 bg-foreground/[0.03] px-2.5 text-[13px] font-normal text-foreground hover:bg-foreground/[0.06] aria-expanded:bg-foreground/[0.06]"
@@ -162,31 +164,34 @@ function WorkspaceSelector(): React.JSX.Element {
 						className="size-3.5 text-muted-foreground"
 					/>
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="min-w-56" sideOffset={6}>
-				<DropdownMenuItem className="justify-between">
-					<span className="flex items-center gap-2">
-						<span className="flex size-5 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-medium">
-							A
-						</span>
-						AI Nexus
+			}
+		>
+			<DropdownMenuItem className="justify-between">
+				<span className="flex items-center gap-2">
+					<span className="flex size-5 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-medium">
+						A
 					</span>
-					<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem onSelect={handleOpenOnboarding}>
-					<FolderPlusIcon aria-hidden="true" className="size-3.5" />
-					Add Workspace...
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+					AI Nexus
+				</span>
+				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+			</DropdownMenuItem>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem onSelect={handleOpenOnboarding}>
+				<FolderPlusIcon aria-hidden="true" className="size-3.5" />
+				Add Workspace...
+			</DropdownMenuItem>
+		</DropdownPanelMenu>
 	);
 }
 
 function HelpMenu(): React.JSX.Element {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
+		<DropdownPanelMenu
+			asChild
+			usePortal
+			align="end"
+			contentClassName="popover-styled p-1 min-w-56"
+			trigger={
 				<Button
 					aria-label="Open documentation menu"
 					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground aria-expanded:bg-foreground/[0.05]"
@@ -196,35 +201,34 @@ function HelpMenu(): React.JSX.Element {
 				>
 					<CircleHelpIcon aria-hidden="true" className="size-4" />
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-56" sideOffset={8}>
-				{HELP_LINKS.map((link) => {
-					const Icon = link.icon;
+			}
+		>
+			{HELP_LINKS.map((link) => {
+				const Icon = link.icon;
 
-					return (
-						<DropdownMenuItem className="justify-between" key={link.label}>
-							<span className="flex items-center gap-2">
-								<Icon aria-hidden="true" className="size-3.5" />
-								{link.label}
-							</span>
-							<ExternalLinkIcon
-								aria-hidden="true"
-								className="size-3.5 text-muted-foreground"
-							/>
-						</DropdownMenuItem>
-					);
-				})}
-				<DropdownMenuSeparator />
-				<DropdownMenuItem>
-					<BookOpenIcon aria-hidden="true" className="size-3.5" />
-					All Documentation
-				</DropdownMenuItem>
-				<DropdownMenuItem>
-					<SettingsIcon aria-hidden="true" className="size-3.5" />
-					Keyboard Shortcuts
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+				return (
+					<DropdownMenuItem className="justify-between" key={link.label}>
+						<span className="flex items-center gap-2">
+							<Icon aria-hidden="true" className="size-3.5" />
+							{link.label}
+						</span>
+						<ExternalLinkIcon
+							aria-hidden="true"
+							className="size-3.5 text-muted-foreground"
+						/>
+					</DropdownMenuItem>
+				);
+			})}
+			<DropdownMenuSeparator />
+			<DropdownMenuItem>
+				<BookOpenIcon aria-hidden="true" className="size-3.5" />
+				All Documentation
+			</DropdownMenuItem>
+			<DropdownMenuItem>
+				<SettingsIcon aria-hidden="true" className="size-3.5" />
+				Keyboard Shortcuts
+			</DropdownMenuItem>
+		</DropdownPanelMenu>
 	);
 }
 
