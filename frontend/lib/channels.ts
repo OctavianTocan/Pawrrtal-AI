@@ -52,6 +52,7 @@ export async function listChannels(signal?: AbortSignal): Promise<ChannelBinding
 
 /** Issue a fresh one-time Telegram link code for the authenticated user. */
 export async function issueTelegramLinkCode(signal?: AbortSignal): Promise<TelegramLinkCode> {
+	//We issue a POST request to the /api/v1/channels/telegram/link endpoint so that the backend can issue a fresh one-time code for the authenticated user.
 	const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.channels.telegramLink}`, {
 		method: 'POST',
 		credentials: 'include',
