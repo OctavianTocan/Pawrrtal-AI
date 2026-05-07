@@ -85,12 +85,40 @@ const OPACITY_SLIDER_DIVISOR = 1000;
  */
 export type WhimsyMode = 'generated' | 'preset';
 
+/**
+ * Tile / background colour override.
+ *
+ * - ``'theme'`` — derive from theme tokens (current behaviour). Tile uses
+ *   ``currentColor`` (text-foreground); background stays the chat panel's
+ *   underlying ``bg-background``.
+ * - A ``'#rrggbb'`` string — apply that exact colour. Lets users dial in
+ *   tints without waiting on a full gradient picker.
+ */
+export type WhimsyColor = 'theme' | string;
+
+/** Validate a stored ``WhimsyColor`` value. */
+function isWhimsyColor(value: unknown): value is WhimsyColor {
+	if (value === 'theme') return true;
+	return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
 /** User-tunable parameters for the whimsy texture overlay. */
 export interface WhimsyConfig {
 	/** When false, the texture overlay is not rendered at all. */
 	enabled: boolean;
 	/** Source of the texture — procedurally generated tile or a static preset. */
 	mode: WhimsyMode;
+	/**
+	 * Custom background colour painted under the texture. ``'theme'`` keeps
+	 * the chat panel's underlying ``bg-background`` showing through; a hex
+	 * string overrides it with a solid fill before the masked tile renders.
+	 */
+	backgroundColor: WhimsyColor;
+	/**
+	 * Custom tile tint. ``'theme'`` uses the foreground theme token (current
+	 * behaviour); a hex string overrides the masked-tile colour.
+	 */
+	tintColor: WhimsyColor;
 	/** Curated motif set name; one of {@link WHIMSY_THEMES}'s keys. Used in ``generated`` mode. */
 	theme: WhimsyThemeName;
 	/** Identifier of the active preset under ``/whimsy-patterns/``. Used in ``preset`` mode. */
@@ -117,6 +145,8 @@ export interface WhimsyConfig {
 const DEFAULT_WHIMSY_CONFIG: WhimsyConfig = {
 	enabled: true,
 	mode: 'generated',
+	backgroundColor: 'theme',
+	tintColor: 'theme',
 	theme: 'kawaii',
 	preset: 'pattern-1',
 	presetSize: 600,
@@ -148,6 +178,8 @@ function validateWhimsyConfig(value: unknown): value is WhimsyConfig {
 	return (
 		typeof v.enabled === 'boolean' &&
 		(v.mode === 'generated' || v.mode === 'preset') &&
+		isWhimsyColor(v.backgroundColor) &&
+		isWhimsyColor(v.tintColor) &&
 		isWhimsyThemeName(v.theme) &&
 		isWhimsyPresetId(v.preset) &&
 		typeof v.presetSize === 'number' &&
@@ -202,6 +234,18 @@ export interface UseWhimsyTileResult {
 	 * between repeats.
 	 */
 	maskSize: string;
+	/**
+	 * Custom background colour to paint under the masked tile. ``null`` means
+	 * "use the parent's existing background"; a CSS colour string overrides.
+	 */
+	backgroundColor: string | null;
+	/**
+	 * CSS colour to use for the masked-tile fill. Either a hex string the
+	 * user picked or ``"currentColor"`` when the config is ``"theme"`` —
+	 * consumers can drop this directly into ``backgroundColor`` on the
+	 * overlay element.
+	 */
+	tintColor: string;
 	/** Stored opacity (0..1) — apply via CSS `opacity` on the overlay element. */
 	opacity: number;
 }
@@ -245,7 +289,9 @@ export function useWhimsyTile(): UseWhimsyTileResult {
 		config.mode === 'preset'
 			? `${config.presetSize}px auto`
 			: `${config.size}px ${config.size}px`;
-	return { cssUrl, maskSize, opacity: config.opacity };
+	const backgroundColor = config.backgroundColor === 'theme' ? null : config.backgroundColor;
+	const tintColor = config.tintColor === 'theme' ? 'currentColor' : config.tintColor;
+	return { cssUrl, maskSize, backgroundColor, tintColor, opacity: config.opacity };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -278,6 +324,65 @@ const MODE_LABELS: Record<WhimsyMode, string> = {
 // PRESET_OPTIONS / PRESET_LABELS were removed when the preset picker switched
 // from a dropdown to a thumbnail grid — clicking a thumbnail is faster than a
 // "Pattern 1 / Pattern 2 / …" list, and there's no useful label for a tile.
+
+/**
+ * Default starter colour used when the user clicks the swatch while still on
+ * ``"theme"``. Picked to be a neutral mid-tone so the first picker interaction
+ * doesn't blast the panel with a vivid hue.
+ */
+const COLOR_PICKER_FALLBACK = '#cbd5e1';
+
+interface WhimsyColorPickerProps {
+	/** Current persisted value — either ``'theme'`` or a ``#rrggbb`` string. */
+	value: WhimsyColor;
+	/** Called with the new value when the user picks a colour or resets. */
+	onChange: (next: WhimsyColor) => void;
+}
+
+/**
+ * Compact swatch + native colour picker pair with a "Reset to theme" toggle.
+ *
+ * Uses the browser's native ``<input type="color">`` to keep the dependency
+ * footprint zero — the platform widget is good enough for tints, and we can
+ * upgrade to ``react-colorful`` later if/when we want HSL/alpha controls.
+ */
+function WhimsyColorPicker({ value, onChange }: WhimsyColorPickerProps): React.JSX.Element {
+	// Native colour inputs require a hex value at all times — never ``undefined``
+	// or a token string — so we feed the fallback when the persisted value is
+	// ``'theme'``. The user picking a colour transitions the value off ``'theme'``.
+	const hexValue = value === 'theme' ? COLOR_PICKER_FALLBACK : value;
+	const isThemeDefault = value === 'theme';
+	return (
+		<div className="flex items-center gap-2">
+			<label
+				className="relative inline-flex size-7 cursor-pointer items-center justify-center overflow-hidden rounded-[6px] shadow-edge"
+				style={{ backgroundColor: hexValue }}
+			>
+				<input
+					aria-label="Pick colour"
+					className="absolute inset-0 cursor-pointer opacity-0"
+					onChange={(event) => onChange(event.target.value)}
+					type="color"
+					value={hexValue}
+				/>
+			</label>
+			<span className="font-mono text-xs tabular-nums text-muted-foreground">
+				{isThemeDefault ? 'theme' : hexValue}
+			</span>
+			{!isThemeDefault ? (
+				<Button
+					className="cursor-pointer"
+					onClick={() => onChange('theme')}
+					size="xs"
+					type="button"
+					variant="ghost"
+				>
+					Reset
+				</Button>
+			) : null}
+		</div>
+	);
+}
 
 /**
  * Settings → Appearance card for the whimsy texture. All controls write to the
@@ -530,6 +635,26 @@ export function WhimsySettingsCard(): React.JSX.Element {
 					</div>
 				</SettingsRow>
 			) : null}
+
+			<SettingsRow
+				description="Solid colour painted under the texture. Click the swatch to pick; reset switches back to the theme background."
+				label="Background colour"
+			>
+				<WhimsyColorPicker
+					value={config.backgroundColor}
+					onChange={(next) => setConfig((c) => ({ ...c, backgroundColor: next }))}
+				/>
+			</SettingsRow>
+
+			<SettingsRow
+				description="Tile (mask) colour. Click the swatch to override the theme's foreground colour for the doodles."
+				label="Tile tint"
+			>
+				<WhimsyColorPicker
+					value={config.tintColor}
+					onChange={(next) => setConfig((c) => ({ ...c, tintColor: next }))}
+				/>
+			</SettingsRow>
 
 			<SettingsRow
 				description="How visible the texture is over the chat panel. The default is 3.5%."

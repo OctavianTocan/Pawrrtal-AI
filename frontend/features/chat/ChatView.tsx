@@ -127,20 +127,37 @@ function ChatView({
 			 * skipped entirely.
 			 */}
 			{whimsy.cssUrl ? (
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 text-foreground"
-					style={{
-						backgroundColor: 'currentColor',
-						opacity: whimsy.opacity,
-						maskImage: whimsy.cssUrl,
-						WebkitMaskImage: whimsy.cssUrl,
-						maskSize: whimsy.maskSize,
-						WebkitMaskSize: whimsy.maskSize,
-						maskRepeat: 'repeat',
-						WebkitMaskRepeat: 'repeat',
-					}}
-				/>
+				<>
+					{/*
+					 * Optional solid-colour layer painted under the masked
+					 * tile. ``null`` means the user kept the theme default,
+					 * in which case the chat panel's own ``bg-background``
+					 * shows through. Skip the wrapper entirely in that case
+					 * to avoid layering an opaque box over interactive
+					 * content for no reason.
+					 */}
+					{whimsy.backgroundColor ? (
+						<div
+							aria-hidden="true"
+							className="pointer-events-none absolute inset-0"
+							style={{ backgroundColor: whimsy.backgroundColor }}
+						/>
+					) : null}
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute inset-0 text-foreground"
+						style={{
+							backgroundColor: whimsy.tintColor,
+							opacity: whimsy.opacity,
+							maskImage: whimsy.cssUrl,
+							WebkitMaskImage: whimsy.cssUrl,
+							maskSize: whimsy.maskSize,
+							WebkitMaskSize: whimsy.maskSize,
+							maskRepeat: 'repeat',
+							WebkitMaskRepeat: 'repeat',
+						}}
+					/>
+				</>
 			) : null}
 			{isEmptyConversation ? (
 				<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">

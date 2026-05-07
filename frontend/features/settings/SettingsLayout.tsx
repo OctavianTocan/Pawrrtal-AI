@@ -46,20 +46,29 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
 	const whimsy = useWhimsyTile();
 	if (!whimsy.cssUrl) return null;
 	return (
-		<div
-			aria-hidden="true"
-			className="pointer-events-none absolute inset-0 text-foreground"
-			style={{
-				backgroundColor: 'currentColor',
-				opacity: whimsy.opacity,
-				maskImage: whimsy.cssUrl,
-				WebkitMaskImage: whimsy.cssUrl,
-				maskSize: whimsy.maskSize,
-				WebkitMaskSize: whimsy.maskSize,
-				maskRepeat: 'repeat',
-				WebkitMaskRepeat: 'repeat',
-			}}
-		/>
+		<>
+			{whimsy.backgroundColor ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0"
+					style={{ backgroundColor: whimsy.backgroundColor }}
+				/>
+			) : null}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 text-foreground"
+				style={{
+					backgroundColor: whimsy.tintColor,
+					opacity: whimsy.opacity,
+					maskImage: whimsy.cssUrl,
+					WebkitMaskImage: whimsy.cssUrl,
+					maskSize: whimsy.maskSize,
+					WebkitMaskSize: whimsy.maskSize,
+					maskRepeat: 'repeat',
+					WebkitMaskRepeat: 'repeat',
+				}}
+			/>
+		</>
 	);
 }
 

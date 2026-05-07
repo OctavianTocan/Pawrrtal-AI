@@ -26,7 +26,6 @@ import {
 	ExternalLinkIcon,
 	FolderPlusIcon,
 	MessageSquareIcon,
-	PlusIcon,
 	SettingsIcon,
 	ShieldCheckIcon,
 	WorkflowIcon,
@@ -296,19 +295,6 @@ function AppHeader(): React.JSX.Element {
 					isMacDesktop && '[-webkit-app-region:no-drag]'
 				)}
 			>
-				<Button
-					aria-label="Create new item"
-					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
-					size="icon-xs"
-					type="button"
-					variant="ghost"
-				>
-					<PlusIcon aria-hidden="true" className="size-4" />
-				</Button>
-				<Separator
-					orientation="vertical"
-					className="mx-1 data-vertical:h-4 data-vertical:self-auto"
-				/>
 				<HelpMenu />
 			</div>
 		</header>
