@@ -40,7 +40,14 @@ export function proxy(request: NextRequest) {
 	return NextResponse.next();
 }
 
-/** Limits middleware to page navigations; skips API, static assets, and favicon. */
+/** Limits middleware to page navigations; skips API, framework static
+ * assets, favicon, and anything served from `frontend/public/` (matched
+ * heuristically by trailing file extension — e.g. `theme-detection.js`,
+ * `*.svg`, `*.png`).  Without the file-extension carve-out, every
+ * `public/` asset request from a cold (no-cookie) client — like the
+ * first visit to `/login` — gets redirected to `/login` itself,
+ * returning an HTML body that the browser then tries to parse as JS
+ * and chokes on ("SyntaxError: Unexpected token '<'"). */
 export const config = {
-	matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+	matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.+\\.[a-zA-Z0-9]+$).*)'],
 };
