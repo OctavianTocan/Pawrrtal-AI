@@ -220,7 +220,13 @@ class ClaudeLLM:
             agent_tools=tools,
         )
         try:
-            async for message in query(prompt=question, options=options):
+            # The SDK requires streaming-mode input (an AsyncIterable
+            # of message dicts) whenever ``can_use_tool`` is set on the
+            # options.  We always emit a single user-message envelope
+            # so the path is uniform regardless of whether bridged
+            # tools are mounted; uniform path means one shape to test
+            # and reason about.
+            async for message in query(prompt=_aiter_user_prompt(question), options=options):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -397,6 +403,22 @@ def _merge_agent_tools_into_whitelist(
         if tid not in deduped:
             deduped.append(tid)
     return deduped
+
+
+async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
+    """Wrap a single user message as the streaming-mode input the SDK expects.
+
+    The Claude SDK accepts either a plain string *or* an
+    ``AsyncIterable[dict]`` for the ``prompt`` arg, but enforces the
+    streaming-mode shape whenever a permission hook (``can_use_tool``)
+    is registered — which we now always do via the bridge.  Yielding
+    one envelope keeps every call site uniform regardless of whether
+    tools were mounted on this turn.
+    """
+    yield {
+        "type": "user",
+        "message": {"role": "user", "content": question},
+    }
 
 
 def _resolve_sdk_model(model_id: str) -> str:
