@@ -33,34 +33,38 @@ import { $ } from 'bun';
  * Inlined rather than depending on `wait-on`, which only lives in
  * electron/node_modules — we don't want to drag a dep into the spike
  * orchestrator just for a 20-line poll.
+ *
+ * Tries IPv4 (127.0.0.1) AND IPv6 (::1) on every tick.  Vite on macOS
+ * binds to `localhost` which Node's DNS resolves to ::1 first, but on
+ * Linux it usually means 127.0.0.1.  Polling both makes us
+ * platform-agnostic without forcing Vite to bind 0.0.0.0.
  */
-async function waitForPort(
-	port: number,
-	host = '127.0.0.1',
-	timeoutMs = 120_000,
-): Promise<void> {
+async function waitForPort(port: number, timeoutMs = 120_000): Promise<void> {
+	const hosts = ['127.0.0.1', '::1'];
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
-		const reachable = await new Promise<boolean>((resolve) => {
-			const socket = new net.Socket();
-			socket.setTimeout(1_000);
-			socket.once('error', () => {
-				socket.destroy();
-				resolve(false);
+		for (const host of hosts) {
+			const reachable = await new Promise<boolean>((resolve) => {
+				const socket = new net.Socket();
+				socket.setTimeout(1_000);
+				socket.once('error', () => {
+					socket.destroy();
+					resolve(false);
+				});
+				socket.once('timeout', () => {
+					socket.destroy();
+					resolve(false);
+				});
+				socket.connect(port, host, () => {
+					socket.destroy();
+					resolve(true);
+				});
 			});
-			socket.once('timeout', () => {
-				socket.destroy();
-				resolve(false);
-			});
-			socket.connect(port, host, () => {
-				socket.destroy();
-				resolve(true);
-			});
-		});
-		if (reachable) return;
+			if (reachable) return;
+		}
 		await new Promise((r) => setTimeout(r, 250));
 	}
-	throw new Error(`Timed out waiting for ${host}:${port}`);
+	throw new Error(`Timed out waiting for :${port} (tried 127.0.0.1 + ::1)`);
 }
 
 const [spikeArg, portArg] = process.argv.slice(2);
