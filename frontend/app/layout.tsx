@@ -8,7 +8,6 @@ import { Agentation } from 'agentation';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
-import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -88,27 +87,22 @@ export default function RootLayout({
 					href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&display=swap"
 					rel="stylesheet"
 				/>
-				{/* System theme detection — blocking inline script before hydration
-				    to prevent FOUC.  Body lives in `frontend/lib/theme-detection-script.ts`
-				    so the JSX surface here stays small.
+				{/* System theme detection — runs synchronously before hydration
+				    to prevent FOUC.  Body lives in `frontend/public/theme-detection.js`.
 
-				    Why `next/script` rather than a bare `<script>` tag: under React 19
-				    the bare-tag form throws a runtime error "Encountered a script tag
-				    while rendering React component" during client render, which
-				    cascades and breaks hydration of the rest of the tree (notably
-				    the `QueryClientProvider` in `app/providers.tsx`).  `next/script`
-				    with `strategy="beforeInteractive"` renders the script directly
-				    into the SSR'd HTML and is skipped by React's reconciler on the
-				    client, so the warning never fires and downstream providers mount
-				    cleanly.  The `noDangerouslySetInnerHtml` Biome rule is silenced
-				    for this file via `biome.json`'s `frontend/app/layout.tsx`
-				    override — the body is a static string from a server-only module,
-				    no user input. */}
-				<Script
-					id="theme-detection"
-					strategy="beforeInteractive"
-					dangerouslySetInnerHTML={{ __html: THEME_DETECTION_SCRIPT }}
-				/>
+				    Why a `src="/theme-detection.js"` script rather than an inline body:
+				    React 19's client reconciler emits a fatal warning ("Encountered
+				    a script tag while rendering React component") for any `<script>`
+				    element it sees with inline content — including those produced by
+				    `next/script` with `dangerouslySetInnerHTML` or children.  The
+				    warning cascades and breaks hydration of the rest of the tree
+				    (notably the `QueryClientProvider` in `app/providers.tsx`, which
+				    surfaces as a secondary "No QueryClient set" error).  A `<Script
+				    src>` tag has no body and is treated identically to the React Grab
+				    loader below — React skips it on the client and the warning never
+				    fires.  Verified against the failure mode reported by the operator
+				    on 2026-05-08. */}
+				<Script src="/theme-detection.js" strategy="beforeInteractive" />
 				{/* React Grab */}
 				{process.env.NODE_ENV === 'development' && (
 					<Script
