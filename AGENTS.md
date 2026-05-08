@@ -5,6 +5,7 @@
 - Repo: https://github.com/OctavianTocan/ai-nexus
 - In chat replies, file references must be repo-root relative only (example: `frontend/components/ui/sidebar.tsx:80`); never absolute paths or `~/...`.
 - Do not edit files covered by security-focused `CODEOWNERS` rules unless a listed owner explicitly asked for the change or is already reviewing it with you. Treat those paths as restricted surfaces, not drive-by cleanup.
+- **Never describe a failure mode as "pre-existing" to justify leaving it broken.** If you encounter a lint warning, type error, runtime warning, console error, broken test, or regression — fix it. The user does not care who introduced it; they care whether the app works. Warnings need fixing too: they are latent errors that haven't been promoted to blocking yet (Biome rolls levels, React 19 hardened previously informational warnings into fatal hydration faults, etc.). If a fix would explode the PR scope, open a sibling PR and reference it; do not punt with genealogy. See `.claude/rules/general/no-pre-existing-excuse.md`.
 
 ## Project Structure & Architecture Boundaries
 
@@ -89,6 +90,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - Group related changes; avoid bundling unrelated refactors.
 - PRs should be small, review-friendly slices (e.g., "Sidebar Craft Parity Round 2"). Do not bundle massive rewrites with unrelated visual tweaks.
 - When landing or merging any PR, ensure the working tree is clean and CI gates pass.
+- **Fix lint warnings on every PR you touch a file in, not just errors.** A Biome warning, a CI non-blocking notice, a `console.warn` — these are latent failures and they need fixing. Do not write "pre-existing" or "not from this PR" in a description to justify leaving them; the user reads that as "I noticed but chose not to fix." If the fix is structurally unrelated, open a sibling PR and reference it; do not leave a TODO hanging. See `.claude/rules/general/no-pre-existing-excuse.md`.
 
 ## Git Notes
 
