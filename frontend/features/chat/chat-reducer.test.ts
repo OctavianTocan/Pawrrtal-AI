@@ -76,6 +76,36 @@ describe('applyChatEvent', () => {
 		expect(msg.tool_calls?.[0]?.result).toBe('[]');
 	});
 
+	it('appends artifact payloads in arrival order', () => {
+		let msg = blankAssistant();
+		msg = applyChatEvent(msg, {
+			type: 'artifact',
+			artifact: {
+				id: 'art_aaa',
+				title: 'First',
+				tool_use_id: 't1',
+				spec: {
+					root: 'p',
+					elements: { p: { type: 'Page', props: {}, children: [] } },
+				},
+			},
+		});
+		msg = applyChatEvent(msg, {
+			type: 'artifact',
+			artifact: {
+				id: 'art_bbb',
+				title: 'Second',
+				tool_use_id: 't2',
+				spec: {
+					root: 'p',
+					elements: { p: { type: 'Page', props: {}, children: [] } },
+				},
+			},
+		});
+		expect(msg.artifacts?.map((a) => a.id)).toEqual(['art_aaa', 'art_bbb']);
+		expect(msg.artifacts?.[1]?.title).toBe('Second');
+	});
+
 	it('marks the message failed on an error event', () => {
 		const msg = applyChatEvent(blankAssistant(), {
 			type: 'error',
