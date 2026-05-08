@@ -71,6 +71,13 @@ export interface KnowledgeViewProps {
 	openFile: { name: string; markdown: string } | null;
 	/** Closes the currently-open file (drops the trailing `.md` segment). */
 	onCloseFile: () => void;
+	/**
+	 * Called when the user saves an edit in the document viewer. The
+	 * container is responsible for the network call and should return a
+	 * promise that rejects on failure so the viewer can show an error banner.
+	 * If omitted the Edit button is hidden.
+	 */
+	onSaveFile?: (newContent: string) => Promise<void>;
 
 	/** Memory cards for the `memory` view. */
 	memoryCards: readonly MemoryCardData[];
@@ -137,9 +144,11 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						{openFile ? (
 							<DocumentViewer
+								key={openFile.name}
 								filename={openFile.name}
 								markdown={openFile.markdown}
 								onClose={onCloseFile}
+								onSave={props.onSaveFile}
 							/>
 						) : (
 							<EmptyState
