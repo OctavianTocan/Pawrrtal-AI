@@ -17,6 +17,7 @@ from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
+from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.workspace_files import make_workspace_tools
 from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
@@ -177,6 +178,22 @@ def get_chat_router() -> APIRouter:
             )
         workspace_tools = make_workspace_tools(root)
 
+        # Load SOUL.md + AGENTS.md from the workspace as the agent's
+        # system prompt.  The workspace is guaranteed by the 412 gate
+        # above, so this is a single line — no extra nesting and no
+        # duplicated path resolution.  Either file may be missing
+        # independently; ``assemble_workspace_prompt`` returns ``None``
+        # only when both are absent, in which case the provider falls
+        # back to its built-in default.
+        workspace_system_prompt = assemble_workspace_prompt(root)
+        if workspace_system_prompt is not None:
+            logger.debug(
+                "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d",
+                rid,
+                user.id,
+                len(workspace_system_prompt),
+            )
+
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes for each LLM event, then done.
 
@@ -199,6 +216,7 @@ def get_chat_router() -> APIRouter:
                         user.id,
                         history=history,
                         tools=workspace_tools or None,
+                        system_prompt=workspace_system_prompt,
                     ):
                         event_count += 1
                         aggregator.apply(event)
