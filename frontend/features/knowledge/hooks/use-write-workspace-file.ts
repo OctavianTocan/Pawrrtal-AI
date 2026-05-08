@@ -54,7 +54,8 @@ export function useWriteWorkspaceFile(workspaceId: string | null) {
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}));
 				throw new Error(
-					(body as { detail?: string }).detail ?? `HTTP ${res.status}: Failed to save file`
+					(body as { detail?: string }).detail ??
+						`HTTP ${res.status}: Failed to save file`
 				);
 			}
 			return res.json() as Promise<WorkspaceFileApiResponse>;

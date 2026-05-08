@@ -321,7 +321,7 @@ export function KnowledgeContainer(): ReactNode {
 			onOpenChild={handleOpenChild}
 			openFile={openFile}
 			onCloseFile={handleCloseFile}
-				onSaveFile={handleSaveFile}
+			onSaveFile={handleSaveFile}
 			memoryCards={KNOWLEDGE_MEMORY_CARDS}
 			onNew={handleNew}
 			onShareFromEmptyState={handleShareFromEmptyState}

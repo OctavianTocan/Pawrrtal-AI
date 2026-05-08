@@ -28,7 +28,7 @@ const DEFAULT_MARKDOWN = '# Hello\n\nOriginal content.';
 
 function renderViewer(overrides: Partial<React.ComponentProps<typeof DocumentViewer>> = {}) {
 	const onClose = vi.fn();
-	const onSave = vi.fn<[string], Promise<void>>();
+	const onSave = vi.fn();
 
 	render(
 		<DocumentViewer
@@ -136,7 +136,9 @@ describe('DocumentViewer', () => {
 
 		it('exits edit mode on successful save', async () => {
 			renderViewer();
-			const { onSave } = { onSave: vi.fn<[string], Promise<void>>().mockResolvedValue(undefined) };
+			const { onSave } = {
+				onSave: vi.fn().mockResolvedValue(undefined),
+			};
 			const { unmount } = render(
 				<DocumentViewer
 					filename="notes.md"
