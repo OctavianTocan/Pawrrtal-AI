@@ -140,7 +140,7 @@ async function attachToDevServer(): Promise<StartedServer> {
 		const banner = [
 			'',
 			'═══════════════════════════════════════════════════════════════',
-			'  Electron could not reach the Next.js dev server on :3001',
+			`  Electron could not reach the dev server on :${DEV_FRONTEND_PORT}`,
 			'═══════════════════════════════════════════════════════════════',
 			'',
 			'  The desktop shell expects the frontend dev server to be',

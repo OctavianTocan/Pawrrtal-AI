@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Inline `#tag` chip rendered in the metadata strip under a task title.

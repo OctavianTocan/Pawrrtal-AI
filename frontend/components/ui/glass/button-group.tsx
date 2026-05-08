@@ -1,4 +1,3 @@
-'use client';
 
 import * as React from 'react';
 import { ButtonGroup as BaseButtonGroup } from '@/components/ui/button-group';

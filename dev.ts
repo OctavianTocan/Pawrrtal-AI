@@ -1,5 +1,5 @@
 /**
- * Dev orchestrator: runs the Next.js frontend and FastAPI backend side-by-side
+ * Dev orchestrator: runs the Vite frontend and FastAPI backend side-by-side
  * on plain localhost. Frontend on :3001, backend on :8000. No proxies, no HTTPS,
  * no special routing — just the two processes.
  */
@@ -10,14 +10,11 @@ import { $ } from 'bun';
 await $`lsof -ti:3001 | xargs kill -9`.quiet().nothrow();
 await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 
-// Clear Next.js dev lock to avoid the "Unable to acquire lock" error on restart.
-await $`rm -rf frontend/.next/dev/lock`.quiet().nothrow();
-
 console.log(
 	'Starting dev servers — frontend on http://localhost:3001, backend on http://localhost:8000'
 );
 
-// Frontend: plain Next.js dev server. Workspace package, run via bun --filter.
+// Frontend: Vite dev server.  Workspace package, run via bun --filter.
 const frontendPromise = $`bun --filter app.nexus-ai dev`.quiet(false);
 
 // Backend: explicit ASGI target via uvicorn. `main.app` is wrapped in CORS

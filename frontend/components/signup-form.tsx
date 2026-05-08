@@ -4,9 +4,8 @@
  * @fileoverview Uses `credentials: 'include'` on follow-up login so the session cookie is stored for the SPA.
  */
 
-'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

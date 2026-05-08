@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Stable event-handler bag for the Tasks container.
@@ -9,7 +8,7 @@
  * inputs are setter functions and the router) so re-renders don't churn.
  */
 
-import type { useRouter } from 'next/navigation';
+import type { useRouter } from '@/lib/navigation';
 import { type Dispatch, type SetStateAction, useCallback } from 'react';
 import { DEFAULT_TASK_VIEW, TASK_QUERY_KEYS } from './constants';
 import type { TaskViewId } from './types';

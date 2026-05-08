@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `web-preview`.
  */
 
-'use client';
 
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';

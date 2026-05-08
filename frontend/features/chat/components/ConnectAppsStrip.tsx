@@ -1,7 +1,6 @@
-'use client';
 
 import { XIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import type * as React from 'react';
 import { useState } from 'react';
 import { GitHubIcon } from '@/components/brand-icons/GitHubIcon';

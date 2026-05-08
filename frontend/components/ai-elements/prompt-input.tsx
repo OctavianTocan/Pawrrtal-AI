@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `prompt-input`.
  */
 
-'use client';
 
 export {
 	PromptInputActionAddAttachments,

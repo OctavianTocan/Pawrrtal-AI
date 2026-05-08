@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * React Query hook that fetches the current user's default workspace and

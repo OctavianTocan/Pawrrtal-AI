@@ -1,4 +1,3 @@
-'use client';
 
 import { LayoutGroup } from 'motion/react';
 import { BannerHeader } from './BannerHeader';

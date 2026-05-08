@@ -1,4 +1,3 @@
-'use client';
 
 import { Progress as ProgressPrimitive } from 'radix-ui';
 import type * as React from 'react';

@@ -12,7 +12,6 @@
  * and the provider tracks which zone is currently active. Navigation skips
  * unregistered zones so conditionally-rendered regions don't block the cycle.
  */
-'use client';
 
 import type React from 'react';
 import {

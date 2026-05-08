@@ -1,4 +1,3 @@
-'use client';
 
 import type * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';

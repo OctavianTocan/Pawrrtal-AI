@@ -5,38 +5,30 @@ import { defineConfig } from 'vitest/config';
 // Force NODE_ENV=test before vitest's React plugin picks the build to
 // alias.  Without this, Bun's vitest runtime defaults to production for
 // react-dom, which strips `React.act` and breaks @testing-library's
-// `render` helper.  Set as early as possible — the React plugin reads
-// it during module init.
+// `render` helper.
 if (process.env.NODE_ENV === undefined) {
-	// `process.env.NODE_ENV` is typed `readonly` under @types/node when
-	// strictly resolved, even though the runtime mutation works fine.
-	// Cast through `unknown` to keep TS happy without disabling strict.
 	(process.env as unknown as Record<string, string>).NODE_ENV = 'test';
 }
+
+const dirname = path.dirname(new URL(import.meta.url).pathname);
 
 export default defineConfig({
 	plugins: [react()],
 	resolve: {
 		alias: {
-			'@': path.resolve(__dirname),
-			// Match the tsconfig "paths" mapping so vitest can resolve the
-			// vendored react-dropdown package the same way Next.js does.
+			'@': path.resolve(dirname),
 			'@octavian-tocan/react-dropdown': path.resolve(
-				__dirname,
-				'lib/react-dropdown/src/index.ts'
+				dirname,
+				'lib/react-dropdown/src/index.ts',
 			),
 		},
 	},
 	test: {
 		environment: 'jsdom',
 		exclude: [
-			'**/.next/**',
+			'**/dist/**',
 			'**/node_modules/**',
 			'**/e2e/**',
-			// react-dropdown owns its own vitest config (globals enabled). When
-			// the frontend's runner picks them up, the bare `describe/it/expect`
-			// references fail to resolve. Run package tests via:
-			//   `cd lib/react-dropdown && bunx vitest run`
 			'lib/react-dropdown/**',
 		],
 		globals: false,
@@ -49,20 +41,17 @@ export default defineConfig({
 				'hooks/**/*.{ts,tsx}',
 				'features/**/*.{ts,tsx}',
 				'components/**/*.{ts,tsx}',
+				'src/**/*.{ts,tsx}',
 			],
 			exclude: [
 				'**/*.test.{ts,tsx}',
 				'**/*.spec.{ts,tsx}',
 				'**/__tests__/**',
 				'**/node_modules/**',
-				'**/.next/**',
+				'**/dist/**',
 				'components/ui/**',
-				'app/**',
-				// Coverage for the vendored react-dropdown package is owned by
-				// its own vitest config in lib/react-dropdown/.
 				'lib/react-dropdown/**',
 			],
 		},
 	},
 });
-

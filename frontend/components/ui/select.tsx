@@ -1,4 +1,3 @@
-'use client';
 
 import { IconCheck, IconChevronDown, IconChevronUp, IconSelector } from '@tabler/icons-react';
 import { Select as SelectPrimitive } from 'radix-ui';

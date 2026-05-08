@@ -1,6 +1,5 @@
-'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from '@/lib/navigation';
 import { startTransition, useState } from 'react';
 import { useSidebar } from '@/components/ui/sidebar';
 import type { Conversation } from '@/lib/types';

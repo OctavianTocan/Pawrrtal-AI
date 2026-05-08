@@ -1,4 +1,3 @@
-'use client';
 
 import { IconX } from '@tabler/icons-react';
 import { Dialog as SheetPrimitive } from 'radix-ui';

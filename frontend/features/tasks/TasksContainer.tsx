@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Container for the Tasks surface.
@@ -16,7 +15,7 @@
  * everything pre-resolved.
  */
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from '@/lib/navigation';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DEFAULT_TASK_VIEW, TASK_QUERY_KEYS, TASK_STORAGE_KEYS, TASK_VIEWS } from './constants';

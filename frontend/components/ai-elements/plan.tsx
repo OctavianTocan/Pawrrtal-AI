@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `plan`.
  */
 
-'use client';
 
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';

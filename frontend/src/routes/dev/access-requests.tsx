@@ -1,4 +1,11 @@
 /**
+ * Dev-only test route for the AccessRequestBanner component.
+ * Same body as the previous app/dev/access-requests/page.tsx,
+ * wrapped in a TanStack Router file route.
+ */
+
+import { createFileRoute } from '@tanstack/react-router';
+/**
  * Dev-only test page for the AccessRequestBanner component.
  *
  * Renders multiple banner variants across different widths and user counts to
@@ -9,7 +16,7 @@
  * @fileoverview Test page for AccessRequestBanner component with multiple variants
  */
 
-'use client';
+
 
 import { useState } from 'react';
 import { type AccessRequest, AccessRequestBanner } from '@/features/access-request-banner';
@@ -34,7 +41,7 @@ const MOCK_REQUESTS: AccessRequest[] = [
  * so all text logic branches, avatar overflow, and layout edge cases
  * can be verified visually. Logs actions to console.
  */
-export default function AccessRequestsDevPage() {
+function AccessRequestsDevPage() {
 	const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
 	return (
@@ -179,3 +186,7 @@ export default function AccessRequestsDevPage() {
 		</div>
 	);
 }
+
+export const Route = createFileRoute("/dev/access-requests")({
+	component: AccessRequestsDevPage,
+});

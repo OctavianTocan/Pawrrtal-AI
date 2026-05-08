@@ -11,7 +11,6 @@
  * selecting or navigating the parent conversation row when the user
  * interacts with the label itself.
  */
-'use client';
 
 import type { ConversationLabel } from '@/lib/types';
 

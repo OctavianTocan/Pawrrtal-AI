@@ -4,7 +4,6 @@
  * @fileoverview Attachment preview, list, and add-action components for prompt inputs.
  */
 
-'use client';
 
 import { DropdownMenuItem } from '@octavian-tocan/react-dropdown';
 import type { FileUIPart } from 'ai';

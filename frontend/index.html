@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" suppressHydrationWarning>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>AI Nexus</title>
+		<meta
+			name="description"
+			content="An AI chat application built with FastAPI + React, all by hand."
+		/>
+
+		<!-- UI sans stack — Google Fonts CDN, see DESIGN.md.
+		     Newsreader/Geist were previously loaded via next/font/google;
+		     post-migration they're loaded the same way as Google Sans, no
+		     framework helper needed. -->
+		<link href="https://fonts.googleapis.com" rel="preconnect" />
+		<link href="https://fonts.gstatic.com" crossorigin="anonymous" rel="preconnect" />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&family=Newsreader:wght@400;500;600&display=swap"
+			rel="stylesheet"
+		/>
+
+		<!-- System theme detection — blocking script before hydration to
+		     prevent FOUC.  Body lives in /lib/theme-detection-script.ts. -->
+		<script id="theme-detect" type="text/javascript">
+			// This empty placeholder is replaced at runtime by main.tsx
+			// before mount.  Keeping it inline in index.html lets us run
+			// it before any module loads.
+		</script>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.tsx"></script>
+	</body>
+</html>

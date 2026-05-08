@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Whimsy customization — single self-contained module.

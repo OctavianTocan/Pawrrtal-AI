@@ -1,4 +1,3 @@
-'use client';
 
 import {
 	DropdownContextMenu,
@@ -7,7 +6,7 @@ import {
 	DropdownMenuItem,
 } from '@octavian-tocan/react-dropdown';
 import { AppWindow } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { SquarePenRounded } from '@/components/icons/SquarePenRounded';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/components/ui/sidebar';

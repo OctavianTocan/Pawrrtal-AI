@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Pure-derivation hook for the Tasks container.

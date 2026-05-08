@@ -1,3 +1,10 @@
+/**
+ * Dev-only test route for the whimsy tile generator.
+ * Same body as the previous app/dev/whimsy-tile/page.tsx,
+ * wrapped in a TanStack Router file route.
+ */
+
+import { createFileRoute } from "@tanstack/react-router";
 import type React from 'react';
 import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
 import {
@@ -100,7 +107,7 @@ function Sample({
  * axes of variation — theme (motif set), seed (layout), and grid (density) —
  * over both light and dark surfaces so themed coloring can be eyeballed.
  */
-export default function WhimsyTilePage(): React.JSX.Element {
+function WhimsyTilePage(): React.JSX.Element {
 	return (
 		<main className="min-h-screen bg-background p-8 text-foreground">
 			<div className="mx-auto max-w-5xl space-y-12">
@@ -265,3 +272,7 @@ const heartfield = generateWhimsyTile({
 		</main>
 	);
 }
+
+export const Route = createFileRoute("/dev/whimsy-tile")({
+	component: WhimsyTilePage,
+});

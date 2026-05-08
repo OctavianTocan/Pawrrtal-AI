@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `task`.
  */
 
-'use client';
 
 import { ChevronDownIcon, SearchIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';

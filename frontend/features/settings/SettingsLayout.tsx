@@ -1,7 +1,6 @@
-'use client';
 
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { useWhimsyTile } from '@/features/whimsy';
 import { cn } from '@/lib/utils';

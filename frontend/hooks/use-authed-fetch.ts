@@ -1,6 +1,5 @@
-'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import { useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 

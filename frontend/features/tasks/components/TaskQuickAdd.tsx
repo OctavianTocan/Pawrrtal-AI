@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Inline "add a task" composer rendered above the section list.

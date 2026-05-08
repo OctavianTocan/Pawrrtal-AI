@@ -1,4 +1,3 @@
-'use client';
 
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { motion } from 'motion/react';

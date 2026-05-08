@@ -1,4 +1,3 @@
-'use client';
 
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type * as React from 'react';

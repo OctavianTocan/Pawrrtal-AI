@@ -1,6 +1,28 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
+
+// Mock the navigation shim so components rendered outside a
+// `<RouterProvider>` (which is most unit tests) don't blow up trying
+// to look up a real router.  The shim's real implementation in
+// `lib/navigation.ts` calls TanStack Router hooks that throw without
+// a router context; tests rendering bare components don't need real
+// navigation, just stable identity for the returned object.
+vi.mock('@/lib/navigation', () => {
+	const noopRouter = {
+		push: vi.fn(),
+		replace: vi.fn(),
+		back: vi.fn(),
+		forward: vi.fn(),
+		refresh: vi.fn(),
+		prefetch: vi.fn(),
+	};
+	return {
+		useRouter: () => noopRouter,
+		usePathname: () => '/',
+		useSearchParams: () => new URLSearchParams(),
+	};
+});
 
 // jsdom doesn't ship a ResizeObserver — radix-ui's Slider, DropdownMenu,
 // and a few other primitives crash without it. Stub the minimum surface

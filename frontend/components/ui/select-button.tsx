@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * SelectButton — a small DropdownMenu-driven picker that matches the

@@ -1,4 +1,3 @@
-'use client';
 
 import { ChevronDown, ChevronRight, FolderPlus } from 'lucide-react';
 import type * as React from 'react';

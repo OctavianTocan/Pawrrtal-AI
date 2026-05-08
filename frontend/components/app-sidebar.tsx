@@ -4,7 +4,6 @@
  * @fileoverview Prefer {@link AppLayout} for the full app chrome; this is used by the dashboard demo page.
  */
 
-'use client';
 
 import type * as React from 'react';
 import { Sidebar, SidebarContent } from '@/components/ui/sidebar';

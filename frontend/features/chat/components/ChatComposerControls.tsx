@@ -1,4 +1,3 @@
-'use client';
 
 import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import {

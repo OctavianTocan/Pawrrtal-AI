@@ -9,7 +9,6 @@
  * @fileoverview Profile button + dropdown rendered as the SidebarFooter.
  */
 
-'use client';
 
 import {
 	DropdownMenuItem,
@@ -32,7 +31,7 @@ import {
 	LogOutIcon,
 	SettingsIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/navigation';
 import type * as React from 'react';
 import { useCallback, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

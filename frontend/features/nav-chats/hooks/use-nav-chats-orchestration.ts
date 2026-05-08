@@ -4,9 +4,8 @@
  * @fileoverview Feeds {@link NavChatsView} with handlers derived from route, groups, and collapse state.
  */
 
-'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/navigation';
 import type {
 	Dispatch,
 	MutableRefObject,

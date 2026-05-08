@@ -1,4 +1,3 @@
-'use client';
 
 import { Plus } from 'lucide-react';
 import type * as React from 'react';

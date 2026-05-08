@@ -8,7 +8,6 @@
  * @fileoverview Collapsible sidebar with desktop resize and mobile sheet support
  */
 
-'use client';
 
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';

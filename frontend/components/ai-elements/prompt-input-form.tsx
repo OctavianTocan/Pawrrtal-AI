@@ -4,7 +4,6 @@
  * @fileoverview Keeps submit/drop/file-input behavior separate from presentational prompt input components.
  */
 
-'use client';
 
 import type { FileUIPart } from 'ai';
 import { nanoid } from 'nanoid';

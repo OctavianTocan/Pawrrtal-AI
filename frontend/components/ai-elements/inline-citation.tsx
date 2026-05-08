@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `inline-citation`.
  */
 
-'use client';
 
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import {

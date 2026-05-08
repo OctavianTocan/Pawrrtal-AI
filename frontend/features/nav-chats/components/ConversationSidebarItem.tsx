@@ -1,6 +1,5 @@
-'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/navigation';
 import type { ReactNode } from 'react';
 import { formatConversationAge } from '@/lib/format-conversation-age';
 import type { ConversationStatus } from '@/lib/types';

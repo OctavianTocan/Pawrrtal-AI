@@ -12,7 +12,6 @@
  * @fileoverview Chat — `ThinkingHeader`.
  */
 
-'use client';
 
 import { ChevronRightIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';

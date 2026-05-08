@@ -1,4 +1,3 @@
-'use client';
 
 /**
  * Collapsible task group rendered between the page header and the next

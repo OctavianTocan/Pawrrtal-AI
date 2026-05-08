@@ -1,4 +1,3 @@
-'use client';
 
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
