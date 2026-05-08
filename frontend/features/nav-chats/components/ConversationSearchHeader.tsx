@@ -1,4 +1,3 @@
-
 import { Search, X } from 'lucide-react';
 
 interface ConversationSearchHeaderProps {

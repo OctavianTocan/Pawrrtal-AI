@@ -61,8 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 				// reachable instead of an infinite loading state.
 				setIsAuthenticated(false);
 			} finally {
-				if (cancelled) return;
-				setIsLoading(false);
+				if (!cancelled) setIsLoading(false);
 			}
 		})();
 		return () => {
@@ -84,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
 	const value = useMemo<AuthState>(
 		() => ({ isAuthenticated, isLoading, logout, markAuthenticated }),
-		[isAuthenticated, isLoading, logout, markAuthenticated],
+		[isAuthenticated, isLoading, logout, markAuthenticated]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

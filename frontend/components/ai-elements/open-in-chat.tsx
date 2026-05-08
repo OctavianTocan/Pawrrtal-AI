@@ -10,7 +10,6 @@
  * for the content).
  */
 
-
 import {
 	DropdownMenuItem,
 	DropdownMenuLabel,

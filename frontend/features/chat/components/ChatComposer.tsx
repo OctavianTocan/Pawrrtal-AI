@@ -1,4 +1,3 @@
-
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useEffect, useState } from 'react';

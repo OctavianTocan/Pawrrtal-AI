@@ -1,4 +1,3 @@
-
 /**
  * Brain access sub-view.
  *

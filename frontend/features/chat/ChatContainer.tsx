@@ -1,9 +1,9 @@
-import { useRouter } from '@/lib/navigation';
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { useRouter } from '@/lib/navigation';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import {

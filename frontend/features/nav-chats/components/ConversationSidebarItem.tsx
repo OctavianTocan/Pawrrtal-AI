@@ -1,7 +1,6 @@
-
-import { usePathname } from '@/lib/navigation';
 import type { ReactNode } from 'react';
 import { formatConversationAge } from '@/lib/format-conversation-age';
+import { usePathname } from '@/lib/navigation';
 import type { ConversationStatus } from '@/lib/types';
 import { ConversationSidebarItemView } from './ConversationSidebarItemView';
 

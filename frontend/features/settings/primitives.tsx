@@ -1,4 +1,3 @@
-
 /**
  * Local primitives used only by the settings surface.
  *

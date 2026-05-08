@@ -4,7 +4,7 @@
  * wrapped in a TanStack Router file route.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router';
 import type React from 'react';
 import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
 import {
@@ -273,6 +273,6 @@ const heartfield = generateWhimsyTile({
 	);
 }
 
-export const Route = createFileRoute("/dev/whimsy-tile")({
+export const Route = createFileRoute('/dev/whimsy-tile')({
 	component: WhimsyTilePage,
 });

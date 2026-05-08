@@ -1,4 +1,3 @@
-
 /**
  * Centered editorial empty state for any Tasks sub-view.
  *

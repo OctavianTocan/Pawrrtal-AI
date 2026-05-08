@@ -14,7 +14,6 @@
  * @fileoverview React hook that wraps the channels API for the UI layer.
  */
 
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
 	type ChannelBinding,

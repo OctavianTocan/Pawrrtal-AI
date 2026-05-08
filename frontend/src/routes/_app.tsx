@@ -14,7 +14,7 @@
  *     wrapping `<Outlet />`.
  */
 
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Outlet, redirect } from '@tanstack/react-router';
 import { AppLayout } from '@/components/app-layout';
 
 export const Route = createFileRoute('/_app')({

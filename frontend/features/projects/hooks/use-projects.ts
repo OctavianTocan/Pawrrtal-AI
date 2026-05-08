@@ -1,4 +1,3 @@
-
 import { type UseMutationResult, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { useAuthedQuery } from '@/hooks/use-authed-query';

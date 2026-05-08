@@ -1,4 +1,3 @@
-
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';

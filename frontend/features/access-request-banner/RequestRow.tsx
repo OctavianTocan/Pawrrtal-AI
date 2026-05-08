@@ -1,4 +1,3 @@
-
 import { motion } from 'motion/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DecisionPill } from './DecisionPill';

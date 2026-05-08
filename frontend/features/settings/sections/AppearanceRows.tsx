@@ -1,4 +1,3 @@
-
 /**
  * Row primitives used by the Appearance settings section.
  *

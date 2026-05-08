@@ -4,7 +4,6 @@
  * @fileoverview Web Speech API integration for prompt input dictation.
  */
 
-
 import { MicIcon } from 'lucide-react';
 import {
 	type ComponentProps,

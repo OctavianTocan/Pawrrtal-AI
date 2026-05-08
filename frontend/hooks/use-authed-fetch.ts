@@ -1,7 +1,6 @@
-
-import { useRouter } from '@/lib/navigation';
 import { useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import { useRouter } from '@/lib/navigation';
 
 /**
  * Returns a memoized `fetch` wrapper that targets {@link API_BASE_URL}, sends cookies, and handles auth failures.

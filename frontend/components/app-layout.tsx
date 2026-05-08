@@ -8,7 +8,6 @@
  * @fileoverview Main app layout with resizable sidebar support
  */
 
-
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,

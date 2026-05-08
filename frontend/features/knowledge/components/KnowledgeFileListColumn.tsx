@@ -1,4 +1,3 @@
-
 /**
  * Middle column rendered when the user is inside a leaf folder.
  *

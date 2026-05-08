@@ -1,4 +1,3 @@
-
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { motion } from 'motion/react';
 import { BOUNCY_SPRING, type Decision } from './types';

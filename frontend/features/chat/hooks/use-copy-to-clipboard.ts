@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** How long the "Copied!" affordance stays visible after a successful copy. */

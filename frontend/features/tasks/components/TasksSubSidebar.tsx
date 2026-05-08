@@ -1,4 +1,3 @@
-
 /**
  * Inner sub-sidebar rendered to the left of the Tasks content area.
  *

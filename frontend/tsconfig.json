@@ -25,13 +25,7 @@
 		},
 		"esModuleInterop": true
 	},
-	"include": [
-		"vite-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
-		"**/*.mts",
-		"src/routeTree.gen.ts"
-	],
+	"include": ["vite-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts", "src/routeTree.gen.ts"],
 	"exclude": [
 		"node_modules",
 		"dist",

@@ -1,4 +1,3 @@
-
 /**
  * Inline metadata strip rendered under a task title.
  *

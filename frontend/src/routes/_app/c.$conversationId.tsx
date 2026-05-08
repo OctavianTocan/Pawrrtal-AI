@@ -25,7 +25,7 @@ export const Route = createFileRoute('/_app/c/$conversationId')({
 				method: 'GET',
 				credentials: 'include',
 				headers: { 'content-type': 'application/json' },
-			},
+			}
 		);
 		if (response.status === 401) {
 			// Login route declares a required `redirect` search param

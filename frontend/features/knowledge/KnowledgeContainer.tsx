@@ -1,4 +1,3 @@
-
 /**
  * Container for the Knowledge surface.
  *
@@ -25,8 +24,8 @@
  */
 
 import { AlertCircleIcon, LoaderIcon } from 'lucide-react';
-import { useRouter, useSearchParams } from '@/lib/navigation';
 import { type ReactNode, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from '@/lib/navigation';
 import { DEFAULT_KNOWLEDGE_VIEW, KNOWLEDGE_QUERY_KEYS, KNOWLEDGE_VIEWS } from './constants';
 import { useWorkspaceFile } from './hooks/use-workspace-file';
 import { useWorkspaceTree } from './hooks/use-workspace-tree';

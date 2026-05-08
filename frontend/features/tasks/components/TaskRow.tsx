@@ -1,4 +1,3 @@
-
 /**
  * One task in the rendered list.
  *

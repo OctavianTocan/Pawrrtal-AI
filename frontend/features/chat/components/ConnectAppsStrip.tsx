@@ -1,6 +1,4 @@
-
 import { XIcon } from 'lucide-react';
-import { useRouter } from '@/lib/navigation';
 import type * as React from 'react';
 import { useState } from 'react';
 import { GitHubIcon } from '@/components/brand-icons/GitHubIcon';
@@ -9,6 +7,7 @@ import { LinearIcon } from '@/components/brand-icons/LinearIcon';
 import { NotionIcon } from '@/components/brand-icons/NotionIcon';
 import { SlackIcon } from '@/components/brand-icons/SlackIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 /** Settings sub-page that owns integrations management. */

@@ -4,10 +4,23 @@ import { useAuthedFetch } from './use-authed-fetch';
 
 const replaceMock = vi.fn();
 
-vi.mock('next/navigation', () => ({
+// Pre-migration this mocked `next/navigation` (Next App Router); now
+// the hook imports the same surface from `@/lib/navigation` (TanStack
+// Router shim), so the mock target moved.  The default test setup at
+// `frontend/test/setup.ts` also mocks `@/lib/navigation` with no-op
+// fns; this per-test override replaces that with our spy so the test
+// can assert on `replace('/login')`.
+vi.mock('@/lib/navigation', () => ({
 	useRouter: () => ({
 		replace: replaceMock,
+		push: vi.fn(),
+		back: vi.fn(),
+		forward: vi.fn(),
+		refresh: vi.fn(),
+		prefetch: vi.fn(),
 	}),
+	usePathname: () => '/',
+	useSearchParams: () => new URLSearchParams(),
 }));
 
 describe('useAuthedFetch', (): void => {

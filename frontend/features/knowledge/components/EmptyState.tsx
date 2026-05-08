@@ -1,4 +1,3 @@
-
 /**
  * Centered empty-state card.
  *

@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `chain-of-thought`.
  */
 
-
 import { useControllableState } from '@radix-ui/react-use-controllable-state';
 import { BrainIcon, ChevronDownIcon, DotIcon, type LucideIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';

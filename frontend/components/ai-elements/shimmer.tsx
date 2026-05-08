@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `shimmer`.
  */
 
-
 import { motion } from 'motion/react';
 import { type CSSProperties, type ElementType, type JSX, memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';

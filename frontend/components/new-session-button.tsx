@@ -1,4 +1,3 @@
-
 import {
 	DropdownContextMenu,
 	DropdownContextMenuContent,
@@ -6,11 +5,11 @@ import {
 	DropdownMenuItem,
 } from '@octavian-tocan/react-dropdown';
 import { AppWindow } from 'lucide-react';
-import { useRouter } from '@/lib/navigation';
 import { SquarePenRounded } from '@/components/icons/SquarePenRounded';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useRouter } from '@/lib/navigation';
 
 /**
  * "New Session" header button with context menu and tooltip.

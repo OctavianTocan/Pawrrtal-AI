@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `artifact`.
  */
 
-
 import { type LucideIcon, XIcon } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { Button } from '@/components/ui/button';

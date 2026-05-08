@@ -31,6 +31,7 @@ export const router = createRouter({
 		// the `undefined!` cast follows the pattern shown in TanStack's
 		// auth-and-guards skill — TypeScript treats it as the right
 		// shape, the runtime value is injected before any beforeLoad runs.
+		// biome-ignore lint/style/noNonNullAssertion: official TanStack pattern, runtime value injected via RouterProvider context.
 		auth: undefined!,
 	},
 });

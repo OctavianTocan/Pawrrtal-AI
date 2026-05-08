@@ -19,18 +19,13 @@ export default defineConfig({
 			'@': path.resolve(dirname),
 			'@octavian-tocan/react-dropdown': path.resolve(
 				dirname,
-				'lib/react-dropdown/src/index.ts',
+				'lib/react-dropdown/src/index.ts'
 			),
 		},
 	},
 	test: {
 		environment: 'jsdom',
-		exclude: [
-			'**/dist/**',
-			'**/node_modules/**',
-			'**/e2e/**',
-			'lib/react-dropdown/**',
-		],
+		exclude: ['**/dist/**', '**/node_modules/**', '**/e2e/**', 'lib/react-dropdown/**'],
 		globals: false,
 		setupFiles: ['./test/setup.ts'],
 		coverage: {

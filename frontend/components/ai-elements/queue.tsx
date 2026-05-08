@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `queue`.
  */
 
-
 import { ChevronDownIcon, PaperclipIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';

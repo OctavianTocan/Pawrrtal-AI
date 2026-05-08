@@ -1,4 +1,3 @@
-
 /**
  * Round priority-tinted checkbox rendered at the start of every task row.
  *

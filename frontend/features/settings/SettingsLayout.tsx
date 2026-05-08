@@ -1,8 +1,7 @@
-
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from '@/lib/navigation';
 import { useState } from 'react';
 import { useWhimsyTile } from '@/features/whimsy';
+import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';

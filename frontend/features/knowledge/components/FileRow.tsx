@@ -1,4 +1,3 @@
-
 /**
  * One row in the file/folder browser.
  *

@@ -13,14 +13,14 @@
  * rules-of-hooks.
  */
 
-import { Agentation } from 'agentation';
 import { RouterProvider } from '@tanstack/react-router';
+import { Agentation } from 'agentation';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import { AuthProvider, useAuth } from './auth';
 import { Providers } from './providers';
 import { router } from './router';
-import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import './styles/globals.css';
 
 // FOUC-safe theme bootstrap.  Replaces the previous server-rendered
@@ -54,5 +54,5 @@ createRoot(rootEl).render(
 				{import.meta.env.DEV ? <Agentation /> : null}
 			</AuthProvider>
 		</Providers>
-	</StrictMode>,
+	</StrictMode>
 );

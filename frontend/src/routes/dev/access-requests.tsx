@@ -16,8 +16,6 @@ import { createFileRoute } from '@tanstack/react-router';
  * @fileoverview Test page for AccessRequestBanner component with multiple variants
  */
 
-
-
 import { useState } from 'react';
 import { type AccessRequest, AccessRequestBanner } from '@/features/access-request-banner';
 
@@ -187,6 +185,6 @@ function AccessRequestsDevPage() {
 	);
 }
 
-export const Route = createFileRoute("/dev/access-requests")({
+export const Route = createFileRoute('/dev/access-requests')({
 	component: AccessRequestsDevPage,
 });

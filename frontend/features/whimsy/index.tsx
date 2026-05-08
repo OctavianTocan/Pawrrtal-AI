@@ -1,4 +1,3 @@
-
 /**
  * Whimsy customization — single self-contained module.
  *

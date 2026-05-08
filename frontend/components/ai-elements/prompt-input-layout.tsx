@@ -4,7 +4,6 @@
  * @fileoverview Small wrappers around shared UI primitives used to compose prompt inputs.
  */
 
-
 import { DropdownMenuItem, DropdownPanelMenu } from '@octavian-tocan/react-dropdown';
 import type { ChatStatus } from 'ai';
 import { CornerDownLeftIcon, Loader2Icon, PlusIcon, SquareIcon, XIcon } from 'lucide-react';

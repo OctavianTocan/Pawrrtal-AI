@@ -4,7 +4,6 @@
  * @fileoverview Shared controller contexts for prompt input components.
  */
 
-
 import type { FileUIPart } from 'ai';
 import { nanoid } from 'nanoid';
 import {

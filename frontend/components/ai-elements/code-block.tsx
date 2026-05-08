@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `code-block`.
  */
 
-
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import {
 	type ComponentProps,

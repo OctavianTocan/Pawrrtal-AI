@@ -1,4 +1,3 @@
-
 /**
  * Collapsible task group rendered between the page header and the next
  * section. Owns its own collapsed-arrow rotation and the right-aligned

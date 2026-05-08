@@ -5,7 +5,6 @@
  * The app imports from the hooks path; this file is currently unused.
  */
 
-
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';

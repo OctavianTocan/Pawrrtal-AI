@@ -155,7 +155,7 @@
 			}
 		},
 		{
-			"includes": ["frontend/app/globals.css"],
+			"includes": ["frontend/src/styles/globals.css"],
 			"linter": {
 				"rules": {
 					"complexity": {

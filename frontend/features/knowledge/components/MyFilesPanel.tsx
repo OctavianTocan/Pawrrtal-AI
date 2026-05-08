@@ -1,4 +1,3 @@
-
 /**
  * Folder/file browser for the "My Files" Knowledge sub-view.
  *

@@ -1,4 +1,3 @@
-
 /**
  * Animated loading indicator for in-progress AI responses.
  *

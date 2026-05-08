@@ -11,7 +11,7 @@
  * login / signup intentionally render bare.
  */
 
-import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import type { RouterContext } from '../router';
 
 export const Route = createRootRouteWithContext<RouterContext>()({

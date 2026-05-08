@@ -1,4 +1,3 @@
-
 /**
  * Document viewer rendered when the user opens a `.md` file from My Files.
  *

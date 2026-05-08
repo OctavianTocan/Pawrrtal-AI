@@ -1,4 +1,3 @@
-
 /**
  * Container for the Tasks surface.
  *
@@ -15,9 +14,9 @@
  * everything pre-resolved.
  */
 
-import { useRouter, useSearchParams } from '@/lib/navigation';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { useRouter, useSearchParams } from '@/lib/navigation';
 import { DEFAULT_TASK_VIEW, TASK_QUERY_KEYS, TASK_STORAGE_KEYS, TASK_VIEWS } from './constants';
 import { formatDueLabel, isOverdue } from './format-utils';
 import { TASK_PROJECTS, TASK_SEED } from './mock-data';

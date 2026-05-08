@@ -8,7 +8,10 @@
 		"build": "tsc && vite build",
 		"preview": "vite preview --port 3001",
 		"start": "vite preview --port 3001",
+		"routes:generate": "bunx --bun --package=@tanstack/router-cli tsr generate",
+		"pretypecheck": "bun run routes:generate",
 		"typecheck": "tsc --noEmit",
+		"pretest": "bun run routes:generate",
 		"test": "NODE_ENV=test vitest run",
 		"test:watch": "NODE_ENV=test vitest",
 		"e2e": "playwright test",
@@ -16,7 +19,7 @@
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write",
-		"check": "bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs"
+		"check": "bun run routes:generate && bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
@@ -60,6 +63,7 @@
 		"@playwright/test": "^1.59.1",
 		"@tailwindcss/vite": "^4.1.18",
 		"@tanstack/react-query-devtools": "^5.100.9",
+		"@tanstack/router-cli": "^1.95.0",
 		"@tanstack/router-plugin": "^1.95.0",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",

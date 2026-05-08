@@ -3,7 +3,6 @@
  * Provides a set of composable panel components with resize handles for building split-pane layouts.
  */
 
-
 import { GripVertical } from 'lucide-react';
 import * as ResizablePrimitive from 'react-resizable-panels';
 import * as React from 'react';

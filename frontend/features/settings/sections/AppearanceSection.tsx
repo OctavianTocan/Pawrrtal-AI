@@ -1,4 +1,3 @@
-
 /**
  * Settings → Appearance — visual mock.
  *

@@ -4,7 +4,6 @@
  * @fileoverview AI Elements — `tool`.
  */
 
-
 import type { ToolUIPart } from 'ai';
 import {
 	CheckCircleIcon,

@@ -8,7 +8,6 @@
  * @fileoverview Responsive Modal/BottomSheet wrapper for ai-nexus.
  */
 
-
 import { BottomSheet, Modal, type ModalSize } from '@octavian-tocan/react-overlay';
 import type * as React from 'react';
 import { useEffect, useState } from 'react';
