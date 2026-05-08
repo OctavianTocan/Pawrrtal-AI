@@ -15,13 +15,10 @@ from pathlib import Path
 
 from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.agent_loop.types import AgentTool
-from app.core.config import settings
+from app.core.agent_tools import build_agent_tools
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.tools.exa_search_agent import make_exa_search_tool
-from app.core.tools.workspace_files import make_workspace_tools
 from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
@@ -179,16 +176,13 @@ def get_chat_router() -> APIRouter:
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",
             )
-        # Compose the full per-turn tool list here, in the chat router —
-        # the providers stay tool-agnostic (see
-        # `.claude/rules/architecture/no-tools-in-providers.md` and the
-        # gate at `scripts/check-no-tools-in-providers.py`).  Adding a
-        # new tool means appending to this list, never reaching into a
-        # provider.
-        agent_tools: list[AgentTool] = []
-        agent_tools.extend(make_workspace_tools(root))
-        if settings.exa_api_key:
-            agent_tools.append(make_exa_search_tool())
+        # Per-turn tool composition lives in `app.core.agent_tools` —
+        # the chat router only decides *that* the agent gets tools,
+        # not *which* (that's the builder's job, and where future
+        # per-agent / per-user permission gating will land).  Provider
+        # files stay tool-agnostic; see
+        # `.claude/rules/architecture/no-tools-in-providers.md`.
+        agent_tools = build_agent_tools(workspace_root=root)
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate

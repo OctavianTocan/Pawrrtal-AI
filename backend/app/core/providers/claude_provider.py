@@ -66,6 +66,9 @@ from claude_agent_sdk import (
 )
 
 from app.core.agent_loop.types import AgentTool
+from app.core.agent_system_prompt import (
+    DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
+)
 
 from ._claude_tool_bridge import (
     MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
@@ -122,17 +125,12 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 # System prompt scoped to a chat product. We deliberately do NOT use
 # Claude Code's default preset, which steers the model toward software
 # engineering tasks and tools that don't exist in this surface.
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are the Claude assistant inside the AI Nexus chat application. "
-    "You are speaking with the user via a text chat surface. Be concise, "
-    "helpful, and accurate. You do NOT have file system or shell access "
-    "in this surface — decline politely if the user asks you to perform "
-    "such actions.\n\n"
-    "App-defined tools (web search, workspace file access, ...) are made "
-    "available to you on a per-turn basis when configured by the chat "
-    "router.  Use whichever tools are present — always cite any URLs "
-    "returned by web-search-style tools."
-)
+# Provider-default system prompt: when no caller supplied one we use
+# the *shared* ``app.core.agent_system_prompt.DEFAULT_AGENT_SYSTEM_PROMPT``
+# so the agent's identity doesn't silently change based on which
+# model the user picked.  The real prompt for chat traffic is
+# assembled from SOUL.md + AGENTS.md by the chat router (PR #113);
+# this constant only fires for unit tests and script-mode callers.
 
 
 # ---------------------------------------------------------------------------

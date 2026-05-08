@@ -25,21 +25,22 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.agent_loop.types import TextContent, ToolCallContent
+from app.core.agent_system_prompt import (
+    DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
+)
 from app.core.config import settings
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
 
 # Last-resort fallback when no caller (frontend, chat router, AGENTS.md
-# loader) supplies a system prompt.  Kept intentionally generic — the real
-# system prompt should be assembled by the caller (workspace AGENTS.md
-# wins; see PR #113) and passed in via ``stream(system_prompt=...)``.
-# This constant exists only so unit tests and direct API callers can run
-# the provider without wiring up the assembly pipeline.
-_FALLBACK_SYSTEM_PROMPT = (
-    "You are a helpful AI assistant. "
-    "Be concise, accurate, and thoughtful in your responses."
-)
+# loader) supplies a system prompt.  Imported from
+# ``app.core.agent_system_prompt`` and aliased so the Gemini and Claude
+# providers fall back to the same constant — the agent's identity must
+# not silently change based on which model the user picked.  The real
+# system prompt for chat traffic is assembled by the chat router
+# (workspace AGENTS.md wins; see PR #113) and passed in via
+# ``stream(system_prompt=...)``.
 
 _GEMINI_ROLE = {"user": "user", "assistant": "model"}
 
