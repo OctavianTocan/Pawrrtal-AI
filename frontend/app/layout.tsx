@@ -102,10 +102,7 @@ export default function RootLayout({
 				    loader below — React skips it on the client and the warning never
 				    fires.  Verified against the failure mode reported by the operator
 				    on 2026-05-08. */}
-				<Script
-					src="/theme-detection.js"
-					strategy="beforeInteractive"
-				/>
+				<Script src="/theme-detection.js" strategy="beforeInteractive" />
 				{/* React Grab */}
 				{process.env.NODE_ENV === 'development' && (
 					<Script

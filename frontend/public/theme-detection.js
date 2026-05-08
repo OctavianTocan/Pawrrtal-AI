@@ -26,12 +26,12 @@
  * serves it directly from `public/` and any framework features here
  * would silently break.
  */
-(function () {
+(() => {
 	try {
-		var d = document.documentElement;
-		var m = window.matchMedia('(prefers-color-scheme:dark)');
+		const d = document.documentElement;
+		const m = window.matchMedia('(prefers-color-scheme:dark)');
 		if (m.matches) d.classList.add('dark');
-		m.addEventListener('change', function (e) {
+		m.addEventListener('change', (e) => {
 			if (e.matches) {
 				d.classList.add('dark');
 			} else {
