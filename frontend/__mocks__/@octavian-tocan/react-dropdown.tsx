@@ -22,6 +22,7 @@ export function DropdownMenuItem({
 	children: React.ReactNode;
 	[key: string]: unknown;
 }): React.JSX.Element {
+	// biome-ignore lint/a11y/useFocusableInteractive: test mock — no real interaction
 	return <div role="menuitem">{children}</div>;
 }
 
