@@ -14,7 +14,7 @@
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write",
-		"check": "bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs"
+		"check": "bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs && node ../scripts/check-nesting.mjs"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
