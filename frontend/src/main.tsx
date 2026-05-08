@@ -1,33 +1,36 @@
 /**
  * Application entry point.
  *
- * Replaces the previous Next.js `app/layout.tsx` mount.  Responsibilities:
- *   1. Run the FOUC-safe theme detection script before React renders.
- *   2. Mount the dev-only `<Agentation>` overlay + react-grab script.
- *   3. Wrap the app in the global `<Providers>` (TanStack Query + Sonner).
- *   4. Mount the TanStack Router (file-based routes under `src/routes/`).
+ * Mount order matches the official auth-and-guards skill:
+ *   <Providers>            (TanStack Query + Sonner toaster)
+ *     <AuthProvider>       (auth state + login/logout)
+ *       <RouterProvider>   (TanStack Router; receives auth via context)
+ *
+ * The auth provider must wrap the router because the router's
+ * route-level `beforeLoad` guards consume `context.auth` — that
+ * context value is plumbed via `<RouterProvider context={{ auth }}>`
+ * inside `<InnerApp>` so we can read the React hook without breaking
+ * rules-of-hooks.
  */
 
 import { Agentation } from 'agentation';
-import { RouterProvider, createRouter } from '@tanstack/react-router';
+import { RouterProvider } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AuthProvider, useAuth } from './auth';
 import { Providers } from './providers';
-import { routeTree } from './routeTree.gen';
+import { router } from './router';
 import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import './styles/globals.css';
 
-// FOUC-safe theme bootstrap.  Previously delivered as a server-rendered
-// `<script dangerouslySetInnerHTML>` in app/layout.tsx; in a SPA we run
-// it inline before React mounts so the dark/light class is on `<html>`
-// before the first paint.
+// FOUC-safe theme bootstrap.  Replaces the previous server-rendered
+// `<script dangerouslySetInnerHTML>` in app/layout.tsx.
 //
 // biome-ignore lint/security/noGlobalEval: deliberate inline-script execution
 new Function(THEME_DETECTION_SCRIPT)();
 
 // react-grab in dev only.  Previously loaded via next/script
-// `beforeInteractive`; we add a vanilla `<script>` to the head so it
-// runs before module evaluation gets ahead of it.
+// `beforeInteractive`; we add a vanilla `<script>` to the head.
 if (import.meta.env.DEV) {
 	const s = document.createElement('script');
 	s.src = '//unpkg.com/react-grab/dist/index.global.js';
@@ -35,12 +38,9 @@ if (import.meta.env.DEV) {
 	document.head.appendChild(s);
 }
 
-const router = createRouter({ routeTree });
-
-declare module '@tanstack/react-router' {
-	interface Register {
-		router: typeof router;
-	}
+function InnerApp(): React.JSX.Element {
+	const auth = useAuth();
+	return <RouterProvider router={router} context={{ auth }} />;
 }
 
 const rootEl = document.getElementById('root');
@@ -49,8 +49,10 @@ if (rootEl === null) throw new Error('#root missing in index.html');
 createRoot(rootEl).render(
 	<StrictMode>
 		<Providers>
-			<RouterProvider router={router} />
-			{import.meta.env.DEV ? <Agentation /> : null}
+			<AuthProvider>
+				<InnerApp />
+				{import.meta.env.DEV ? <Agentation /> : null}
+			</AuthProvider>
 		</Providers>
 	</StrictMode>,
 );

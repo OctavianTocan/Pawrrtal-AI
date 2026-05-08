@@ -28,7 +28,12 @@ export const Route = createFileRoute('/_app/c/$conversationId')({
 			},
 		);
 		if (response.status === 401) {
-			throw redirect({ to: '/login' });
+			// Login route declares a required `redirect` search param
+			// (see src/routes/login.tsx) so we always pass it; current
+			// `location.href` round-trips the user back here after
+			// login.
+			const here = typeof window !== 'undefined' ? window.location.pathname : '/';
+			throw redirect({ to: '/login', search: { redirect: here } });
 		}
 		if (response.status === 404) {
 			throw notFound();
