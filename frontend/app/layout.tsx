@@ -88,12 +88,27 @@ export default function RootLayout({
 					href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&display=swap"
 					rel="stylesheet"
 				/>
-				{/* System theme detection — blocking script before hydration to prevent FOUC.
-				    Body lives in `frontend/lib/theme-detection-script.ts` so the JSX surface
-				    here stays small. The `noDangerouslySetInnerHtml` rule is silenced for
-				    this file via biome.json's `frontend/app/layout.tsx` override (the
-				    body is a static string from a server-only module — no user input). */}
-				<script dangerouslySetInnerHTML={{ __html: THEME_DETECTION_SCRIPT }} />
+				{/* System theme detection — blocking inline script before hydration
+				    to prevent FOUC.  Body lives in `frontend/lib/theme-detection-script.ts`
+				    so the JSX surface here stays small.
+
+				    Why `next/script` rather than a bare `<script>` tag: under React 19
+				    the bare-tag form throws a runtime error "Encountered a script tag
+				    while rendering React component" during client render, which
+				    cascades and breaks hydration of the rest of the tree (notably
+				    the `QueryClientProvider` in `app/providers.tsx`).  `next/script`
+				    with `strategy="beforeInteractive"` renders the script directly
+				    into the SSR'd HTML and is skipped by React's reconciler on the
+				    client, so the warning never fires and downstream providers mount
+				    cleanly.  The `noDangerouslySetInnerHtml` Biome rule is silenced
+				    for this file via `biome.json`'s `frontend/app/layout.tsx`
+				    override — the body is a static string from a server-only module,
+				    no user input. */}
+				<Script
+					id="theme-detection"
+					strategy="beforeInteractive"
+					dangerouslySetInnerHTML={{ __html: THEME_DETECTION_SCRIPT }}
+				/>
 				{/* React Grab */}
 				{process.env.NODE_ENV === 'development' && (
 					<Script
