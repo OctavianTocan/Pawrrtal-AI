@@ -38,7 +38,6 @@ def resolve_llm(model_id: str | None) -> AILLM:
     if any(resolved.startswith(p) for p in _CLAUDE_PREFIXES):
         config = ClaudeLLMConfig(
             oauth_token=settings.claude_code_oauth_token or None,
-            enable_exa_search=bool(settings.exa_api_key),
         )
         return ClaudeLLM(resolved, config=config)
     return GeminiLLM(resolved)

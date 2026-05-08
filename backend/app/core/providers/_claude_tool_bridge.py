@@ -1,0 +1,110 @@
+"""Claude Agent SDK bridge for the cross-provider :class:`AgentTool` shape.
+
+The agent loop hands every provider a ``list[AgentTool]`` (see
+``app.core.agent_loop.types``) — a provider-neutral dataclass with
+``name``, ``description``, JSON-Schema ``parameters`` and an async
+``execute(tool_call_id, **kwargs) -> str``.  The Gemini provider
+translates that list into ``gtypes.FunctionDeclaration``; this module
+is the equivalent translation for Claude.
+
+Claude exposes custom tools via *in-process* MCP servers built with
+``create_sdk_mcp_server`` (despite the "MCP" label there is no IPC,
+no extra process — it's just the SDK's calling convention for
+caller-supplied tools, per the official docstring).  We wrap each
+:class:`AgentTool` with the SDK's ``@tool`` decorator and assemble
+them into a single server named :data:`MCP_SERVER_NAME`, which the
+provider mounts via ``ClaudeAgentOptions.mcp_servers``.
+
+The bridge is intentionally a ``providers/_*`` private module rather
+than an ``app.core.tools.*`` import: the no-tools-in-providers gate
+(``scripts/check-no-tools-in-providers.py``) blocks providers from
+reaching into specific tool factories, but provider-internal plumbing
+that translates the *abstract* ``AgentTool`` is exactly what we want
+to live next to the provider.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from claude_agent_sdk import create_sdk_mcp_server, tool
+
+from app.core.agent_loop.types import AgentTool
+
+# The single in-process MCP server name we mount every cross-provider
+# AgentTool under.  Claude addresses each tool as
+# ``mcp__<server>__<tool_name>``; both the server name and that prefix
+# are stable so the allowed-tools whitelist is computable from the
+# AgentTool list alone.
+MCP_SERVER_NAME = "ai_nexus"
+
+
+def claude_tool_id(name: str) -> str:
+    """Return the canonical Claude tool ID for an :class:`AgentTool` ``name``.
+
+    Useful when whitelisting the tool in
+    ``ClaudeAgentOptions.tools`` — the SDK refuses execution otherwise.
+    """
+    return f"mcp__{MCP_SERVER_NAME}__{name}"
+
+
+def _wrap(agent_tool: AgentTool) -> Any:
+    """Wrap one :class:`AgentTool` in a Claude SDK ``@tool``.
+
+    Returns the decorated handler so :func:`build_mcp_server` can pass
+    it straight to ``create_sdk_mcp_server(tools=[...])``.
+
+    Why a closure rather than a class with ``__call__``: the SDK's
+    ``@tool`` decorator inspects the wrapped function and stores
+    metadata on the returned ``SdkMcpTool`` — wrapping a fresh closure
+    per agent_tool keeps that metadata tidy and avoids state sharing.
+    """
+
+    @tool(agent_tool.name, agent_tool.description, agent_tool.parameters)
+    async def _handler(args: dict[str, Any]) -> dict[str, Any]:
+        try:
+            text = await agent_tool.execute("", **args)
+        except Exception as exc:  # noqa: BLE001 — surface to the model as a tool error
+            return {
+                "content": [{"type": "text", "text": f"Tool error: {exc}"}],
+                "is_error": True,
+            }
+        return {
+            "content": [{"type": "text", "text": text}],
+            "is_error": False,
+        }
+
+    return _handler
+
+
+def build_mcp_server(agent_tools: list[AgentTool]) -> Any | None:
+    """Return an in-process MCP server config exposing every *agent_tool*.
+
+    Args:
+        agent_tools: The provider-neutral tool list the agent loop
+            hands the provider.  May be empty.
+
+    Returns:
+        A ``McpSdkServerConfig`` ready to mount under
+        ``ClaudeAgentOptions.mcp_servers[MCP_SERVER_NAME]``, or
+        ``None`` when the list is empty (the provider should then omit
+        the ``mcp_servers`` kwarg entirely — passing an empty dict is
+        accepted by the SDK but pointlessly noisy in logs).
+    """
+    if not agent_tools:
+        return None
+    return create_sdk_mcp_server(
+        name=MCP_SERVER_NAME,
+        version="1.0.0",
+        tools=[_wrap(t) for t in agent_tools],
+    )
+
+
+def allowed_tool_ids(agent_tools: list[AgentTool]) -> list[str]:
+    """Return the Claude allowed-tools whitelist for *agent_tools*.
+
+    Each entry is ``mcp__<MCP_SERVER_NAME>__<tool.name>``; the SDK
+    requires the whitelist or it refuses execution even when the
+    server is mounted.
+    """
+    return [claude_tool_id(t.name) for t in agent_tools]

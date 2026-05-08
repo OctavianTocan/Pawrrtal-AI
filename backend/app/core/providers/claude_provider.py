@@ -65,16 +65,15 @@ from claude_agent_sdk import (
     query,
 )
 
-from app.core.tools.exa_search_claude import (
-    CLAUDE_TOOL_ID as EXA_CLAUDE_TOOL_ID,
-)
-from app.core.tools.exa_search_claude import (
-    MCP_SERVER_NAME as EXA_MCP_SERVER_NAME,
-)
-from app.core.tools.exa_search_claude import (
-    build_exa_mcp_server,
-)
+from app.core.agent_loop.types import AgentTool
 
+from ._claude_tool_bridge import (
+    MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
+)
+from ._claude_tool_bridge import (
+    allowed_tool_ids,
+    build_mcp_server,
+)
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -129,10 +128,10 @@ _DEFAULT_SYSTEM_PROMPT = (
     "helpful, and accurate. You do NOT have file system or shell access "
     "in this surface — decline politely if the user asks you to perform "
     "such actions.\n\n"
-    "Web search is available via the `exa_search` tool (powered by Exa). "
-    "Call it whenever the user asks for fresh information, current events, "
-    "citations, or anything beyond your training data. Always cite the "
-    "URLs returned by the tool when you use the results."
+    "App-defined tools (web search, workspace file access, ...) are made "
+    "available to you on a per-turn basis when configured by the chat "
+    "router.  Use whichever tools are present — always cite any URLs "
+    "returned by web-search-style tools."
 )
 
 
@@ -170,8 +169,7 @@ class ClaudeLLMConfig:
     extra_env: dict[str, str] = field(default_factory=dict)
     """Additional environment variables forwarded to the CLI subprocess."""
 
-    enable_exa_search: bool = False
-    """When ``True``, mount the in-process Exa MCP server and whitelist the ``exa_search`` tool. Toggled by the factory based on whether ``EXA_API_KEY`` is configured."""
+
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +196,7 @@ class ClaudeLLM:
         user_id: uuid.UUID,
         history: list[dict[str, str]]
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
-        tools: object | None = None,  # ignored for now: see note in stream() body
+        tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
@@ -274,7 +272,7 @@ class ClaudeLLM:
         conversation_id: uuid.UUID,
         *,
         system_prompt: str | None = None,
-        agent_tools: object | None = None,
+        agent_tools: list[AgentTool] | None = None,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -285,26 +283,30 @@ class ClaudeLLM:
                 takes precedence over ``self._config.system_prompt`` so
                 the chat router can inject app-assembled context (e.g.
                 workspace AGENTS.md per PR #113).
-            agent_tools: AgentTool list from the cross-provider agent loop
-                signature.  Currently unused — the Claude SDK runs its
-                own tool surface and AgentTool wiring requires an MCP
-                bridge that's tracked separately.  Accepted here so the
-                provider protocol signature stays consistent.
+            agent_tools: Cross-provider :class:`AgentTool` list assembled
+                by the chat router.  Translated into a single in-process
+                MCP server via
+                :mod:`app.core.providers._claude_tool_bridge` and mounted
+                under ``ClaudeAgentOptions.mcp_servers``; the matching
+                ``mcp__ai_nexus__<name>`` IDs are appended to the
+                allowed-tools whitelist so the SDK actually permits
+                execution.
         """
-        _ = agent_tools  # see docstring
         session_id = str(conversation_id)
 
-        # Local tool whitelist for the Claude SDK (built-in CLI tools).
-        # Renamed off the bare ``tools`` name so the parameter shadowing is
-        # explicit — see comment below about the AgentTool ``tools`` arg.
+        # Local tool whitelist for the Claude SDK's built-in CLI tools
+        # (read/write filesystem, etc.).  Distinct from ``agent_tools``
+        # — those are app-defined tools we bridge into an MCP server.
         local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
-        if self._config.enable_exa_search:
-            if local_tools is None:
-                local_tools = [EXA_CLAUDE_TOOL_ID]
-            elif EXA_CLAUDE_TOOL_ID not in local_tools:
-                local_tools.append(EXA_CLAUDE_TOOL_ID)
-            mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
+
+        # Bridge the cross-provider AgentTool list into a single MCP
+        # server.  All app-defined tools (workspace files, web search,
+        # …) flow through here — the provider doesn't know which ones
+        # are in the list and shouldn't.
+        local_tools = _merge_agent_tools_into_whitelist(
+            local_tools, list(agent_tools or []), mcp_servers
+        )
 
         # If tool use is enabled but the caller didn't override
         # ``max_turns``, automatically widen the turn budget so the agent
@@ -360,6 +362,33 @@ class ClaudeLLM:
 # ---------------------------------------------------------------------------
 # Module-level helpers (also unit-tested directly).
 # ---------------------------------------------------------------------------
+
+
+def _merge_agent_tools_into_whitelist(
+    local_tools: list[str] | None,
+    agent_tool_list: list[AgentTool],
+    mcp_servers: dict[str, Any],
+) -> list[str] | None:
+    """Mount *agent_tool_list* as an MCP server and append its IDs to *local_tools*.
+
+    Mutates *mcp_servers* in place (adding the bridge server when there
+    is at least one tool) and returns the updated *local_tools* whitelist.
+    Extracted from :meth:`ClaudeLLM._build_options` so the body stays under
+    the project nesting budget.
+    """
+    if not agent_tool_list:
+        return local_tools
+    server = build_mcp_server(agent_tool_list)
+    if server is not None:
+        mcp_servers[AGENT_TOOL_MCP_SERVER_NAME] = server
+    allowed = allowed_tool_ids(agent_tool_list)
+    if local_tools is None:
+        return list(allowed)
+    deduped = list(local_tools)
+    for tid in allowed:
+        if tid not in deduped:
+            deduped.append(tid)
+    return deduped
 
 
 def _resolve_sdk_model(model_id: str) -> str:

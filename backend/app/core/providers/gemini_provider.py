@@ -26,7 +26,6 @@ from app.core.agent_loop import (
 )
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.config import settings
-from app.core.tools.exa_search_agent import make_exa_search_tool
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -259,20 +258,15 @@ class GeminiLLM:
                     )
                 )
 
-        # Start from the caller-supplied tools (e.g. workspace file tools
-        # built by ``make_workspace_tools`` — see PR #112) so we don't
-        # silently drop them, then append the Exa web-search tool when
-        # the API key is configured.  Exa is instantiated per-request so
-        # it's trivially mockable in tests by patching
-        # ``make_exa_search_tool`` before calling ``stream()``.
-        effective_tools: list[AgentTool] = list(tools or [])
-        if settings.exa_api_key:
-            effective_tools.append(make_exa_search_tool())
-
+        # The chat router composes the full tool list (workspace tools,
+        # web search, future capabilities) and hands it in via *tools*.
+        # The provider stays tool-agnostic on purpose — see
+        # `.claude/rules/architecture/no-tools-in-providers.md` and the
+        # gate at `scripts/check-no-tools-in-providers.py`.
         context = AgentContext(
             system_prompt=system_prompt or _FALLBACK_SYSTEM_PROMPT,
             messages=prior,
-            tools=effective_tools,
+            tools=list(tools or []),
         )
         prompt = UserMessage(role="user", content=question)
         config = AgentLoopConfig(convert_to_llm=_identity_convert)
