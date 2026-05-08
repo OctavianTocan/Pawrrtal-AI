@@ -4,6 +4,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useState } from 'react';
+import { useWhimsyTile } from '@/features/whimsy';
+import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';
@@ -32,6 +34,42 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
 	return <PlaceholderSection title={section?.label ?? 'Settings'} />;
+}
+
+/**
+ * Renders the same texture overlay the chat panel uses, scoped to its
+ * positioned parent (here, the settings ``<main>``). Pulled out as a
+ * component so the hook subscribes once for the panel and so the parent
+ * stays JSX-clean. Returns ``null`` when the user has disabled whimsy.
+ */
+function SettingsWhimsyOverlay(): React.JSX.Element | null {
+	const whimsy = useWhimsyTile();
+	if (!whimsy.cssUrl) return null;
+	return (
+		<>
+			{whimsy.backgroundColor ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0"
+					style={{ backgroundColor: whimsy.backgroundColor }}
+				/>
+			) : null}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 text-foreground"
+				style={{
+					backgroundColor: whimsy.tintColor,
+					opacity: whimsy.opacity,
+					maskImage: whimsy.cssUrl,
+					WebkitMaskImage: whimsy.cssUrl,
+					maskSize: whimsy.maskSize,
+					WebkitMaskSize: whimsy.maskSize,
+					maskRepeat: 'repeat',
+					WebkitMaskRepeat: 'repeat',
+				}}
+			/>
+		</>
+	);
 }
 
 /**
@@ -92,8 +130,29 @@ export function SettingsLayout(): React.JSX.Element {
 				</nav>
 			</aside>
 
-			<main className="h-full overflow-y-auto bg-background px-10 py-10">
-				<div className="mx-auto w-full max-w-3xl">{renderActiveSection(activeId)}</div>
+			{/*
+			 * Mirror the chat panel's whimsy texture overlay on the right
+			 * pane so editing the texture knobs in Settings → Appearance
+			 * gives immediate, visible feedback. Sidebar deliberately does
+			 * NOT receive the overlay — it stays a flat surface so
+			 * navigation chrome reads cleanly.
+			 *
+			 * The overlay is the viewport-sized sibling of a separately
+			 * scrolling inner box. If the overlay were ``inset-0`` inside
+			 * an ``overflow-y: auto`` parent, the absolute box would
+			 * resolve to the parent's padding box (one viewport tall) and
+			 * scroll away with the content — leaving the texture only at
+			 * the top of the page. Splitting the scroll into an inner
+			 * ``absolute inset-0 overflow-y-auto`` lets the overlay stay
+			 * pinned to the visible area while content scrolls underneath.
+			 */}
+			<main className="relative h-full bg-background">
+				<SettingsWhimsyOverlay />
+				<div className="absolute inset-0 overflow-y-auto px-10 py-10">
+					<div className="relative mx-auto w-full max-w-3xl">
+						{renderActiveSection(activeId)}
+					</div>
+				</div>
 			</main>
 		</div>
 	);
