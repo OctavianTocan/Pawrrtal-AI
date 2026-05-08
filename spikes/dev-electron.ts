@@ -93,14 +93,28 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // inside `pnpm run <script>` fails preflight on a fresh clone if any
 // transitive version skewed.  Running install up-front is idempotent
 // when nothing changed and fast on repeat.
+// 1. Root-level workspace install (covers electron + frontend + lib).
+// Required because Electron's TS build needs `@types/node` from
+// electron/node_modules, which only lands once `bun install` has run
+// at the repo root on a fresh checkout.  Bun is fast on no-op installs.
+console.log('📦 Ensuring root workspace dependencies are installed…');
+const rootInstall = spawn('bun', ['install'], { stdio: 'inherit' });
+const rootInstallCode: number = await new Promise((resolve) =>
+	rootInstall.on('close', (c) => resolve(c ?? 1)),
+);
+if (rootInstallCode !== 0) {
+	console.error(`bun install failed (exit ${rootInstallCode}) at repo root`);
+	process.exit(rootInstallCode);
+}
+
+// 2. Spike-specific install (pnpm-managed, separate from the bun
+// workspace).  `--config.strictDepBuilds=false` prevents pnpm 11
+// from exiting non-zero when esbuild's postinstall script runs;
+// esbuild needs that to download its platform binary, otherwise
+// Vite can't run.  The spike's package.json also whitelists esbuild
+// via pnpm.onlyBuiltDependencies, but the strict-dep-builds gate
+// fires before the whitelist is consulted in some pnpm 11 versions.
 console.log(`📦 Ensuring ${spikeDir} dependencies are installed…`);
-// `--config.strictDepBuilds=false` prevents pnpm 11 from exiting
-// non-zero when a dep declares a postinstall script.  esbuild needs
-// its postinstall to download the platform binary; the spike's
-// package.json whitelists it via pnpm.onlyBuiltDependencies, but the
-// strict-dep-builds gate fires before the whitelist is consulted in
-// some pnpm 11 versions.  Disabling the gate is safe here because
-// these are spikes, not production deps.
 const install = spawn(
 	'pnpm',
 	['install', '--config.strictDepBuilds=false'],
