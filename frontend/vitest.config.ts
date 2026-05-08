@@ -2,6 +2,18 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+// Force NODE_ENV=test before vitest's React plugin picks the build to
+// alias.  Without this, Bun's vitest runtime defaults to production for
+// react-dom, which strips `React.act` and breaks @testing-library's
+// `render` helper.  Set as early as possible — the React plugin reads
+// it during module init.
+if (process.env.NODE_ENV === undefined) {
+	// `process.env.NODE_ENV` is typed `readonly` under @types/node when
+	// strictly resolved, even though the runtime mutation works fine.
+	// Cast through `unknown` to keep TS happy without disabling strict.
+	(process.env as unknown as Record<string, string>).NODE_ENV = 'test';
+}
+
 export default defineConfig({
 	plugins: [react()],
 	resolve: {
