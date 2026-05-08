@@ -65,16 +65,19 @@ from claude_agent_sdk import (
     query,
 )
 
-from app.core.tools.exa_search_claude import (
-    CLAUDE_TOOL_ID as EXA_CLAUDE_TOOL_ID,
-)
-from app.core.tools.exa_search_claude import (
-    MCP_SERVER_NAME as EXA_MCP_SERVER_NAME,
-)
-from app.core.tools.exa_search_claude import (
-    build_exa_mcp_server,
+from app.core.agent_loop.types import AgentTool
+from app.core.agent_system_prompt import (
+    DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
 
+from ._claude_tool_bridge import (
+    MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
+)
+from ._claude_tool_bridge import (
+    allowed_tool_ids,
+    auto_approve_bridge_tools,
+    build_mcp_server,
+)
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -123,17 +126,12 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 # System prompt scoped to a chat product. We deliberately do NOT use
 # Claude Code's default preset, which steers the model toward software
 # engineering tasks and tools that don't exist in this surface.
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are the Claude assistant inside the AI Nexus chat application. "
-    "You are speaking with the user via a text chat surface. Be concise, "
-    "helpful, and accurate. You do NOT have file system or shell access "
-    "in this surface — decline politely if the user asks you to perform "
-    "such actions.\n\n"
-    "Web search is available via the `exa_search` tool (powered by Exa). "
-    "Call it whenever the user asks for fresh information, current events, "
-    "citations, or anything beyond your training data. Always cite the "
-    "URLs returned by the tool when you use the results."
-)
+# Provider-default system prompt: when no caller supplied one we use
+# the *shared* ``app.core.agent_system_prompt.DEFAULT_AGENT_SYSTEM_PROMPT``
+# so the agent's identity doesn't silently change based on which
+# model the user picked.  The real prompt for chat traffic is
+# assembled from SOUL.md + AGENTS.md by the chat router (PR #113);
+# this constant only fires for unit tests and script-mode callers.
 
 
 # ---------------------------------------------------------------------------
@@ -170,8 +168,7 @@ class ClaudeLLMConfig:
     extra_env: dict[str, str] = field(default_factory=dict)
     """Additional environment variables forwarded to the CLI subprocess."""
 
-    enable_exa_search: bool = False
-    """When ``True``, mount the in-process Exa MCP server and whitelist the ``exa_search`` tool. Toggled by the factory based on whether ``EXA_API_KEY`` is configured."""
+
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +195,7 @@ class ClaudeLLM:
         user_id: uuid.UUID,
         history: list[dict[str, str]]
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
-        tools: object | None = None,  # ignored for now: see note in stream() body
+        tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
@@ -223,7 +220,13 @@ class ClaudeLLM:
             agent_tools=tools,
         )
         try:
-            async for message in query(prompt=question, options=options):
+            # The SDK requires streaming-mode input (an AsyncIterable
+            # of message dicts) whenever ``can_use_tool`` is set on the
+            # options.  We always emit a single user-message envelope
+            # so the path is uniform regardless of whether bridged
+            # tools are mounted; uniform path means one shape to test
+            # and reason about.
+            async for message in query(prompt=_aiter_user_prompt(question), options=options):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -274,7 +277,7 @@ class ClaudeLLM:
         conversation_id: uuid.UUID,
         *,
         system_prompt: str | None = None,
-        agent_tools: object | None = None,
+        agent_tools: list[AgentTool] | None = None,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -285,26 +288,30 @@ class ClaudeLLM:
                 takes precedence over ``self._config.system_prompt`` so
                 the chat router can inject app-assembled context (e.g.
                 workspace AGENTS.md per PR #113).
-            agent_tools: AgentTool list from the cross-provider agent loop
-                signature.  Currently unused — the Claude SDK runs its
-                own tool surface and AgentTool wiring requires an MCP
-                bridge that's tracked separately.  Accepted here so the
-                provider protocol signature stays consistent.
+            agent_tools: Cross-provider :class:`AgentTool` list assembled
+                by the chat router.  Translated into a single in-process
+                MCP server via
+                :mod:`app.core.providers._claude_tool_bridge` and mounted
+                under ``ClaudeAgentOptions.mcp_servers``; the matching
+                ``mcp__ai_nexus__<name>`` IDs are appended to the
+                allowed-tools whitelist so the SDK actually permits
+                execution.
         """
-        _ = agent_tools  # see docstring
         session_id = str(conversation_id)
 
-        # Local tool whitelist for the Claude SDK (built-in CLI tools).
-        # Renamed off the bare ``tools`` name so the parameter shadowing is
-        # explicit — see comment below about the AgentTool ``tools`` arg.
+        # Local tool whitelist for the Claude SDK's built-in CLI tools
+        # (read/write filesystem, etc.).  Distinct from ``agent_tools``
+        # — those are app-defined tools we bridge into an MCP server.
         local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
-        if self._config.enable_exa_search:
-            if local_tools is None:
-                local_tools = [EXA_CLAUDE_TOOL_ID]
-            elif EXA_CLAUDE_TOOL_ID not in local_tools:
-                local_tools.append(EXA_CLAUDE_TOOL_ID)
-            mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
+
+        # Bridge the cross-provider AgentTool list into a single MCP
+        # server.  All app-defined tools (workspace files, web search,
+        # …) flow through here — the provider doesn't know which ones
+        # are in the list and shouldn't.
+        local_tools = _merge_agent_tools_into_whitelist(
+            local_tools, list(agent_tools or []), mcp_servers
+        )
 
         # If tool use is enabled but the caller didn't override
         # ``max_turns``, automatically widen the turn budget so the agent
@@ -332,6 +339,15 @@ class ClaudeLLM:
         }
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
+            # Auto-approve every tool we bridged in.  The whitelist on
+            # ``tools=`` tells the SDK the IDs are *known*; this hook
+            # tells it they're *pre-approved*.  Without it, the SDK
+            # blocks each tool call with "Claude requested permissions
+            # … but you haven't granted it yet" — caught by the new
+            # bridge integration test on PR #131.  The hook denies
+            # anything outside our namespace so a future misconfigured
+            # MCP server can't silently piggy-back on this approval.
+            kwargs["can_use_tool"] = auto_approve_bridge_tools
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 
@@ -360,6 +376,49 @@ class ClaudeLLM:
 # ---------------------------------------------------------------------------
 # Module-level helpers (also unit-tested directly).
 # ---------------------------------------------------------------------------
+
+
+def _merge_agent_tools_into_whitelist(
+    local_tools: list[str] | None,
+    agent_tool_list: list[AgentTool],
+    mcp_servers: dict[str, Any],
+) -> list[str] | None:
+    """Mount *agent_tool_list* as an MCP server and append its IDs to *local_tools*.
+
+    Mutates *mcp_servers* in place (adding the bridge server when there
+    is at least one tool) and returns the updated *local_tools* whitelist.
+    Extracted from :meth:`ClaudeLLM._build_options` so the body stays under
+    the project nesting budget.
+    """
+    if not agent_tool_list:
+        return local_tools
+    server = build_mcp_server(agent_tool_list)
+    if server is not None:
+        mcp_servers[AGENT_TOOL_MCP_SERVER_NAME] = server
+    allowed = allowed_tool_ids(agent_tool_list)
+    if local_tools is None:
+        return list(allowed)
+    deduped = list(local_tools)
+    for tid in allowed:
+        if tid not in deduped:
+            deduped.append(tid)
+    return deduped
+
+
+async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
+    """Wrap a single user message as the streaming-mode input the SDK expects.
+
+    The Claude SDK accepts either a plain string *or* an
+    ``AsyncIterable[dict]`` for the ``prompt`` arg, but enforces the
+    streaming-mode shape whenever a permission hook (``can_use_tool``)
+    is registered — which we now always do via the bridge.  Yielding
+    one envelope keeps every call site uniform regardless of whether
+    tools were mounted on this turn.
+    """
+    yield {
+        "type": "user",
+        "message": {"role": "user", "content": question},
+    }
 
 
 def _resolve_sdk_model(model_id: str) -> str:

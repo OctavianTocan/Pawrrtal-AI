@@ -15,10 +15,10 @@ from pathlib import Path
 
 from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.agent_tools import build_agent_tools
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.tools.workspace_files import make_workspace_tools
 from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
@@ -176,7 +176,13 @@ def get_chat_router() -> APIRouter:
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",
             )
-        workspace_tools = make_workspace_tools(root)
+        # Per-turn tool composition lives in `app.core.agent_tools` —
+        # the chat router only decides *that* the agent gets tools,
+        # not *which* (that's the builder's job, and where future
+        # per-agent / per-user permission gating will land).  Provider
+        # files stay tool-agnostic; see
+        # `.claude/rules/architecture/no-tools-in-providers.md`.
+        agent_tools = build_agent_tools(workspace_root=root)
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate
@@ -215,7 +221,7 @@ def get_chat_router() -> APIRouter:
                         request.conversation_id,
                         user.id,
                         history=history,
-                        tools=workspace_tools or None,
+                        tools=agent_tools or None,
                         system_prompt=workspace_system_prompt,
                     ):
                         event_count += 1

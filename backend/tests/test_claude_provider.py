@@ -394,7 +394,13 @@ class TestProviderOptions:
         assert options.setting_sources == []
         assert options.permission_mode == "default"
         assert options.max_turns == 1
-        assert options.system_prompt is not None and "AI Nexus" in options.system_prompt
+        # Default falls back to the shared `DEFAULT_AGENT_SYSTEM_PROMPT`
+        # (provider-agnostic since PR #131 review).  Real chat traffic
+        # gets the workspace's SOUL.md + AGENTS.md instead.
+        assert (
+            options.system_prompt is not None
+            and "chat application" in options.system_prompt
+        )
 
     @pytest.mark.anyio
     async def test_first_turn_uses_session_id_not_resume(

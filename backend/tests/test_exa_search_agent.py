@@ -147,14 +147,21 @@ class TestExaSearchToolExecute:
 
 
 @pytest.mark.anyio
-class TestGeminiExaToolWiring:
-    async def test_tool_included_when_api_key_set(self) -> None:
-        """When EXA_API_KEY is non-empty the tool must appear in AgentContext.tools."""
+class TestGeminiToolPassthrough:
+    """Gemini provider must pass caller-supplied tools through verbatim.
+
+    Tool composition (which tools the agent gets) is the chat router's
+    job — the provider is just a translator.  See
+    `.claude/rules/architecture/no-tools-in-providers.md`.
+    """
+
+    async def test_provider_passes_tools_through_unchanged(self) -> None:
         import uuid
 
         from app.core.providers.gemini_provider import GeminiLLM
 
         provider = GeminiLLM("gemini-2.5-flash-preview-05-20")
+        in_tools = [make_exa_search_tool()]
 
         captured_tools: list | None = None
 
@@ -162,26 +169,25 @@ class TestGeminiExaToolWiring:
             nonlocal captured_tools
             captured_tools = list(ctx.tools)
             return
-            yield  # make this an async generator
+            yield
 
-        with (
-            patch("app.core.config.settings.exa_api_key", "test-key"),
-            patch(
-                "app.core.providers.gemini_provider.agent_loop",
-                side_effect=_fake_loop,
-            ),
+        with patch(
+            "app.core.providers.gemini_provider.agent_loop",
+            side_effect=_fake_loop,
         ):
             async for _ in provider.stream(
-                "hello", uuid.uuid4(), uuid.uuid4(), history=[]
+                "hello",
+                uuid.uuid4(),
+                uuid.uuid4(),
+                history=[],
+                tools=in_tools,
             ):
                 pass
 
         assert captured_tools is not None
-        names = [t.name for t in captured_tools]
-        assert "exa_search" in names
+        assert [t.name for t in captured_tools] == ["exa_search"]
 
-    async def test_tool_excluded_when_api_key_absent(self) -> None:
-        """When EXA_API_KEY is empty/absent the tool must NOT appear."""
+    async def test_provider_does_not_inject_tools_when_caller_passes_none(self) -> None:
         import uuid
 
         from app.core.providers.gemini_provider import GeminiLLM
@@ -197,7 +203,7 @@ class TestGeminiExaToolWiring:
             yield
 
         with (
-            patch("app.core.config.settings.exa_api_key", ""),
+            patch("app.core.config.settings.exa_api_key", "test-key"),
             patch(
                 "app.core.providers.gemini_provider.agent_loop",
                 side_effect=_fake_loop,
@@ -208,6 +214,6 @@ class TestGeminiExaToolWiring:
             ):
                 pass
 
-        assert captured_tools is not None
-        names = [t.name for t in captured_tools]
-        assert "exa_search" not in names
+        # Even with EXA_API_KEY set, the provider must NOT inject Exa
+        # — that's the chat router's job.
+        assert captured_tools == []
