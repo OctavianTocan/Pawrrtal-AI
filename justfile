@@ -179,3 +179,30 @@ tasks:
 clean:
     rm -rf frontend/.next
     find . -type d -name __pycache__ -exec rm -rf {} +
+
+# --- Frontend stack spikes (spike/frontend-alternatives branch) -------------
+
+# Each `spike-NN` recipe boots the FastAPI backend on :8000 AND the
+# matching spike's Vite/SvelteKit dev server in parallel via a single
+# orchestrator (`spikes/dev.ts`).  First run does `pnpm install` for the
+# spike automatically.  Ctrl-C tears the whole stack down cleanly.
+#
+# CORS is widened on the fly so the spike's localhost port is allowed
+# without editing `backend/.env`.  Backend URL is passed to the spike
+# via VITE_BACKEND_URL so no hardcoded URLs leak into the spike source.
+
+# Spike 01 — React 19 + Vite (no router baseline). FE on :5173.
+spike-01:
+    bun run spikes/dev.ts 01-react-vite 5173
+
+# Spike 02 — React 19 + Vite + TanStack Router. FE on :5174.
+spike-02:
+    bun run spikes/dev.ts 02-react-vite-tanstack 5174
+
+# Spike 03 — SvelteKit + Svelte 5 runes. FE on :5175.
+spike-03:
+    bun run spikes/dev.ts 03-sveltekit 5175
+
+# Spike 04 — Solid.js + Vite. FE on :5176.
+spike-04:
+    bun run spikes/dev.ts 04-solid 5176

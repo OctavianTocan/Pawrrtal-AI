@@ -41,9 +41,31 @@ Each spike has its own `README.md` capturing:
 - Subjective notes on the dev experience: TS DX, error messages,
   how loud the build is, how many config files we needed.
 
-Run all four against a backend at `http://localhost:8000`.  Each
-spike reads `VITE_BACKEND_URL` (or framework equivalent) so you can
-point them at a deployed backend if you'd rather.
+## How to run a spike
+
+From the repo root, one command per spike — boots the FastAPI backend
+on :8000 AND the spike's frontend dev server in parallel:
+
+```bash
+just spike-01    # React + Vite              → http://localhost:5173
+just spike-02    # React + Vite + TanStack    → http://localhost:5174
+just spike-03    # SvelteKit                  → http://localhost:5175
+just spike-04    # Solid.js                   → http://localhost:5176
+```
+
+First run does `pnpm install` for that spike automatically.  Ctrl-C
+tears down both processes cleanly.  CORS is widened on the fly to
+allow the spike's port without editing `backend/.env`.
+
+If you'd rather override the backend (e.g. point at a deployed
+staging), invoke the orchestrator directly:
+
+```bash
+VITE_BACKEND_URL=https://api.pawrrtal.app bun run spikes/dev.ts 01-react-vite 5173
+```
+
+You can also run any spike standalone (without the backend booting)
+with `cd spikes/0N-* && pnpm install && pnpm dev`.
 
 ## What we're explicitly *not* trying to do
 
