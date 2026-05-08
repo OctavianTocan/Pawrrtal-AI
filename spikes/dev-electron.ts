@@ -24,9 +24,44 @@
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import net from 'node:net';
 import { join } from 'node:path';
 import { $ } from 'bun';
-import waitOn from 'wait-on';
+
+/**
+ * Poll a TCP port until it accepts connections or the deadline passes.
+ * Inlined rather than depending on `wait-on`, which only lives in
+ * electron/node_modules — we don't want to drag a dep into the spike
+ * orchestrator just for a 20-line poll.
+ */
+async function waitForPort(
+	port: number,
+	host = '127.0.0.1',
+	timeoutMs = 120_000,
+): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		const reachable = await new Promise<boolean>((resolve) => {
+			const socket = new net.Socket();
+			socket.setTimeout(1_000);
+			socket.once('error', () => {
+				socket.destroy();
+				resolve(false);
+			});
+			socket.once('timeout', () => {
+				socket.destroy();
+				resolve(false);
+			});
+			socket.connect(port, host, () => {
+				socket.destroy();
+				resolve(true);
+			});
+		});
+		if (reachable) return;
+		await new Promise((r) => setTimeout(r, 250));
+	}
+	throw new Error(`Timed out waiting for ${host}:${port}`);
+}
 
 const [spikeArg, portArg] = process.argv.slice(2);
 if (!spikeArg || !portArg) {
@@ -145,11 +180,7 @@ const frontend = spawn('pnpm', viteArgs, {
 // proper timeout + actionable error is more honest.
 console.log(`⏳ Waiting for frontend on :${frontendPort}…`);
 try {
-	await waitOn({
-		resources: [`tcp:127.0.0.1:${frontendPort}`],
-		timeout: 120_000,
-		interval: 250,
-	});
+	await waitForPort(frontendPort);
 } catch (err) {
 	console.error(
 		`\n❌ Frontend on :${frontendPort} did not come up within 120s.\n` +
