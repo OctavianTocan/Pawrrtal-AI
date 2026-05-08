@@ -60,7 +60,7 @@ def evaluate(category: ToolCategory, mode: PermissionMode) -> PermissionDecision
             "Plan mode is read-only by design — switch to Full Access "
             "in the model selector when you're ready to execute the plan."
         )
-    elif mode == PermissionMode.DEFAULT_PERMISSIONS:
+    elif mode == PermissionMode.ASK_TO_EDIT:
         reason = (
             f"This is a {category.value} tool, blocked under "
             "Ask-to-Edit. Switch to Full Access in the model selector "

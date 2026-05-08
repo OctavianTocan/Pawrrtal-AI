@@ -65,7 +65,7 @@ export const DEFAULT_PLAN_MODE_VISIBLE = false;
  */
 export const PERMISSION_MODES = [
 	'plan',
-	'default-permissions',
+	'ask-to-edit',
 	'auto-review',
 	'full-access',
 	'custom',
@@ -79,7 +79,7 @@ export type PermissionMode = (typeof PERMISSION_MODES)[number];
  * `DEFAULT_PERMISSION_MODE`.  Picked so the agent never silently
  * mutates a workspace before the user opts in.
  */
-export const DEFAULT_PERMISSION_MODE: PermissionMode = 'default-permissions';
+export const DEFAULT_PERMISSION_MODE: PermissionMode = 'ask-to-edit';
 
 /**
  * Order the modes appear in the dropdown.  Kept separate from the
@@ -88,7 +88,7 @@ export const DEFAULT_PERMISSION_MODE: PermissionMode = 'default-permissions';
  */
 export const PERMISSION_MODE_ORDER: ReadonlyArray<PermissionMode> = [
 	'plan',
-	'default-permissions',
+	'ask-to-edit',
 	'auto-review',
 	'full-access',
 	'custom',

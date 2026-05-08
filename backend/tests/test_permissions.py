@@ -23,14 +23,14 @@ from app.core.permissions import (
 
 def test_default_mode_is_ask_to_edit() -> None:
     """New users land on Ask-to-Edit, not Full Access."""
-    assert DEFAULT_PERMISSION_MODE == PermissionMode.DEFAULT_PERMISSIONS
+    assert DEFAULT_PERMISSION_MODE == PermissionMode.ASK_TO_EDIT
 
 
 @pytest.mark.parametrize(
     ("mode", "expected"),
     [
         (PermissionMode.PLAN, frozenset({ToolCategory.READ})),
-        (PermissionMode.DEFAULT_PERMISSIONS, frozenset({ToolCategory.READ})),
+        (PermissionMode.ASK_TO_EDIT, frozenset({ToolCategory.READ})),
         (
             PermissionMode.AUTO_REVIEW,
             frozenset({ToolCategory.READ, ToolCategory.WRITE, ToolCategory.EXEC}),
@@ -68,7 +68,7 @@ def test_evaluate_denies_write_under_plan_with_recovery_hint() -> None:
 
 
 def test_evaluate_denies_write_under_default_with_recovery_hint() -> None:
-    decision = evaluate(ToolCategory.WRITE, PermissionMode.DEFAULT_PERMISSIONS)
+    decision = evaluate(ToolCategory.WRITE, PermissionMode.ASK_TO_EDIT)
     assert decision.allow is False
     assert "Ask-to-Edit" in decision.reason
     assert "Full Access" in decision.reason
@@ -154,7 +154,7 @@ def test_plan_mode_emits_planning_addendum() -> None:
 
 
 def test_default_mode_emits_ask_to_edit_addendum() -> None:
-    text = system_prompt_addendum(PermissionMode.DEFAULT_PERMISSIONS)
+    text = system_prompt_addendum(PermissionMode.ASK_TO_EDIT)
     assert "ASK-TO-EDIT" in text
 
 

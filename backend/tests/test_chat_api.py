@@ -164,7 +164,7 @@ async def test_chat_filters_write_tools_under_default_permission_mode(
             "question": "hi",
             "conversation_id": str(conversation_id),
             # Explicit default; would also be the fallback when omitted.
-            "permission_mode": "default-permissions",
+            "permission_mode": "ask-to-edit",
         },
     )
 

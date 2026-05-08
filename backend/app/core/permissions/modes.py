@@ -32,15 +32,21 @@ class PermissionMode(StrEnum):
     PLAN = "plan"
     """Read-only + a planning system-prompt addendum.  The agent
     surveys the workspace, drafts a plan, and stops short of any change.
-    Same tool surface as ``DEFAULT_PERMISSIONS`` plus a planning prompt.
+    Same tool surface as ``ASK_TO_EDIT`` plus a planning prompt.
     """
 
-    DEFAULT_PERMISSIONS = "default-permissions"
+    ASK_TO_EDIT = "ask-to-edit"
     """Default for new users.  Read-only tools auto-allow; write/exec
-    tools are blocked.  The user-facing label is *"Ask to Edit"* — the
-    long-term intent is an interactive approval round-trip, but until
-    that UI exists this mode behaves as deny-write so we never silently
-    mutate a user's workspace.
+    tools are blocked with a hint that asks the user to switch modes.
+
+    The long-term intent is an interactive approval round-trip — the
+    agent attempts a write, the UI surfaces an inline approval card,
+    the user clicks Approve or Deny, and the agent loop resumes.  That
+    streaming/suspend-resume protocol is non-trivial and tracked in
+    `.beans/ai-nexus-perm--ask-to-edit-interactive-approval-round-trip.md`.
+
+    Until the round-trip ships, this mode is functionally deny-write so
+    we never silently mutate a user's workspace.
     """
 
     AUTO_REVIEW = "auto-review"
@@ -57,13 +63,13 @@ class PermissionMode(StrEnum):
     CUSTOM = "custom"
     """Reserved for a future ``permissions.json``-driven mode \xe0 la Craft
     Agents.  Disabled in the UI for now — selection falls back to
-    ``DEFAULT_PERMISSIONS`` semantics."""
+    ``ASK_TO_EDIT`` semantics."""
 
 
 # Default mode for users who haven't expressed a preference yet.  Matches
 # the frontend's localStorage default; centralising it here lets the
 # backend reject missing values explicitly without guessing.
-DEFAULT_PERMISSION_MODE: PermissionMode = PermissionMode.DEFAULT_PERMISSIONS
+DEFAULT_PERMISSION_MODE: PermissionMode = PermissionMode.ASK_TO_EDIT
 
 
 class ToolCategory(StrEnum):
@@ -100,7 +106,7 @@ class ToolCategory(StrEnum):
 # auditable.
 _MODE_ALLOWS: dict[PermissionMode, frozenset[ToolCategory]] = {
     PermissionMode.PLAN: frozenset({ToolCategory.READ}),
-    PermissionMode.DEFAULT_PERMISSIONS: frozenset({ToolCategory.READ}),
+    PermissionMode.ASK_TO_EDIT: frozenset({ToolCategory.READ}),
     PermissionMode.AUTO_REVIEW: frozenset(
         {ToolCategory.READ, ToolCategory.WRITE, ToolCategory.EXEC}
     ),

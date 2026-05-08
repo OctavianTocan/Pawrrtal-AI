@@ -242,7 +242,7 @@ const PERMISSION_MODE_META: Record<PermissionMode, PermissionModeMeta> = {
 		bgClass: 'bg-info/15',
 		hint: 'Read-only — survey and draft a plan, no changes.',
 	},
-	'default-permissions': {
+	'ask-to-edit': {
 		label: 'Ask to Edit',
 		Icon: HandIcon,
 		colorClass: 'text-info',

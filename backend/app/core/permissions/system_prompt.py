@@ -51,7 +51,7 @@ def system_prompt_addendum(mode: PermissionMode) -> str:
     """
     if mode == PermissionMode.PLAN:
         return _PLAN_ADDENDUM
-    if mode == PermissionMode.DEFAULT_PERMISSIONS:
+    if mode == PermissionMode.ASK_TO_EDIT:
         return _DEFAULT_ADDENDUM
     # FULL_ACCESS, AUTO_REVIEW (treated as full for now), CUSTOM all
     # need no extra system-prompt instruction.
