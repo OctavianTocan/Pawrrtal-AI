@@ -105,19 +105,29 @@ function parseWebSearch(value: unknown): WebSourceInfo[] {
 	};
 
 	for (const entry of value) {
-		if (typeof entry === 'string') {
-			pushUrl(entry);
-			continue;
-		}
-		if (entry && typeof entry === 'object' && 'citations' in entry) {
-			const citations = (entry as { citations?: unknown }).citations;
-			if (Array.isArray(citations)) {
-				for (const url of citations) pushUrl(url);
-			}
-		}
+		ingestWebSearchEntry(entry, pushUrl);
 	}
 
 	return chips;
+}
+
+/**
+ * Push every URL inside a single `web_search` entry through `pushUrl`.
+ *
+ * Extracted from `parseWebSearch` to keep its nesting depth within the
+ * project budget (see `scripts/check-nesting.mjs`). An entry is either
+ * a bare URL string or an object with a `citations` array; anything
+ * else is ignored.
+ */
+function ingestWebSearchEntry(entry: unknown, pushUrl: (url: unknown) => void): void {
+	if (typeof entry === 'string') {
+		pushUrl(entry);
+		return;
+	}
+	if (!entry || typeof entry !== 'object' || !('citations' in entry)) return;
+	const citations = (entry as { citations?: unknown }).citations;
+	if (!Array.isArray(citations)) return;
+	for (const url of citations) pushUrl(url);
 }
 
 /**

@@ -11,6 +11,7 @@ on:
     paths:
       - 'frontend/**'
       - 'scripts/check-file-lines.mjs'
+      - 'scripts/check-nesting.mjs'
       - 'biome.jsonc'
       - 'package.json'
       - 'bun.lock'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'frontend/**'
       - 'scripts/check-file-lines.mjs'
+      - 'scripts/check-nesting.mjs'
       - 'biome.jsonc'
       - 'package.json'
       - 'bun.lock'
@@ -85,6 +87,7 @@ jobs:
               '- **Biome** — lint or format violations',
               '- **TypeScript** — `tsc --noEmit` type errors',
               '- **File-lines** — `node scripts/check-file-lines.mjs` 500-line budget overflow',
+              '- **Nesting** — `node scripts/check-nesting.mjs` depth-3 budget overflow',
               '',
               'Reproduce locally with `cd frontend && bun run check` (or `just check`).',
               '',
