@@ -101,12 +101,12 @@ jobs:
           FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
           CORS_ORIGINS: '["http://localhost:3001"]'
           DATABASE_URL: 'sqlite+aiosqlite:///./e2e.db'
-          ADMIN_EMAIL: e2e-admin@local.test
+          ADMIN_EMAIL: e2e-admin@example.com
           ADMIN_PASSWORD: e2e-admin-password
           COOKIE_SAMESITE: lax
           COOKIE_SECURE: 'false'
         run: |
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          uv run uvicorn main:app --host 127.0.0.1 --port 8000 &
           echo $! > /tmp/backend.pid
           # Fail fast if backend doesn't come up within 30s — saves us
           # from spending LLM tokens against a broken stack.
