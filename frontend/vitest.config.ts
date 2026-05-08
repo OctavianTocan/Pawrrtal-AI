@@ -24,7 +24,11 @@ export default defineConfig({
 			// the lib/react-dropdown subpackage hasn't been set up.
 			'@octavian-tocan/react-dropdown': (() => {
 				const vendored = path.resolve(__dirname, 'lib/react-dropdown/src/index.ts');
-				const stub = path.resolve(__dirname, '__mocks__/@octavian-tocan/react-dropdown.tsx');
+				const stub = path.resolve(
+					__dirname,
+					'__mocks__/@octavian-tocan/react-dropdown.tsx'
+				);
+				// biome-ignore lint/style/useNodejsImportProtocol: CJS require in IIFE
 				return require('fs').existsSync(vendored) ? vendored : stub;
 			})(),
 			// streamdown is ESM-only; inline it so vite can transform it, or
