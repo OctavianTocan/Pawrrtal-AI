@@ -75,6 +75,7 @@ from ._claude_tool_bridge import (
 )
 from ._claude_tool_bridge import (
     allowed_tool_ids,
+    auto_approve_bridge_tools,
     build_mcp_server,
 )
 from .base import StreamEvent
@@ -332,6 +333,15 @@ class ClaudeLLM:
         }
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
+            # Auto-approve every tool we bridged in.  The whitelist on
+            # ``tools=`` tells the SDK the IDs are *known*; this hook
+            # tells it they're *pre-approved*.  Without it, the SDK
+            # blocks each tool call with "Claude requested permissions
+            # … but you haven't granted it yet" — caught by the new
+            # bridge integration test on PR #131.  The hook denies
+            # anything outside our namespace so a future misconfigured
+            # MCP server can't silently piggy-back on this approval.
+            kwargs["can_use_tool"] = auto_approve_bridge_tools
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 

@@ -27,7 +27,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from claude_agent_sdk import create_sdk_mcp_server, tool
+from claude_agent_sdk import (
+    PermissionResultAllow,
+    PermissionResultDeny,
+    create_sdk_mcp_server,
+    tool,
+)
+from claude_agent_sdk.types import ToolPermissionContext
 
 from app.core.agent_loop.types import AgentTool
 
@@ -108,3 +114,45 @@ def allowed_tool_ids(agent_tools: list[AgentTool]) -> list[str]:
     server is mounted.
     """
     return [claude_tool_id(t.name) for t in agent_tools]
+
+
+async def auto_approve_bridge_tools(
+    tool_name: str,
+    _input: dict[str, Any],
+    _ctx: ToolPermissionContext,
+) -> PermissionResultAllow | PermissionResultDeny:
+    """``can_use_tool`` callback: auto-approve our bridged AgentTools.
+
+    Without this callback the SDK enforces interactive permission
+    grants on every custom MCP tool call — the integration test on
+    PR #131 surfaced this with::
+
+        Claude requested permissions to use mcp__ai_nexus__echo_back,
+        but you haven't granted it yet.
+
+    The ``allowed_tools`` whitelist is necessary but not sufficient:
+    it tells the SDK these tools are *known*, not that they're
+    *pre-approved*.  Adding a ``can_use_tool`` hook that returns
+    ``PermissionResultAllow`` for our ``mcp__<MCP_SERVER_NAME>__*``
+    namespace closes the gap without resorting to
+    ``permission_mode='bypassPermissions'`` (which would silently
+    auto-approve every tool the SDK exposes, not just ours).
+
+    Tools outside our namespace get an explicit ``deny`` so a future
+    misconfiguration that mounts an unexpected MCP server can't
+    silently piggy-back on this approval.
+    """
+    if tool_name.startswith(f"mcp__{MCP_SERVER_NAME}__"):
+        return PermissionResultAllow(
+            behavior="allow",
+            updated_input=_input,
+            updated_permissions=None,
+        )
+    return PermissionResultDeny(
+        behavior="deny",
+        message=(
+            f"Tool {tool_name!r} is outside the bridge's namespace "
+            f"({MCP_SERVER_NAME!r}); deny."
+        ),
+        interrupt=False,
+    )
