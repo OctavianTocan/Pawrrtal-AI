@@ -10,8 +10,15 @@ export function App(): React.JSX.Element {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [streaming, setStreaming] = useState(false);
 	const conversationIdRef = useRef<string>(uuidv4());
+	// React StrictMode mounts the component twice in dev, so this effect
+	// would otherwise fire `createConversation` twice with the same UUID
+	// and trip a duplicate-PK error on the second insert.  Gate via a ref
+	// flag instead of an empty dep array.
+	const initRef = useRef(false);
 
 	useEffect(() => {
+		if (initRef.current) return;
+		initRef.current = true;
 		(async () => {
 			try {
 				await devLogin();

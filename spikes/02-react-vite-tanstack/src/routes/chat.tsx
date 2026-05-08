@@ -18,8 +18,12 @@ function ChatPage(): React.JSX.Element {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [streaming, setStreaming] = useState(false);
 	const conversationIdRef = useRef<string>(uuidv4());
+	// StrictMode-safe init guard — see spikes/01-react-vite/src/App.tsx.
+	const initRef = useRef(false);
 
 	useEffect(() => {
+		if (initRef.current) return;
+		initRef.current = true;
 		(async () => {
 			try {
 				await devLogin();
