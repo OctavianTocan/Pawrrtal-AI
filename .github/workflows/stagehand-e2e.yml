@@ -106,7 +106,7 @@ jobs:
           COOKIE_SAMESITE: lax
           COOKIE_SECURE: 'false'
         run: |
-          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          uv run uvicorn main:app --host 127.0.0.1 --port 8000 &
           echo $! > /tmp/backend.pid
           # Fail fast if backend doesn't come up within 30s — saves us
           # from spending LLM tokens against a broken stack.
