@@ -55,37 +55,70 @@ export const DEFAULT_PLAN_MODE_VISIBLE = false;
 // ─── safety-mode enum ──────────────────────────────────────────────────────
 
 /**
- * Identifiers for the safety / auto-review permissions exposed in the
- * composer toolbar. `as const` so the {@link SafetyMode} union and the
- * runtime guard are derived from one source of truth.
+ * Identifiers for the tool permission modes exposed in the composer
+ * toolbar.  Sent verbatim to the backend in the chat request body —
+ * renaming a member is a wire-protocol break.  See
+ * `backend/app/core/permissions/modes.py` for the matching enum.
+ *
+ * `as const` so the {@link PermissionMode} union and the runtime guard
+ * derive from one source of truth.
  */
-export const SAFETY_MODES = [
+export const PERMISSION_MODES = [
+	'plan',
 	'default-permissions',
 	'auto-review',
 	'full-access',
 	'custom',
 ] as const;
 
-/** Available safety / auto-review permission modes. */
-export type SafetyMode = (typeof SAFETY_MODES)[number];
-
-/** Default selection — matches the previously hardcoded "Auto-review" entry. */
-export const DEFAULT_SAFETY_MODE: SafetyMode = 'auto-review';
+/** Available tool permission modes. */
+export type PermissionMode = (typeof PERMISSION_MODES)[number];
 
 /**
- * Order in which the modes are listed in the dropdown. Kept separate from
- * the metadata map so the visual order can change without altering the
+ * Default selection for new users — matches the backend's
+ * `DEFAULT_PERMISSION_MODE`.  Picked so the agent never silently
+ * mutates a workspace before the user opts in.
+ */
+export const DEFAULT_PERMISSION_MODE: PermissionMode = 'default-permissions';
+
+/**
+ * Order the modes appear in the dropdown.  Kept separate from the
+ * metadata map so the visual order can change without altering the
  * declaration order of the union (which matters for type narrowing).
  */
-export const SAFETY_MODE_ORDER: ReadonlyArray<SafetyMode> = [
+export const PERMISSION_MODE_ORDER: ReadonlyArray<PermissionMode> = [
+	'plan',
 	'default-permissions',
 	'auto-review',
 	'full-access',
 	'custom',
 ];
 
-/** Modes that render below the in-menu separator (advanced options). */
-export const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set(['custom']);
+/** Modes that render below the in-menu separator (advanced / WIP). */
+export const PERMISSION_MODE_ADVANCED: ReadonlySet<PermissionMode> = new Set(['custom']);
+
+/**
+ * Modes present in the type union but currently disabled in the UI —
+ * the user can see them (greyed-out, with an explanation) but can't
+ * select them.  When the underlying feature ships, remove the entry.
+ *
+ * `auto-review` — the LLM-judged-safety reviewer isn't built yet.
+ *   Selecting it would (per the backend) treat as Full Access, which
+ *   isn't the user's intent.  Tracked in beans.
+ * `custom`      — `permissions.json` loader isn't implemented yet.
+ */
+export const PERMISSION_MODE_DISABLED: ReadonlySet<PermissionMode> = new Set([
+	'auto-review',
+	'custom',
+]);
+
+/**
+ * Modes the Shift+Tab cycle visits.  Disabled modes are skipped so the
+ * keyboard shortcut never lands on a non-functional mode.
+ */
+export const PERMISSION_MODE_CYCLE: ReadonlyArray<PermissionMode> = PERMISSION_MODE_ORDER.filter(
+	(mode) => !PERMISSION_MODE_DISABLED.has(mode)
+);
 
 // ─── miscellaneous chat-container constants ────────────────────────────────
 

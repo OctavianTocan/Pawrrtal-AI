@@ -175,12 +175,20 @@ class AgentTool:
 
     ``execute`` receives the tool_call_id and keyword arguments matching
     the JSON schema parameters.  It must return a string result.
+
+    ``category`` is a coarse risk class consumed by the permission gate
+    in :mod:`app.core.permissions`.  Defaults to ``"write"`` so that a
+    tool author who forgets to set it is treated as the most restrictive
+    case in low-permission modes (fail closed).  String type, not the
+    ``ToolCategory`` enum, to keep this module dependency-free for the
+    Pi-style agent loop.
     """
 
     name: str
     description: str
     parameters: dict[str, Any]  # JSON schema object
     execute: Callable[..., Coroutine[Any, Any, str]]
+    category: str = "write"
 
 
 # ---------------------------------------------------------------------------

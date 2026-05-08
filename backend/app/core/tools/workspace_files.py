@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.agent_loop.types import AgentTool
+from app.core.permissions import ToolCategory
 from app.core.tools.errors import ToolError, ToolErrorCode
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ def _wrap_workspace_tool(
     body: WorkspaceToolBody,
     root: Path,
     path_required: bool,
+    category: ToolCategory,
 ) -> AgentTool:
     """Build an AgentTool that resolves ``path`` safely before calling *body*.
 
@@ -113,6 +115,7 @@ def _wrap_workspace_tool(
         description=description,
         parameters=parameters,
         execute=execute,
+        category=category.value,
     )
 
 
@@ -228,6 +231,7 @@ def make_workspace_tools(workspace_root: Path) -> list[AgentTool]:
             body=_read_file_body,
             root=root,
             path_required=True,
+            category=ToolCategory.READ,
         ),
         _wrap_workspace_tool(
             name="write_file",
@@ -254,6 +258,7 @@ def make_workspace_tools(workspace_root: Path) -> list[AgentTool]:
             body=_write_file_body,
             root=root,
             path_required=True,
+            category=ToolCategory.WRITE,
         ),
         _wrap_workspace_tool(
             name="list_dir",
@@ -281,5 +286,6 @@ def make_workspace_tools(workspace_root: Path) -> list[AgentTool]:
             ),
             root=root,
             path_required=False,
+            category=ToolCategory.READ,
         ),
     ]

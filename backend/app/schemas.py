@@ -245,11 +245,18 @@ class ChatRequest(BaseModel):
         question: The user's message to send to the Agno agent.
         conversation_id: UUID linking this message to a conversation.
         model_id: The ID of the model to use for the agent. (Just Gemini models right now).
+        permission_mode: Tool permission mode for this turn.  When omitted
+            the backend falls back to ``DEFAULT_PERMISSION_MODE``
+            ("Ask to Edit").  Sent verbatim as the string the frontend
+            renders — the backend validates it against the
+            ``PermissionMode`` enum and falls back to safe-default on
+            unknown values.
     """
 
     question: str
     conversation_id: uuid.UUID
     model_id: str | None = None
+    permission_mode: str | None = None
 
 
 class ChatResponse(BaseModel):

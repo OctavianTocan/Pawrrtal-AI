@@ -16,8 +16,11 @@ import {
 import {
 	CHAT_STORAGE_KEYS,
 	DEFAULT_CHAT_MODEL_ID,
+	DEFAULT_PERMISSION_MODE,
 	DEFAULT_REASONING_LEVEL,
 	FALLBACK_TITLE_MAX_LENGTH,
+	PERMISSION_MODES,
+	type PermissionMode,
 } from './constants';
 import { useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
@@ -36,6 +39,11 @@ function isChatReasoningLevel(value: unknown): value is ChatReasoningLevel {
 	return (
 		typeof value === 'string' && (CHAT_REASONING_LEVELS as readonly string[]).includes(value)
 	);
+}
+
+/** Runtime guard for persisted permission modes — same rationale as {@link isChatModelId}. */
+function isPermissionMode(value: unknown): value is PermissionMode {
+	return typeof value === 'string' && (PERMISSION_MODES as readonly string[]).includes(value);
 }
 
 /**
@@ -104,12 +112,21 @@ export default function ChatContainer({
 		defaultValue: DEFAULT_REASONING_LEVEL,
 		validate: isChatReasoningLevel,
 	});
+	// The composer's selector persists this directly; we just read it here
+	// and forward to the chat backend so the agent honours the user's
+	// most-recently chosen permission mode on every turn.
+	const [permissionMode] = usePersistedState<PermissionMode>({
+		storageKey: CHAT_STORAGE_KEYS.permissionMode,
+		defaultValue: DEFAULT_PERMISSION_MODE,
+		validate: isPermissionMode,
+	});
 
-	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
-	// so `useChatTurns` stays decoupled from routing/model concerns.
+	// Adapt the (prompt, conversation, model, perms) transport to a
+	// (prompt)-only API so `useChatTurns` stays decoupled from routing,
+	// model, and permission-mode concerns.
 	const stream = useCallback(
-		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
-		[conversationId, selectedModelId, streamMessage]
+		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId, permissionMode),
+		[conversationId, selectedModelId, permissionMode, streamMessage]
 	);
 
 	// First-send: persist the conversation, fire title gen, swap URL without

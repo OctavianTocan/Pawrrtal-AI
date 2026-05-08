@@ -18,6 +18,12 @@ from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.workspace_files import make_workspace_tools
+from app.core.permissions import (
+    DEFAULT_PERMISSION_MODE,
+    PermissionMode,
+    filter_tools_for_mode,
+    system_prompt_addendum,
+)
 from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
@@ -175,7 +181,33 @@ def get_chat_router() -> APIRouter:
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",
             )
-        workspace_tools = make_workspace_tools(root)
+        all_workspace_tools = make_workspace_tools(root)
+
+        # Resolve the requested permission mode and apply it as the
+        # primary tool gate: the model only sees tools its mode allows,
+        # so it can't even attempt a forbidden one.  Unknown / missing
+        # values fall back to the safe default (Ask-to-Edit).
+        try:
+            permission_mode = (
+                PermissionMode(request.permission_mode)
+                if request.permission_mode
+                else DEFAULT_PERMISSION_MODE
+            )
+        except ValueError:
+            logger.warning(
+                "CHAT_PERMISSION_MODE_INVALID rid=%s value=%r — falling back to %s",
+                rid,
+                request.permission_mode,
+                DEFAULT_PERMISSION_MODE.value,
+            )
+            permission_mode = DEFAULT_PERMISSION_MODE
+        workspace_tools = filter_tools_for_mode(all_workspace_tools, permission_mode)
+
+        # Per-mode system-prompt addendum (Plan mode in particular
+        # changes behaviour beyond the tool surface).  Empty string for
+        # modes that need no extra instruction — the f-string still
+        # produces a clean prompt.
+        mode_addendum = system_prompt_addendum(permission_mode)
 
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes for each LLM event, then done.
@@ -199,6 +231,7 @@ def get_chat_router() -> APIRouter:
                         user.id,
                         history=history,
                         tools=workspace_tools or None,
+                        system_prompt=mode_addendum or None,
                     ):
                         event_count += 1
                         aggregator.apply(event)
