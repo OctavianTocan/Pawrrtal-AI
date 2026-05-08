@@ -93,6 +93,14 @@ jobs:
       - name: Start backend (dev-login + chat endpoints)
         working-directory: backend
         env:
+          # Required pydantic-settings fields — dummy values are fine for E2E
+          # (no real cloud calls; AI keys come from secrets in the run step).
+          AUTH_SECRET: e2e-not-a-secret
+          GOOGLE_API_KEY: e2e-not-a-key
+          # Fernet expects a 32-byte url-safe base64 key.
+          FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          CORS_ORIGINS: '["http://localhost:3001"]'
+          DATABASE_URL: 'sqlite+aiosqlite:///./e2e.db'
           ADMIN_EMAIL: e2e-admin@local.test
           ADMIN_PASSWORD: e2e-admin-password
           COOKIE_SAMESITE: lax
