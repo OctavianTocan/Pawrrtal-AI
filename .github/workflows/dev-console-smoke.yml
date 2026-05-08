@@ -82,13 +82,19 @@ jobs:
       # `agent-browser` itself is intended to be installed once on the
       # runner, but the install command is idempotent so re-running
       # here is harmless on a warm runner and self-bootstraps a cold
-      # one.  `agent-browser install --with-deps` adds the system
-      # libs Chrome needs on a fresh Linux box.
+      # one.  Use `bun add -g` rather than `npm install -g` because the
+      # self-hosted `ainexus` runner doesn't ship npm in its PATH; bun
+      # is already available via the `setup-bun` step above.  Append
+      # bun's global bin to PATH for downstream steps so the binary is
+      # actually invokable after install.  `agent-browser install
+      # --with-deps` adds the Chrome system libs on a fresh Linux box.
       - name: Ensure agent-browser is installed
         run: |
+          export PATH="$HOME/.bun/bin:$PATH"
           if ! command -v agent-browser > /dev/null; then
-            npm install -g agent-browser
+            bun add -g agent-browser
           fi
+          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
           agent-browser install --with-deps
 
       - name: Start backend
