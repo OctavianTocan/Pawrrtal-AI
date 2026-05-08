@@ -24,6 +24,7 @@ import { registerIpcHandlers } from './ipc';
 import { createStore } from './lib/typed-store';
 import { buildApplicationMenu } from './menu';
 import { type StartedServer, startNextServer } from './server';
+import { MACOS_TITLE_BAR_STYLE } from './window-chrome';
 import { ensureDefaultWorkspaceRoot } from './workspace';
 
 /** Persisted BrowserWindow geometry saved via {@link windowStore}. */
@@ -67,9 +68,8 @@ function buildSplashDataUrl(): string {
 	// drag regions at the OS level and Chromium has a known quirk where
 	// they can persist after navigating away from the page that declared
 	// them — the next page's clicks get eaten as "drag the window" while
-	// keyboard focus still works. The window stays draggable via the
-	// reserved area around the traffic lights under `hiddenInset`, so we
-	// don't need an explicit drag region for the splash.
+	// keyboard focus still works. With `titleBarStyle: 'default'` the native
+	// title bar is draggable; we don't need `-webkit-app-region: drag` here.
 	const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
 <title>AI Nexus</title>
@@ -174,14 +174,15 @@ function createWindow(targetUrl: string): BrowserWindow {
 		minHeight: 480,
 		title: 'AI Nexus',
 		backgroundColor: '#F7F4ED',
-		titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-		// Pin the traffic-light inset so the renderer can align its
-		// header controls to a known Y. With 12px-diameter buttons and
-		// y=14 the button center sits at y=20, matching a 32px-tall row
-		// that's `items-center` inside the 40px AppHeader (h-10).
-		// Bumping the row height OR this inset MUST be done in lockstep
-		// or the controls drift out of alignment with the system buttons.
-		...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 14 } } : {}),
+		frame: true,
+		// See `window-chrome.ts`: overlay styles (`hidden` / `hiddenInset`) paint
+		// Chromium traffic lights inside the page — they look smaller than native
+		// AppKit controls; `default` keeps full-size buttons in the standard strip.
+		...(process.platform === 'darwin'
+			? {
+					titleBarStyle: MACOS_TITLE_BAR_STYLE,
+				}
+			: {}),
 		show: false,
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),

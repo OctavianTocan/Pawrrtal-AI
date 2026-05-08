@@ -35,6 +35,18 @@ The renderer is the same Next.js app you get on the web — it has
 feature it goes through `frontend/lib/desktop.ts`, which falls back to
 web equivalents (`window.open`, no-op handlers) when not in Electron.
 
+### macOS window chrome
+
+We use **`titleBarStyle: 'default'`** so close / minimize / zoom are drawn by
+the **standard AppKit title bar** at full system size. **`hidden`** and
+**`hiddenInset`** paint Chromium overlay controls in the web content region —
+they look visibly smaller than Finder / Safari (trade-off: one native title
+strip above the page instead of embedding controls in the custom header row).
+
+The value lives in **`electron/src/window-chrome.ts`** and is consumed only by
+**`main.ts`** (not preload). If you ever switch to overlay styles, pad the
+in-app header in the frontend yourself — there is no automatic inset bridge.
+
 ## Quick start
 
 ### Dev (against the running Next.js dev server)

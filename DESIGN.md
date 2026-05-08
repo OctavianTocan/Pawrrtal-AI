@@ -5,8 +5,8 @@ description: >
   Craft Agents-inspired chat interface with a flat, editorial aesthetic. Six
   semantic colors, neutral interpolation variants, and a 16px-rooted Tailwind v4
   scale. Dual-theme (light + dark, Codex/GitHub-adjacent in dark). Default UI
-  sans is Google Sans Flex, Google Sans, Helvetica Neue, sans-serif (loaded via
-  next/font in frontend/app/layout.tsx; token --font-sans-stack in
+  sans is Google Sans Flex, Google Sans, Helvetica Neue, sans-serif (loaded via a
+  Google Fonts stylesheet link in frontend/app/layout.tsx; token --font-sans-stack in
   frontend/app/globals.css).
 colors:
   primary: "#FA520F"
@@ -179,6 +179,10 @@ components:
   divider:
     backgroundColor: "{colors.border}"
     height: 1px
+  dropdown-menu-item-disabled:
+    backgroundColor: "Muted tray — Tailwind `bg-muted/50` (theme token `--muted`, see globals.css)"
+    textColor: "{colors.muted-foreground}"
+    rounded: "{rounded.sm}"
   metadata:
     textColor: "{colors.muted-foreground}"
     typography: caption
@@ -187,9 +191,10 @@ components:
 ## Overview
 
 AI Nexus is a chat-first AI workspace with a **Craft Agents-inspired** visual
-language: warm, flat, and editorial. Surfaces are matte (no gradients on UI
-chrome by default); hierarchy comes from typography, neutral interpolation,
-and a single brand accent.
+language: warm, flat, and editorial. Surfaces are matte (**no decorative gradients on
+buttons/cards**); hierarchy comes from typography, neutral interpolation, and a single
+brand accent. **Overlay / frosted stacks** (blur + tint—see **Overlay & frosted surfaces**)
+are the exception to flat matte chrome.
 
 The system is dual-theme. Light mode is a warm, low-chroma palette with a
 subdued purple accent; dark mode is **Codex/GitHub-adjacent** (`#0D1117`
@@ -232,7 +237,8 @@ popovers, the lot.
 The defaults documented in this file are the values the user gets
 when they have never customized anything (or pressed "Reset to
 defaults" in the panel). When you change a default here, change it in `frontend/app/globals.css` in the
-same commit, and keep `frontend/app/layout.tsx` (any `next/font` loaders) and
+same commit, and keep `frontend/app/layout.tsx` (Google Sans `<link>`, any
+`next/font` loaders for other families) and
 `frontend/features/settings/sections/appearance-helpers.ts` (`DEFAULT_FONTS`)
 aligned with this spec so the cascade, settings mock defaults, and this file
 all agree.
@@ -297,9 +303,11 @@ All body UI type (`--font-sans`, `--font-default`, Tailwind `font-sans`, and
 
 `Google Sans Flex, Google Sans, Helvetica Neue, sans-serif`
 
-- **Implementation:** `frontend/app/globals.css` → `--font-sans-stack` (uses
-  `var(--font-google-sans-flex-loaded, …)` and `var(--font-google-sans-loaded, …)`
-  from `next/font/google` in `frontend/app/layout.tsx`).
+- **Implementation:** `frontend/app/globals.css` builds `--font-sans-stack` from
+  `var(--font-google-sans-flex-loaded, "Google Sans Flex")` and
+  `var(--font-google-sans-loaded, "Google Sans")` (variables are optional; without
+  `next/font` they stay unset and the string fallbacks match the `@font-face`
+  family names from the Google Fonts `<link>` in `frontend/app/layout.tsx`).
 - **Front matter below:** tokens labeled `fontFamily: Google Sans Flex` mean “the
   primary face in that stack”; runtime always includes **Google Sans** and
   **Helvetica Neue** before the generic `sans-serif` fallback.
@@ -317,9 +325,10 @@ Three families anchor the system:
   before the web font arrives.
 - **Google Sans Flex / Google Sans** (`--font-sans`) — default UI sans for
   everything from `h2` down through body, captions, and sidebar rows. Loaded
-  via `next/font/google` as `Google_Sans_Flex` + `Google_Sans` in
-  `frontend/app/layout.tsx` (`--font-google-sans-flex-loaded`,
-  `--font-google-sans-loaded`), with stack fallbacks **Helvetica Neue** →
+  via a **Google Fonts** `<link rel="stylesheet">` in `frontend/app/layout.tsx`
+  (same families as the old `next/font/google` path; see `globals.css`
+  `--font-sans-stack` and optional `var(--font-google-sans-*)` fallbacks), with
+  stack fallbacks **Helvetica Neue** →
   generic `sans-serif`. **Inter** remains an opt-in upgrade via
   `<html data-font="inter">`; with Inter active, OpenType features `cv01`–`cv04`
   and `case` switch on for slightly more geometric letterforms.
@@ -522,6 +531,25 @@ visually attaches to its author edge:
 User messages tail toward the right; assistant messages tail toward the left.
 This is the only place in the system that breaks the flat default.
 
+## Overlay & frosted surfaces
+
+**Direction:** Use **background blur** (`backdrop-filter` / stack blur) **plus**
+a **subtle tint**—for example a **linear gradient** with roughly **10–15% black**
+(or theme-equivalent stops)—**instead of** a **simple flat opacity overlay** (such
+as a single dark layer at **~40% opacity** over the viewport).
+
+Blur puts the scene behind the glass; the gradient adds controlled depth without
+turning the stack into a flat muddy wash. That reads **refined and glass-like**;
+uniform opacity alone reads **flat** and dull.
+
+**In practice:** Prefer the same pattern already described for **`popover`**
+(menu panels): blur strength + percentage tint on the panel surface. Apply the
+same discipline to **modal scrims**, **sheet backdrops**, and any full-bleed
+dimming—reach for **blur + gradient tint**, not **`bg-black/40`**-style solids
+unless a deliberate exception is documented.
+
+**Implementation (this repo):** Radix **Dialog**, **Alert dialog**, and **Sheet** overlays use the `.modal-scrim` utility in `frontend/app/globals.css`: **8px** backdrop blur (aligned with `.popover-styled`) plus a **vertical gradient** from ~**10%** to ~**14%** black (`rgba(0, 0, 0, 0.1)` → `rgba(0, 0, 0, 0.14)`), replacing the prior flat **`bg-black/80`** wash.
+
 ## Motion
 
 The system prefers **transform-based animation** over property animation
@@ -620,6 +648,53 @@ Component tokens record the **typed surfaces** in the chat workspace. Use the
 front matter as the source of truth for backgrounds, text colors, and radii;
 fall back to the prose below for behavioral notes.
 
+### Menu primitives (`@octavian-tocan/react-dropdown`)
+
+Panel-style dropdowns (sidebar profile menu, composer attachment menus, etc.)
+use **`DropdownMenuItem`** from **`@octavian-tocan/react-dropdown`**. The
+implementation is vendored at **`frontend/lib/react-dropdown`** (`package.json`
+`link:` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
+
+**Tailwind v4 scanning:** Default row chrome lives in
+**`frontend/lib/react-dropdown/src/DropdownPanelItems.tsx`**
+(`DEFAULT_ITEM_CLASSNAME`). Tailwind only emits utilities for class names it
+**scans**. Those files sit outside `app/` / `features/`, so
+**`frontend/app/globals.css`** registers the package explicitly:
+
+```css
+@source "../lib/react-dropdown/src";
+```
+
+(Path is relative to `app/globals.css`.) If you add utilities only inside
+`lib/react-dropdown/` and styles “do nothing” at runtime, verify the compiled
+CSS contains those classes—missing **`@source`** is the usual cause.
+
+**Disabled rows:** Pass **`disabled`** on **`DropdownMenuItem`**. Visuals rely on
+native **`:disabled`** Tailwind variants (`disabled:*`) on the underlying
+`<button>`. Disabled rows keep a **steady `bg-muted/50` tray** (same fill on
+`:hover` / `:focus` / `:active` so they never flash the enabled
+**`hover:bg-foreground/[0.03]`** wash), **`text-muted-foreground`**, and softer
+default Lucide icons
+(`disabled:[&>svg:not([class*='text-'])]:text-muted-foreground/55`). Enabled
+rows stay flat until hover—so unavailable actions read unambiguously.
+
+**Disabled submenu triggers:** **`DropdownSubmenuTrigger`** accepts **`disabled`**.
+Implementation merges the shared **`MENU_ROW_DISABLED_VISUAL_CLASSNAME`** module
+(`frontend/lib/react-dropdown/src/menu-row-disabled-visual.ts`) with item rows,
+skips hover-scheduled open and keyboard open, and sets **`disabled`** on the
+underlying `<button>`. Sub-items inside the flyout still use **`DropdownMenuItem
+disabled`** as usual (they remain unreachable when the trigger is disabled).
+
+The write-up in **`docs/solutions/ui-bugs/dropdown-disabled-menu-items-not-visually-distinct.md`**
+captures the full diagnosis (scan gap + contrast strategy) for future debugging.
+
+- **`dropdown-menu-item-disabled`** — Unavailable **`DropdownMenuItem`** rows
+  (`disabled` prop). **Surface:** `bg-muted/50` row tray, **`text-muted-foreground`**
+  labels, **4px** row radius (`rounded.sm`) inside the panel. **Do not** recreate
+  one-off disabled styling at call sites unless the default is insufficient—fix
+  **`DEFAULT_ITEM_CLASSNAME`** instead. See **Menu primitives
+  (`@octavian-tocan/react-dropdown`)** above for **`@source`** and file paths.
+
 - **`popover`** — Used by all menu containers via the `popover-styled`
   utility class. 8px radius (`rounded.md`), `shadow-modal-small`, no border.
   Default mode: **8 px backdrop blur** and a **95% background tint** so the
@@ -627,6 +702,8 @@ fall back to the prose below for behavioral notes.
   busy sidebar / chat content to bleed through and hurt readability).
   Scenic mode keeps the more-transparent **88% tint + 24 px blur** so the
   user's chosen background image is still visible behind the menu.
+  Aligns with **Overlay & frosted surfaces**—avoid swapping this for a **flat
+  opacity-only** dim.
 - **`chat-composer`** — The message input surface. Soft (`shadow-minimal`),
   no border on focus (the shadow alone defines the edge). Dropdowns opened
   from the composer (e.g. model picker) inherit `chat-composer-dropdown-menu`
@@ -720,6 +797,15 @@ fall back to the prose below for behavioral notes.
 - **Trust the 16px root.** All Tailwind sizing utilities resolve to clean
   pixels; you should rarely need a literal `px` value outside 1px borders
   and a handful of icon-sized affordances.
+- **Prefer frosted overlays over flat opacity washes.** For scrims and stacked
+  glass surfaces, use **backdrop blur + subtle gradient tint** (~10–15% black
+  equivalent)—not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
+- **Register linked UI packages with Tailwind.** Packages resolved under
+  `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
+  `frontend/lib/react-dropdown`) often define Tailwind class strings. Add an
+  `@source` path in `frontend/app/globals.css` for each such package so those
+  utilities are emitted—see **Menu primitives (`@octavian-tocan/react-dropdown`)**
+  under **Components**.
 
 - **Bump up, never down, the sidebar text scale.** The 14px floor is
   load-bearing for the sidebar's legibility under the warm low-contrast
@@ -736,9 +822,14 @@ fall back to the prose below for behavioral notes.
 
 ### Don't
 
-- **Don't introduce gradients on UI chrome.** The matte aesthetic is
-  load-bearing. Background image gradients on the page itself are fine and
-  intentional (`--background-image`).
+- **Don't put decorative gradients on matte UI chrome** (buttons, cards, flat
+  panels). The editorial surface is load-bearing. **Exception:** **overlay /
+  scrim / frosted panels** may use a **controlled linear gradient** as part of
+  **blur + tint** (see **Overlay & frosted surfaces**)—that is not “decorative chrome,”
+  it is depth for glass stacks.
+- **Don't use flat opacity-only viewport dims** (e.g. uniform **40% black**) as the
+  default scrim pattern when blur + gradient tint can carry the effect—see **Overlay &
+  frosted surfaces**.
 - **Don't add new `--radius-*` tokens.** Use the existing scale or use 0.
 - **Don't use `text-gray-*` or any literal Tailwind color utility.** They
   bypass the theme system and won't invert in dark mode.
@@ -765,5 +856,5 @@ npx @google/design.md export --format css-tailwind DESIGN.md > theme.css
 
 The canonical token values live in `frontend/app/globals.css`. When tokens
 change there, mirror them here in the same PR. For the **UI sans stack**, also
-update `frontend/app/layout.tsx` (font loaders) and
+update `frontend/app/layout.tsx` (Google Sans stylesheet link) and
 `frontend/features/settings/sections/appearance-helpers.ts` as needed.

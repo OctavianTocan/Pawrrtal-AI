@@ -6,7 +6,7 @@
 
 import { Agentation } from 'agentation';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Google_Sans, Google_Sans_Flex, Newsreader } from 'next/font/google';
+import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
 import { THEME_DETECTION_SCRIPT } from '@/lib/theme-detection-script';
 import './globals.css';
@@ -28,41 +28,14 @@ const newsreader = Newsreader({
 });
 
 /**
- * Google Sans Flex + Google Sans — default UI sans stack (`--font-sans-stack`
- * in `globals.css`). Flex is the primary face; Google Sans covers environments
- * where Flex subsets differ. Both expose CSS variables for `var(...)` chains.
+ * Google Sans Flex + Google Sans — default UI sans stack (`--font-sans-stack` in
+ * `globals.css`). **Not** loaded with `next/font/google`: those families are
+ * missing from Next.js’s capsize fallback metrics DB, so the loader logs
+ * “Failed to find font override values…” on every dev start (and
+ * `adjustFontFallback: false` is unreliable in some Next 15/16 versions).
+ * Instead we add a standard Google Fonts `<link>` in `<head>` (see below) so
+ * the same public `fonts.gstatic.com` files load without the metrics pipeline.
  */
-/**
- * `adjustFontFallback: false` opts out of Next.js's automatic
- * size-adjusted fallback generation. Next.js can't find override
- * metric values for `Google Sans Flex` / `Google Sans` in its
- * built-in font database, so without this flag Next.js emits the
- *   "Failed to find font override values for font `Google Sans Flex`"
- *   "Skipping generating a fallback font."
- * pair of warnings on every dev start.
- *
- * The CLS impact is bounded by the rest of the
- * `--font-sans-stack` chain in `globals.css` — the cascade falls
- * back to "Helvetica Neue" / `sans-serif`, which both have similar
- * x-heights to Google Sans, so the layout shift between fallback
- * and web font is minimal in practice. Once Next.js ships override
- * metrics for Google Sans (or we bump to a future version that
- * does), this flag can be removed.
- */
-const googleSansFlex = Google_Sans_Flex({
-	subsets: ['latin'],
-	weight: 'variable',
-	variable: '--font-google-sans-flex-loaded',
-	display: 'swap',
-	adjustFontFallback: false,
-});
-const googleSans = Google_Sans({
-	subsets: ['latin'],
-	weight: 'variable',
-	variable: '--font-google-sans-loaded',
-	display: 'swap',
-	adjustFontFallback: false,
-});
 
 /**
  * Geist + Geist Mono — preloaded so the Cursor preset's typography
@@ -100,7 +73,7 @@ export default function RootLayout({
 		<html
 			lang="en"
 			suppressHydrationWarning
-			className={`${newsreader.variable} ${googleSansFlex.variable} ${googleSans.variable} ${geist.variable} ${geistMono.variable}`}
+			className={`${newsreader.variable} ${geist.variable} ${geistMono.variable}`}
 		>
 			{/*
 				suppressHydrationWarning is required because the blocking theme script
@@ -109,6 +82,12 @@ export default function RootLayout({
 				script only modifies the class list, not the DOM structure.
 			*/}
 			<head>
+				<link href="https://fonts.googleapis.com" rel="preconnect" />
+				<link href="https://fonts.gstatic.com" crossOrigin="anonymous" rel="preconnect" />
+				<link
+					href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&display=swap"
+					rel="stylesheet"
+				/>
 				{/* System theme detection — blocking script before hydration to prevent FOUC.
 				    Body lives in `frontend/lib/theme-detection-script.ts` so the JSX surface
 				    here stays small. The `noDangerouslySetInnerHtml` rule is silenced for

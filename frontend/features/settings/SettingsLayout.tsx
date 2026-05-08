@@ -83,7 +83,6 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
 export function SettingsLayout(): React.JSX.Element {
 	const router = useRouter();
 	const [activeId, setActiveId] = useState<SettingsSectionId>('general');
-	const isMacDesktop = useIsMacDesktop();
 
 	return (
 		<div className="grid h-svh w-full grid-cols-[260px_1fr] bg-sidebar">
@@ -91,17 +90,8 @@ export function SettingsLayout(): React.JSX.Element {
 			    sidebar (gap-4 vs gap-2) so the section list reads like a
 			    settings nav, not a project list. The rail divider uses
 			    `border-border/60` so it tints itself per active theme
-			    instead of stamping a hard `foreground/8` line.
-			    On macOS desktop the top padding is doubled so the
-			    "Back to app" button clears the system traffic-light
-			    buttons that `titleBarStyle: 'hiddenInset'` parks inside
-			    the BrowserWindow content area. */}
-			<aside
-				className={cn(
-					'flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4',
-					isMacDesktop ? 'pt-12' : 'pt-4'
-				)}
-			>
+			    instead of stamping a hard `foreground/8` line. */}
+			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4 pt-4">
 				<button
 					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground"
 					onClick={() => router.push('/')}

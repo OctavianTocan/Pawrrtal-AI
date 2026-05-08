@@ -100,7 +100,8 @@ const EMPTY_COMPOSER_PLACEHOLDERS = [
 	'Use Auto-review to let AI Nexus inspect changes',
 ] as const;
 const DEFAULT_EMPTY_COMPOSER_PLACEHOLDER = 'Ask AI Nexus anything. @ to mention context';
-const PLACEHOLDER_ROTATION_INTERVAL_MS = 3200;
+/** Milliseconds between rotating empty-composer placeholder tips. */
+const PLACEHOLDER_ROTATION_INTERVAL_MS = 5200;
 
 function useRotatingPlaceholder(hasContent: boolean): string {
 	const [placeholderIndex, setPlaceholderIndex] = useState(0);

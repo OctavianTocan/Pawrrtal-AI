@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Linked `@octavian-tocan/react-dropdown` resolves here — ensure Tailwind scans it so
+   menu primitives (e.g. `disabled:bg-muted/*`) are generated in dev + prod. */
+@source "../lib/react-dropdown/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
@@ -228,7 +232,9 @@
 	--step-content-gap: 1.5rem;
 	--step-actions-margin: 2rem;
 
-	/* Fonts — Google Sans Flex → Google Sans → Helvetica; loaded in `layout.tsx` */
+	/* Fonts — Google Sans Flex → Google Sans → Helvetica; @font-face from
+	   Google Fonts `<link>` in `app/layout.tsx` (not `next/font` — avoids
+	   capsize override warnings for these families). */
 	--font-sans-stack:
 		var(--font-google-sans-flex-loaded, "Google Sans Flex"),
 		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
@@ -908,6 +914,16 @@ html[data-font="inter"] {
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 6px 6px 0px,
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 12px 12px 0px,
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 24px 24px 0px;
+	}
+
+	/* Full-bleed modal / sheet / alert scrims — DESIGN.md § Overlay & frosted surfaces.
+	 * Backdrop blur (same 8px as `.popover-styled`) plus a subtle vertical gradient
+	 * tint (~10–14% black), not a flat `bg-black/80` opacity wash.
+	 */
+	.modal-scrim {
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14));
 	}
 }
 

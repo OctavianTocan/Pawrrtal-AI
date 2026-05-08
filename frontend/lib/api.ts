@@ -149,6 +149,34 @@ export const API_ENDPOINTS = {
 		 */
 		delete: (id: string) => `/api/v1/projects/${id}`,
 	},
+	/** Workspace file-system API (backs the Knowledge → My Files surface). */
+	workspaces: {
+		/** List all workspaces owned by the current user. */
+		list: '/api/v1/workspaces',
+		/**
+		 * Flat file-tree for a workspace.
+		 * @param id - Workspace UUID
+		 */
+		tree: (id: string) => `/api/v1/workspaces/${id}/tree`,
+		/**
+		 * Read a single file from a workspace.
+		 * @param id   - Workspace UUID
+		 * @param path - Workspace-relative POSIX path (e.g. `memory/note.md`)
+		 */
+		file: (id: string, path: string) => `/api/v1/workspaces/${id}/files/${path}`,
+		/**
+		 * Write (create or replace) a file inside a workspace.
+		 * @param id   - Workspace UUID
+		 * @param path - Workspace-relative POSIX path
+		 */
+		writeFile: (id: string, path: string) => `/api/v1/workspaces/${id}/files/${path}`,
+		/**
+		 * Delete a file from a workspace.
+		 * @param id   - Workspace UUID
+		 * @param path - Workspace-relative POSIX path
+		 */
+		deleteFile: (id: string, path: string) => `/api/v1/workspaces/${id}/files/${path}`,
+	},
 	/** Third-party messaging channels (Telegram today; more later). */
 	channels: {
 		/** List every channel binding owned by the authenticated user. */

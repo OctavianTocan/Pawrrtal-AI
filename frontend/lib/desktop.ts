@@ -181,8 +181,8 @@ export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
 
 /**
  * Synchronous platform getter intended for layout decisions that have to
- * run on first paint (e.g. reserving space for the macOS traffic-light
- * buttons). Returns `null` when not in Electron or during SSR.
+ * run on first paint (e.g. macOS Electron drag chrome). Returns `null` when
+ * not in Electron or during SSR.
  *
  * Components that read this MUST gate it behind `useEffect` so the
  * initial render matches the SSR output and React doesn't blow up with
