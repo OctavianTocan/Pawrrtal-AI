@@ -26,7 +26,9 @@ from app.core.providers.base import StreamEvent
 from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
+    handle_model_command,
     handle_plain_message,
+    handle_stop_command,
 )
 
 
@@ -228,14 +230,19 @@ class TestHandlePlainMessage:
         )
         session = AsyncMock()
 
+        # Fake conversation row with no model override.
+        fake_conv = AsyncMock()
+        fake_conv.id = conv_id
+        fake_conv.model_id = None
+
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation",
-                new=AsyncMock(return_value=conv_id),
+                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                new=AsyncMock(return_value=fake_conv),
             ),
         ):
             result = await handle_plain_message(
@@ -246,3 +253,168 @@ class TestHandlePlainMessage:
         assert result.nexus_user_id == nexus_uid
         assert result.conversation_id == conv_id
         assert isinstance(result.model_id, str)
+
+    async def test_bound_user_uses_conversation_model_override(self) -> None:
+        """When conversation.model_id is set it must propagate into the context."""
+        nexus_uid = uuid.uuid4()
+        conv_id = uuid.uuid4()
+        sender = TelegramSender(
+            user_id=42, chat_id=42, username="tavi", full_name="Tavi"
+        )
+        session = AsyncMock()
+
+        fake_conv = AsyncMock()
+        fake_conv.id = conv_id
+        fake_conv.model_id = "anthropic/claude-opus-4-5"
+
+        with (
+            patch(
+                "app.integrations.telegram.handlers.get_user_id_for_external",
+                new=AsyncMock(return_value=nexus_uid),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                new=AsyncMock(return_value=fake_conv),
+            ),
+        ):
+            result = await handle_plain_message(
+                sender=sender, text="hey", session=session
+            )
+
+        assert isinstance(result, TelegramTurnContext)
+        assert result.model_id == "anthropic/claude-opus-4-5"
+
+
+# ---------------------------------------------------------------------------
+# handle_stop_command
+# ---------------------------------------------------------------------------
+
+
+class TestHandleStopCommand:
+    """handle_stop_command is a plain synchronous function — no anyio needed."""
+
+    def test_stop_with_running_task(self) -> None:
+        """Returns the 'stopped' message when was_running=True."""
+        reply = handle_stop_command(was_running=True)
+        assert "⏹" in reply or "stop" in reply.lower()
+
+    def test_stop_with_no_running_task(self) -> None:
+        """Returns the 'nothing running' message when was_running=False."""
+        reply = handle_stop_command(was_running=False)
+        assert "nothing" in reply.lower() or "running" in reply.lower()
+
+    def test_stop_returns_string(self) -> None:
+        """handle_stop_command always returns a plain string."""
+        for flag in (True, False):
+            assert isinstance(handle_stop_command(was_running=flag), str)
+
+
+# ---------------------------------------------------------------------------
+# handle_model_command
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+class TestHandleModelCommand:
+    async def test_missing_model_arg_returns_usage(self) -> None:
+        """Calling /model with no argument returns the usage hint."""
+        sender = TelegramSender(user_id=1, chat_id=1, username=None, full_name=None)
+        session = AsyncMock()
+        reply = await handle_model_command(
+            sender=sender, model_arg="", session=session
+        )
+        assert "usage" in reply.lower() or "/model" in reply.lower()
+
+    async def test_unknown_model_prefix_returns_error(self) -> None:
+        """A model ID with an unrecognised prefix must be rejected before any DB call."""
+        sender = TelegramSender(user_id=1, chat_id=1, username=None, full_name=None)
+        session = AsyncMock()
+        reply = await handle_model_command(
+            sender=sender, model_arg="openai-gpt-4o-no-prefix", session=session
+        )
+        assert isinstance(reply, str)
+        # Should contain a prefix hint, not a success message.
+        assert "✅" not in reply
+        assert "google/" in reply or "anthropic/" in reply or "prefix" in reply.lower()
+
+    async def test_unbound_user_returns_error(self) -> None:
+        """An unbound sender cannot switch models."""
+        sender = TelegramSender(user_id=2, chat_id=2, username=None, full_name=None)
+        session = AsyncMock()
+        with patch(
+            "app.integrations.telegram.handlers.get_user_id_for_external",
+            new=AsyncMock(return_value=None),
+        ):
+            reply = await handle_model_command(
+                sender=sender, model_arg="google/gemini-3-flash-preview", session=session
+            )
+        assert isinstance(reply, str)
+        assert "connect" in reply.lower() or "account" in reply.lower()
+
+    async def test_valid_model_switch_replies_ok(self) -> None:
+        """A bound user switching to a valid model gets the success message."""
+        nexus_uid = uuid.uuid4()
+        conv_id = uuid.uuid4()
+        sender = TelegramSender(user_id=3, chat_id=3, username="t", full_name="T")
+        session = AsyncMock()
+
+        fake_conv = AsyncMock()
+        fake_conv.id = conv_id
+        fake_conv.model_id = None
+
+        with (
+            patch(
+                "app.integrations.telegram.handlers.get_user_id_for_external",
+                new=AsyncMock(return_value=nexus_uid),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                new=AsyncMock(return_value=fake_conv),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.update_conversation_model",
+                new=AsyncMock(return_value=True),
+            ),
+        ):
+            reply = await handle_model_command(
+                sender=sender,
+                model_arg="anthropic/claude-opus-4-5",
+                session=session,
+            )
+
+        assert "anthropic/claude-opus-4-5" in reply
+        assert "✅" in reply
+
+    async def test_update_failure_returns_error_message(self) -> None:
+        """When the DB update fails the user gets an error string, not an exception."""
+        nexus_uid = uuid.uuid4()
+        conv_id = uuid.uuid4()
+        sender = TelegramSender(user_id=4, chat_id=4, username="t", full_name="T")
+        session = AsyncMock()
+
+        fake_conv = AsyncMock()
+        fake_conv.id = conv_id
+        fake_conv.model_id = None
+
+        with (
+            patch(
+                "app.integrations.telegram.handlers.get_user_id_for_external",
+                new=AsyncMock(return_value=nexus_uid),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                new=AsyncMock(return_value=fake_conv),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.update_conversation_model",
+                new=AsyncMock(return_value=False),
+            ),
+        ):
+            reply = await handle_model_command(
+                sender=sender,
+                model_arg="google/gemini-3-flash-preview",
+                session=session,
+            )
+
+        assert isinstance(reply, str)
+        assert "couldn't" in reply.lower() or "fail" in reply.lower() or "try" in reply.lower()

@@ -22,12 +22,16 @@ import hmac
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models import ChannelBinding, ChannelLinkCode
+
+if TYPE_CHECKING:
+    from app.models import Conversation
 
 # Code alphabet excludes look-alikes (0/O, 1/I/L) so support tickets
 # don't end up arguing over what the user actually typed. Eight chars
@@ -234,6 +238,68 @@ async def get_or_create_telegram_conversation(
     Returns:
         UUID of the resolved (or newly created) ``Conversation`` row.
     """
+    conv = await _get_or_create_telegram_conv_row(user_id=user_id, session=session)
+    return conv.id
+
+
+async def get_or_create_telegram_conversation_full(
+    *,
+    user_id: uuid.UUID,
+    session: AsyncSession,
+) -> "Conversation":
+    """Like :func:`get_or_create_telegram_conversation` but returns the full row.
+
+    The extra fields (particularly ``model_id``) let the bot honour per-session
+    model overrides set by ``/model`` without a second round-trip.
+
+    Args:
+        user_id: Nexus user who owns the conversation.
+        session: Async database session.
+
+    Returns:
+        The resolved or newly created ``Conversation`` ORM row.
+    """
+    return await _get_or_create_telegram_conv_row(user_id=user_id, session=session)
+
+
+async def update_conversation_model(
+    *,
+    conversation_id: uuid.UUID,
+    model_id: str,
+    session: AsyncSession,
+) -> bool:
+    """Persist a model-ID override on an existing ``Conversation`` row.
+
+    Used by the ``/model`` Telegram command so the choice survives across turns.
+
+    Args:
+        conversation_id: The conversation to update.
+        model_id: Provider-prefixed model identifier string
+            (e.g. ``"google/gemini-3-flash-preview"`` or
+            ``"anthropic/claude-opus-4-5"``).  The value is stored as-is
+            and resolved by the provider factory at runtime.
+        session: Async database session.
+
+    Returns:
+        ``True`` when the row was found and updated, ``False`` when no such
+        conversation exists.
+    """
+    from app.models import Conversation  # noqa: PLC0415
+
+    row = await session.get(Conversation, conversation_id)
+    if row is None:
+        return False
+    row.model_id = model_id
+    await session.commit()
+    return True
+
+
+async def _get_or_create_telegram_conv_row(
+    *,
+    user_id: uuid.UUID,
+    session: AsyncSession,
+) -> "Conversation":
+    """Internal helper: find or create the Telegram conversation row."""
     from sqlalchemy import select  # already imported at module level; re-import safe
 
     from app.models import Conversation  # noqa: PLC0415
@@ -250,7 +316,7 @@ async def get_or_create_telegram_conversation(
     result = await session.execute(stmt)
     existing = result.scalar_one_or_none()
     if existing is not None:
-        return existing.id
+        return existing
 
     from datetime import datetime  # noqa: PLC0415
 
@@ -264,4 +330,4 @@ async def get_or_create_telegram_conversation(
     session.add(conversation)
     await session.commit()
     await session.refresh(conversation)
-    return conversation.id
+    return conversation
