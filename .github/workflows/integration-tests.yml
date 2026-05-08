@@ -66,6 +66,16 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
+      # Self-hosted ainexus runner doesn't carry node/npm by default,
+      # and the comment in this workflow that claimed the CLI was
+      # "already installed locally" was stale — every run of this job
+      # was failing on `npm: command not found`.  setup-node provides
+      # both binaries on PATH for the duration of the job, with caching.
+      - name: Setup Node.js (for npm install of the Claude CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       # Install the Claude CLI so the SDK has a binary to spawn.
       # ``claude-agent-sdk`` runs the CLI as a subprocess; without it
       # the integration tests fail at provider construction time.
