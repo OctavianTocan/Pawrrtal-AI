@@ -20,6 +20,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from app.core.fs import read_capped_utf8
+
 log = logging.getLogger(__name__)
 
 _AGENTS_MD = "AGENTS.md"
@@ -39,39 +41,9 @@ PROTECTED_FILENAMES: frozenset[str] = frozenset(
 )
 
 
-def _read_text(target: Path) -> str | None:
-    """Read *target* as UTF-8 with size + encoding guards.
-
-    Returns the stripped text, or ``None`` when the file is missing,
-    unreadable, oversized, or empty after stripping.
-
-    Pulled out of the per-file readers because the I/O guards are
-    identical and we'd otherwise duplicate the open/decode/strip
-    sequence twice (cf. the workspace_files repetition flagged in
-    review).
-    """
-    if not target.is_file():
-        log.debug("_read_text: %s not found", target)
-        return None
-    try:
-        raw = target.read_bytes()
-    except OSError as exc:
-        log.warning("_read_text: cannot read %s: %s", target, exc)
-        return None
-    if len(raw) > _MAX_BYTES:
-        log.warning("_read_text: %s exceeds %d bytes, truncating", target, _MAX_BYTES)
-        raw = raw[:_MAX_BYTES]
-    try:
-        text = raw.decode("utf-8").strip()
-    except UnicodeDecodeError:
-        log.warning("_read_text: %s is not valid UTF-8", target)
-        return None
-    return text or None
-
-
 def read_agents_md(workspace_root: Path) -> str | None:
     """Return the text of *workspace_root*/AGENTS.md, or ``None`` on failure."""
-    return _read_text(workspace_root / _AGENTS_MD)
+    return read_capped_utf8(workspace_root / _AGENTS_MD, max_bytes=_MAX_BYTES)
 
 
 def read_soul_md(workspace_root: Path) -> str | None:
@@ -81,7 +53,7 @@ def read_soul_md(workspace_root: Path) -> str | None:
     editable by the agent itself — when the agent rewrites it, the next
     turn's system prompt reflects the new identity.
     """
-    return _read_text(workspace_root / _SOUL_MD)
+    return read_capped_utf8(workspace_root / _SOUL_MD, max_bytes=_MAX_BYTES)
 
 
 def assemble_workspace_prompt(workspace_root: Path) -> str | None:
