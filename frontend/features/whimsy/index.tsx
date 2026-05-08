@@ -384,6 +384,192 @@ function WhimsyColorPicker({ value, onChange }: WhimsyColorPickerProps): React.J
 	);
 }
 
+interface WhimsyRowProps {
+	config: WhimsyConfig;
+	setConfig: Dispatch<SetStateAction<WhimsyConfig>>;
+}
+
+/** Tile-scale + preset-thumbnail grid — only rendered in `preset` mode. */
+function WhimsyPresetModeRows({ config, setConfig }: WhimsyRowProps): React.JSX.Element {
+	return (
+		<>
+			<SettingsRow
+				description="Tile width in CSS pixels. Smaller = denser, larger = bigger doodles with fewer repeats. Height auto-resolves from the source SVG aspect."
+				label="Tile scale"
+			>
+				<div className="flex w-56 items-center gap-3">
+					<Slider
+						max={WHIMSY_BOUNDS.presetSize.max}
+						min={WHIMSY_BOUNDS.presetSize.min}
+						onValueChange={(values) => {
+							const next = values[0];
+							if (typeof next === 'number')
+								setConfig((c) => ({ ...c, presetSize: next }));
+						}}
+						step={20}
+						value={[config.presetSize]}
+					/>
+					<span className="w-14 text-right text-xs tabular-nums text-muted-foreground">
+						{config.presetSize}px
+					</span>
+				</div>
+			</SettingsRow>
+			<SettingsRow
+				className="items-start"
+				description="Pick from the bundled SVG patterns. Theme/seed/density are ignored in this mode. Click a thumbnail to apply it instantly."
+				label="Preset"
+			>
+				{/*
+				 * Thumbnail grid instead of a dropdown. With 33 unlabelled
+				 * "Pattern N" options the dropdown was useless even if it
+				 * worked — patterns differ visually, not by name.  Also
+				 * sidesteps the SelectButton/dropdown bug tracked in the
+				 * companion bean.
+				 */}
+				<div className="grid w-72 grid-cols-4 gap-1.5">
+					{WHIMSY_PRESETS.map((preset) => {
+						const isActive = config.preset === preset.id;
+						return (
+							<button
+								aria-label={preset.label}
+								aria-pressed={isActive}
+								className={cn(
+									'group relative aspect-square cursor-pointer overflow-hidden rounded-[6px] bg-foreground/[0.04] transition-shadow duration-150',
+									'hover:bg-foreground/[0.08]',
+									isActive && 'shadow-[0_0_0_2px_var(--color-accent)]'
+								)}
+								key={preset.id}
+								onClick={() => setConfig((c) => ({ ...c, preset: preset.id }))}
+								type="button"
+							>
+								<span
+									aria-hidden="true"
+									className="absolute inset-0 text-foreground/40"
+									style={{
+										backgroundColor: 'currentColor',
+										maskImage: `url("${whimsyPresetUrl(preset.id)}")`,
+										WebkitMaskImage: `url("${whimsyPresetUrl(preset.id)}")`,
+										// Each thumbnail shows ~one tile of the
+										// pattern; auto height keeps the source
+										// SVG's portrait aspect, so adjacent
+										// thumbnails read as the same family.
+										maskSize: '64px auto',
+										WebkitMaskSize: '64px auto',
+										maskRepeat: 'repeat',
+										WebkitMaskRepeat: 'repeat',
+									}}
+								/>
+							</button>
+						);
+					})}
+				</div>
+			</SettingsRow>
+		</>
+	);
+}
+
+/** Theme picker — only rendered in `generated` mode (presets ignore theme). */
+function WhimsyThemeRow({ config, setConfig }: WhimsyRowProps): React.JSX.Element {
+	return (
+		<SettingsRow
+			description="Restricts which motifs the generator can pick from. Pick a curated combo."
+			label="Theme"
+		>
+			<SelectButton
+				activeId={config.theme}
+				ariaLabel="Whimsy theme"
+				onSelect={(id) => {
+					if (isWhimsyThemeName(id)) setConfig((c) => ({ ...c, theme: id }));
+				}}
+				options={THEME_OPTIONS}
+				triggerLabel={THEME_LABELS[config.theme]}
+			/>
+		</SettingsRow>
+	);
+}
+
+/** Seed + density + tile-size sliders — only rendered in `generated` mode. */
+function WhimsyGeneratedModeRows({ config, setConfig }: WhimsyRowProps): React.JSX.Element {
+	// Keep the seed comfortably below 2^31 so it round-trips through any
+	// integer arithmetic the generator's PRNG does.
+	const randomizeSeed = (): void =>
+		setConfig((prev) => ({ ...prev, seed: Math.floor(Math.random() * 1_000_000_000) }));
+
+	return (
+		<>
+			<SettingsRow
+				description="Layout randomness. Same seed always renders the same tile; reroll for a new scatter."
+				label="Seed"
+			>
+				<div className="flex items-center gap-2">
+					<Input
+						aria-label="Whimsy seed"
+						className="w-28 text-right text-sm tabular-nums"
+						onChange={(event) => {
+							const next = Number.parseInt(event.target.value, 10);
+							if (Number.isFinite(next)) setConfig((c) => ({ ...c, seed: next }));
+						}}
+						type="number"
+						value={config.seed}
+					/>
+					<Button
+						aria-label="Randomize seed"
+						className="cursor-pointer"
+						onClick={randomizeSeed}
+						size="icon-xs"
+						type="button"
+						variant="ghost"
+					>
+						<Shuffle aria-hidden="true" />
+					</Button>
+				</div>
+			</SettingsRow>
+
+			<SettingsRow
+				description="Motifs per row/column inside one tile. Higher = denser pattern."
+				label="Density"
+			>
+				<div className="flex w-56 items-center gap-3">
+					<Slider
+						max={WHIMSY_BOUNDS.grid.max}
+						min={WHIMSY_BOUNDS.grid.min}
+						onValueChange={(values) => {
+							const next = values[0];
+							if (typeof next === 'number') setConfig((c) => ({ ...c, grid: next }));
+						}}
+						step={1}
+						value={[config.grid]}
+					/>
+					<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+						{config.grid}×{config.grid}
+					</span>
+				</div>
+			</SettingsRow>
+
+			<SettingsRow
+				description="Pixels per repeating tile. Smaller tiles repeat more often, so motifs feel denser without changing the grid."
+				label="Tile size"
+			>
+				<div className="flex w-56 items-center gap-3">
+					<Slider
+						max={WHIMSY_BOUNDS.size.max}
+						min={WHIMSY_BOUNDS.size.min}
+						onValueChange={(values) => {
+							const next = values[0];
+							if (typeof next === 'number') setConfig((c) => ({ ...c, size: next }));
+						}}
+						step={20}
+						value={[config.size]}
+					/>
+					<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
+						{config.size}px
+					</span>
+				</div>
+			</SettingsRow>
+		</>
+	);
+}
+
 /**
  * Settings → Appearance card for the whimsy texture. All controls write to the
  * same localStorage key consumed by {@link useWhimsyTile}, so changes propagate
@@ -393,10 +579,6 @@ export function WhimsySettingsCard(): React.JSX.Element {
 	const [config, setConfig] = useWhimsyConfig();
 
 	const reset = (): void => setConfig(DEFAULT_WHIMSY_CONFIG);
-	// Keep the seed comfortably below 2^31 so it round-trips through any
-	// integer arithmetic the generator's PRNG does.
-	const randomizeSeed = (): void =>
-		setConfig((prev) => ({ ...prev, seed: Math.floor(Math.random() * 1_000_000_000) }));
 
 	// Slider stores integer 0-200 for fine control while the persisted opacity
 	// stays a 0-0.20 decimal — matches how AppearanceSection's contrast slider
@@ -465,175 +647,13 @@ export function WhimsySettingsCard(): React.JSX.Element {
 			</SettingsRow>
 
 			{config.mode === 'preset' ? (
-				<>
-					<SettingsRow
-						description="Tile width in CSS pixels. Smaller = denser, larger = bigger doodles with fewer repeats. Height auto-resolves from the source SVG aspect."
-						label="Tile scale"
-					>
-						<div className="flex w-56 items-center gap-3">
-							<Slider
-								max={WHIMSY_BOUNDS.presetSize.max}
-								min={WHIMSY_BOUNDS.presetSize.min}
-								onValueChange={(values) => {
-									const next = values[0];
-									if (typeof next === 'number')
-										setConfig((c) => ({ ...c, presetSize: next }));
-								}}
-								step={20}
-								value={[config.presetSize]}
-							/>
-							<span className="w-14 text-right text-xs tabular-nums text-muted-foreground">
-								{config.presetSize}px
-							</span>
-						</div>
-					</SettingsRow>
-					<SettingsRow
-						className="items-start"
-						description="Pick from the bundled SVG patterns. Theme/seed/density are ignored in this mode. Click a thumbnail to apply it instantly."
-						label="Preset"
-					>
-						{/*
-						 * Thumbnail grid instead of a dropdown. With 33 unlabelled
-						 * "Pattern N" options the dropdown was useless even if it
-						 * worked — patterns differ visually, not by name. Also
-						 * sidesteps the SelectButton/dropdown bug tracked in the
-						 * companion bean.
-						 */}
-						<div className="grid w-72 grid-cols-4 gap-1.5">
-							{WHIMSY_PRESETS.map((preset) => {
-								const isActive = config.preset === preset.id;
-								return (
-									<button
-										aria-label={preset.label}
-										aria-pressed={isActive}
-										className={cn(
-											'group relative aspect-square cursor-pointer overflow-hidden rounded-[6px] bg-foreground/[0.04] transition-shadow duration-150',
-											'hover:bg-foreground/[0.08]',
-											isActive && 'shadow-[0_0_0_2px_var(--color-accent)]'
-										)}
-										key={preset.id}
-										onClick={() =>
-											setConfig((c) => ({ ...c, preset: preset.id }))
-										}
-										type="button"
-									>
-										<span
-											aria-hidden="true"
-											className="absolute inset-0 text-foreground/40"
-											style={{
-												backgroundColor: 'currentColor',
-												maskImage: `url("${whimsyPresetUrl(preset.id)}")`,
-												WebkitMaskImage: `url("${whimsyPresetUrl(preset.id)}")`,
-												// Each thumbnail shows ~one tile of the
-												// pattern; auto height keeps the source
-												// SVG's portrait aspect, so adjacent
-												// thumbnails read as the same family.
-												maskSize: '64px auto',
-												WebkitMaskSize: '64px auto',
-												maskRepeat: 'repeat',
-												WebkitMaskRepeat: 'repeat',
-											}}
-										/>
-									</button>
-								);
-							})}
-						</div>
-					</SettingsRow>
-				</>
+				<WhimsyPresetModeRows config={config} setConfig={setConfig} />
 			) : (
-				<SettingsRow
-					description="Restricts which motifs the generator can pick from. Pick a curated combo."
-					label="Theme"
-				>
-					<SelectButton
-						activeId={config.theme}
-						ariaLabel="Whimsy theme"
-						onSelect={(id) => {
-							if (isWhimsyThemeName(id)) setConfig((c) => ({ ...c, theme: id }));
-						}}
-						options={THEME_OPTIONS}
-						triggerLabel={THEME_LABELS[config.theme]}
-					/>
-				</SettingsRow>
+				<WhimsyThemeRow config={config} setConfig={setConfig} />
 			)}
 
 			{config.mode === 'generated' ? (
-				<>
-					<SettingsRow
-						description="Layout randomness. Same seed always renders the same tile; reroll for a new scatter."
-						label="Seed"
-					>
-						<div className="flex items-center gap-2">
-							<Input
-								aria-label="Whimsy seed"
-								className="w-28 text-right text-sm tabular-nums"
-								onChange={(event) => {
-									const next = Number.parseInt(event.target.value, 10);
-									if (Number.isFinite(next))
-										setConfig((c) => ({ ...c, seed: next }));
-								}}
-								type="number"
-								value={config.seed}
-							/>
-							<Button
-								aria-label="Randomize seed"
-								className="cursor-pointer"
-								onClick={randomizeSeed}
-								size="icon-xs"
-								type="button"
-								variant="ghost"
-							>
-								<Shuffle aria-hidden="true" />
-							</Button>
-						</div>
-					</SettingsRow>
-
-					<SettingsRow
-						description="Motifs per row/column inside one tile. Higher = denser pattern."
-						label="Density"
-					>
-						<div className="flex w-56 items-center gap-3">
-							<Slider
-								max={WHIMSY_BOUNDS.grid.max}
-								min={WHIMSY_BOUNDS.grid.min}
-								onValueChange={(values) => {
-									const next = values[0];
-									if (typeof next === 'number')
-										setConfig((c) => ({ ...c, grid: next }));
-								}}
-								step={1}
-								value={[config.grid]}
-							/>
-							<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-								{config.grid}×{config.grid}
-							</span>
-						</div>
-					</SettingsRow>
-				</>
-			) : null}
-
-			{config.mode === 'generated' ? (
-				<SettingsRow
-					description="Pixels per repeating tile. Smaller tiles repeat more often, so motifs feel denser without changing the grid."
-					label="Tile size"
-				>
-					<div className="flex w-56 items-center gap-3">
-						<Slider
-							max={WHIMSY_BOUNDS.size.max}
-							min={WHIMSY_BOUNDS.size.min}
-							onValueChange={(values) => {
-								const next = values[0];
-								if (typeof next === 'number')
-									setConfig((c) => ({ ...c, size: next }));
-							}}
-							step={20}
-							value={[config.size]}
-						/>
-						<span className="w-12 text-right text-xs tabular-nums text-muted-foreground">
-							{config.size}px
-						</span>
-					</div>
-				</SettingsRow>
+				<WhimsyGeneratedModeRows config={config} setConfig={setConfig} />
 			) : null}
 
 			<SettingsRow
