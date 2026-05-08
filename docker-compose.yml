@@ -52,6 +52,10 @@ services:
       # Override the DATABASE_URL from .env so it points at the compose
       # postgres service regardless of what the user typed in .env.
       DATABASE_URL: "postgresql://nexus:nexus_dev@postgres:5432/nexus"
+      # watchfiles uses kernel inotify by default, which doesn't fire
+      # reliably for changes made on the host through a Docker bind mount.
+      # Force polling so uvicorn --reload actually reloads on every save.
+      WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "8000:8000"
     depends_on:
