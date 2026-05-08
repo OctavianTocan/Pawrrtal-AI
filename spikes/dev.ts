@@ -44,16 +44,16 @@ if (!existsSync(spikeDir)) {
 await $`lsof -ti:${frontendPort} | xargs kill -9`.quiet().nothrow();
 await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 
-// First-run install if node_modules is missing — kept out of the just
-// recipe so `just spike-NN` is one command end-to-end.
-if (!existsSync(join(spikeDir, 'node_modules'))) {
-	console.log(`📦 Installing ${spikeDir} dependencies (first run)…`);
-	const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
-	const installCode: number = await new Promise((resolve) => install.on('close', (c) => resolve(c ?? 1)));
-	if (installCode !== 0) {
-		console.error(`pnpm install failed (exit ${installCode}) in ${spikeDir}`);
-		process.exit(installCode);
-	}
+// Always run `pnpm install` (not just on first run).  pnpm 11's
+// deps-status preflight inside `pnpm run <script>` can error without
+// a committed lockfile; running install up-front is idempotent when
+// nothing changed and fast on repeat.
+console.log(`📦 Ensuring ${spikeDir} dependencies are installed…`);
+const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
+const installCode: number = await new Promise((resolve) => install.on('close', (c) => resolve(c ?? 1)));
+if (installCode !== 0) {
+	console.error(`pnpm install failed (exit ${installCode}) in ${spikeDir}`);
+	process.exit(installCode);
 }
 
 const spikeOrigin = `http://localhost:${frontendPort}`;
@@ -101,10 +101,13 @@ const backend = spawn(
 	},
 );
 
-// Frontend process — every spike exposes `pnpm dev`.  We pass the
-// VITE_BACKEND_URL env so all four spikes hit the same backend without
-// hardcoding it in the spike's source.
-const frontend = spawn('pnpm', ['dev'], {
+// Frontend process — invoke vite directly via `pnpm exec` to bypass
+// pnpm 11's deps-status preflight that runs inside `pnpm run dev`.
+// SvelteKit's dev needs `vite dev`, others just `vite`.
+const viteArgs = spikeArg.startsWith('03-sveltekit')
+	? ['exec', 'vite', 'dev']
+	: ['exec', 'vite'];
+const frontend = spawn('pnpm', viteArgs, {
 	cwd: spikeDir,
 	stdio: 'inherit',
 	env: { ...process.env, VITE_BACKEND_URL: backendUrl },

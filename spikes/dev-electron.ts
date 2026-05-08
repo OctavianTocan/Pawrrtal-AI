@@ -26,6 +26,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { $ } from 'bun';
+import waitOn from 'wait-on';
 
 const [spikeArg, portArg] = process.argv.slice(2);
 if (!spikeArg || !portArg) {
@@ -52,17 +53,19 @@ if (!existsSync(spikeDir)) {
 await $`lsof -ti:${frontendPort} | xargs kill -9`.quiet().nothrow();
 await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 
-// First-run install for the spike if needed.
-if (!existsSync(join(spikeDir, 'node_modules'))) {
-	console.log(`📦 Installing ${spikeDir} dependencies (first run)…`);
-	const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
-	const installCode: number = await new Promise((resolve) =>
-		install.on('close', (c) => resolve(c ?? 1)),
-	);
-	if (installCode !== 0) {
-		console.error(`pnpm install failed (exit ${installCode}) in ${spikeDir}`);
-		process.exit(installCode);
-	}
+// Always run `pnpm install` (not just on first run).  The spikes ship
+// without a committed `pnpm-lock.yaml`, so pnpm 11's deps-status check
+// inside `pnpm run <script>` fails preflight on a fresh clone if any
+// transitive version skewed.  Running install up-front is idempotent
+// when nothing changed and fast on repeat.
+console.log(`📦 Ensuring ${spikeDir} dependencies are installed…`);
+const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
+const installCode: number = await new Promise((resolve) =>
+	install.on('close', (c) => resolve(c ?? 1)),
+);
+if (installCode !== 0) {
+	console.error(`pnpm install failed (exit ${installCode}) in ${spikeDir}`);
+	process.exit(installCode);
 }
 
 // Compile the Electron main + preload TypeScript once.  The shell
@@ -89,9 +92,8 @@ console.log(
 );
 
 // Backend.  CORS widened so both browser (http://localhost:<port>) AND
-// Electron's renderer (loads via http://localhost:<port> in dev) can hit
-// it.  `app://` is reserved for a future loadFile mode and is harmless
-// to allowlist.
+// Electron's renderer can hit it.  `app://` is reserved for a future
+// loadFile mode and is harmless to allowlist.
 const backend = spawn(
 	'uv',
 	[
@@ -123,18 +125,45 @@ const backend = spawn(
 	},
 );
 
-// Frontend — spike's own dev server.
-const frontend = spawn('pnpm', ['dev'], {
+// Frontend — spike's own dev server.  We bypass `pnpm dev` (which
+// re-runs pnpm 11's deps-status preflight that can fail without a
+// committed lockfile) and call the framework's binary directly via
+// `pnpm exec`.  Each spike's `dev` script is just `vite` (or
+// `vite dev` for SvelteKit), so this matches the previous behaviour
+// without the preflight.
+const viteArgs = spikeArg.startsWith('03-sveltekit') ? ['exec', 'vite', 'dev'] : ['exec', 'vite'];
+const frontend = spawn('pnpm', viteArgs, {
 	cwd: spikeDir,
 	stdio: 'inherit',
 	env: { ...process.env, VITE_BACKEND_URL: backendUrl },
 });
 
-// Wait briefly for the frontend port to come up before starting Electron.
-// Electron's wait-on logic also handles this, but giving Vite a head
-// start keeps the splash screen from immediately rendering "couldn't
-// reach the server" if Vite is still warming up.
-await new Promise((r) => setTimeout(r, 800));
+// Block until the frontend port is actually listening before launching
+// Electron.  Previously we slept 800ms and let Electron's own wait-on
+// retry, which surfaced "couldn't reach the dev server" splash if Vite
+// took longer than 60s on first cold install.  Waiting here with a
+// proper timeout + actionable error is more honest.
+console.log(`⏳ Waiting for frontend on :${frontendPort}…`);
+try {
+	await waitOn({
+		resources: [`tcp:127.0.0.1:${frontendPort}`],
+		timeout: 120_000,
+		interval: 250,
+	});
+} catch (err) {
+	console.error(
+		`\n❌ Frontend on :${frontendPort} did not come up within 120s.\n` +
+			`Common causes:\n` +
+			`  - pnpm install errored silently (re-run with PNPM_DEBUG=1)\n` +
+			`  - port collision (try: lsof -i :${frontendPort})\n` +
+			`  - the spike's package.json "dev" script doesn't bind on that port\n` +
+			`Underlying error: ${err}\n`,
+	);
+	frontend.kill('SIGTERM');
+	backend.kill('SIGTERM');
+	process.exit(1);
+}
+console.log('✅ Frontend reachable. Starting Electron…');
 
 // Electron — points at the spike's port via ELECTRON_FRONTEND_PORT.
 const electron = spawn('bun', ['run', 'start:dev'], {
