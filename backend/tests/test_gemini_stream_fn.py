@@ -192,7 +192,10 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
             AgentLoopConfig,
             UserMessage,
         )
-        from app.core.providers.gemini_provider import _identity_convert, _SYSTEM_PROMPT
+        from app.core.providers.gemini_provider import (
+            _FALLBACK_SYSTEM_PROMPT,
+            _identity_convert,
+        )
 
         prior = [
             {"role": m["role"], "content": m["content"]}
@@ -200,7 +203,7 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
             if m.get("role") in {"user", "assistant"}
         ]
         context = AgentContext(
-            system_prompt=_SYSTEM_PROMPT,
+            system_prompt=_FALLBACK_SYSTEM_PROMPT,
             messages=prior,
             tools=[echo_tool],
         )

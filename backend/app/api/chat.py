@@ -11,10 +11,14 @@ from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pathlib import Path
+
 from app.channels import resolve_channel, surface_from_header
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
+from app.core.tools.workspace_files import make_workspace_tools
+from app.core.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -149,6 +153,30 @@ def get_chat_router() -> APIRouter:
 
         provider = resolve_llm(model_id)
 
+        # Resolve the user's default workspace.  A workspace is created as
+        # part of onboarding, so its absence means the user hasn't finished
+        # that flow yet — the agent should not run at all in that state.
+        # Refuse with 412 (Precondition Failed) so the frontend can route to
+        # onboarding instead of pretending we shipped a degraded reply.
+        workspace = await get_default_workspace(user.id, session)
+        if workspace is None:
+            raise HTTPException(
+                status_code=412,
+                detail="Onboarding not completed: no default workspace exists for this user.",
+            )
+        root = Path(workspace.path)
+        if not root.exists():
+            # Workspace row exists but the directory is gone (manually
+            # deleted, volume wipe, etc.).  Same outcome — do not run.
+            logger.error(
+                "CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root
+            )
+            raise HTTPException(
+                status_code=412,
+                detail="Workspace directory is missing on disk.  Re-run onboarding.",
+            )
+        workspace_tools = make_workspace_tools(root)
+
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes for each LLM event, then done.
 
@@ -170,6 +198,7 @@ def get_chat_router() -> APIRouter:
                         request.conversation_id,
                         user.id,
                         history=history,
+                        tools=workspace_tools or None,
                     ):
                         event_count += 1
                         aggregator.apply(event)

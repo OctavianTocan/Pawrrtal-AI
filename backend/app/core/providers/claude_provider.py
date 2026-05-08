@@ -198,6 +198,8 @@ class ClaudeLLM:
         user_id: uuid.UUID,
         history: list[dict[str, str]]
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
+        tools: object | None = None,  # ignored for now: see note in stream() body
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -215,7 +217,11 @@ class ClaudeLLM:
             events, an optional rate-limit warning, and any error events.
         """
         del user_id  # reserved for future per-user routing
-        options = self._build_options(conversation_id)
+        options = self._build_options(
+            conversation_id,
+            system_prompt=system_prompt,
+            agent_tools=tools,
+        )
         try:
             async for message in query(prompt=question, options=options):
                 for event in _events_from_message(message):
@@ -263,21 +269,41 @@ class ClaudeLLM:
 
     # -- internal --------------------------------------------------------
 
-    def _build_options(self, conversation_id: uuid.UUID) -> ClaudeAgentOptions:
-        """Build per-request options, picking ``session_id`` vs ``resume``."""
+    def _build_options(
+        self,
+        conversation_id: uuid.UUID,
+        *,
+        system_prompt: str | None = None,
+        agent_tools: object | None = None,
+    ) -> ClaudeAgentOptions:
+        """Build per-request options, picking ``session_id`` vs ``resume``.
+
+        Args:
+            conversation_id: App-level conversation UUID; reused as the
+                Claude SDK session id.
+            system_prompt: Optional per-call override.  When provided,
+                takes precedence over ``self._config.system_prompt`` so
+                the chat router can inject app-assembled context (e.g.
+                workspace AGENTS.md per PR #113).
+            agent_tools: AgentTool list from the cross-provider agent loop
+                signature.  Currently unused — the Claude SDK runs its
+                own tool surface and AgentTool wiring requires an MCP
+                bridge that's tracked separately.  Accepted here so the
+                provider protocol signature stays consistent.
+        """
+        _ = agent_tools  # see docstring
         session_id = str(conversation_id)
 
-        # Tools start as the configured whitelist (built-in CLI tools).
-        # When Exa is enabled, append the canonical mcp__<server>__<tool>
-        # identifier so the SDK actually permits invocation; the MCP
-        # server itself is mounted via mcp_servers below.
-        tools = list(self._config.tools) if self._config.tools is not None else None
+        # Local tool whitelist for the Claude SDK (built-in CLI tools).
+        # Renamed off the bare ``tools`` name so the parameter shadowing is
+        # explicit — see comment below about the AgentTool ``tools`` arg.
+        local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
         if self._config.enable_exa_search:
-            if tools is None:
-                tools = [EXA_CLAUDE_TOOL_ID]
-            elif EXA_CLAUDE_TOOL_ID not in tools:
-                tools.append(EXA_CLAUDE_TOOL_ID)
+            if local_tools is None:
+                local_tools = [EXA_CLAUDE_TOOL_ID]
+            elif EXA_CLAUDE_TOOL_ID not in local_tools:
+                local_tools.append(EXA_CLAUDE_TOOL_ID)
             mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
 
         # If tool use is enabled but the caller didn't override
@@ -287,16 +313,20 @@ class ClaudeLLM:
         # in chat as a "Claude SDK result reported an error" panel
         # immediately after the "Searched the web" indicator.
         effective_max_turns = self._config.max_turns
-        tool_use_enabled = bool(tools) or bool(mcp_servers)
+        tool_use_enabled = bool(local_tools) or bool(mcp_servers)
         if tool_use_enabled and effective_max_turns <= _DEFAULT_MAX_TURNS:
             effective_max_turns = _TOOL_ENABLED_MAX_TURNS
 
+        # System prompt resolution: per-call value (from the chat router /
+        # AGENTS.md loader) wins over ``self._config.system_prompt``.
+        effective_system_prompt = system_prompt or self._config.system_prompt
+
         kwargs: dict[str, Any] = {
             "model": _resolve_sdk_model(self._model_id),
-            "tools": tools,
+            "tools": local_tools,
             "max_turns": effective_max_turns,
             "permission_mode": self._config.permission_mode,
-            "system_prompt": self._config.system_prompt,
+            "system_prompt": effective_system_prompt,
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
