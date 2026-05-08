@@ -13,6 +13,7 @@ on:
     paths:
       - 'frontend/**'
       - 'backend/**'
+      - 'scripts/check-nesting.py'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/tests.yml'
@@ -21,6 +22,7 @@ on:
     paths:
       - 'frontend/**'
       - 'backend/**'
+      - 'scripts/check-nesting.py'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/tests.yml'
@@ -114,6 +116,12 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+
+      - name: Check Python nesting depth
+        # Cheap pre-check before installing the test deps — fails fast on
+        # functions that exceed the nesting budget (default depth 3).
+        # Exemption list lives at the top of the script.
+        run: python3 scripts/check-nesting.py
 
       - name: Install backend dependencies
         working-directory: backend
