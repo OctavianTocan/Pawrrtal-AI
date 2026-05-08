@@ -32,7 +32,7 @@ import {
 	UserPlusIcon,
 	XIcon,
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { Streamdown } from 'streamdown';
 
 interface DocumentViewerProps {
@@ -67,23 +67,16 @@ export function DocumentViewer({
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 
-	// Seed the draft only when we *enter* edit mode (false→true transition).
-	// Using a ref to track the previous value means we don't accidentally
-	// overwrite an in-progress edit when the parent re-fetches and updates the
-	// `markdown` prop while the textarea is open.
-	const prevIsEditing = useRef(false);
-	useEffect(() => {
-		const entered = isEditing && !prevIsEditing.current;
-		prevIsEditing.current = isEditing;
-		if (entered) {
-			setEditContent(markdown);
-			setSaveError(null);
-		}
-	}, [isEditing, markdown]);
-
+	// Seed the draft with the current markdown when the user enters edit mode.
+	// Moving this into the event handler (rather than a useEffect) means the
+	// captured value is always fresh and we don't need a ref to guard against
+	// mid-edit overwrites.  Cross-file resets are handled by the `key` prop
+	// applied to this component in KnowledgeView.
 	const handleEdit = useCallback(() => {
+		setEditContent(markdown);
+		setSaveError(null);
 		setIsEditing(true);
-	}, []);
+	}, [markdown]);
 
 	const handleCancel = useCallback(() => {
 		setIsEditing(false);

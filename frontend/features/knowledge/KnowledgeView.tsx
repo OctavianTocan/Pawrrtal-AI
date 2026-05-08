@@ -144,6 +144,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						{openFile ? (
 							<DocumentViewer
+								key={openFile.name}
 								filename={openFile.name}
 								markdown={openFile.markdown}
 								onClose={onCloseFile}
