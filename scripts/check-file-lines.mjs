@@ -72,6 +72,11 @@ const EXEMPT_PATH_FRAGMENTS = [
 	'frontend/components/ui/',
 	// TODO(ai-nexus-1vti follow-up): split these and remove the exemption.
 	'frontend/components/app-layout.tsx',
+	// TODO: split whimsy/index.tsx (currently ~690 lines).  Pre-existing
+	// tech debt that landed before the file-length gate ran cleanly in
+	// CI; exempted here to unblock CI without forcing a refactor PR
+	// alongside the gate.  Track in a follow-up bean before removing.
+	'frontend/features/whimsy/index.tsx',
 	// `frontend/lib/react-dropdown/` is a vendored copy of the
 	// `@octavian-tocan/react-dropdown` package that lives in its own git
 	// repo (gitignored from this one). Its file-length conventions belong

@@ -14,8 +14,16 @@ class FakeProvider:
         self.events = events
 
     async def stream(
-        self, question: str, conversation_id: object, user_id: object
+        self,
+        question: str,
+        conversation_id: object,
+        user_id: object,
+        history: object = None,
     ) -> AsyncIterator[dict[str, str]]:
+        # ``history`` was added to the provider contract when chat.py started
+        # threading prior turns through; tests don't assert on it but must
+        # accept it so the keyword-call from chat.py doesn't blow up.
+        del history
         for event in self.events:
             yield event
 
@@ -95,8 +103,13 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
 
     class FailingProvider:
         async def stream(
-            self, question: str, conversation_id: object, user_id: object
+            self,
+            question: str,
+            conversation_id: object,
+            user_id: object,
+            history: object = None,
         ) -> AsyncIterator[dict[str, str]]:
+            del history  # accept-and-ignore, see FakeProvider above
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
 

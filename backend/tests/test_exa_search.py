@@ -22,6 +22,15 @@ ever talks to the real Exa API.
 
 from __future__ import annotations
 
+import pytest
+
+# The Agno toolkit imports below pull in the optional ``agno`` dependency,
+# which was removed when the Gemini direct-loop provider replaced the
+# Agno experiment.  Skip the whole module when agno isn't installed so
+# CI passes without a runtime dep, but coverage returns the moment
+# ``agno`` is reinstalled.
+pytest.importorskip("agno", reason="agno is no longer a runtime dependency")
+
 import json
 from collections.abc import Callable
 from typing import Any
