@@ -2,11 +2,14 @@
 
 Provides ``read_file``, ``write_file``, and ``list_dir`` as :class:`AgentTool`
 instances bound to a specific workspace root directory.  Path traversal is
-blocked: any path that resolves outside the workspace root returns an error
-string rather than raising, so the agent can read the message and adjust.
+blocked: any path that resolves outside the workspace root surfaces a
+:class:`ToolError` rather than raising, so the agent can read the message
+and adjust.
 
-All paths passed by the model are interpreted relative to the workspace root.
-The agent should treat the root as ``/`` (or ``.``).
+All paths the model passes are interpreted relative to the workspace root.
+The agent should treat the root as ``/`` (or ``.``) — this contract is
+communicated via the tool descriptions, and the chat router additionally
+mentions it in the assembled system prompt when these tools are mounted.
 
 Usage::
 
@@ -20,9 +23,12 @@ Usage::
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 from app.core.agent_loop.types import AgentTool
+from app.core.tools.errors import ToolError, ToolErrorCode
 
 log = logging.getLogger(__name__)
 
@@ -32,18 +38,25 @@ _MAX_READ_BYTES = 128_000  # 128 KB
 _MAX_LIST_ENTRIES = 200
 
 
-def _resolve_safe(root: Path, rel_path: str) -> Path | None:
+def _resolve_safe(root: Path, rel_path: str) -> Path:
     """Resolve *rel_path* relative to *root* and return it if still inside.
 
-    Returns ``None`` when the resolved path escapes the workspace root.
+    Raises :class:`ToolError` (``OUT_OF_ROOT``) when the resolved path
+    escapes the workspace root or cannot be resolved at all.
     """
     try:
         target = (root / rel_path.lstrip("/")).resolve()
-    except Exception:
-        return None
+    except (OSError, ValueError) as exc:
+        raise ToolError(
+            ToolErrorCode.INVALID_PATH,
+            f"Could not resolve path '{rel_path}': {exc}",
+        ) from exc
     # resolve() follows symlinks; check the string prefix.
     if not str(target).startswith(str(root.resolve())):
-        return None
+        raise ToolError(
+            ToolErrorCode.OUT_OF_ROOT,
+            f"Path '{rel_path}' resolves outside the workspace root.",
+        )
     return target
 
 
@@ -55,146 +68,124 @@ def _fmt_size(n: int) -> str:
     return f"{n}TB"
 
 
-def _make_read_file(root: Path) -> AgentTool:
-    async def execute(tool_call_id: str, path: str) -> str:  # noqa: ARG001
-        target = _resolve_safe(root, path)
-        if target is None:
-            return f"Error: path '{path}' is outside the workspace root."
-        if not target.exists():
-            return f"Error: '{path}' does not exist."
-        if not target.is_file():
-            return f"Error: '{path}' is a directory, not a file."
+# A workspace tool body receives the resolved-and-checked target path plus
+# whatever extra kwargs the schema declares; raising ToolError on failure
+# is preferred over returning error strings (the wrapper does that).
+WorkspaceToolBody = Callable[..., Awaitable[str]]
+
+
+def _wrap_workspace_tool(
+    *,
+    name: str,
+    description: str,
+    parameters: dict[str, Any],
+    body: WorkspaceToolBody,
+    root: Path,
+    path_required: bool,
+) -> AgentTool:
+    """Build an AgentTool that resolves ``path`` safely before calling *body*.
+
+    Centralises the path-traversal check, the ``ToolError`` → string
+    translation, and the AgentTool dataclass construction so individual
+    tool bodies stay tiny and only encode their own behaviour.
+    """
+
+    async def execute(tool_call_id: str, **kwargs: Any) -> str:  # noqa: ARG001
+        raw_path = kwargs.pop("path", None)
+        if path_required and not raw_path:
+            return ToolError(
+                ToolErrorCode.INVALID_PATH,
+                "The 'path' argument is required.",
+            ).render()
         try:
-            raw = target.read_bytes()
+            target = _resolve_safe(root, raw_path or "")
+            return await body(target=target, raw_path=raw_path or "", **kwargs)
+        except ToolError as err:
+            return err.render()
         except OSError as exc:
-            return f"Error reading '{path}': {exc}"
-        if len(raw) > _MAX_READ_BYTES:
-            raw = raw[:_MAX_READ_BYTES]
-            suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // 1024} KB]"
+            return ToolError(
+                ToolErrorCode.IO_ERROR,
+                f"Filesystem error on '{raw_path}': {exc}",
+            ).render()
+
+    return AgentTool(
+        name=name,
+        description=description,
+        parameters=parameters,
+        execute=execute,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tool bodies
+# ---------------------------------------------------------------------------
+
+
+async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
+    if not target.exists():
+        raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
+    if not target.is_file():
+        raise ToolError(
+            ToolErrorCode.WRONG_KIND,
+            f"'{raw_path}' is a directory, not a file.",
+        )
+    raw = target.read_bytes()
+    if len(raw) > _MAX_READ_BYTES:
+        raw = raw[:_MAX_READ_BYTES]
+        suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // 1024} KB]"
+    else:
+        suffix = ""
+    try:
+        return raw.decode("utf-8") + suffix
+    except UnicodeDecodeError as exc:
+        raise ToolError(
+            ToolErrorCode.BINARY_FILE,
+            f"'{raw_path}' is a binary file and cannot be read as text.",
+        ) from exc
+
+
+async def _write_file_body(
+    *, target: Path, raw_path: str, content: str = "", **_: Any
+) -> str:
+    if target.is_dir():
+        raise ToolError(
+            ToolErrorCode.WRONG_KIND,
+            f"'{raw_path}' is a directory.",
+        )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+    return f"Written {len(content)} characters to '{raw_path}'."
+
+
+async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -> str:
+    if not target.exists():
+        raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
+    if not target.is_dir():
+        raise ToolError(
+            ToolErrorCode.WRONG_KIND,
+            f"'{raw_path}' is a file, not a directory. Use read_file to read it.",
+        )
+    entries = sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name))
+    if not entries:
+        return f"'{raw_path or '.'}' is empty."
+
+    lines: list[str] = []
+    for entry in entries[:_MAX_LIST_ENTRIES]:
+        rel = entry.relative_to(root)
+        if entry.is_dir():
+            lines.append(f"[dir]  {rel}/")
         else:
-            suffix = ""
-        try:
-            return raw.decode("utf-8") + suffix
-        except UnicodeDecodeError:
-            return f"Error: '{path}' is a binary file and cannot be read as text."
+            size = _fmt_size(entry.stat().st_size)
+            lines.append(f"[file] {rel}  ({size})")
 
-    return AgentTool(
-        name="read_file",
-        description=(
-            "Read the text content of a file in the workspace. "
-            "Paths are relative to the workspace root. "
-            "Binary files and files larger than 128 KB are rejected or truncated."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": (
-                        "File path relative to the workspace root, e.g. 'AGENTS.md' "
-                        "or 'memory/2026-05-07.md'."
-                    ),
-                }
-            },
-            "required": ["path"],
-        },
-        execute=execute,
-    )
+    if len(entries) > _MAX_LIST_ENTRIES:
+        lines.append(f"... and {len(entries) - _MAX_LIST_ENTRIES} more entries")
+    return "\n".join(lines)
 
 
-def _make_write_file(root: Path) -> AgentTool:
-    async def execute(tool_call_id: str, path: str, content: str) -> str:  # noqa: ARG001
-        target = _resolve_safe(root, path)
-        if target is None:
-            return f"Error: path '{path}' is outside the workspace root."
-        if target.is_dir():
-            return f"Error: '{path}' is a directory."
-        try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
-        except OSError as exc:
-            return f"Error writing '{path}': {exc}"
-        return f"Written {len(content)} characters to '{path}'."
-
-    return AgentTool(
-        name="write_file",
-        description=(
-            "Write text content to a file in the workspace, creating it if it "
-            "does not exist and overwriting it if it does. "
-            "Parent directories are created automatically. "
-            "Paths are relative to the workspace root."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "File path relative to the workspace root.",
-                },
-                "content": {
-                    "type": "string",
-                    "description": "Full text content to write. Overwrites the existing file.",
-                },
-            },
-            "required": ["path", "content"],
-        },
-        execute=execute,
-    )
-
-
-def _make_list_dir(root: Path) -> AgentTool:
-    async def execute(tool_call_id: str, path: str = "") -> str:  # noqa: ARG001
-        target = _resolve_safe(root, path or "")
-        if target is None:
-            return f"Error: path '{path}' is outside the workspace root."
-        if not target.exists():
-            return f"Error: '{path}' does not exist."
-        if not target.is_dir():
-            return f"Error: '{path}' is a file, not a directory. Use read_file to read it."
-        try:
-            entries = sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name))
-        except OSError as exc:
-            return f"Error listing '{path}': {exc}"
-
-        if not entries:
-            return f"'{path or '.'}' is empty."
-
-        lines: list[str] = []
-        for entry in entries[:_MAX_LIST_ENTRIES]:
-            rel = entry.relative_to(root)
-            if entry.is_dir():
-                lines.append(f"[dir]  {rel}/")
-            else:
-                size = _fmt_size(entry.stat().st_size)
-                lines.append(f"[file] {rel}  ({size})")
-
-        if len(entries) > _MAX_LIST_ENTRIES:
-            lines.append(f"... and {len(entries) - _MAX_LIST_ENTRIES} more entries")
-
-        return "\n".join(lines)
-
-    return AgentTool(
-        name="list_dir",
-        description=(
-            "List the contents of a directory in the workspace. "
-            "Shows directories with a trailing '/' and files with their sizes. "
-            "Call with no path (or empty string) to list the workspace root."
-        ),
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": (
-                        "Directory path relative to the workspace root. "
-                        "Omit or pass '' to list the root."
-                    ),
-                }
-            },
-            "required": [],
-        },
-        execute=execute,
-    )
+# ---------------------------------------------------------------------------
+# Public factory
+# ---------------------------------------------------------------------------
 
 
 def make_workspace_tools(workspace_root: Path) -> list[AgentTool]:
@@ -212,8 +203,83 @@ def make_workspace_tools(workspace_root: Path) -> list[AgentTool]:
         ``[read_file, write_file, list_dir]`` AgentTool instances.
     """
     root = Path(workspace_root).resolve()
+
     return [
-        _make_read_file(root),
-        _make_write_file(root),
-        _make_list_dir(root),
+        _wrap_workspace_tool(
+            name="read_file",
+            description=(
+                "Read the text content of a file in the workspace. "
+                "Paths are relative to the workspace root. "
+                "Binary files and files larger than 128 KB are rejected or truncated."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "File path relative to the workspace root, e.g. 'AGENTS.md' "
+                            "or 'memory/2026-05-07.md'."
+                        ),
+                    }
+                },
+                "required": ["path"],
+            },
+            body=_read_file_body,
+            root=root,
+            path_required=True,
+        ),
+        _wrap_workspace_tool(
+            name="write_file",
+            description=(
+                "Write text content to a file in the workspace, creating it if it "
+                "does not exist and overwriting it if it does. "
+                "Parent directories are created automatically. "
+                "Paths are relative to the workspace root."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "File path relative to the workspace root.",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Full text content to write. Overwrites the existing file.",
+                    },
+                },
+                "required": ["path", "content"],
+            },
+            body=_write_file_body,
+            root=root,
+            path_required=True,
+        ),
+        _wrap_workspace_tool(
+            name="list_dir",
+            description=(
+                "List the contents of a directory in the workspace. "
+                "Shows directories with a trailing '/' and files with their sizes. "
+                "Call with no path (or empty string) to list the workspace root."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "Directory path relative to the workspace root. "
+                            "Omit or pass '' to list the root."
+                        ),
+                    }
+                },
+                "required": [],
+            },
+            # list_dir's body needs ``root`` for ``relative_to`` formatting.
+            body=lambda target, raw_path, **kw: _list_dir_body(
+                target=target, raw_path=raw_path, root=root, **kw
+            ),
+            root=root,
+            path_required=False,
+        ),
     ]

@@ -30,7 +30,13 @@ from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = (
+# Last-resort fallback when no caller (frontend, chat router, AGENTS.md
+# loader) supplies a system prompt.  Kept intentionally generic — the real
+# system prompt should be assembled by the caller (workspace AGENTS.md
+# wins; see PR #113) and passed in via ``stream(system_prompt=...)``.
+# This constant exists only so unit tests and direct API callers can run
+# the provider without wiring up the assembly pipeline.
+_FALLBACK_SYSTEM_PROMPT = (
     "You are a helpful AI assistant. "
     "Be concise, accurate, and thoughtful in your responses."
 )
@@ -107,7 +113,7 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
         # rather than make the helper return the wide type.
         gemini_tools: list[Any] | None = _build_gemini_tool_declarations(tools)
         config = gtypes.GenerateContentConfig(
-            system_instruction=_SYSTEM_PROMPT,
+            system_instruction=_FALLBACK_SYSTEM_PROMPT,
             # Pass None (not []) when there are no tools — some SDK versions raise on empty list.
             tools=gemini_tools or None,
         )
@@ -230,8 +236,11 @@ class GeminiLLM:
             history: Prior messages oldest-first as ``{role, content}`` dicts.
             tools: Optional list of AgentTools to make available this turn
                 (e.g. workspace file tools built by ``make_workspace_tools``).
-            system_prompt: Override the default system prompt.  When ``None``
-                the built-in ``_SYSTEM_PROMPT`` constant is used.
+            system_prompt: System prompt for this turn.  Callers should
+                always supply one (the chat router does, populated from
+                workspace AGENTS.md per PR #113).  When ``None`` the
+                provider falls back to ``_FALLBACK_SYSTEM_PROMPT`` so a
+                bare unit test or direct script call still works.
         """
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
@@ -250,7 +259,7 @@ class GeminiLLM:
                 )
 
         context = AgentContext(
-            system_prompt=system_prompt or _SYSTEM_PROMPT,
+            system_prompt=system_prompt or _FALLBACK_SYSTEM_PROMPT,
             messages=prior,
             tools=list(tools or []),
         )

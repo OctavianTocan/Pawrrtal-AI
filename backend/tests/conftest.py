@@ -1,6 +1,7 @@
 """Shared backend test fixtures."""
 
 import sys
+import tempfile
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
 from uuid import uuid4
@@ -16,6 +17,7 @@ sys.path.insert(0, str(BACKEND_ROOT))
 
 from app import models  # noqa: F401  # Registers ORM models on Base metadata.
 from app.db import Base, User, get_async_session
+from app.models import Workspace
 from app.users import current_active_user
 from main import create_app
 
@@ -58,6 +60,32 @@ async def db_session(test_user: User) -> AsyncGenerator[AsyncSession]:
         yield session
 
     await engine.dispose()
+
+
+@pytest.fixture
+async def seeded_default_workspace(
+    db_session: AsyncSession, test_user: User
+) -> AsyncGenerator[Workspace]:
+    """Seed a default workspace for tests that need an onboarded user.
+
+    Chat now refuses to run until the user has a default workspace (PR
+    #112 onboarding gate); tests covering the chat API should depend on
+    this fixture so the gate doesn't 412 every request.  Tests that
+    explicitly want the "no workspace yet" condition (workspace CRUD
+    tests) skip this fixture.
+    """
+    workspace_root = Path(tempfile.mkdtemp(prefix="ainexus-test-ws-"))
+    workspace = Workspace(
+        id=uuid4(),
+        user_id=test_user.id,
+        name="Main",
+        slug="main",
+        path=str(workspace_root),
+        is_default=True,
+    )
+    db_session.add(workspace)
+    await db_session.commit()
+    yield workspace
 
 
 @pytest.fixture
