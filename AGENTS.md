@@ -81,6 +81,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **File-line budget**: 500 lines hard ceiling for any `.ts`/`.tsx`/`.py` source file. `node scripts/check-file-lines.mjs` enforces it; CI fails on overflow. Split into smaller modules rather than asking for an exemption.
 - **Nesting-depth budget (Python)**: max 3 levels of compound-statement nesting per Python function (`if`/`for`/`while`/`try`/`with`/`match`). `python3 scripts/check-nesting.py` enforces it on every backend pytest CI run. Pre-existing offenders are tracked in the script's `EXEMPT_FUNCTIONS`; do not add new entries.
 - **Nesting-depth budget (frontend)**: max 3 levels of compound-statement nesting per TS/TSX function (`if`/`for`/`while`/`do`/`try`/`switch`). `node scripts/check-nesting.mjs` runs as part of `bun run check` and the Frontend Check CI workflow.
+- **Dev-mode console must stay clean**: `node scripts/dev-console-smoke.mjs` boots the app under `next dev` (Turbopack + React 19 strict) via the `agent-browser` CLI and fails CI if `pageerror` or `console.error` fires on the cold-boot routes. The Stagehand suite hits the *production* build, which silences hydration warnings; this smoke is the gate that catches dev-only fatal warnings (e.g. React 19's `<script>` rule). Allowlist policy: narrow regex per CI-environment artefact only, with a TODO + reason; never widen the matcher.
 - See `.claude/rules/clean-code/limit-nesting-depth.md` for guidance on flattening with guard clauses and helper functions.
 
 ## Commit & Pull Request Guidelines

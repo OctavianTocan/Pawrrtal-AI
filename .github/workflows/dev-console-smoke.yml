@@ -1,0 +1,161 @@
+name: Dev Console Smoke
+
+# Boots the app under `next dev` (Turbopack + React 19 strict mode)
+# and fails CI if the browser console emits any errors or uncaught
+# exceptions on the cold-boot routes.  Closes the gap that lets
+# fatal-in-dev hydration warnings ship — the rest of the test
+# matrix runs against the production build (Vercel preview, the
+# Stagehand workflow), where React silences these warnings.
+#
+# Driven by `vercel-labs/agent-browser` rather than Playwright: the
+# project already uses `agent-browser` for visual-regression on the
+# React Native side, the binary is cached on the self-hosted runner,
+# and there's no test-runner scaffolding to maintain — this workflow
+# is a thin shell around `node scripts/dev-console-smoke.mjs`.
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'scripts/dev-console-smoke.mjs'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/dev-console-smoke.yml'
+  push:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'scripts/dev-console-smoke.mjs'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/dev-console-smoke.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: dev-console-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Dev console clean
+    # Self-hosted: `agent-browser` and its Chrome-for-Testing payload
+    # are cached on the `ainexus` runner across runs; rebuilding the
+    # cache on every GitHub-hosted ubuntu-latest run would dominate
+    # the smoke's wall time.
+    runs-on: [self-hosted, ainexus]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Python (for backend dev-login)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build local libs (frontend/lib/* submodules)
+        run: bash scripts/build-local-libs.sh
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      # `agent-browser` itself is intended to be installed once on the
+      # runner, but the install command is idempotent so re-running
+      # here is harmless on a warm runner and self-bootstraps a cold
+      # one.  `agent-browser install --with-deps` adds the system
+      # libs Chrome needs on a fresh Linux box.
+      - name: Ensure agent-browser is installed
+        run: |
+          if ! command -v agent-browser > /dev/null; then
+            npm install -g agent-browser
+          fi
+          agent-browser install --with-deps
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          AUTH_SECRET: e2e-not-a-secret
+          GOOGLE_API_KEY: e2e-not-a-key
+          FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          CORS_ORIGINS: '["http://localhost:3001"]'
+          DATABASE_URL: 'sqlite+aiosqlite:///./e2e.db'
+          ADMIN_EMAIL: e2e-admin@example.com
+          ADMIN_PASSWORD: e2e-admin-password
+          COOKIE_SAMESITE: lax
+          COOKIE_SECURE: 'false'
+        run: |
+          uv run uvicorn main:app --host 127.0.0.1 --port 8000 &
+          echo $! > /tmp/backend.pid
+          for i in $(seq 1 30); do
+            if curl -sSf http://localhost:8000/openapi.json > /dev/null 2>&1; then
+              echo "Backend ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Backend did not start within 30s"
+          exit 1
+
+      - name: Start frontend in DEV mode (next dev / Turbopack)
+        working-directory: frontend
+        env:
+          E2E_API_URL: http://localhost:8000
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        # `bun run dev` invokes `next dev --port 3001` per
+        # package.json.  Production build is INTENTIONALLY skipped
+        # here — the Stagehand workflow exercises that path; this
+        # smoke needs dev-mode warnings to surface React 19
+        # hydration errors.
+        run: |
+          bun run dev > /tmp/dev-server.log 2>&1 &
+          echo $! > /tmp/frontend.pid
+          for i in $(seq 1 90); do
+            if curl -sSf http://localhost:3001 > /dev/null 2>&1; then
+              echo "Dev server ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Dev server did not start within 90s"
+          tail -200 /tmp/dev-server.log || true
+          exit 1
+
+      - name: Run dev-console smoke
+        env:
+          DEV_URL: http://localhost:3001
+        run: node scripts/dev-console-smoke.mjs
+
+      - name: Upload dev-server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-console-server-log
+          path: /tmp/dev-server.log
+          retention-days: 14
+
+      - name: Stop backend + frontend + agent-browser
+        if: always()
+        run: |
+          [ -f /tmp/backend.pid ] && kill -9 "$(cat /tmp/backend.pid)" 2>/dev/null || true
+          [ -f /tmp/frontend.pid ] && kill -9 "$(cat /tmp/frontend.pid)" 2>/dev/null || true
+          agent-browser close --all 2>/dev/null || true
