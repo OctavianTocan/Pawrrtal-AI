@@ -40,7 +40,15 @@ def build_agent_tools(*, workspace_root: Path) -> list[AgentTool]:
     Args:
         workspace_root: The user's default workspace directory.  Passed
             to :func:`make_workspace_tools` so the resulting tools are
-            scoped to that directory — the agent cannot escape it.
+            **scoped** to that directory.  The path-resolution helper
+            inside ``workspace_files.py`` rejects ``..`` traversal and
+            absolute paths via ``ToolError(OUT_OF_ROOT)``, but — and
+            this is the load-bearing word — *scoped*, not *proven
+            unescapable*.  We have unit tests for the resolver, not
+            adversarial evals against a real model trying to escape.
+            Until those land (see bean ``ai-nexus-wsiq``), treat the
+            boundary as a strong invariant we haven't yet proved
+            under prompt pressure.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.

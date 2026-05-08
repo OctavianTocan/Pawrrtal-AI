@@ -40,7 +40,13 @@ concurrency:
 jobs:
   integration:
     name: Integration suite
-    runs-on: ubuntu-latest
+    # Self-hosted to keep token spend bounded: the runner already has
+    # the Claude CLI + uv installed locally (no per-run install of
+    # 「@anthropic-ai/claude-code」) and the network egress to Anthropic
+    # is on Tavi's box, not GitHub's.  Reserving 「ubuntu-latest」 for
+    # the GitHub-hosted-only workloads (「playwright install --with-deps」
+    # in the dev-console smoke).
+    runs-on: [self-hosted, ainexus]
     timeout-minutes: 20
     steps:
       - name: Checkout repository

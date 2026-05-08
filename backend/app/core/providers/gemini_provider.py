@@ -33,14 +33,21 @@ from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
 
-# Last-resort fallback when no caller (frontend, chat router, AGENTS.md
-# loader) supplies a system prompt.  Imported from
-# ``app.core.agent_system_prompt`` and aliased so the Gemini and Claude
-# providers fall back to the same constant — the agent's identity must
-# not silently change based on which model the user picked.  The real
-# system prompt for chat traffic is assembled by the chat router
-# (workspace AGENTS.md wins; see PR #113) and passed in via
-# ``stream(system_prompt=...)``.
+# `_FALLBACK_SYSTEM_PROMPT` is the system prompt this provider uses
+# when *no caller supplies one*.  In production the chat router
+# always supplies one (assembled from the workspace's SOUL.md +
+# AGENTS.md per PR #113), so this fallback only fires for unit tests
+# and direct-script callers that don't wire up the assembly
+# pipeline.
+#
+# It's imported from `app.core.agent_system_prompt` instead of being
+# a string literal here so that the Gemini and Claude providers fall
+# back to the **same** constant.  Otherwise the agent's identity
+# would silently change when the user switched models — which is the
+# behaviour AGENTS.md was meant to make impossible.
+#
+# The local alias is kept for grep continuity with the previous
+# in-file constant of the same name.
 
 _GEMINI_ROLE = {"user": "user", "assistant": "model"}
 
