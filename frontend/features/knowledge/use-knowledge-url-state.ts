@@ -68,6 +68,12 @@ export function useKnowledgeUrlState(): KnowledgeUrlState {
 		: DEFAULT_KNOWLEDGE_VIEW;
 
 	const rawPath = searchParams.get(KNOWLEDGE_QUERY_KEYS.path);
+	// `parseKnowledgePath` returns a fresh array on every call.
+	// Memoizing on `rawPath` (a primitive string) gives downstream
+	// consumers — the `useCallback` deps in `useKnowledgeNavigation`,
+	// the `useMemo` deps of derived state below, the `KnowledgeView`
+	// render shape — a stable reference so they don't recompute on every
+	// parent render even when the URL hasn't changed.
 	const segments = useMemo(() => parseKnowledgePath(rawPath), [rawPath]);
 
 	const {
@@ -80,26 +86,36 @@ export function useKnowledgeUrlState(): KnowledgeUrlState {
 
 	const resolvedTree = fileTree ?? EMPTY_FILE_TREE;
 
-	const openFilePath = useMemo(
-		() => (isFilePath(segments) ? joinKnowledgePath(segments) : null),
-		[segments]
-	);
+	// `openFilePath` is a primitive string; React Query (inside
+	// `useWorkspaceFile`) compares query keys by value, so memoizing
+	// here would only add allocations.  Computed inline.
+	const openFilePath = isFilePath(segments) ? joinKnowledgePath(segments) : null;
 
 	const { content: fileContent, isLoading: fileLoading } = useWorkspaceFile(
 		workspaceId,
 		openFilePath
 	);
 
+	// Memoized: `Array.prototype.slice` allocates a new array each
+	// call, and `folderSegments` is consumed as a `useCallback` dep in
+	// `useKnowledgeNavigation`.  Without the memo, every parent render
+	// would invalidate every navigation handler.
 	const folderSegments = useMemo(
 		() => (isFilePath(segments) ? segments.slice(0, -1) : segments),
 		[segments]
 	);
 
+	// Memoized: `findNodeByPath` walks the tree to return a node
+	// reference; without the memo we'd re-walk every parent render
+	// and hand `KnowledgeView` a different reference each time even
+	// when neither the tree nor the path changed.
 	const currentNode = useMemo(
 		() => findNodeByPath(resolvedTree, folderSegments),
 		[resolvedTree, folderSegments]
 	);
 
+	// Same rationale as `currentNode` — a tree walk that should
+	// produce a stable reference per (tree, segments) pair.
 	const openFileNode = useMemo(() => {
 		if (!isFilePath(segments)) return null;
 		const node = findNodeByPath(resolvedTree, segments);
@@ -107,6 +123,8 @@ export function useKnowledgeUrlState(): KnowledgeUrlState {
 		return null;
 	}, [resolvedTree, segments]);
 
+	// Memoized: returns a fresh array; consumers (KnowledgeView
+	// render + breadcrumb keys) benefit from a stable reference.
 	const crumbs = useMemo(
 		() => buildBreadcrumbs(resolvedTree.name, folderSegments),
 		[resolvedTree.name, folderSegments]

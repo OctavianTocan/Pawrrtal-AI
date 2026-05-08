@@ -29,12 +29,27 @@ function buildQuery(view: KnowledgeViewId, path: string): string {
 	return params.toString();
 }
 
+/**
+ * Bag of handlers that {@link KnowledgeView} expects.
+ *
+ * Returned by {@link useKnowledgeNavigation}; spread directly onto
+ * `<KnowledgeView />` so a new handler added to the view's prop set
+ * surfaces as a TypeScript error here too.  Each handler is a stable
+ * callback (`useCallback`) keyed on `folderSegments` + `router` so
+ * memoized children don't re-render when unrelated state changes.
+ */
 export interface KnowledgeNavigationHandlers {
+	/** Switch the active sub-view (`my-files` / `memory` / `brain-access`). */
 	onSelectView: KnowledgeViewProps['onSelectView'];
+	/** Jump to a breadcrumb segment (always within `my-files`). */
 	onNavigateBreadcrumb: KnowledgeViewProps['onNavigateBreadcrumb'];
+	/** Descend into a child file/folder of the current folder. */
 	onOpenChild: KnowledgeViewProps['onOpenChild'];
+	/** Close the currently-open `.md` file and return to its parent folder. */
 	onCloseFile: KnowledgeViewProps['onCloseFile'];
+	/** "New file/folder" action — currently navigates to the My Files root. */
 	onNew: KnowledgeViewProps['onNew'];
+	/** "Share from empty state" action — navigates to Brain Access. */
 	onShareFromEmptyState: KnowledgeViewProps['onShareFromEmptyState'];
 }
 
