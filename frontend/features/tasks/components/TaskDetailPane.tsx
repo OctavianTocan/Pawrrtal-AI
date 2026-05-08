@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Right-side detail pane that slides in when a task row is selected.
  *

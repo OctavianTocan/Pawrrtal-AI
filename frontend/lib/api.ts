@@ -5,7 +5,9 @@
  * Default targets the local FastAPI dev server on `http://localhost:8000`.
  * In production (Vercel) the env var must be set to the deployed API origin.
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+// Vite-style env var (post-Next.js migration).  Backend URL override
+// for production / Electron / staging builds; falls back to local dev.
+export const API_BASE_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8000';
 
 /**
  * API endpoint definitions for frontend requests.

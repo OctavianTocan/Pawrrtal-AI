@@ -1,5 +1,3 @@
-'use client';
-
 import type * as React from 'react';
 import { useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';

@@ -1,5 +1,3 @@
-'use client';
-
 import { getLabelById } from '@/features/nav-chats/constants';
 import { TOAST_IDS, toast } from '@/lib/toast';
 import type { Conversation, ConversationStatus } from '@/lib/types';

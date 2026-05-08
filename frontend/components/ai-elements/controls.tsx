@@ -4,8 +4,6 @@
  * @fileoverview AI Elements — `controls`.
  */
 
-'use client';
-
 import { Controls as ControlsPrimitive } from '@xyflow/react';
 import type { ComponentProps } from 'react';
 import { cn } from '@/lib/utils';

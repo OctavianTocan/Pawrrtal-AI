@@ -10,8 +10,6 @@
  * for the content).
  */
 
-'use client';
-
 import {
 	DropdownMenuItem,
 	DropdownMenuLabel,

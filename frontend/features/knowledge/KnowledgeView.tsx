@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Pure presentation shell for the Knowledge surface.
  *

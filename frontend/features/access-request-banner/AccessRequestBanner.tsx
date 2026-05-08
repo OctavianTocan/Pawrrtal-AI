@@ -1,5 +1,3 @@
-'use client';
-
 import { useReducer, useState } from 'react';
 import { AccessRequestBannerView } from './AccessRequestBannerView';
 import type { AccessRequestBannerProps, BannerState, Decision } from './types';

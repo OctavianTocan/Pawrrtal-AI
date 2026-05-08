@@ -4,3 +4,10 @@ test-results/
 playwright-report/
 .playwright/
 e2e/output/
+# Vite build output (post-Next.js migration)
+dist/
+# TanStack Router generated route tree.
+src/routeTree.gen.ts
+# Old Next.js artifacts (kept gitignored in case any sibling branch
+# leaks them back during a rebase)
+.next/

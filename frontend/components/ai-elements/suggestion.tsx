@@ -4,8 +4,6 @@
  * @fileoverview AI Elements — `suggestion`.
  */
 
-'use client';
-
 import type { ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';

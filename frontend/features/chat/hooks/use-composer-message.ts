@@ -1,5 +1,3 @@
-'use client';
-
 import { type ChangeEvent, useCallback, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 

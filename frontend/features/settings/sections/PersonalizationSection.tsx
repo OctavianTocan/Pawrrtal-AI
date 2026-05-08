@@ -1,5 +1,3 @@
-'use client';
-
 import type * as React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';

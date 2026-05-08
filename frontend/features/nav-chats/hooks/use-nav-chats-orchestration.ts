@@ -4,9 +4,6 @@
  * @fileoverview Feeds {@link NavChatsView} with handlers derived from route, groups, and collapse state.
  */
 
-'use client';
-
-import { usePathname } from 'next/navigation';
 import type {
 	Dispatch,
 	MutableRefObject,
@@ -16,6 +13,7 @@ import type {
 } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ConversationGroup } from '@/lib/conversation-groups';
+import { usePathname } from '@/lib/navigation';
 import { extractConversationIdFromPath } from '@/lib/route-utils';
 import type { Conversation } from '@/lib/types';
 import type { NavChatsViewProps } from '../components/NavChatsView';

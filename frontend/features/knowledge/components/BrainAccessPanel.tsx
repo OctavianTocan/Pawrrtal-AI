@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Brain access sub-view.
  *

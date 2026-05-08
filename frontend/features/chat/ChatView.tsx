@@ -1,5 +1,3 @@
-'use client';
-
 import type * as React from 'react';
 import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';

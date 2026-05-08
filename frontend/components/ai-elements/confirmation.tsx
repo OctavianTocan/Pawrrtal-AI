@@ -4,8 +4,6 @@
  * @fileoverview AI Elements — `confirmation`.
  */
 
-'use client';
-
 import type { ToolUIPart } from 'ai';
 import { type ComponentProps, createContext, type ReactNode, useContext } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';

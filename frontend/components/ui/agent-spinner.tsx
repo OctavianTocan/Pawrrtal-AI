@@ -9,8 +9,6 @@
  * @fileoverview Drop-in replacement for spinner icons in chat/agent loaders.
  */
 
-'use client';
-
 import { type CSSProperties, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 

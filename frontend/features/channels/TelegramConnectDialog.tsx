@@ -20,8 +20,6 @@
  * @fileoverview Onboarding + settings dialog for the Telegram bind flow.
  */
 
-'use client';
-
 import { Check, Copy, ExternalLink } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';

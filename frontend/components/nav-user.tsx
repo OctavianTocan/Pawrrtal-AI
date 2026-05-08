@@ -9,8 +9,6 @@
  * @fileoverview Profile button + dropdown rendered as the SidebarFooter.
  */
 
-'use client';
-
 import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
@@ -32,11 +30,11 @@ import {
 	LogOutIcon,
 	SettingsIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useCallback, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
+import { useRouter } from '@/lib/navigation';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
@@ -244,7 +242,14 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 					Gift AI Nexus
 				</DropdownMenuItem>
 				<DropdownSubmenu>
-					<DropdownSubmenuTrigger disabled className={SUBMENU_TRIGGER_CLASSNAME}>
+					{/* `disabled` was previously a `DropdownSubmenuTrigger` prop;
+					    the lib dropped it.  Visual disabled state via class until
+					    the lib re-adds support — click still opens but the
+					    aria + opacity tell the user it's a placeholder. */}
+					<DropdownSubmenuTrigger
+						aria-disabled
+						className={cn(SUBMENU_TRIGGER_CLASSNAME, 'pointer-events-none opacity-50')}
+					>
 						<InfoIcon aria-hidden="true" className="size-4" />
 						<span className="flex-1 text-left">Learn more</span>
 					</DropdownSubmenuTrigger>

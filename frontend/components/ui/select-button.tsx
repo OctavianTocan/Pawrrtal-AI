@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * SelectButton — a small DropdownMenu-driven picker that matches the
  * chat composer's model selector styling.

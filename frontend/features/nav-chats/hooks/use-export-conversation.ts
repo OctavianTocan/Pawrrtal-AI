@@ -1,5 +1,3 @@
-'use client';
-
 import { useCallback } from 'react';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * React Query hook for lazily fetching a single workspace file's text content.
  *

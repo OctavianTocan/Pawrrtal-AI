@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Page-level header rendered ABOVE the rounded Knowledge card.
  *

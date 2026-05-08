@@ -4,8 +4,6 @@
  * @fileoverview Keyboard, paste, and controlled-provider behavior for prompt input textareas.
  */
 
-'use client';
-
 import {
 	type ChangeEvent,
 	type ClipboardEventHandler,

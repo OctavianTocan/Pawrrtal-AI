@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Right-aligned project chip rendered on every task row.
  *

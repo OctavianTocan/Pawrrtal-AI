@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Settings → Appearance — visual mock.
  *

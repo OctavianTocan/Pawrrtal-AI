@@ -1,5 +1,3 @@
-'use client';
-
 import { AnimatePresence, motion } from 'motion/react';
 import { RequestRow } from './RequestRow';
 import { EXPAND_SPRING, type ExpandedRequestListProps } from './types';

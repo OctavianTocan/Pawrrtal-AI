@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Top-of-page header for the Tasks surface.
  *

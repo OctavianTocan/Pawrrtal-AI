@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Vertical list of memory category cards rendered inside the Memory
  * sub-view's middle column.

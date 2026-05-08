@@ -25,7 +25,8 @@
 			"!**/.stagehand-cache",
 			"!**/playwright-report",
 			"!**/test-results",
-			"!frontend/e2e/output"
+			"!frontend/e2e/output",
+			"!frontend/lib/**"
 		]
 	},
 	"formatter": {
@@ -154,7 +155,7 @@
 			}
 		},
 		{
-			"includes": ["frontend/app/globals.css"],
+			"includes": ["frontend/src/styles/globals.css"],
 			"linter": {
 				"rules": {
 					"complexity": {

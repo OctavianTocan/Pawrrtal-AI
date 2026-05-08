@@ -4,15 +4,13 @@
  * @fileoverview Uses `credentials: 'include'` on follow-up login so the session cookie is stored for the SPA.
  */
 
-'use client';
-
-import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { useRouter } from '@/lib/navigation';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 /** Registration form with invite code gate (when enabled server-side). */

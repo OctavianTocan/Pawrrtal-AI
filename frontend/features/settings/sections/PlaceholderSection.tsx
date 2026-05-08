@@ -1,5 +1,3 @@
-'use client';
-
 import { Construction } from 'lucide-react';
 import type * as React from 'react';
 import { SettingsPage } from '../primitives';

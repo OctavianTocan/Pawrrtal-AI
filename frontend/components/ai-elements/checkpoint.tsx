@@ -4,8 +4,6 @@
  * @fileoverview AI Elements — `checkpoint`.
  */
 
-'use client';
-
 import { BookmarkIcon, type LucideProps } from 'lucide-react';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { Button } from '@/components/ui/button';

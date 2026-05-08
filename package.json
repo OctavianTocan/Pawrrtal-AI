@@ -26,6 +26,15 @@
 	},
 	"workspaces": [
 		"frontend",
-		"electron"
-	]
+		"electron",
+		"frontend/lib/react-dropdown"
+	],
+	"overrides": {
+		"react": "19.2.5",
+		"react-dom": "19.2.5"
+	},
+	"resolutions": {
+		"react": "19.2.5",
+		"react-dom": "19.2.5"
+	}
 }

@@ -1,5 +1,3 @@
-'use client';
-
 import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';

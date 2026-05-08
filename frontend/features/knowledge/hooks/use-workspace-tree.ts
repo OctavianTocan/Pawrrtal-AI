@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * React Query hook that fetches the current user's default workspace and
  * converts its flat file-tree API response into the recursive

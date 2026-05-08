@@ -1,11 +1,7 @@
-'use client';
-
 import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import type * as React from 'react';
 import { useState } from 'react';
 import { useWhimsyTile } from '@/features/whimsy';
-import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
+import { useRouter } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';

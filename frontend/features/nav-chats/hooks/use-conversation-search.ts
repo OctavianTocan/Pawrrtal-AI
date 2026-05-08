@@ -12,7 +12,6 @@
  * transient network errors don't permanently block a conversation from being
  * searchable.
  */
-'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';

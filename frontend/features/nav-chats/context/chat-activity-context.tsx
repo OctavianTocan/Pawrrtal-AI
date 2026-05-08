@@ -11,7 +11,6 @@
  * cleanly in the current layout (sidebar and chat are siblings under different
  * layout regions).
  */
-'use client';
 
 import type React from 'react';
 import { createContext, useContext, useMemo, useState } from 'react';

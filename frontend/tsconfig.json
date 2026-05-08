@@ -6,10 +6,8 @@
 		"allowJs": true,
 		"resolveJsonModule": true,
 		"moduleDetection": "force",
-		// Strictness.
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
-		// Not transpiling with Typescript:
 		"moduleResolution": "bundler",
 		"module": "esnext",
 		"noEmit": true,
@@ -19,11 +17,7 @@
 		"isolatedModules": true,
 		"jsx": "react-jsx",
 		"incremental": true,
-		"plugins": [
-			{
-				"name": "next"
-			}
-		],
+		"types": ["vite/client", "node"],
 		"paths": {
 			"@/*": ["./*"],
 			"@octavian-tocan/react-dropdown": ["./lib/react-dropdown/src/index.ts"],
@@ -31,16 +25,10 @@
 		},
 		"esModuleInterop": true
 	},
-	"include": [
-		"next-env.d.ts",
-		"**/*.ts",
-		"**/*.tsx",
-		".next/types/**/*.ts",
-		"**/*.mts",
-		".next/dev/types/**/*.ts"
-	],
+	"include": ["vite-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts", "src/routeTree.gen.ts"],
 	"exclude": [
 		"node_modules",
+		"dist",
 		"lib/react-dropdown/src/__stories__",
 		"lib/react-dropdown/src/__storybook__",
 		"lib/react-dropdown/src/__tests__",

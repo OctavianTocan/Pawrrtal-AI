@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Pill-style breadcrumb rendered at the top of the file/file-list panes.
  *
