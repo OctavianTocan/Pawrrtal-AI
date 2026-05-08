@@ -24,7 +24,7 @@ export function uuidv4(): string {
 
 /** Establish the dev session cookie.  Idempotent. */
 export async function devLogin(): Promise<void> {
-	const res = await fetch(`${BACKEND_URL}/api/v1/auth/dev-login`, {
+	const res = await fetch(`${BACKEND_URL}/auth/dev-login`, {
 		method: 'POST',
 		credentials: 'include',
 	});
