@@ -1,10 +1,10 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type * as React from 'react';
 import { Toaster } from 'sonner';
 import { getQueryClient } from './get-query-client';
+import { QueryDevtools } from './query-devtools';
 
 /**
  * App-root provider tree.
@@ -25,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<ReactQueryDevtools initialIsOpen={false} />
+			<QueryDevtools />
 			{children}
 			<Toaster
 				closeButton
