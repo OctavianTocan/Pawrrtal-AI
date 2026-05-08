@@ -206,3 +206,32 @@ spike-03:
 # Spike 04 — Solid.js + Vite. FE on :5176.
 spike-04:
     bun run spikes/dev.ts 04-solid 5176
+
+# --- Spike + Electron variants ----------------------------------------------
+
+# Each `spike-NN-electron` recipe boots backend + the spike's frontend
+# dev server + the Electron desktop shell pointing at it, in a single
+# command.  Same teardown semantics as `spike-NN`: Ctrl-C kills all
+# three.  Use these to compare each stack wrapped in Electron vs in a
+# plain browser tab.
+#
+# Implementation: `spikes/dev-electron.ts` builds the Electron main +
+# preload TS once, then spawns backend + spike + electron with
+# `ELECTRON_FRONTEND_PORT` set so the shell loads the spike's port
+# instead of Next.js's :3001.
+
+# Spike 01 — React + Vite, in Electron. FE on :5173.
+spike-01-electron:
+    bun run spikes/dev-electron.ts 01-react-vite 5173
+
+# Spike 02 — React + Vite + TanStack Router, in Electron. FE on :5174.
+spike-02-electron:
+    bun run spikes/dev-electron.ts 02-react-vite-tanstack 5174
+
+# Spike 03 — SvelteKit, in Electron. FE on :5175.
+spike-03-electron:
+    bun run spikes/dev-electron.ts 03-sveltekit 5175
+
+# Spike 04 — Solid.js + Vite, in Electron. FE on :5176.
+spike-04-electron:
+    bun run spikes/dev-electron.ts 04-solid 5176

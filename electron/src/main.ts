@@ -99,7 +99,7 @@ function buildSplashDataUrl(): string {
 	<div class="box">
 		<div class="spinner" aria-hidden="true"></div>
 		<h1>Starting AI Nexus…</h1>
-		<p>Waiting for dev server on :3001</p>
+		<p>Waiting for dev server on :${process.env.ELECTRON_FRONTEND_PORT ?? '3001'}</p>
 	</div>
 </body></html>`;
 	return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
@@ -141,7 +141,7 @@ function buildErrorDataUrl(reason: string): string {
 </style></head>
 <body>
 	<div class="box">
-		<h1>Couldn't reach the dev server on :3001</h1>
+		<h1>Couldn't reach the dev server on :${process.env.ELECTRON_FRONTEND_PORT ?? '3001'}</h1>
 		<p>Start the Next.js dev server first, then relaunch the desktop shell:</p>
 		<p><code>just dev</code> &nbsp; (terminal 1)<br /><code>just electron-dev</code> &nbsp; (terminal 2)</p>
 		<p>Or in one shot: <code>just electron-dev-full</code>.</p>

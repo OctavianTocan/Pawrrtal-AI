@@ -29,8 +29,19 @@ interface StartOptions {
 	isDev: boolean;
 }
 
-/** Default port the frontend dev server runs on (mirrors `just dev`). */
-const DEV_FRONTEND_PORT = 3001;
+/**
+ * Port the Electron shell points at in dev mode.  Defaults to 3001
+ * (the Next.js dev server `just dev` boots).  Override via
+ * `ELECTRON_FRONTEND_PORT` to point at one of the spike dev servers
+ * — see `just spike-NN-electron` recipes which launch the matching
+ * Vite/SvelteKit server on its own port and pass it through here.
+ */
+const DEV_FRONTEND_PORT = (() => {
+	const raw = process.env.ELECTRON_FRONTEND_PORT;
+	if (raw === undefined || raw === '') return 3001;
+	const parsed = Number.parseInt(raw, 10);
+	return Number.isNaN(parsed) ? 3001 : parsed;
+})();
 
 /** Default backend URL — the FastAPI server `just dev` boots up. */
 const DEFAULT_BACKEND_URL = 'http://localhost:8000';
@@ -140,7 +151,7 @@ async function attachToDevServer(): Promise<StartedServer> {
 		const banner = [
 			'',
 			'═══════════════════════════════════════════════════════════════',
-			'  Electron could not reach the Next.js dev server on :3001',
+			`  Electron could not reach the dev server on :${DEV_FRONTEND_PORT}`,
 			'═══════════════════════════════════════════════════════════════',
 			'',
 			'  The desktop shell expects the frontend dev server to be',

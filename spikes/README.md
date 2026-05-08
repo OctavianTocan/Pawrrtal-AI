@@ -43,8 +43,11 @@ Each spike has its own `README.md` capturing:
 
 ## How to run a spike
 
-From the repo root, one command per spike — boots the FastAPI backend
-on :8000 AND the spike's frontend dev server in parallel:
+Every spike runs in **two surfaces** — plain browser tab and Electron.
+What we're really comparing is end-to-end UX across both, since the
+desktop app ships through Electron and the web build runs in a tab.
+
+### Browser-only mode
 
 ```bash
 just spike-01    # React + Vite              → http://localhost:5173
@@ -53,19 +56,40 @@ just spike-03    # SvelteKit                  → http://localhost:5175
 just spike-04    # Solid.js                   → http://localhost:5176
 ```
 
-First run does `pnpm install` for that spike automatically.  Ctrl-C
-tears down both processes cleanly.  CORS is widened on the fly to
-allow the spike's port without editing `backend/.env`.
+Boots the FastAPI backend on :8000 and the spike's frontend dev
+server on its dedicated port.  Ctrl-C tears both down cleanly.
 
-If you'd rather override the backend (e.g. point at a deployed
-staging), invoke the orchestrator directly:
+### Electron mode (also opens the desktop shell)
+
+```bash
+just spike-01-electron     # opens spike 01 in Electron + browser at :5173
+just spike-02-electron     # spike 02 in Electron + browser at :5174
+just spike-03-electron     # spike 03 in Electron + browser at :5175
+just spike-04-electron     # spike 04 in Electron + browser at :5176
+```
+
+Boots backend + spike + Electron in one command.  The Electron shell
+points at the spike's port via `ELECTRON_FRONTEND_PORT`, so you can
+open the same dev server in both a browser tab AND the desktop window
+at once and compare.
+
+First run does `pnpm install` for the spike automatically and builds
+the Electron main process TypeScript.  Ctrl-C kills backend, frontend,
+and Electron together.
+
+### Backend override
+
+To point any spike at a deployed staging instead of localhost:
 
 ```bash
 VITE_BACKEND_URL=https://api.pawrrtal.app bun run spikes/dev.ts 01-react-vite 5173
 ```
 
-You can also run any spike standalone (without the backend booting)
-with `cd spikes/0N-* && pnpm install && pnpm dev`.
+### Standalone (no backend, no Electron)
+
+```bash
+cd spikes/0N-* && pnpm install && pnpm dev
+```
 
 ## What we're explicitly *not* trying to do
 
