@@ -1,5 +1,5 @@
 ---
-# ai-nexus-v0mc
+# pawrrtal-v0mc
 title: OnboardingShell footer inside panel
 status: completed
 type: task

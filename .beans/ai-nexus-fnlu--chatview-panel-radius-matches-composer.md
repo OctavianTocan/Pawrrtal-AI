@@ -1,5 +1,5 @@
 ---
-# ai-nexus-fnlu
+# pawrrtal-fnlu
 title: ChatView panel radius matches composer
 status: completed
 type: task

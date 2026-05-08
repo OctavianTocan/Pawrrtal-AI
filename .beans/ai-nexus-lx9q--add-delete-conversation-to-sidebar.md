@@ -1,5 +1,5 @@
 ---
-# ai-nexus-lx9q
+# pawrrtal-lx9q
 title: Add Delete Conversation to Sidebar
 status: scrapped
 type: task
@@ -10,7 +10,7 @@ tags:
 created_at: 2026-02-27T15:04:48Z
 updated_at: 2026-05-07T16:31:57Z
 blocked_by:
-    - ai-nexus-da7z
+    - pawrrtal-da7z
 ---
 
 Notion Task #30

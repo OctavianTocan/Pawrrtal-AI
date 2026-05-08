@@ -1,11 +1,11 @@
-# Sidebar Parity Audit: ai-nexus vs craft-agents-oss
+# Sidebar Parity Audit: pawrrtal vs craft-agents-oss
 
 **Date:** 2026-03-26
 **Branch:** `port-craft-session-sidebar-parity`
 
 ## File Mapping
 
-| Craft (reference) | ai-nexus (ours) | Status |
+| Craft (reference) | pawrrtal (ours) | Status |
 |---|---|---|
 | `apps/electron/src/renderer/components/app-shell/SessionItem.tsx` | `frontend/components/conversation-sidebar-item.tsx` | Partial match |
 | `apps/electron/src/renderer/components/app-shell/SessionSearchHeader.tsx` | `frontend/components/conversation-search-header.tsx` | Close match |
@@ -43,7 +43,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Context menu** | Built-in via `ContextMenu` wrapper + `ContextMenuProvider` | **Missing** - no right-click menu |
 | **Dropdown menu** | Built-in via `menuContent` prop + `DropdownMenuProvider` | Handled externally in `ConversationRowMenu` |
@@ -56,7 +56,7 @@
 | **hideMoreButton** | Prop to hide "..." button | Not supported |
 | **Comp element** | Always `<button>` | `asChild` toggles between `<div>` and `<button>` |
 | **Badge mask gradient** | `maskImage: linear-gradient(...)` fade-out on overflow | **Missing** |
-| **Non-titleTrailing more button** | Absolute positioned in top-right, bigger icon (h-4 w-4), border on hover | **Missing** (ai-nexus only has inline titleTrailing menu) |
+| **Non-titleTrailing more button** | Absolute positioned in top-right, bigger icon (h-4 w-4), border on hover | **Missing** (pawrrtal only has inline titleTrailing menu) |
 
 ### 2. Session/Conversation Item
 
@@ -70,7 +70,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Status icon** | `SessionStatusIcon` - colored per status, clickable popover to change status | Static `Circle` icon, not clickable, single muted color |
 | **Indicator group** | Animated div with spinner, unread badge (blue dot), plan icon, pending prompt badge | **Missing** - no indicators at all |
@@ -95,7 +95,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Placeholder** | `"Search titles and content..."` | `"Search session titles..."` |
 | **Loading state** | Shows `<Spinner>` + "Loading..." while `isSearching` | No loading state |
@@ -116,7 +116,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Menu architecture** | Dedicated `SessionMenu` component using `useMenuComponents()` context for DropdownMenu/ContextMenu polymorphism | Inline `ConversationRowMenu` component, direct Radix `DropdownMenu` usage |
 | **Share** | Share/Shared submenu (share to viewer, copy link, update share, stop sharing) | **Missing** |
@@ -148,7 +148,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Data source** | Jotai atoms (`sessionMetaMapAtom`) | React Query (`useGetConversations`) |
 | **Group date format** | `"Today"`, `"Yesterday"`, `"MMM d"` (via date-fns `format`) | `"Today"`, `"Yesterday"`, `"Mon 15"` (via Intl.DateTimeFormat) |
@@ -177,7 +177,7 @@
 
 **Differences:**
 
-| Feature | Craft | ai-nexus |
+| Feature | Craft | pawrrtal |
 |---|---|---|
 | **Sidebar type** | `LeftSidebar` - vertical nav buttons (sessions, sources, settings) | `NewSidebar` - single-panel with header + content |
 | **Navigation** | Multi-mode: sessions, sources, settings views | Sessions only |

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-1fs1
+# pawrrtal-1fs1
 title: Python CLI commit message generator
 status: completed
 type: feature

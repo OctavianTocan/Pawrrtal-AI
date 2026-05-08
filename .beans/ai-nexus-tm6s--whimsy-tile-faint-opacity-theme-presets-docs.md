@@ -1,5 +1,5 @@
 ---
-# ai-nexus-tm6s
+# pawrrtal-tm6s
 title: 'Whimsy tile: faint opacity + theme presets + docs'
 status: completed
 type: task

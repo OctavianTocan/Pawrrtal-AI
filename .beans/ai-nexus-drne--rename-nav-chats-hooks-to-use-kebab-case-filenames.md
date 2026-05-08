@@ -1,5 +1,5 @@
 ---
-# ai-nexus-drne
+# pawrrtal-drne
 title: Rename nav-chats hooks to use-kebab-case filenames
 status: completed
 type: task

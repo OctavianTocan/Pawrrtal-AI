@@ -1,5 +1,5 @@
 ---
-# ai-nexus-f58v
+# pawrrtal-f58v
 title: 'Onboarding: load Telegram connect state with skeleton + DESIGN.md async-load pattern'
 status: todo
 type: feature

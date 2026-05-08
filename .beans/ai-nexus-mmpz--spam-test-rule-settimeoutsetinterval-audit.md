@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mmpz
+# pawrrtal-mmpz
 title: Spam-test rule + setTimeout/setInterval audit
 status: completed
 type: task

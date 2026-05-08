@@ -1,5 +1,5 @@
 ---
-# ai-nexus-cbfp
+# pawrrtal-cbfp
 title: Disable Learn more submenu (profile menu)
 status: completed
 type: task

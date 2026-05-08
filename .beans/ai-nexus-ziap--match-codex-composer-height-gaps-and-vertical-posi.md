@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ziap
+# pawrrtal-ziap
 title: Match Codex composer height, gaps, and vertical position
 status: completed
 type: feature
@@ -8,7 +8,7 @@ created_at: 2026-05-03T21:09:04Z
 updated_at: 2026-05-03T21:10:19Z
 ---
 
-Tighten AI Nexus empty-state composer to match Codex compact look.
+Tighten Pawrrtal empty-state composer to match Codex compact look.
 
 
 

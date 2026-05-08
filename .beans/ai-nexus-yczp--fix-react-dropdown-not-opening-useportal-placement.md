@@ -1,5 +1,5 @@
 ---
-# ai-nexus-yczp
+# pawrrtal-yczp
 title: 'Fix react-dropdown not opening: usePortal + placement priority'
 status: completed
 type: bug
@@ -21,4 +21,4 @@ Fix:
 
 ## Resolution
 
-The not-opening bug was fixed in the prior pass via `usePortal` + `placement` priority. Subsequent work (`ai-nexus-amlb`) closed 12 of 14 Radix-parity improvements. The remaining Radix gaps and full migration plan are tracked under bean ai-nexus-2v85 (parity overhaul) and ai-nexus-2v86 (migration).
+The not-opening bug was fixed in the prior pass via `usePortal` + `placement` priority. Subsequent work (`pawrrtal-amlb`) closed 12 of 14 Radix-parity improvements. The remaining Radix gaps and full migration plan are tracked under bean pawrrtal-2v85 (parity overhaul) and pawrrtal-2v86 (migration).

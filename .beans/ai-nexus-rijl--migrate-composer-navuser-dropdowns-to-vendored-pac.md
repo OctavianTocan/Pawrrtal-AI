@@ -1,5 +1,5 @@
 ---
-# ai-nexus-rijl
+# pawrrtal-rijl
 title: Migrate composer + NavUser dropdowns to vendored package, retire Radix DropdownMenu
 status: completed
 type: feature
@@ -12,9 +12,9 @@ After all package work lands (asChild, align, flyout submenus, headless hook), u
 
 ## Migration order
 
-1. **NavUser bg fix.** `frontend/components/nav-user.tsx:240-247` passes `contentClassName="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"` which strips the package's default `bg-white border`. Switch to `popover-styled w-64` so it inherits the project surface (which after `ai-nexus-yyug` includes backdrop-blur).
+1. **NavUser bg fix.** `frontend/components/nav-user.tsx:240-247` passes `contentClassName="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"` which strips the package's default `bg-white border`. Switch to `popover-styled w-64` so it inherits the project surface (which after `pawrrtal-yyug` includes backdrop-blur).
 2. **AutoReviewSelector style polish.** Already on the vendored package; confirm visual parity with ModelSelectorPopover after backdrop-blur globalization lands.
-3. **ModelSelectorPopover migration.** Port from Radix `DropdownMenu` to the vendored package. Uses new flyout submenus (`ai-nexus-za3f`) for per-provider grouping. Uses `asChild` (`ai-nexus-nwcd`) for the Button trigger.
+3. **ModelSelectorPopover migration.** Port from Radix `DropdownMenu` to the vendored package. Uses new flyout submenus (`pawrrtal-za3f`) for per-provider grouping. Uses `asChild` (`pawrrtal-nwcd`) for the Button trigger.
 4. **Audit other Radix DropdownMenu consumers.** `grep -r '@/components/ui/dropdown-menu'` to find remaining call sites. Migrate each.
 5. **Delete Radix DropdownMenu.** Remove `frontend/components/ui/dropdown-menu.tsx`. Remove `@radix-ui/react-dropdown-menu` from `frontend/package.json`. Verify build.
 
@@ -33,11 +33,11 @@ After all package work lands (asChild, align, flyout submenus, headless hook), u
 ## Progress this session
 
 - [x] **NavUser bg fix.** `frontend/components/nav-user.tsx:240-247` updated. `contentClassName` changed from `'w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]'` (transparent dropdown bug — function-parameter default `bg-white` got overridden) to `'popover-styled p-1 w-64'` so the dropdown inherits the project's themed background, border, layered shadow, and (after motion overhaul) global backdrop-filter blur.
-- [x] AutoReviewSelector style polish (already on vendored package, completed in ai-nexus-6wxf).
+- [x] AutoReviewSelector style polish (already on vendored package, completed in pawrrtal-6wxf).
 
 ## Still blocked
 
-- ModelSelectorPopover migration is blocked on flyout submenus (bean ai-nexus-za3f) — Radix's `DropdownMenuSub` is used for per-provider grouping, no equivalent in vendored package yet.
+- ModelSelectorPopover migration is blocked on flyout submenus (bean pawrrtal-za3f) — Radix's `DropdownMenuSub` is used for per-provider grouping, no equivalent in vendored package yet.
 - Audit of remaining Radix DropdownMenu consumers (other than ModelSelectorPopover) and the eventual deletion of `frontend/components/ui/dropdown-menu.tsx` happen after migrating the model selector.
 
 
@@ -75,7 +75,7 @@ Multi-session task brief asked for the full migration of 6 remaining Radix Dropd
 
 ### Why
 
-The session prioritized landing the headless `useDropdown` hook (bean ai-nexus-a3td) cleanly with 22 new tests + docs, plus the keyframes consolidation in globals.css. Building a vendored ContextMenu family that mirrors Radix's surface used by `entity-row.tsx` and `menu-context.tsx` (Trigger, Content, Item, Separator, Sub, SubTrigger, SubContent), then porting 6 consumers without regression, then deleting the Radix package — is a multi-hour piece of work that doesn't compress.
+The session prioritized landing the headless `useDropdown` hook (bean pawrrtal-a3td) cleanly with 22 new tests + docs, plus the keyframes consolidation in globals.css. Building a vendored ContextMenu family that mirrors Radix's surface used by `entity-row.tsx` and `menu-context.tsx` (Trigger, Content, Item, Separator, Sub, SubTrigger, SubContent), then porting 6 consumers without regression, then deleting the Radix package — is a multi-hour piece of work that doesn't compress.
 
 ### What's needed before unblock
 

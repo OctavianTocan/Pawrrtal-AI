@@ -1,5 +1,5 @@
 ---
-# ai-nexus-bvym
+# pawrrtal-bvym
 title: 'Full chat parity with thirdear: duration, tool labels, source chips, actions, recovery'
 status: completed
 type: task
@@ -8,7 +8,7 @@ created_at: 2026-05-04T10:22:56Z
 updated_at: 2026-05-04T10:37:27Z
 ---
 
-Layer the missing thirdear /c-route polish onto AssistantMessage. See parent bean ai-nexus-613t for the gap analysis.
+Layer the missing thirdear /c-route polish onto AssistantMessage. See parent bean pawrrtal-613t for the gap analysis.
 
 ## Todos
 - [x] Track thinking start/end timestamps and feed duration to the reasoning panel

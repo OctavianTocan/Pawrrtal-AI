@@ -1,5 +1,5 @@
 ---
-# ai-nexus-5rwv
+# pawrrtal-5rwv
 title: 'Decide: privileged-ops in Electron main vs bundled FastAPI sidecar'
 status: completed
 type: feature
@@ -8,7 +8,7 @@ created_at: 2026-05-05T06:07:44Z
 updated_at: 2026-05-05T07:05:11Z
 ---
 
-**Context.** The AI Nexus desktop shell ships, but the FastAPI backend isn't bundled. To make the agent able to modify the user's computer (file edits, shell commands, local workspace scanning), we need privileged code running locally — either in the Electron main process or in a bundled backend.
+**Context.** The Pawrrtal desktop shell ships, but the FastAPI backend isn't bundled. To make the agent able to modify the user's computer (file edits, shell commands, local workspace scanning), we need privileged code running locally — either in the Electron main process or in a bundled backend.
 
 **Craft Agents pattern (researched 2026-05-05).** They do **not** bundle a backend. Privileged tool calls run in the Electron main process via Node `fs/promises` + `child_process`, gated by a path allowlist. Renderer ↔ main is a local WebSocket RPC; renderer is sandboxed (`contextIsolation: true`, `nodeIntegration: false`). They DO bundle the Claude Agent SDK native binary (~210 MB) + `bun` + `uv` runtimes via `extraResources`.
 

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-yl6q
+# pawrrtal-yl6q
 title: Move settings/primitives to ui-primitives/ to break whimsy↔settings back-edge
 status: todo
 type: task
@@ -10,7 +10,7 @@ tags:
     - refactor
 created_at: 2026-05-06T16:51:39Z
 updated_at: 2026-05-06T16:51:39Z
-parent: ai-nexus-ey9p
+parent: pawrrtal-ey9p
 ---
 
 ## Why

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-8kxs
+# pawrrtal-8kxs
 title: Adopt agentic-stack workspace template
 status: todo
 type: feature
@@ -40,4 +40,4 @@ User direction: "For the workspace template that we are using, I need us to foll
 
 ## Related
 
-- Depends on ai-nexus-dmor (workspace must actually be wired into providers first, otherwise this is paint on a wall)
+- Depends on pawrrtal-dmor (workspace must actually be wired into providers first, otherwise this is paint on a wall)

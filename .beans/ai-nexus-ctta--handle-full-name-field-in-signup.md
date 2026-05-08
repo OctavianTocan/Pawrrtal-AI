@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ctta
+# pawrrtal-ctta
 title: Handle Full Name Field in Signup
 status: todo
 type: task

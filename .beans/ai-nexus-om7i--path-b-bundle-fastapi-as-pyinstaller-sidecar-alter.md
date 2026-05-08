@@ -1,5 +1,5 @@
 ---
-# ai-nexus-om7i
+# pawrrtal-om7i
 title: 'Path B: bundle FastAPI as PyInstaller sidecar (alternative)'
 status: todo
 type: feature

@@ -1,6 +1,6 @@
 ---
-# ai-nexus-1dko
-title: Adopt web-ce-shared-packages Biome & TSConfig patterns for AI Nexus
+# pawrrtal-1dko
+title: Adopt web-ce-shared-packages Biome & TSConfig patterns for Pawrrtal
 status: completed
 type: task
 priority: normal
@@ -8,7 +8,7 @@ created_at: 2026-03-27T16:03:54Z
 updated_at: 2026-03-27T16:24:14Z
 ---
 
-Research and plan how to bring the stricter Biome linting, custom policies, and TSConfig patterns from .private/web-ce-shared-packages into the AI Nexus project.
+Research and plan how to bring the stricter Biome linting, custom policies, and TSConfig patterns from .private/web-ce-shared-packages into the Pawrrtal project.
 
 
 ## Summary of Changes

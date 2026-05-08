@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mjru
+# pawrrtal-mjru
 title: Set up pytest infrastructure and write first test suite
 status: completed
 type: task

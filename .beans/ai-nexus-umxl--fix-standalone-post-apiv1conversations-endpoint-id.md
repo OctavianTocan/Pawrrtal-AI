@@ -1,5 +1,5 @@
 ---
-# ai-nexus-umxl
+# pawrrtal-umxl
 title: Fix standalone POST /api/v1/conversations endpoint (id now required on schema)
 status: scrapped
 type: task

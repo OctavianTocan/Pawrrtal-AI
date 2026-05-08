@@ -38,7 +38,7 @@ concurrency:
 jobs:
   check:
     name: bun run check
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 10
     steps:
       - name: Checkout repository

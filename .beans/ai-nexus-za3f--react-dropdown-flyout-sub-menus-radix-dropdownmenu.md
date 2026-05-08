@@ -1,5 +1,5 @@
 ---
-# ai-nexus-za3f
+# pawrrtal-za3f
 title: 'react-dropdown: flyout sub-menus (Radix DropdownMenuSub parity)'
 status: completed
 type: feature
@@ -43,7 +43,7 @@ This is structural work that's better as a focused pass than crammed into a poli
   - `DropdownSubmenuContent` — portaled flyout panel. Reuses the root's enterDuration / exitDuration / enterEase / exitEase via `useDropdownContext` for visual continuity. Filter blur on enter/exit. Side-flip collision detection (right ↔ left) when one side overflows the viewport. Vertical clamp keeps the panel within VIEWPORT_INSET (8 px) of viewport edges. Cancels parent's hover-close timer on pointer enter, restarts it on leave.
 - Components exported from package index alongside their types (`DropdownSubmenuTriggerProps`, `DropdownSubmenuContentProps`).
 - Nested submenus work because each `DropdownSubmenu` creates its own context — chain of nested providers, each with independent state.
-- ModelSelectorPopover now uses these — see ai-nexus-rijl.
+- ModelSelectorPopover now uses these — see pawrrtal-rijl.
 
 ## Limitations / future work
 

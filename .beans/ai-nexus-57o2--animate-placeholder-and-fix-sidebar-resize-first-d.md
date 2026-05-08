@@ -1,5 +1,5 @@
 ---
-# ai-nexus-57o2
+# pawrrtal-57o2
 title: Animate placeholder and fix sidebar resize first drag
 status: completed
 type: bug

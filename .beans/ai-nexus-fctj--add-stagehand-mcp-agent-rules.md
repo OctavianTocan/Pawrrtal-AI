@@ -1,5 +1,5 @@
 ---
-# ai-nexus-fctj
+# pawrrtal-fctj
 title: Add Stagehand MCP + agent rules
 status: completed
 type: task

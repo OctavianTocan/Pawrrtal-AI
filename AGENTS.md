@@ -2,7 +2,7 @@
 
 # Repository Guidelines
 
-- Repo: https://github.com/OctavianTocan/ai-nexus
+- Repo: https://github.com/OctavianTocan/pawrrtal
 - In chat replies, file references must be repo-root relative only (example: `frontend/components/ui/sidebar.tsx:80`); never absolute paths or `~/...`.
 - Do not edit files covered by security-focused `CODEOWNERS` rules unless a listed owner explicitly asked for the change or is already reviewing it with you. Treat those paths as restricted surfaces, not drive-by cleanup.
 - **Never describe a failure mode as "pre-existing" to justify leaving it broken.** If you encounter a lint warning, type error, runtime warning, console error, broken test, or regression — fix it. The user does not care who introduced it; they care whether the app works. Warnings need fixing too: they are latent errors that haven't been promoted to blocking yet (Biome rolls levels, React 19 hardened previously informational warnings into fatal hydration faults, etc.). If a fix would explode the PR scope, open a sibling PR and reference it; do not punt with genealogy. See `.claude/rules/general/no-pre-existing-excuse.md`.
@@ -51,7 +51,7 @@ This is a public repo wired to a self-hosted runner pool on Octavian's VPS. CI i
       github.event.pull_request.head.repo.full_name == github.repository)
   ```
 
-- **Default runner is self-hosted:** `runs-on: [self-hosted, openclaw-mini, ainexus]`. The runner pool is `openclaw-vps-NN` registered out of `/srv/github-runners/<repo>/actions-runner/` as the `gha` system user. Use `ubuntu-latest` only when there's a real reason (macOS/Windows/GPU/untrusted external code already gated separately).
+- **Default runner is self-hosted:** `runs-on: [self-hosted, openclaw-mini, pawrrtal]`. The runner pool is `openclaw-vps-NN` registered out of `/srv/github-runners/<repo>/actions-runner/` as the `gha` system user. Use `ubuntu-latest` only when there's a real reason (macOS/Windows/GPU/untrusted external code already gated separately).
 - **Documented exception:** `rebase.yml` uses `pull_request_target` and never runs PR code; it relies on `author_association` instead of the actor gate. See `.claude/rules/github-actions/safe-pull-request-target.md`.
 - **Repo-level Actions settings** (must be set in the GitHub UI; the standard CI tokens don't have Actions admin scope): require approval for first-time contributor workflows, default workflow permissions = read.
 - **Layout / install / removal:** `docs/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
@@ -128,7 +128,7 @@ architecture; the rules at a glance:
 
 - The frontend stays Electron-agnostic. Anywhere it needs a desktop
   capability it goes through `frontend/lib/desktop.ts`, which detects
-  `window.aiNexus` and falls back to web equivalents on the browser.
+  `window.pawrrtal` and falls back to web equivalents on the browser.
 - Desktop-only IPC is namespaced `desktop:*` and validated on the
   main side (see `electron/src/ipc.ts`). Renderer security is locked:
   `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`.
@@ -140,10 +140,10 @@ architecture; the rules at a glance:
 - Backend is not bundled; set `BACKEND_URL` to point the desktop app
   at a remote FastAPI deployment (defaults to `http://localhost:8000`).
 
-## How We Work On AI Nexus
+## How We Work On Pawrrtal
 
 The session-derived working agreement lives in
-`.claude/rules/general/how-we-work-on-ai-nexus.md`. It encodes nine rules
+`.claude/rules/general/how-we-work-on-pawrrtal.md`. It encodes nine rules
 the team keeps re-discovering: read implementations before changing them,
 trace cause before fixing, update `DESIGN.md` when tokens change in code,
 reuse established patterns instead of inventing parallel ones, declare
@@ -152,7 +152,7 @@ every file write, ship tests in the same commit as new features, commit
 one concern at a time, and ask before destructive or scope-bending work.
 Apply on every session.
 
-## Curated Claude rules (AI Nexus)
+## Curated Claude rules (Pawrrtal)
 
 Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full `.claude/rules/` tree has additional coverage.
 
@@ -235,7 +235,7 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 ## Learned User Preferences
 
 - When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
-- When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
+- When adapting external UI references (screenshots, other products), use Pawrrtal naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
 - When a UI fix establishes a reusable pattern (disabled controls, overlays, menus, etc.), capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
 - Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
@@ -257,7 +257,7 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 <claude-mem-context>
 # Memory Context
 
-# [ai-nexus] recent context, 2026-05-04 9:18am GMT+2
+# [pawrrtal] recent context, 2026-05-04 9:18am GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
@@ -272,9 +272,9 @@ S1 Check Notion todos for project status and verify CLAUDE.md symlink setup (Feb
 20 4:34p 🟣 Implemented React Query with authenticated API fetching
 21 " 🔄 Refactored conversation fetching to use React Query caching
 ### Feb 16, 2026
-120 5:13p 🔵 Notion Integration Tools Available in ai-nexus Project
-121 " 🔵 AppSidebar Component Structure in ai-nexus Frontend
-122 5:14p 🔵 AI Nexus Project Architecture and Task Management System
+120 5:13p 🔵 Notion Integration Tools Available in pawrrtal Project
+121 " 🔵 AppSidebar Component Structure in pawrrtal Frontend
+122 5:14p 🔵 Pawrrtal Project Architecture and Task Management System
 123 " 🔵 App Layout Structure Uses Sidebar Wrapper Component
 124 " 🔵 Sidebar Component Architecture Using SidebarProvider Pattern
 125 5:27p 🟣 Conversations Successfully Rendering in UI
@@ -336,7 +336,7 @@ Added comprehensive implementation context to the Notion task page for "Fix POST
 
 S15 Clarification on task scope after documenting implementation details for 5 Notion tasks (Feb 22 at 9:16 PM)
 **1545** 9:17p 🔵 **Task Backlog Contains 93 Tasks Across 6 Sprints**
-The Notion database query revealed the complete project scope after user questioned why only "5 pages" were mentioned. The ai-nexus project has 93 tracked tasks spanning 6 sprints. Sprint 1 (22 tasks) and Sprint 2 (16 tasks) show substantial completion with most tasks marked "Done". Sprint 3 begins with critical UUID handling fixes (tasks 71-72), sidebar features (73-75), and conversation management features. Later sprints (4-6) contain 50+ additional tasks covering technical debt, polish, testing, deployment, and accessibility improvements. The recent documentation effort targeted only 5 specific Sprint 3 tasks, representing a small fraction of the total backlog. This explains the user's confusion - the phrase "all 5 pages updated" implied completeness when it was actually a focused subset.
+The Notion database query revealed the complete project scope after user questioned why only "5 pages" were mentioned. The pawrrtal project has 93 tracked tasks spanning 6 sprints. Sprint 1 (22 tasks) and Sprint 2 (16 tasks) show substantial completion with most tasks marked "Done". Sprint 3 begins with critical UUID handling fixes (tasks 71-72), sidebar features (73-75), and conversation management features. Later sprints (4-6) contain 50+ additional tasks covering technical debt, polish, testing, deployment, and accessibility improvements. The recent documentation effort targeted only 5 specific Sprint 3 tasks, representing a small fraction of the total backlog. This explains the user's confusion - the phrase "all 5 pages updated" implied completeness when it was actually a focused subset.
 ~397t 🔍 10,114
 
 

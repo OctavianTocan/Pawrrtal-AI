@@ -1,5 +1,5 @@
 ---
-# ai-nexus-cocq
+# pawrrtal-cocq
 title: Evaluate Adding Own Messages Table as Agno Mirror
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #69
 
 ## Reasons for Scrapping
 
-User confirmed 2026-05-07: nothing more is being done with Agno. `app/core/agents.py` and `app/core/providers/agno_provider.py` are dead code and excluded from mypy in commit `e49d664`. The provider direction is Gemini + Claude. Closing the Agno cluster: ai-nexus-bl8g, ai-nexus-d2ke, ai-nexus-cocq, ai-nexus-7xc0.
+User confirmed 2026-05-07: nothing more is being done with Agno. `app/core/agents.py` and `app/core/providers/agno_provider.py` are dead code and excluded from mypy in commit `e49d664`. The provider direction is Gemini + Claude. Closing the Agno cluster: pawrrtal-bl8g, pawrrtal-d2ke, pawrrtal-cocq, pawrrtal-7xc0.

@@ -1,12 +1,12 @@
 ---
-# ai-nexus-wnrp
+# pawrrtal-wnrp
 title: Re-evaluate chat-composer-input-group bespoke CSS class
 status: todo
 type: task
 priority: normal
 created_at: 2026-05-06T12:55:00Z
 updated_at: 2026-05-06T12:55:00Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 `globals.css` currently has a bespoke `.chat-composer-input-group` rule (and a sibling `.chat-composer-dropdown-menu` rule) that exists because the InputGroup primitive's API didn't expose enough hooks to set the surface bg / border / shadow without a custom class. That's a smell about the primitive, not a real surface token.

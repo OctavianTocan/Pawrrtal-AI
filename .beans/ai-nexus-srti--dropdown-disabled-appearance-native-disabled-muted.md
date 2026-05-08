@@ -1,5 +1,5 @@
 ---
-# ai-nexus-srti
+# pawrrtal-srti
 title: 'Dropdown disabled appearance: native disabled + muted tray + @source'
 status: completed
 type: task

@@ -65,7 +65,7 @@ def create_app() -> FastAPI:
     """Create a FastAPI app instance with middleware and routes."""
     fastapi_app = FastAPI(
         lifespan=lifespan,
-        title="Nexus-AI",
+        title="Pawrrtal",
         description="An AI assistant platform",
         version="0.1.0",
     )

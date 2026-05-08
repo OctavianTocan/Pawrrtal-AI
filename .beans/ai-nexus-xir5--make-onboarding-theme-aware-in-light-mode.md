@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xir5
+# pawrrtal-xir5
 title: Make onboarding theme-aware in light mode
 status: completed
 type: bug

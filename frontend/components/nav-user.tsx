@@ -241,7 +241,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				</DropdownMenuItem>
 				<DropdownMenuItem disabled onSelect={noop}>
 					<GiftIcon aria-hidden="true" className="size-4" />
-					Gift AI Nexus
+					Gift Pawrrtal
 				</DropdownMenuItem>
 				<DropdownSubmenu>
 					{/* `disabled` was previously a `DropdownSubmenuTrigger` prop;

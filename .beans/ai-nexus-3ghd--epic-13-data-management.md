@@ -1,5 +1,5 @@
 ---
-# ai-nexus-3ghd
+# pawrrtal-3ghd
 title: 'Epic 13: Data Management'
 status: todo
 type: epic
@@ -10,9 +10,9 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:18Z
 updated_at: 2026-02-27T16:10:35Z
-parent: ai-nexus-93co
+parent: pawrrtal-93co
 blocked_by:
-    - ai-nexus-pva0
+    - pawrrtal-pva0
 ---
 
 Export conversations (JSON/Markdown). Delete conversation endpoint. Bulk delete. Delete all data with confirmation.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xfys
+# pawrrtal-xfys
 title: Sidebar user profile dropdown menu
 status: in-progress
 type: feature
@@ -20,7 +20,7 @@ Add a user profile button to the bottom of the navbar that opens a Claude.ai-sty
   - --- separator ---
   - View all plans
   - Get apps and extensions
-  - Gift AI Nexus
+  - Gift Pawrrtal
   - Learn more (submenu)
   - --- separator ---
   - Log out

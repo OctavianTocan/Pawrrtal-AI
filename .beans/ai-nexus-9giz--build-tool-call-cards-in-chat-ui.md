@@ -1,5 +1,5 @@
 ---
-# ai-nexus-9giz
+# pawrrtal-9giz
 title: Wire existing tool cards into chat SSE stream
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:10:03Z
 updated_at: 2026-03-07T22:25:43Z
-parent: ai-nexus-sady
+parent: pawrrtal-sady
 ---
 
 Tool card UI already built in components/ai-elements/tool.tsx (collapsible, status badges, animations). Remaining work:

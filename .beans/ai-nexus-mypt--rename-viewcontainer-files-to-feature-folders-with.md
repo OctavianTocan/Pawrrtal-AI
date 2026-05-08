@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mypt
+# pawrrtal-mypt
 title: Rename View/Container files to feature folders with PascalCase
 status: completed
 type: task

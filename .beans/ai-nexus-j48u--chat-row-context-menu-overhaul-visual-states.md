@@ -1,5 +1,5 @@
 ---
-# ai-nexus-j48u
+# pawrrtal-j48u
 title: Chat row context menu — overhaul + visual states
 status: completed
 type: feature

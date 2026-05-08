@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ol7a
+# pawrrtal-ol7a
 title: Add Dark Mode Toggle
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #56
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-i1uj (Implement theme context and dark/light toggle) in Epic 5.
+Duplicate of pawrrtal-i1uj (Implement theme context and dark/light toggle) in Epic 5.

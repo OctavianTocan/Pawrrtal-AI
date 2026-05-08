@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mml1
+# pawrrtal-mml1
 title: Fix model selector visual bugs
 status: scrapped
 type: bug

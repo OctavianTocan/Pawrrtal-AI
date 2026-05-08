@@ -1,12 +1,12 @@
 ---
-# ai-nexus-w4xx
+# pawrrtal-w4xx
 title: Restore dark-mode toggle without bringing back the appearance system
 status: todo
 type: bug
 priority: high
 created_at: 2026-05-06T12:54:42Z
 updated_at: 2026-05-06T12:54:42Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 The deleted `AppearanceProvider` was responsible for adding/removing the `.dark` class on `<html>` based on the user's resolved theme mode (light / dark / system). With the provider gone, `.dark` is never set and the app is stuck in light mode.

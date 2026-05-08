@@ -1,12 +1,12 @@
 ---
-# ai-nexus-2uyu
+# pawrrtal-2uyu
 title: Pass selected model_id from frontend to backend chat endpoint
 status: todo
 type: task
 priority: high
 created_at: 2026-03-12T00:29:18Z
 updated_at: 2026-03-12T00:44:45Z
-parent: ai-nexus-3i2d
+parent: pawrrtal-3i2d
 ---
 
 ## Problem

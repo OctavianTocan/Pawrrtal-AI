@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6aor
+# pawrrtal-6aor
 title: Apply Vercel React + Next.js best-practice rules across the chat stack
 status: completed
 type: task

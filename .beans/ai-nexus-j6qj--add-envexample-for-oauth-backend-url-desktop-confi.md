@@ -1,5 +1,5 @@
 ---
-# ai-nexus-j6qj
+# pawrrtal-j6qj
 title: Add .env.example for OAuth + BACKEND_URL desktop config
 status: todo
 type: task

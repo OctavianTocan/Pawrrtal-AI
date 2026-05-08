@@ -1,5 +1,5 @@
 ---
-# ai-nexus-dbcl
+# pawrrtal-dbcl
 title: Update agent factory for multi-model support
 status: completed
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:41Z
 updated_at: 2026-03-10T19:25:52Z
-parent: ai-nexus-7k7w
+parent: pawrrtal-7k7w
 ---
 
 Update the agent factory and chat endpoint to accept a dynamic model ID, so the user's selected model is used per request. Only Gemini is supported for now — no MODEL_MAP or multi-provider complexity needed yet.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-nwcd
+# pawrrtal-nwcd
 title: 'react-dropdown: asChild slot pattern'
 status: completed
 type: feature

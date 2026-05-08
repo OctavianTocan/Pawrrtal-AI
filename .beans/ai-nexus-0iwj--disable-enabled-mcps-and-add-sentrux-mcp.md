@@ -1,5 +1,5 @@
 ---
-# ai-nexus-0iwj
+# pawrrtal-0iwj
 title: Disable enabled MCPs and add sentrux MCP
 status: completed
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-2kt4
+# pawrrtal-2kt4
 title: 'DESIGN.md updates: motion vocabulary + popover backdrop-blur globalization'
 status: completed
 type: task
@@ -8,7 +8,7 @@ created_at: 2026-05-07T09:31:57Z
 updated_at: 2026-05-07T09:38:16Z
 ---
 
-Update DESIGN.md to reflect the new motion vocabulary and popover spec changes that ai-nexus-yyug introduces.
+Update DESIGN.md to reflect the new motion vocabulary and popover spec changes that pawrrtal-yyug introduces.
 
 ## Sections to update
 

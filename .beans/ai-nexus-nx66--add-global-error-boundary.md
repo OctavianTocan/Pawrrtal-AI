@@ -1,5 +1,5 @@
 ---
-# ai-nexus-nx66
+# pawrrtal-nx66
 title: Add Global Error Boundary
 status: todo
 type: task

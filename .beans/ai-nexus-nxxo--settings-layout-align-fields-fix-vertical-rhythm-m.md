@@ -1,5 +1,5 @@
 ---
-# ai-nexus-nxxo
+# pawrrtal-nxxo
 title: 'Settings layout: align fields, fix vertical rhythm, match reference'
 status: completed
 type: feature

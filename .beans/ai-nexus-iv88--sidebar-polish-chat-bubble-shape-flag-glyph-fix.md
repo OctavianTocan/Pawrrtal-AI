@@ -1,5 +1,5 @@
 ---
-# ai-nexus-iv88
+# pawrrtal-iv88
 title: Sidebar polish + chat bubble shape + flag glyph fix
 status: completed
 type: feature

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-tl20
+# pawrrtal-tl20
 title: Add Health Check Endpoint
 status: todo
 type: task
@@ -17,4 +17,4 @@ Notion Task #64 — Add a health check endpoint for monitoring.
 
 ## Priority Bump Rationale
 
-Railway needs a health check endpoint to determine service readiness. Required before deployment (ai-nexus-sx1v). Simple GET /health returning 200 + status JSON.
+Railway needs a health check endpoint to determine service readiness. Required before deployment (pawrrtal-sx1v). Simple GET /health returning 200 + status JSON.

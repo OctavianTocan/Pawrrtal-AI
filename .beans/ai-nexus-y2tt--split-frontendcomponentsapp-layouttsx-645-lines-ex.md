@@ -1,5 +1,5 @@
 ---
-# ai-nexus-y2tt
+# pawrrtal-y2tt
 title: Split frontend/components/app-layout.tsx (645 lines, exempted via TODO)
 status: todo
 type: task
@@ -10,12 +10,12 @@ tags:
     - tech-debt
 created_at: 2026-05-06T16:57:23Z
 updated_at: 2026-05-06T16:57:23Z
-parent: ai-nexus-ey9p
+parent: pawrrtal-ey9p
 ---
 
 ## Why
 
-`frontend/components/app-layout.tsx` is **645 lines**, exceeding the 500-line ceiling. It is currently exempted via `EXEMPT_PATH_FRAGMENTS` in `scripts/check-file-lines.mjs:71-75` with an inline TODO referencing `ai-nexus-1vti follow-up` — but no follow-up bean was actually opened.
+`frontend/components/app-layout.tsx` is **645 lines**, exceeding the 500-line ceiling. It is currently exempted via `EXEMPT_PATH_FRAGMENTS` in `scripts/check-file-lines.mjs:71-75` with an inline TODO referencing `pawrrtal-1vti follow-up` — but no follow-up bean was actually opened.
 
 This bean *is* that follow-up.
 
@@ -25,7 +25,7 @@ This bean *is* that follow-up.
 // scripts/check-file-lines.mjs:71-75
 const EXEMPT_PATH_FRAGMENTS = [
   "frontend/components/ui/",
-  // TODO(ai-nexus-1vti follow-up): split these and remove the exemption.
+  // TODO(pawrrtal-1vti follow-up): split these and remove the exemption.
   "frontend/components/app-layout.tsx",
 ];
 ```

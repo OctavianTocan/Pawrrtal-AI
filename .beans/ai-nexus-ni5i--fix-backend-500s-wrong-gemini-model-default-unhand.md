@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ni5i
+# pawrrtal-ni5i
 title: 'Fix backend 500s: wrong Gemini model default + unhandled Gemini errors'
 status: in-progress
 type: bug

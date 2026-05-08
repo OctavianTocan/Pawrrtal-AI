@@ -1,4 +1,4 @@
-"""Channel abstraction layer for AI Nexus.
+"""Channel abstraction layer for Pawrrtal.
 
 Every surface that can send a message and receive a response is a Channel.
 This package provides:

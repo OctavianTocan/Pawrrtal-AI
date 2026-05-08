@@ -1,5 +1,5 @@
 ---
-# ai-nexus-5615
+# pawrrtal-5615
 title: 'Epic 9: Personas System'
 status: scrapped
 type: epic
@@ -10,10 +10,10 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:15Z
 updated_at: 2026-03-07T21:29:54Z
-parent: ai-nexus-h10p
+parent: pawrrtal-h10p
 blocked_by:
-    - ai-nexus-9ygz
-    - ai-nexus-ntkp
+    - pawrrtal-9ygz
+    - pawrrtal-ntkp
 ---
 
 Built-in personas seed data. Persona CRUD endpoints. Persona picker in empty state and input area.

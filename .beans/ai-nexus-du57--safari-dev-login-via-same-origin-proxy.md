@@ -1,5 +1,5 @@
 ---
-# ai-nexus-du57
+# pawrrtal-du57
 title: Safari dev-login via same-origin proxy
 status: completed
 type: bug

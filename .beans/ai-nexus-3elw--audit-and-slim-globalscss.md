@@ -1,12 +1,12 @@
 ---
-# ai-nexus-3elw
+# pawrrtal-3elw
 title: Audit and slim globals.css
 status: todo
 type: task
 priority: high
 created_at: 2026-05-06T12:53:50Z
 updated_at: 2026-05-06T12:53:50Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 Catalogue every token, derivative formula, and component-specific override in `frontend/app/globals.css` (1536 lines, ~269 token declarations, ~79 selector blocks at the time of the rip). Decide which stay, which get folded into the rebuilt surface vocabulary, and which delete outright.

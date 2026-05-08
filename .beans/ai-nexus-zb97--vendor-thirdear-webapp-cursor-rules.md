@@ -1,5 +1,5 @@
 ---
-# ai-nexus-zb97
+# pawrrtal-zb97
 title: Vendor thirdear-webapp cursor rules
 status: completed
 type: task
@@ -8,7 +8,7 @@ created_at: 2026-05-03T20:49:23Z
 updated_at: 2026-05-03T20:49:32Z
 ---
 
-rsync thirdear-webapp/.cursor/rules into ai-nexus/.cursor/rules and mirror at .claude/rules/thirdear-cursor; document in AGENTS.md.
+rsync thirdear-webapp/.cursor/rules into pawrrtal/.cursor/rules and mirror at .claude/rules/thirdear-cursor; document in AGENTS.md.
 
 
 

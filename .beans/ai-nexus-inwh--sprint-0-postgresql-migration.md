@@ -1,5 +1,5 @@
 ---
-# ai-nexus-inwh
+# pawrrtal-inwh
 title: 'Sprint 0: PostgreSQL Migration'
 status: scrapped
 type: milestone

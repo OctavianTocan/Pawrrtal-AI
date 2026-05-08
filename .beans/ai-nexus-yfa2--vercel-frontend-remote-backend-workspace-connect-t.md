@@ -1,5 +1,5 @@
 ---
-# ai-nexus-yfa2
+# pawrrtal-yfa2
 title: 'Vercel frontend → remote backend: workspace ''Connect to remote server'' wiring'
 status: todo
 type: feature
@@ -46,4 +46,4 @@ Today the frontend default-fetches against the local ``http://localhost:8000`` b
 
 ## Related
 
-- Discussed alongside Telegram connect flow → both surfaces care about cross-origin cookie behaviour. The Portless cleanup beans (ai-nexus-7xpf, aluo, 6ve4) are stale per the recent localhost-only direction; once those are closed, this becomes the canonical "remote backend" path.
+- Discussed alongside Telegram connect flow → both surfaces care about cross-origin cookie behaviour. The Portless cleanup beans (pawrrtal-7xpf, aluo, 6ve4) are stale per the recent localhost-only direction; once those are closed, this becomes the canonical "remote backend" path.

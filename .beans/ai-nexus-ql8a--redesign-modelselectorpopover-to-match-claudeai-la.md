@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ql8a
+# pawrrtal-ql8a
 title: Redesign ModelSelectorPopover to match Claude.ai layout
 status: completed
 type: feature
@@ -84,7 +84,7 @@ Old α/β/γ split is dead — there is NO 'primary vs more models' distinction.
 - `bun run build` ✅ all 8 routes compile
 
 ### Out of scope (deferred for follow-up beans on request)
-- react-dropdown package adoption — fully scrapped for this menu (sub-menus + Switch toggle + secondary descriptions don't fit the items-array API). Original ai-nexus-6d31 bean's scope is now uncertain — only ChatComposerControls.tsx might remain a viable candidate, but with separators between mode groups, also marginal. Recommend: don't install react-dropdown until a clean candidate appears.
+- react-dropdown package adoption — fully scrapped for this menu (sub-menus + Switch toggle + secondary descriptions don't fit the items-array API). Original pawrrtal-6d31 bean's scope is now uncertain — only ChatComposerControls.tsx might remain a viable candidate, but with separators between mode groups, also marginal. Recommend: don't install react-dropdown until a clean candidate appears.
 - Composer 'Full access' pill (separate component / safety mode) — not part of this redesign.
 - Per-model descriptions ('Most capable for ambitious work' style) — Anthropic visual style chosen leaves these out for cleaner menu.
 

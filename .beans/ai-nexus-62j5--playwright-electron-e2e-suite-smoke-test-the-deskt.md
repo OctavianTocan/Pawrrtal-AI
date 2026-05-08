@@ -1,5 +1,5 @@
 ---
-# ai-nexus-62j5
+# pawrrtal-62j5
 title: Playwright-electron E2E suite (smoke test the desktop shell)
 status: todo
 type: task
@@ -13,7 +13,7 @@ The web Playwright suite covers login, sidebar, settings, onboarding via the FE 
 **Scope.**
 - Add \`@playwright/test\` Electron support (or use \`playwright-electron\` directly; same Microsoft-maintained surface).
 - New folder \`electron/e2e/\` with at least:
-  - \`launch.spec.ts\` — app starts, BrowserWindow loads the dev URL, title reads "AI Nexus", window has the persisted geometry.
+  - \`launch.spec.ts\` — app starts, BrowserWindow loads the dev URL, title reads "Pawrrtal", window has the persisted geometry.
   - \`menu.spec.ts\` — File → New chat triggers the IPC channel + the FE routes to /.
   - \`external-links.spec.ts\` — clicking an external link calls \`shell.openExternal\` (mocked) instead of opening in-window.
   - \`single-instance.spec.ts\` — launching a second instance focuses the existing window.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-dm1s
+# pawrrtal-dm1s
 title: Document disabled dropdown menu styling (DESIGN.md + solutions)
 status: completed
 type: task

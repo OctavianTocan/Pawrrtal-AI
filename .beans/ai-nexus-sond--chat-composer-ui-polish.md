@@ -1,5 +1,5 @@
 ---
-# ai-nexus-sond
+# pawrrtal-sond
 title: Chat composer UI polish
 status: completed
 type: task

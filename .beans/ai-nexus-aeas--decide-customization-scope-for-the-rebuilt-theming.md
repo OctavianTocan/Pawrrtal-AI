@@ -1,12 +1,12 @@
 ---
-# ai-nexus-aeas
+# pawrrtal-aeas
 title: Decide customization scope for the rebuilt theming system
 status: todo
 type: task
 priority: high
 created_at: 2026-05-06T12:54:06Z
 updated_at: 2026-05-06T12:54:06Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 Pick one:

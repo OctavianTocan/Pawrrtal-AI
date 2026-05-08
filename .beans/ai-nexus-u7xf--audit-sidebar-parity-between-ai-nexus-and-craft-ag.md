@@ -1,6 +1,6 @@
 ---
-# ai-nexus-u7xf
-title: Audit sidebar parity between ai-nexus and craft-agents-oss
+# pawrrtal-u7xf
+title: Audit sidebar parity between pawrrtal and craft-agents-oss
 status: completed
 type: task
 priority: normal
@@ -8,7 +8,7 @@ created_at: 2026-03-26T04:41:51Z
 updated_at: 2026-03-26T04:47:07Z
 ---
 
-Compare sidebar implementations between ai-nexus and craft-agents-oss to identify exact differences. Map which files correspond to which, and document all discrepancies for future reference.
+Compare sidebar implementations between pawrrtal and craft-agents-oss to identify exact differences. Map which files correspond to which, and document all discrepancies for future reference.
 
 ## Findings
 
@@ -22,7 +22,7 @@ File mapping saved to memory at `sidebar-file-mapping.md`.
 
 ## Todo
 - [x] Explore craft-agents-oss sidebar
-- [x] Explore ai-nexus sidebar
+- [x] Explore pawrrtal sidebar
 - [x] Document file mapping
 - [x] Document all differences
 - [x] Save to memory for future reference

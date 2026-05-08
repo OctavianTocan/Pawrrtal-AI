@@ -1,5 +1,5 @@
 ---
-# ai-nexus-bfra
+# pawrrtal-bfra
 title: Show user's first message as temp chat title, then animate loader until AI title arrives
 status: todo
 type: feature

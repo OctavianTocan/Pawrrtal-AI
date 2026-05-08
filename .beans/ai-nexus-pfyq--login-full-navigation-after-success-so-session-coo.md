@@ -1,5 +1,5 @@
 ---
-# ai-nexus-pfyq
+# pawrrtal-pfyq
 title: 'Login: full navigation after success so session cookie is sent'
 status: completed
 type: bug

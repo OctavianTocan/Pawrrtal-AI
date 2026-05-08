@@ -1,5 +1,5 @@
 ---
-# ai-nexus-tzau
+# pawrrtal-tzau
 title: 'Audit follow-ups: trim ci/ rules with RN flavor + decide thirdear-cursor snapshot'
 status: scrapped
 type: task
@@ -47,7 +47,7 @@ Recommendation: move to `docs/decisions/` if any of those rules has unique value
 
 ## Follow-up 3 (optional): audit always-applied Cursor rules content
 
-Three Cursor rules use `alwaysApply: true` (`check-solutions-first.mdc`, `no-backwards-compat.mdc`, `stagehand-v3-typescript.mdc`). All three look genuinely universal but a content review for ai-nexus accuracy is worth doing once.
+Three Cursor rules use `alwaysApply: true` (`check-solutions-first.mdc`, `no-backwards-compat.mdc`, `stagehand-v3-typescript.mdc`). All three look genuinely universal but a content review for pawrrtal accuracy is worth doing once.
 
 ## Acceptance
 

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-id67
+# pawrrtal-id67
 title: Migrate frontend from Next.js to Vite + TanStack Router
 status: scrapped
 type: epic
@@ -20,4 +20,4 @@ Plan: `docs/superpowers/plans/2026-03-26-vite-tanstack-migration.md`
 
 ## Reasons for Scrapping
 
-User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: ai-nexus-id67, ai-nexus-91ch, ai-nexus-ow61, ai-nexus-57ic, ai-nexus-hogv, ai-nexus-335f, ai-nexus-fc8j.
+User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: pawrrtal-id67, pawrrtal-91ch, pawrrtal-ow61, pawrrtal-57ic, pawrrtal-hogv, pawrrtal-335f, pawrrtal-fc8j.

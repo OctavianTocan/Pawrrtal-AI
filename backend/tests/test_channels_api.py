@@ -36,7 +36,7 @@ pytestmark = pytest.mark.anyio
 def telegram_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pretend the deployment has a usable Telegram bot configured."""
     monkeypatch.setattr(settings, "telegram_bot_token", "test-token")
-    monkeypatch.setattr(settings, "telegram_bot_username", "ainexus_test_bot")
+    monkeypatch.setattr(settings, "telegram_bot_username", "pawrrtal_test_bot")
 
 
 async def test_link_returns_503_when_telegram_unconfigured(
@@ -63,8 +63,8 @@ async def test_link_issues_code_with_deep_link(
     assert response.status_code == 200
     body: dict[str, Any] = response.json()
     assert body["code"]
-    assert body["bot_username"] == "ainexus_test_bot"
-    assert body["deep_link"] == (f"https://t.me/ainexus_test_bot?start={body['code']}")
+    assert body["bot_username"] == "pawrrtal_test_bot"
+    assert body["deep_link"] == (f"https://t.me/pawrrtal_test_bot?start={body['code']}")
     assert "expires_at" in body
 
 

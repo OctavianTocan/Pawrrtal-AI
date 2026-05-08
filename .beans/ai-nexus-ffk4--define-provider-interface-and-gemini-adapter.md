@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ffk4
+# pawrrtal-ffk4
 title: Define provider interface and Gemini adapter
 status: scrapped
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:41Z
 updated_at: 2026-03-07T22:09:29Z
-parent: ai-nexus-7k7w
+parent: pawrrtal-7k7w
 ---
 
 Create base ModelProvider ABC in core/providers/base.py. Implement GeminiProvider. Create provider registry with get_provider() and list_providers().

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-z16b
+# pawrrtal-z16b
 title: Build command palette (Cmd+K)
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:10:08Z
 updated_at: 2026-02-27T16:10:08Z
-parent: ai-nexus-ghy1
+parent: pawrrtal-ghy1
 ---
 
 Use shadcn Command component. Actions: new conversation, search conversations, switch model, open settings, toggle theme. Wire to app layout.

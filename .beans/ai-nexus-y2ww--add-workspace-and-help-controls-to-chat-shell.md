@@ -1,5 +1,5 @@
 ---
-# ai-nexus-y2ww
+# pawrrtal-y2ww
 title: Add workspace and help controls to chat shell
 status: completed
 type: task
@@ -22,4 +22,4 @@ Add Craft Agents-style top chrome controls and remove distracting composer focus
 
 ## Summary of Changes
 
-Added an AI Nexus workspace selector to the top chrome, added a top-right help/docs dropdown with UI-only documentation links, removed the visible composer selection outline, and removed browser-native menu item title tooltips in favor of controlled UI tooltips. Verified with `bun run typecheck` and scoped Biome on `components/app-layout.tsx` and `features/chat/components/ChatComposer.tsx`.
+Added an Pawrrtal workspace selector to the top chrome, added a top-right help/docs dropdown with UI-only documentation links, removed the visible composer selection outline, and removed browser-native menu item title tooltips in favor of controlled UI tooltips. Verified with `bun run typecheck` and scoped Biome on `components/app-layout.tsx` and `features/chat/components/ChatComposer.tsx`.

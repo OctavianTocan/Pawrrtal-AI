@@ -1,5 +1,5 @@
 ---
-# ai-nexus-gvsb
+# pawrrtal-gvsb
 title: 'Backend pytest fails to collect: test_providers_and_schemas.py imports stale GeminiLLM'
 status: completed
 type: bug
@@ -27,7 +27,7 @@ This blocks the whole pytest suite (collection error fails fast — none of the 
 
 ## Why it surfaced now
 
-Discovered while wiring `tests.yml` into CI (`ai-nexus-anju`). The new workflow runs `uv run pytest`, which now correctly fails — same outcome as on a developer machine, just nobody had been running it.
+Discovered while wiring `tests.yml` into CI (`pawrrtal-anju`). The new workflow runs `uv run pytest`, which now correctly fails — same outcome as on a developer machine, just nobody had been running it.
 
 ## Plan
 

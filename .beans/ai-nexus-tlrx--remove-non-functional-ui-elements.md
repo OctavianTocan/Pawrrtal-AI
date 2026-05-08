@@ -1,5 +1,5 @@
 ---
-# ai-nexus-tlrx
+# pawrrtal-tlrx
 title: Remove Non-Functional UI Elements
 status: todo
 type: task

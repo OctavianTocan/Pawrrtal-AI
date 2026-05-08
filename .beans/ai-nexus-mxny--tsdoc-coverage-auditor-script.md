@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mxny
+# pawrrtal-mxny
 title: TSDoc coverage auditor script
 status: completed
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-qi7g
+# pawrrtal-qi7g
 title: Build API key management UI
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:47Z
 updated_at: 2026-02-27T16:09:47Z
-parent: ai-nexus-ntkp
+parent: pawrrtal-ntkp
 ---
 
 Create api-key-form.tsx with masked input fields per provider. Show Set/Not set status. Allow updating and clearing keys.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-zn5n
+# pawrrtal-zn5n
 title: Persist composer preferences (model, reasoning, plan mode, safety mode)
 status: completed
 type: feature

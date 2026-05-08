@@ -1,6 +1,6 @@
 ---
-# ai-nexus-hebx
-title: Home onboarding modal (cosmetic AI Nexus)
+# pawrrtal-hebx
+title: Home onboarding modal (cosmetic Pawrrtal)
 status: completed
 type: feature
 priority: normal
@@ -14,6 +14,6 @@ Three-step Dialog on / for Welcome → Create workspace → Local workspace. Cos
 
 ## Summary of Changes
 
-- Added `frontend/features/onboarding/` with three-step Dialog (Welcome → Create workspace → Local workspace), AI Nexus copy, theme tokens.
+- Added `frontend/features/onboarding/` with three-step Dialog (Welcome → Create workspace → Local workspace), Pawrrtal copy, theme tokens.
 - Wired `OnboardingModal` into `frontend/app/(app)/page.tsx`. Cosmetic folder picker only; disabled options use `<fieldset disabled>`.
 - Verified: `bun run typecheck` (frontend), Biome check on touched onboarding paths + page.

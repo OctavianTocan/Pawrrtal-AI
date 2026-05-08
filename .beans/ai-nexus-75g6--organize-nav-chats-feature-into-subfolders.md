@@ -1,5 +1,5 @@
 ---
-# ai-nexus-75g6
+# pawrrtal-75g6
 title: Organize nav-chats feature into subfolders
 status: completed
 type: task

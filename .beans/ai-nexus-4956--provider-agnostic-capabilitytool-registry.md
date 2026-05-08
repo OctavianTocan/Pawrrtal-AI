@@ -1,5 +1,5 @@
 ---
-# ai-nexus-4956
+# pawrrtal-4956
 title: Provider-agnostic capability/tool registry
 status: todo
 type: task
@@ -91,5 +91,5 @@ Fix the pattern before adding the second occupant of it.
 ## Out of scope
 
 - Adding new capabilities (Mirage, etc.) — separate bean.
-- User-facing MCP server manager (lives under Epic 7 / `ai-nexus-sady`).
+- User-facing MCP server manager (lives under Epic 7 / `pawrrtal-sady`).
 - Frontend tool toggles (Epic 7).

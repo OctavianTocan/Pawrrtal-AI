@@ -1,5 +1,5 @@
 ---
-# ai-nexus-3rqh
+# pawrrtal-3rqh
 title: Resolve projects↔nav-chats sidebar composition coupling
 status: draft
 type: task
@@ -10,7 +10,7 @@ tags:
     - refactor
 created_at: 2026-05-06T16:51:52Z
 updated_at: 2026-05-06T16:52:16Z
-parent: ai-nexus-ey9p
+parent: pawrrtal-ey9p
 ---
 
 ## Why
@@ -30,7 +30,7 @@ Status `draft` because the right shape depends on whether the two features shoul
 2. **Sidebar parent feature** — fold `nav-chats` and `projects` under a new `features/sidebar/` parent that owns composition. Heavier refactor; clearer ownership.
 3. **Shared sidebar lib** — extract drag/drop + selection state to `lib/sidebar/`. Keeps features peer but removes the constant-sharing edge.
 
-The `CONVERSATION_DRAG_MIME` move is already covered by `ai-nexus-q8p8` Stage A.
+The `CONVERSATION_DRAG_MIME` move is already covered by `pawrrtal-q8p8` Stage A.
 
 ## Plan
 
@@ -41,4 +41,4 @@ The `CONVERSATION_DRAG_MIME` move is already covered by `ai-nexus-q8p8` Stage A.
 
 ## Notes
 
-- Coordinate with `ai-nexus-23yy` (Projects backend + sidebar reorg) and `ai-nexus-q8p8` (conversations primitives) — these three together define the sidebar architecture.
+- Coordinate with `pawrrtal-23yy` (Projects backend + sidebar reorg) and `pawrrtal-q8p8` (conversations primitives) — these three together define the sidebar architecture.

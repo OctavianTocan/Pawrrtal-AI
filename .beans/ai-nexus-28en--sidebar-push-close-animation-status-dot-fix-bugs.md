@@ -1,5 +1,5 @@
 ---
-# ai-nexus-28en
+# pawrrtal-28en
 title: Sidebar 'push' close animation + status dot + fix bugs
 status: completed
 type: bug
@@ -56,4 +56,4 @@ The DESIGN.md-aligned sidebar slide rework landed in `frontend/components/app-la
 - Frontend vitest: 309 passing (no regression).
 - The "creep" effect the bean documented is gone — the chat panel and sidebar now translate together at full width without re-flowing the sidebar contents on every frame.
 
-Mark-unread remains deferred to its own bean (see `ai-nexus-p9xy`); it was scoped out of this round per the original bean.
+Mark-unread remains deferred to its own bean (see `pawrrtal-p9xy`); it was scoped out of this round per the original bean.

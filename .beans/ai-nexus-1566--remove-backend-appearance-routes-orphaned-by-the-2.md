@@ -1,12 +1,12 @@
 ---
-# ai-nexus-1566
+# pawrrtal-1566
 title: Remove backend appearance routes orphaned by the 2026-05-06 rip
 status: todo
 type: task
 priority: normal
 created_at: 2026-05-06T12:54:33Z
 updated_at: 2026-05-06T12:54:33Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 After the frontend appearance system was ripped on 2026-05-06, the backend routes that backed it are orphaned. Delete or repurpose:

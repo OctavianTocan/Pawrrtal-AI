@@ -1,5 +1,5 @@
 ---
-# ai-nexus-f1fr
+# pawrrtal-f1fr
 title: Chat layout shifts right when typing long messages
 status: completed
 type: bug

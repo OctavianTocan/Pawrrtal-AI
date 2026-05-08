@@ -151,7 +151,7 @@ function WorkspaceSelector(): React.JSX.Element {
 					<span className="flex size-4.5 items-center justify-center rounded-full bg-foreground/10 text-[10px] font-medium">
 						A
 					</span>
-					<span>AI Nexus</span>
+					<span>Pawrrtal</span>
 					<ChevronDownIcon
 						aria-hidden="true"
 						className="size-3.5 text-muted-foreground"
@@ -164,7 +164,7 @@ function WorkspaceSelector(): React.JSX.Element {
 					<span className="flex size-5 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-medium">
 						A
 					</span>
-					AI Nexus
+					Pawrrtal
 				</span>
 				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
 			</DropdownMenuItem>

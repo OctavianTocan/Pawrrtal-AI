@@ -1,5 +1,5 @@
 ---
-# ai-nexus-25yy
+# pawrrtal-25yy
 title: 'Test coverage: reach >=70% across frontend + backend'
 status: todo
 type: task

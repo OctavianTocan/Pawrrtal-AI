@@ -1,5 +1,5 @@
 ---
-# ai-nexus-g5pd
+# pawrrtal-g5pd
 title: 'Fix react-dropdown not opening: usePortal + placement priority'
 status: completed
 type: bug

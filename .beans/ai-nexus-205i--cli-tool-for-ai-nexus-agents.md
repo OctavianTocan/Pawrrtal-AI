@@ -1,6 +1,6 @@
 ---
-# ai-nexus-205i
-title: CLI tool for AI Nexus agents
+# pawrrtal-205i
+title: CLI tool for Pawrrtal agents
 status: todo
 type: epic
 created_at: 2026-03-10T18:24:12Z

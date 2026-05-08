@@ -1,14 +1,14 @@
 ---
-# ai-nexus-vf3i
+# pawrrtal-vf3i
 title: Update Railway config and env vars for PostgreSQL
 status: todo
 type: task
 priority: high
 created_at: 2026-03-19T23:10:10Z
 updated_at: 2026-03-21T17:42:43Z
-parent: ai-nexus-inwh
+parent: pawrrtal-inwh
 blocked_by:
-    - ai-nexus-cx7v
+    - pawrrtal-cx7v
 ---
 
 ## Description

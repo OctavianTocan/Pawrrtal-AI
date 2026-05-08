@@ -1,5 +1,5 @@
 ---
-# ai-nexus-l9dw
+# pawrrtal-l9dw
 title: 'Settings: Integrations section + Add Integration / Add Custom MCP modals'
 status: completed
 type: feature

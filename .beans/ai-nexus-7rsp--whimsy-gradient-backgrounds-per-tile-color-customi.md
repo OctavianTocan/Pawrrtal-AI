@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7rsp
+# pawrrtal-7rsp
 title: 'Whimsy: gradient backgrounds + per-tile color customization (Telegram parity)'
 status: todo
 type: feature
@@ -10,7 +10,7 @@ updated_at: 2026-05-07T17:25:57Z
 
 ## Goal
 
-Telegram chat backgrounds combine three layers: a **gradient/solid background colour**, an **SVG pattern** masked over it, and the user can pick the **pattern tint** independently. Bring that to AI Nexus's whimsy texture so users can build a fully customised chat background.
+Telegram chat backgrounds combine three layers: a **gradient/solid background colour**, an **SVG pattern** masked over it, and the user can pick the **pattern tint** independently. Bring that to Pawrrtal's whimsy texture so users can build a fully customised chat background.
 
 Today the whimsy texture only renders one of these layers — the SVG mask, tinted with ``currentColor`` (theme foreground). The chat panel's background colour is fixed by the active palette.
 
@@ -41,7 +41,7 @@ Order of rows, all gated by ``mode === 'preset'`` AND ``enabled``:
 
 1. Source toggle (already there)
 2. Preset thumbnail grid (already there)
-3. Tile scale slider (already there, as of ai-nexus-s8na latest)
+3. Tile scale slider (already there, as of pawrrtal-s8na latest)
 4. **NEW:** Background colour — a tab-row picker: ``Solid`` / ``2-stop gradient`` / ``4-stop gradient``. Below: the relevant pickers.
 5. **NEW:** Tile tint — ``Theme`` / ``Custom`` (with picker).
 6. **NEW:** Tile blend — chip row with ``Normal`` / ``Multiply`` / ``Screen`` / ``Overlay``.
@@ -123,5 +123,5 @@ The user mentioned in the same conversation that they want a profile-picture upl
 
 ## Related
 
-- ai-nexus-s8na (whimsy generator) — this builds on the preset-mode plumbing landed there.
+- pawrrtal-s8na (whimsy generator) — this builds on the preset-mode plumbing landed there.
 - Tile scale slider already shipped in commit ``0ceb73c``.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uobp
+# pawrrtal-uobp
 title: 'UI cleanup pass: nav fixes, rename modal, settings, composer placeholder'
 status: scrapped
 type: task

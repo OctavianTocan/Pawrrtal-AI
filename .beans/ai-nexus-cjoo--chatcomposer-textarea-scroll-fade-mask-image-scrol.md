@@ -1,5 +1,5 @@
 ---
-# ai-nexus-cjoo
+# pawrrtal-cjoo
 title: ChatComposer textarea scroll fade (mask-image, scroll-aware)
 status: completed
 type: feature

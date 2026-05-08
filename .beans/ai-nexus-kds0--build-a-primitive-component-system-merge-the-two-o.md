@@ -1,5 +1,5 @@
 ---
-# ai-nexus-kds0
+# pawrrtal-kds0
 title: Build a primitive component system + merge the two onboardings
 status: todo
 type: epic
@@ -59,5 +59,5 @@ You can't merge the onboardings cleanly without first deciding how the shared pr
 
 ## Related
 
-- ai-nexus-f58v (skeleton/loader pattern in DESIGN.md) shares the DESIGN.md surface — coordinate the section structure.
-- ai-nexus-yfa2 (remote backend) needs the workspace-create step which lives in the older onboarding — this epic is what unblocks rewiring it cleanly.
+- pawrrtal-f58v (skeleton/loader pattern in DESIGN.md) shares the DESIGN.md surface — coordinate the section structure.
+- pawrrtal-yfa2 (remote backend) needs the workspace-create step which lives in the older onboarding — this epic is what unblocks rewiring it cleanly.

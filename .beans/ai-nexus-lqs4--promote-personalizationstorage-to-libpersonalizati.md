@@ -1,5 +1,5 @@
 ---
-# ai-nexus-lqs4
+# pawrrtal-lqs4
 title: Promote personalization/storage to lib/personalization/
 status: todo
 type: task
@@ -10,7 +10,7 @@ tags:
     - refactor
 created_at: 2026-05-06T16:51:10Z
 updated_at: 2026-05-06T16:51:10Z
-parent: ai-nexus-ey9p
+parent: pawrrtal-ey9p
 ---
 
 ## Why

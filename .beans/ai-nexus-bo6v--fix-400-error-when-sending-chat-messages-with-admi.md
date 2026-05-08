@@ -1,5 +1,5 @@
 ---
-# ai-nexus-bo6v
+# pawrrtal-bo6v
 title: Fix 400 error when sending chat messages with admin user
 status: todo
 type: bug

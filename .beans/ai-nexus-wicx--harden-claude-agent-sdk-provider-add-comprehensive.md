@@ -1,12 +1,12 @@
 ---
-# ai-nexus-wicx
+# pawrrtal-wicx
 title: Harden Claude Agent SDK provider + add comprehensive tests
 status: completed
 type: task
 priority: high
 created_at: 2026-05-04T08:07:44Z
 updated_at: 2026-05-04T08:17:10Z
-parent: ai-nexus-7k7w
+parent: pawrrtal-7k7w
 ---
 
 Audit and improve backend/app/core/providers/claude_provider.py:

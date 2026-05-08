@@ -1,5 +1,5 @@
 ---
-# ai-nexus-owse
+# pawrrtal-owse
 title: Evaluate sentrux Pro for full rule-coverage on architecture gate
 status: draft
 type: task
@@ -48,4 +48,4 @@ We currently believe our architecture is rule-clean because all checked rules pa
 ## Notes
 
 - Status `draft` because this needs the rule audit before a real plan can be written.
-- This is the audit half; the "shifted bottleneck" half (modularity now leads, not equality) is captured separately in the in-progress parent `ai-nexus-ey9p`.
+- This is the audit half; the "shifted bottleneck" half (modularity now leads, not equality) is captured separately in the in-progress parent `pawrrtal-ey9p`.

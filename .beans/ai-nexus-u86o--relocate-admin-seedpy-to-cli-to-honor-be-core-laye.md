@@ -1,5 +1,5 @@
 ---
-# ai-nexus-u86o
+# pawrrtal-u86o
 title: Relocate admin_seed.py to cli/ to honor be-core layer
 status: completed
 type: feature

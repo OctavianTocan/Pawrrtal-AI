@@ -1,5 +1,5 @@
 ---
-# ai-nexus-oo34
+# pawrrtal-oo34
 title: Fix sidebar parity divergences with craft-agents-oss
 status: completed
 type: task

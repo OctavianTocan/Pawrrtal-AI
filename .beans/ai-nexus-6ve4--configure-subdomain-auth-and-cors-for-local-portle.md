@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6ve4
+# pawrrtal-6ve4
 title: Configure subdomain auth and CORS for local Portless and production
 status: scrapped
 type: task
@@ -13,21 +13,21 @@ tags:
     - Portless
 created_at: 2026-03-16T17:15:24Z
 updated_at: 2026-05-07T16:21:28Z
-parent: ai-nexus-sx1v
+parent: pawrrtal-sx1v
 blocked_by:
-    - ai-nexus-bsgu
+    - pawrrtal-bsgu
 ---
 
-Document and implement the subdomain-based auth/CORS setup so AI Nexus works in both local Portless development and production without redirect loops after login.
+Document and implement the subdomain-based auth/CORS setup so Pawrrtal works in both local Portless development and production without redirect loops after login.
 
 ## Goal
 
 Support this shape reliably:
 
-- Local frontend: `http://ai-nexus.localhost:1355`
-- Local backend: `http://api.ai-nexus.localhost:1355`
-- Production frontend: `https://app.nexus-ai.com`
-- Production backend: `https://api.app.nexus-ai.com`
+- Local frontend: `http://pawrrtal.localhost:1355`
+- Local backend: `http://api.pawrrtal.localhost:1355`
+- Production frontend: `https://pawrrtal.com`
+- Production backend: `https://api.pawrrtal.com`
 
 The login flow must work with HTTP-only cookies, frontend route protection, and backend API calls in both environments.
 
@@ -37,7 +37,7 @@ Current auth assumes the browser can receive a session cookie from the backend a
 
 Important rules:
 
-- `localhost` and `ai-nexus.localhost` are different cookie hosts
+- `localhost` and `pawrrtal.localhost` are different cookie hosts
 - cookies do not care about port, but they do care about host/domain
 - CORS alone does not solve cookie visibility between sibling subdomains
 - `allow_credentials=True` means backend CORS cannot use `*` for origins
@@ -46,8 +46,8 @@ Important rules:
 
 Use sibling subdomains in both local and production, and scope the auth cookie to the shared parent domain:
 
-- Local cookie domain: `ai-nexus.localhost`
-- Production cookie domain: `app.nexus-ai.com`
+- Local cookie domain: `pawrrtal.localhost`
+- Production cookie domain: `pawrrtal.com`
 
 This keeps local behavior structurally similar to production instead of relying on a special-case proxy-only auth flow.
 
@@ -58,13 +58,13 @@ This keeps local behavior structurally similar to production instead of relying 
 Run the frontend with Portless so it gets a stable browser-facing hostname:
 
 ```text
-portless ai-nexus <frontend dev command>
+portless pawrrtal <frontend dev command>
 ```
 
 Expected frontend URL:
 
 ```text
-http://ai-nexus.localhost:1355
+http://pawrrtal.localhost:1355
 ```
 
 ### Backend
@@ -72,42 +72,42 @@ http://ai-nexus.localhost:1355
 Run the backend on a sibling Portless subdomain:
 
 ```text
-portless api.ai-nexus <backend dev command>
+portless api.pawrrtal <backend dev command>
 ```
 
 Expected backend URL:
 
 ```text
-http://api.ai-nexus.localhost:1355
+http://api.pawrrtal.localhost:1355
 ```
 
 ### Local environment values
 
-- Frontend `NEXT_PUBLIC_API_URL=http://api.ai-nexus.localhost:1355`
-- Backend `CORS_ORIGINS=["http://ai-nexus.localhost:1355"]`
-- Backend `COOKIE_DOMAIN=ai-nexus.localhost`
+- Frontend `NEXT_PUBLIC_API_URL=http://api.pawrrtal.localhost:1355`
+- Backend `CORS_ORIGINS=["http://pawrrtal.localhost:1355"]`
+- Backend `COOKIE_DOMAIN=pawrrtal.localhost`
 - Backend `ENV=dev`
 - Backend cookie must keep `Secure=False` for local HTTP development
 
 ### Expected behavior
 
-- Browser posts login credentials from `ai-nexus.localhost` to `api.ai-nexus.localhost`
-- backend responds with `Set-Cookie` for `Domain=ai-nexus.localhost`
-- cookie becomes available to both `ai-nexus.localhost` and `api.ai-nexus.localhost`
+- Browser posts login credentials from `pawrrtal.localhost` to `api.pawrrtal.localhost`
+- backend responds with `Set-Cookie` for `Domain=pawrrtal.localhost`
+- cookie becomes available to both `pawrrtal.localhost` and `api.pawrrtal.localhost`
 - frontend route guard can see `session_token` after redirect
 
 ## Production setup
 
 ### Production URLs
 
-- Frontend: `https://app.nexus-ai.com`
-- Backend: `https://api.app.nexus-ai.com`
+- Frontend: `https://pawrrtal.com`
+- Backend: `https://api.pawrrtal.com`
 
 ### Production environment values
 
-- Frontend `NEXT_PUBLIC_API_URL=https://api.app.nexus-ai.com`
-- Backend `CORS_ORIGINS=["https://app.nexus-ai.com"]`
-- Backend `COOKIE_DOMAIN=app.nexus-ai.com`
+- Frontend `NEXT_PUBLIC_API_URL=https://api.pawrrtal.com`
+- Backend `CORS_ORIGINS=["https://pawrrtal.com"]`
+- Backend `COOKIE_DOMAIN=pawrrtal.com`
 - Backend `ENV=prod`
 - Backend cookie must use `Secure=True`
 
@@ -143,13 +143,13 @@ http://api.ai-nexus.localhost:1355
 Prefer `list[str]` in settings with JSON-array env values:
 
 ```text
-CORS_ORIGINS=["http://ai-nexus.localhost:1355"]
+CORS_ORIGINS=["http://pawrrtal.localhost:1355"]
 ```
 
 and:
 
 ```text
-CORS_ORIGINS=["https://app.nexus-ai.com"]
+CORS_ORIGINS=["https://pawrrtal.com"]
 ```
 
 This avoids ambiguous comma-splitting behavior in environment parsing.
@@ -159,20 +159,20 @@ This avoids ambiguous comma-splitting behavior in environment parsing.
 - Do not mix `localhost` frontend URLs with `*.localhost` backend URLs for cookie auth
 - Do not use `allow_origins=["*"]` when `allow_credentials=True`
 - Do not assume Portless wildcard subdomain routing solves cookies by itself; cookie domain still must be configured
-- Do not scope the production cookie to `nexus-ai.com` unless cross-product auth sharing is explicitly intended
+- Do not scope the production cookie to `pawrrtal.com` unless cross-product auth sharing is explicitly intended
 
 ## Acceptance criteria
 
-- local login from `http://ai-nexus.localhost:1355/login` redirects successfully to `/`
+- local login from `http://pawrrtal.localhost:1355/login` redirects successfully to `/`
 - backend requests from the frontend include the session cookie in local Portless mode
-- production config supports `app.nexus-ai.com` -> `api.app.nexus-ai.com` auth with the same cookie-based flow
+- production config supports `pawrrtal.com` -> `api.pawrrtal.com` auth with the same cookie-based flow
 - CORS configuration is environment-driven, not hardcoded
 
 ## Related
 
-- `ai-nexus-bsgu` covers configurable CORS origins only
+- `pawrrtal-bsgu` covers configurable CORS origins only
 - this bean expands that work to include cookie-domain strategy, Portless local subdomains, and production subdomain deployment
 
 ## Reasons for Scrapping
 
-Portless was removed from local dev — see ai-nexus-7xpf. The 'remote backend' direction now lives under ai-nexus-yfa2 (Vercel + VPS) rather than subdomain Portless.
+Portless was removed from local dev — see pawrrtal-7xpf. The 'remote backend' direction now lives under pawrrtal-yfa2 (Vercel + VPS) rather than subdomain Portless.

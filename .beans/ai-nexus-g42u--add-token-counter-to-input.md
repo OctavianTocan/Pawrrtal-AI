@@ -1,5 +1,5 @@
 ---
-# ai-nexus-g42u
+# pawrrtal-g42u
 title: Add token counter to input
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:10:16Z
 updated_at: 2026-02-27T16:10:16Z
-parent: ai-nexus-fo5b
+parent: pawrrtal-fo5b
 ---
 
 Use Tokenlens (already installed) to show live token count as user types. Show remaining tokens based on model context window.

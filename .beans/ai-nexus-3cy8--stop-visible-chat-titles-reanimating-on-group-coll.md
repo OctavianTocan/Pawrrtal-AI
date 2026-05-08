@@ -1,5 +1,5 @@
 ---
-# ai-nexus-3cy8
+# pawrrtal-3cy8
 title: Stop visible chat titles reanimating on group collapse
 status: completed
 type: bug

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the AI Nexus self-hosted GitHub Actions runner on the VPS.
+# Install the Pawrrtal self-hosted GitHub Actions runner on the VPS.
 #
 # Matches the existing convention used by the other runners on the box
 # (openclaw-vps-01..04): a system-level systemd service running as the
@@ -9,11 +9,11 @@
 # Steps:
 #   1. Asks GitHub for a one-shot registration token using the GH_TOKEN
 #      env var.
-#   2. Creates `/srv/github-runners/ai-nexus/actions-runner/` owned by gha
+#   2. Creates `/srv/github-runners/pawrrtal/actions-runner/` owned by gha
 #      (creates the gha user if missing).
 #   3. Downloads the latest `actions-runner` tarball into that directory.
 #   4. Configures the runner with labels [self-hosted, openclaw-mini,
-#      ainexus] under the next available `openclaw-vps-NN` name.
+#      pawrrtal] under the next available `openclaw-vps-NN` name.
 #   5. Installs + starts the official runner systemd unit (`./svc.sh
 #      install gha && ./svc.sh start`), which lands at
 #      /etc/systemd/system/actions.runner.<repo-slug>.<runner>.service.
@@ -27,11 +27,11 @@
 
 set -euo pipefail
 
-REPO="OctavianTocan/ai-nexus"
+REPO="OctavianTocan/pawrrtal"
 RUNNER_USER="${RUNNER_USER:-gha}"
 RUNNER_BASE="${RUNNER_BASE:-/srv/github-runners}"
-RUNNER_DIR="${RUNNER_BASE}/ai-nexus/actions-runner"
-LABELS="${LABELS:-self-hosted,openclaw-mini,ainexus}"
+RUNNER_DIR="${RUNNER_BASE}/pawrrtal/actions-runner"
+LABELS="${LABELS:-self-hosted,openclaw-mini,pawrrtal}"
 
 if [[ $EUID -ne 0 ]]; then
     echo "Run as root (sudo)." >&2

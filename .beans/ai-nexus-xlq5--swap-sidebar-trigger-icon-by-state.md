@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xlq5
+# pawrrtal-xlq5
 title: Swap sidebar trigger icon by state
 status: completed
 type: task

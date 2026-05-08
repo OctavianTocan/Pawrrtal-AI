@@ -114,8 +114,8 @@ export const DEFAULT_OPTIONS: Required<MockAppearanceOptions> = {
 /** Mock preset list — same three the original system shipped, all data only. */
 export const THEME_PRESETS: ReadonlyArray<MockThemePreset> = [
 	{
-		id: 'ai-nexus',
-		name: 'AI Nexus',
+		id: 'pawrrtal',
+		name: 'Pawrrtal',
 		description: 'Project default — Mistral-inspired tokens with Newsreader display serif.',
 		light: DEFAULT_LIGHT_COLORS,
 		dark: DEFAULT_DARK_COLORS,

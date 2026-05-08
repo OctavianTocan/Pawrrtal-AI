@@ -1,4 +1,4 @@
-# sentrux architectural rules for AI Nexus
+# sentrux architectural rules for Pawrrtal
 # Run locally:   sentrux check .
 # Run in CI:     same — exits 1 on violation
 #

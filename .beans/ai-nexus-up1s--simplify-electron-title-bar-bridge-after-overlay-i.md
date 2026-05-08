@@ -1,5 +1,5 @@
 ---
-# ai-nexus-up1s
+# pawrrtal-up1s
 title: Simplify Electron title-bar bridge after overlay inset removal
 status: completed
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-cigl
+# pawrrtal-cigl
 title: Push frontend test coverage from 36% to 70%
 status: todo
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6qhh
+# pawrrtal-6qhh
 title: Polish Codex-like composer interactions
 status: completed
 type: task

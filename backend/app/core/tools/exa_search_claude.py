@@ -24,7 +24,7 @@ from .exa_search import (
 )
 
 # Identifier used by Claude when invoking the tool: mcp__<server>__<tool>.
-MCP_SERVER_NAME = "ai_nexus"
+MCP_SERVER_NAME = "pawrrtal"
 MCP_TOOL_NAME = "exa_search"
 
 # Public allowed_tools entry. Whitelist this string in ClaudeAgentOptions

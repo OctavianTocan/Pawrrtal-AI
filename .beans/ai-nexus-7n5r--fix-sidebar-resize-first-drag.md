@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7n5r
+# pawrrtal-7n5r
 title: Fix sidebar resize first drag
 status: completed
 type: bug

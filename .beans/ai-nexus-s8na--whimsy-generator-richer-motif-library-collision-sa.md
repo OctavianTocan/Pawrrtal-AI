@@ -1,5 +1,5 @@
 ---
-# ai-nexus-s8na
+# pawrrtal-s8na
 title: 'Whimsy generator: richer motif library + collision-safe placer for recognisable doodles'
 status: in-progress
 type: feature

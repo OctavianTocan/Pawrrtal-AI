@@ -1,5 +1,5 @@
 ---
-# ai-nexus-733g
+# pawrrtal-733g
 title: 'Dictation: animated waveform timeline + transcribing spinner + send guard'
 status: completed
 type: feature

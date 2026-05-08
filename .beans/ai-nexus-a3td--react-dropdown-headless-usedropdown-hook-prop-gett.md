@@ -1,5 +1,5 @@
 ---
-# ai-nexus-a3td
+# pawrrtal-a3td
 title: 'react-dropdown: headless useDropdown hook + prop getters'
 status: completed
 type: feature

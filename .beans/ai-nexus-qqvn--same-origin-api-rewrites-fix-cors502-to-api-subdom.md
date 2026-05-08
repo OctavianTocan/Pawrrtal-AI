@@ -1,5 +1,5 @@
 ---
-# ai-nexus-qqvn
+# pawrrtal-qqvn
 title: 'Same-origin API rewrites: fix CORS/502 to api subdomain in dev'
 status: scrapped
 type: bug

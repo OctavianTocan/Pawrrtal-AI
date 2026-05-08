@@ -1,5 +1,5 @@
 ---
-# ai-nexus-hqds
+# pawrrtal-hqds
 title: 'Fix sidebar hydration: defer localStorage reads to useLayoutEffect'
 status: completed
 type: bug

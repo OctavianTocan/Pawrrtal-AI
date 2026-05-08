@@ -1,5 +1,5 @@
 ---
-# ai-nexus-swdp
+# pawrrtal-swdp
 title: 'Sprint E: AI Power'
 status: todo
 type: milestone

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-juqj
+# pawrrtal-juqj
 title: Vendor react-resizable-panels for sidebar resize
 status: in-progress
 type: task

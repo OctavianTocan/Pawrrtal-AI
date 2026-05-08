@@ -1,14 +1,14 @@
 ---
-# ai-nexus-ohj0
+# pawrrtal-ohj0
 title: Integrate model selector into chat input bar (replace dialog-based selector)
 status: completed
 type: task
 priority: high
 created_at: 2026-03-12T00:41:58Z
 updated_at: 2026-05-02T22:32:09Z
-parent: ai-nexus-3i2d
+parent: pawrrtal-3i2d
 blocked_by:
-    - ai-nexus-6k3a
+    - pawrrtal-6k3a
 ---
 
 ## Goal

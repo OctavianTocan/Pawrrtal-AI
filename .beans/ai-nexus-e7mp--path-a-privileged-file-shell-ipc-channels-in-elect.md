@@ -1,5 +1,5 @@
 ---
-# ai-nexus-e7mp
+# pawrrtal-e7mp
 title: 'Path A: privileged file + shell IPC channels in Electron main'
 status: completed
 type: feature
@@ -46,7 +46,7 @@ Implemented on branch `feat/electron-privileged-ops`:
 - electron/src/permissions.ts (Claude-Code-style ladder + decision storage)
 - electron/src/handlers/fs.ts (read/write/list/watch via chokidar)
 - electron/src/handlers/shell.ts (run + spawn-streaming + kill, timeouts)
-- electron/src/preload.ts extended with aiNexus.fs.* / shell.* / workspace.* / permissions.* bridges
+- electron/src/preload.ts extended with pawrrtal.fs.* / shell.* / workspace.* / permissions.* bridges
 - frontend/lib/desktop.ts mirrored every method with web fallbacks (no-op + 'desktop-only' envelope)
 
 Coverage on the new electron code: 63% statements / 67% lines (target was 60%).

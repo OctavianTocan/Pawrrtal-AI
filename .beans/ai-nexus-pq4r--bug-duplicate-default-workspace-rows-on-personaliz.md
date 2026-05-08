@@ -1,12 +1,12 @@
 ---
-# ai-nexus-pq4r
+# pawrrtal-pq4r
 title: 'Bug: duplicate default Workspace rows on personalization save'
 status: in-review
 type: bug
 priority: high
 created_at: 2026-05-07T16:17:18Z
 updated_at: 2026-05-07T18:10:00Z
-pr: https://github.com/OctavianTocan/ai-nexus/pull/111
+pr: https://github.com/OctavianTocan/pawrrtal/pull/111
 ---
 
 ## Symptom

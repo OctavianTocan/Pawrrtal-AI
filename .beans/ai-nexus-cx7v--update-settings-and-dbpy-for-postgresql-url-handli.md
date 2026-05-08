@@ -1,14 +1,14 @@
 ---
-# ai-nexus-cx7v
+# pawrrtal-cx7v
 title: Update Settings and db.py for PostgreSQL URL handling
 status: todo
 type: task
 priority: high
 created_at: 2026-03-19T23:10:10Z
 updated_at: 2026-03-21T17:42:42Z
-parent: ai-nexus-inwh
+parent: pawrrtal-inwh
 blocked_by:
-    - ai-nexus-03sh
+    - pawrrtal-03sh
 ---
 
 ## Description

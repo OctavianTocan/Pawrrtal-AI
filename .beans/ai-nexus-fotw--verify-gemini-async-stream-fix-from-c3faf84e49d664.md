@@ -1,5 +1,5 @@
 ---
-# ai-nexus-fotw
+# pawrrtal-fotw
 title: Verify Gemini async stream fix from c3faf84/e49d664
 status: todo
 type: bug

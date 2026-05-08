@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ke9j
+# pawrrtal-ke9j
 title: Soften global white and black tokens
 status: completed
 type: task
@@ -10,7 +10,7 @@ updated_at: 2026-05-02T23:45:02Z
 
 ## Goal
 
-Tune global theme endpoints away from pure white and pure black while keeping the current AI Nexus palette and contrast.
+Tune global theme endpoints away from pure white and pure black while keeping the current Pawrrtal palette and contrast.
 
 ## Checklist
 

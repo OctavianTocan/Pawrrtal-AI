@@ -9,7 +9,7 @@ Every function must have an explicit return type annotation. Maximum 3 positiona
 
 **Why:** Explicit return types turn runtime type mismatches into compile errors. They document intent at the signature level. When the return type changes, callers get compiler errors instead of silent runtime failures. Max 3 params prevents unclear call sites and enables easier refactoring to options objects.
 
-**Learned from:** ai-nexus (OctavianTocan/ai-nexus) — AGENTS.md convention.
+**Learned from:** pawrrtal (OctavianTocan/pawrrtal) — AGENTS.md convention.
 
 ## Verify
 

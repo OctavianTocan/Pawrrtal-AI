@@ -11,7 +11,7 @@
  *                       prompt, so the agent can think but not act.
  *
  * Per-op decisions are keyed `<op>:<command-or-write>:<root-id>` so a
- * "Always allow `npm install` in ~/AI-Nexus-Workspace" decision
+ * "Always allow `npm install` in ~/Pawrrtal-Workspace" decision
  * doesn't leak into a different workspace root.
  *
  * The actual prompt UI lives in the renderer — main process forwards

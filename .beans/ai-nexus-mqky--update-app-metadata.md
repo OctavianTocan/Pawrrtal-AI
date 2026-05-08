@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mqky
+# pawrrtal-mqky
 title: Update App Metadata
 status: todo
 type: task

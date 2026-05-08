@@ -124,7 +124,7 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 # Claude Code's default preset, which steers the model toward software
 # engineering tasks and tools that don't exist in this surface.
 _DEFAULT_SYSTEM_PROMPT = (
-    "You are the Claude assistant inside the AI Nexus chat application. "
+    "You are the Claude assistant inside the Pawrrtal chat application. "
     "You are speaking with the user via a text chat surface. Be concise, "
     "helpful, and accurate. You do NOT have file system or shell access "
     "in this surface — decline politely if the user asks you to perform "

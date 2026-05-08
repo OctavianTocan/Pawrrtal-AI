@@ -1,5 +1,5 @@
 ---
-# ai-nexus-8bbj
+# pawrrtal-8bbj
 title: Polish chat thinking section to match thirdear /c/ design
 status: completed
 type: task

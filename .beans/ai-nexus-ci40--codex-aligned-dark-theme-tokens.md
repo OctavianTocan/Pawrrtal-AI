@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ci40
+# pawrrtal-ci40
 title: Codex-aligned dark theme tokens
 status: completed
 type: task

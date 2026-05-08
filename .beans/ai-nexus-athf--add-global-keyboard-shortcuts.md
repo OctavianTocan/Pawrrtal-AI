@@ -1,5 +1,5 @@
 ---
-# ai-nexus-athf
+# pawrrtal-athf
 title: Add global keyboard shortcuts
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:10:08Z
 updated_at: 2026-02-27T16:10:08Z
-parent: ai-nexus-ghy1
+parent: pawrrtal-ghy1
 ---
 
 Create useKeyboardShortcuts hook. Cmd+N (new chat), Cmd+/ (toggle sidebar), Cmd+, (settings), Cmd+Shift+M (model switcher), Cmd+Enter (send).

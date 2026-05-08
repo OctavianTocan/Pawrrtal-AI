@@ -1,14 +1,14 @@
 ---
-# ai-nexus-l8pt
+# pawrrtal-l8pt
 title: Wire useModels hook to fetch from backend and feed model selector
 status: todo
 type: task
 priority: high
 created_at: 2026-03-12T00:29:07Z
 updated_at: 2026-03-12T00:44:45Z
-parent: ai-nexus-3i2d
+parent: pawrrtal-3i2d
 blocked_by:
-    - ai-nexus-x22k
+    - pawrrtal-x22k
 ---
 
 ## Goal
@@ -25,7 +25,7 @@ Uncomment and implement `use-models.ts` to fetch the real model list from `GET /
 
 ## Blocked by
 
-- `ai-nexus-x22k` (backend models endpoint must return real data first)
+- `pawrrtal-x22k` (backend models endpoint must return real data first)
 
 ## Key Files
 

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mlaj
+# pawrrtal-mlaj
 title: Centralize inline localStorage keys in NavChats and sidebar
 status: scrapped
 type: task
@@ -30,4 +30,4 @@ Inline keys to migrate:
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-t295 ("Centralize localStorage keys in a constants file") which predates this bean and covers identical scope. Completed work tracked under that bean instead.
+Duplicate of pawrrtal-t295 ("Centralize localStorage keys in a constants file") which predates this bean and covers identical scope. Completed work tracked under that bean instead.

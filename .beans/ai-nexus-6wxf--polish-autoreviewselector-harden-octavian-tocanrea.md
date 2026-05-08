@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6wxf
+# pawrrtal-6wxf
 title: Polish AutoReviewSelector + harden @octavian-tocan/react-dropdown
 status: completed
 type: bug

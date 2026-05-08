@@ -1,5 +1,5 @@
 ---
-# ai-nexus-s41r
+# pawrrtal-s41r
 title: fix NavChats NavChatsView prop wiring
 status: completed
 type: task

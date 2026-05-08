@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ey9p
+# pawrrtal-ey9p
 title: Improve sentrux quality score with targeted refactors
 status: in-progress
 type: feature
@@ -41,18 +41,18 @@ Live sentrux scan (Wed May 6 18:42 UTC+2):
 
 ### New child beans (modularity hotspots)
 
-- ai-nexus-lqs4 (P1) - Promote personalization/storage -> lib/personalization/ (~7 edges)
-- ai-nexus-q8p8 (P2) - Hoist CONVERSATION_DRAG_MIME + conversation primitives -> lib/conversations/
-- ai-nexus-yl6q (P2) - Move settings/primitives -> ui-primitives/
-- ai-nexus-3rqh (P2, draft) - Resolve projects<->nav-chats sidebar composition
+- pawrrtal-lqs4 (P1) - Promote personalization/storage -> lib/personalization/ (~7 edges)
+- pawrrtal-q8p8 (P2) - Hoist CONVERSATION_DRAG_MIME + conversation primitives -> lib/conversations/
+- pawrrtal-yl6q (P2) - Move settings/primitives -> ui-primitives/
+- pawrrtal-3rqh (P2, draft) - Resolve projects<->nav-chats sidebar composition
 
 ### Adjacent findings (created as own beans)
 
-- ai-nexus-8nw3 (P1, bug) - NavChatsView.tsx is 509 lines, currently failing line-budget gate
-- ai-nexus-y2tt (P2) - app-layout.tsx (645 LOC, exempted via TODO with no follow-up bean until now)
-- ai-nexus-9vft (P3) - Delete self-documented dead duplicate UseConversationMutations.ts
-- ai-nexus-anju (P1, bug) - No CI workflow runs bun run check or unit tests; AGENTS.md claim is incorrect
-- ai-nexus-owse (P3, draft) - sentrux OSS only checks 4/17 rules; evaluate Pro vs alternatives
+- pawrrtal-8nw3 (P1, bug) - NavChatsView.tsx is 509 lines, currently failing line-budget gate
+- pawrrtal-y2tt (P2) - app-layout.tsx (645 LOC, exempted via TODO with no follow-up bean until now)
+- pawrrtal-9vft (P3) - Delete self-documented dead duplicate UseConversationMutations.ts
+- pawrrtal-anju (P1, bug) - No CI workflow runs bun run check or unit tests; AGENTS.md claim is incorrect
+- pawrrtal-owse (P3, draft) - sentrux OSS only checks 4/17 rules; evaluate Pro vs alternatives
 
 ### Evidence kept out of beans
 

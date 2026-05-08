@@ -1,5 +1,5 @@
 ---
-# ai-nexus-owwt
+# pawrrtal-owwt
 title: JSON parse error on every chat open ("Internal S" is not valid JSON)
 status: todo
 type: bug

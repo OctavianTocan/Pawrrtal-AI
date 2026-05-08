@@ -1,5 +1,5 @@
 ---
-# ai-nexus-t2mj
+# pawrrtal-t2mj
 title: '@-mention menu in chat composer: workspace files (with fuzzy filter)'
 status: todo
 type: feature
@@ -54,7 +54,7 @@ State machine:
 
 - Anchored above the composer caret (Radix Popover with ``side="top"``).
 - Renders the existing ``ResponsiveModal`` primitives if matching the style of model-selector dropdown; otherwise a custom popover sized to the result list.
-- Loading skeleton while query is in flight (per the new DESIGN.md async-load convention — cross-ref ai-nexus-f58v).
+- Loading skeleton while query is in flight (per the new DESIGN.md async-load convention — cross-ref pawrrtal-f58v).
 - Empty state ("No files match") when results are zero.
 - Keyboard nav: arrow keys, Enter to insert, Esc to dismiss.
 - Click on an item also inserts.
@@ -80,7 +80,7 @@ The token format must be one the backend prompt-builder strips/expands so the LL
 
 ## Open questions
 
-- **Server-side mention resolution.** When the user sends a message containing ``@workspace:foo.md``, does the backend (a) embed the file content into the system prompt, (b) hand the LLM a tool that reads the file by reference, or (c) split into both depending on size? This decision needs its own bean — coordinate with ai-nexus-dmor (workspace → providers wiring) since both depend on the same workspace-files contract.
+- **Server-side mention resolution.** When the user sends a message containing ``@workspace:foo.md``, does the backend (a) embed the file content into the system prompt, (b) hand the LLM a tool that reads the file by reference, or (c) split into both depending on size? This decision needs its own bean — coordinate with pawrrtal-dmor (workspace → providers wiring) since both depend on the same workspace-files contract.
 - **Mention pill vs plain text** — phase 1 plain text, phase 2 pill once the input model is decided.
 - **Multi-workspace** — ``GET /api/v1/workspaces/{id}/files`` requires a workspace ID. The composer needs to know which workspace the conversation belongs to (currently a user has exactly one default).
 
@@ -115,6 +115,6 @@ The token format must be one the backend prompt-builder strips/expands so the LL
 
 ## Related
 
-- ai-nexus-dmor (workspace → providers wiring) — defines whether the LLM can actually read the referenced file
-- ai-nexus-f58v (DESIGN.md async-load convention) — the popover follows that pattern
-- ai-nexus-kds0 (component primitives epic) — the popover should reuse the project's primitive popover, not invent one
+- pawrrtal-dmor (workspace → providers wiring) — defines whether the LLM can actually read the referenced file
+- pawrrtal-f58v (DESIGN.md async-load convention) — the popover follows that pattern
+- pawrrtal-kds0 (component primitives epic) — the popover should reuse the project's primitive popover, not invent one

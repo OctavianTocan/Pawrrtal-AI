@@ -1,5 +1,5 @@
 ---
-# ai-nexus-amlb
+# pawrrtal-amlb
 title: 'react-dropdown: 12 parity improvements over Radix/shadcn'
 status: completed
 type: feature
@@ -43,7 +43,7 @@ Implements 12 of the 14 follow-up improvements from the previous polish pass. Th
 
 ## Summary of Changes
 
-**12 of 14 proposed improvements landed.** The two remaining (flyout sub-menus, headless `useDropdown` hook) require structural rework and are tracked as `ai-nexus-za3f` and `ai-nexus-a3td` respectively.
+**12 of 14 proposed improvements landed.** The two remaining (flyout sub-menus, headless `useDropdown` hook) require structural rework and are tracked as `pawrrtal-za3f` and `pawrrtal-a3td` respectively.
 
 **New code surface:**
 - `useMenuKeyboard.ts` (new file): headless action-menu keyboard hook with roving focus, type-ahead, edge traversal. Exported from `index.ts` for custom compositions.
@@ -59,5 +59,5 @@ Implements 12 of the 14 follow-up improvements from the previous polish pass. Th
 **Skipped: #6 unified separator API.** The lower-level `DropdownMenu` takes a generic `T[]` items array; switching to `(MenuItemDef<T> | T)[]` would break the generic parameter for every existing call site. The existing `getItemSeparator` predicate plus the high-level `DropdownMenuDef`'s discriminated `MenuItemDef` cover both consumer modes adequately. Not blocking; can revisit if a real consumer pattern emerges.
 
 **Followups:**
-- `ai-nexus-za3f` — flyout sub-menus (Radix DropdownMenuSub parity)
-- `ai-nexus-a3td` — headless `useDropdown` hook + prop getters
+- `pawrrtal-za3f` — flyout sub-menus (Radix DropdownMenuSub parity)
+- `pawrrtal-a3td` — headless `useDropdown` hook + prop getters

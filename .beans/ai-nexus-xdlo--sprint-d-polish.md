@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xdlo
+# pawrrtal-xdlo
 title: 'Sprint D: Polish'
 status: todo
 type: milestone

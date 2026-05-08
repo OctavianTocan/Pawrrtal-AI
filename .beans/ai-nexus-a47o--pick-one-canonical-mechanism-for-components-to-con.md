@@ -1,12 +1,12 @@
 ---
-# ai-nexus-a47o
+# pawrrtal-a47o
 title: Pick one canonical mechanism for components to consume surface tokens
 status: todo
 type: task
 priority: normal
 created_at: 2026-05-06T12:54:26Z
 updated_at: 2026-05-06T12:54:26Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 At the moment of the rip, components used FOUR parallel mechanisms to set a surface color:

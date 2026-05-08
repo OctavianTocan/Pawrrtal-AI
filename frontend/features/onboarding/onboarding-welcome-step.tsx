@@ -50,7 +50,7 @@ export function OnboardingWelcomeStep({
 						className="text-balance text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]"
 						aria-hidden="true"
 					>
-						Welcome to AI Nexus
+						Welcome to Pawrrtal
 					</div>
 					<DialogDescription className="max-w-[30rem] text-[0.9375rem] leading-relaxed text-muted-foreground">
 						Your computer, but it works for you.

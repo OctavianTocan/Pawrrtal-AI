@@ -367,7 +367,7 @@
 	 * popovers, sidebars, borders, and muted text to fixed oklch
 	 * literals. Switching presets in dark mode visibly only changed
 	 * `--background` + `--accent`, while every other surface stayed at
-	 * the AI Nexus default — making distinct presets look basically
+	 * the Pawrrtal default — making distinct presets look basically
 	 * the same in dark mode (E2E preset-comparison report on
 	 * 2026-05-05 confirmed 6/7 derived slots collapsed to identical
 	 * literal values across presets).

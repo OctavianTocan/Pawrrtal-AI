@@ -8,10 +8,10 @@ import {
 	showOpenFolderDialog,
 } from './desktop';
 
-describe('lib/desktop (web shell — no aiNexus bridge)', () => {
+describe('lib/desktop (web shell — no pawrrtal bridge)', () => {
 	beforeEach(() => {
 		// Make sure no other test left an injected bridge behind.
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { pawrrtal?: unknown }).pawrrtal = undefined;
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
@@ -49,7 +49,7 @@ describe('lib/desktop (web shell — no aiNexus bridge)', () => {
 
 describe('lib/desktop (Electron shell — bridge present)', () => {
 	beforeEach(() => {
-		(window as unknown as { aiNexus: unknown }).aiNexus = {
+		(window as unknown as { pawrrtal: unknown }).pawrrtal = {
 			openExternal: vi.fn().mockResolvedValue(undefined),
 			showOpenFolderDialog: vi.fn().mockResolvedValue('/Users/me/Code'),
 			getPlatform: vi.fn().mockResolvedValue('darwin' as NodeJS.Platform),
@@ -58,7 +58,7 @@ describe('lib/desktop (Electron shell — bridge present)', () => {
 		};
 	});
 	afterEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { pawrrtal?: unknown }).pawrrtal = undefined;
 	});
 
 	it('reports the app is running on desktop', () => {
@@ -68,8 +68,8 @@ describe('lib/desktop (Electron shell — bridge present)', () => {
 	it('routes openExternal through the bridge', async () => {
 		await openExternal('https://example.com');
 		const bridge = (
-			window as unknown as { aiNexus: { openExternal: ReturnType<typeof vi.fn> } }
-		).aiNexus;
+			window as unknown as { pawrrtal: { openExternal: ReturnType<typeof vi.fn> } }
+		).pawrrtal;
 		expect(bridge.openExternal).toHaveBeenCalledWith('https://example.com');
 	});
 
@@ -88,7 +88,7 @@ describe('lib/desktop (Electron shell — bridge present)', () => {
 
 describe('lib/desktop privileged-op wrappers (web fallbacks)', () => {
 	beforeEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { pawrrtal?: unknown }).pawrrtal = undefined;
 	});
 
 	it('listWorkspaceRoots returns []', async () => {
@@ -186,7 +186,7 @@ describe('lib/desktop privileged-op wrappers (web fallbacks)', () => {
 
 describe('lib/desktop privileged-op wrappers (Electron bridge present)', () => {
 	beforeEach(() => {
-		(window as unknown as { aiNexus: unknown }).aiNexus = {
+		(window as unknown as { pawrrtal: unknown }).pawrrtal = {
 			openExternal: vi.fn(),
 			showOpenFolderDialog: vi.fn(),
 			getPlatform: vi.fn(),
@@ -223,7 +223,7 @@ describe('lib/desktop privileged-op wrappers (Electron bridge present)', () => {
 		};
 	});
 	afterEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { pawrrtal?: unknown }).pawrrtal = undefined;
 	});
 
 	it('listWorkspaceRoots routes through bridge', async () => {

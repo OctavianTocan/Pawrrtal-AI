@@ -1,12 +1,12 @@
 ---
-# ai-nexus-pohh
+# pawrrtal-pohh
 title: Codify 'how to add a surface token' as a single procedure
 status: todo
 type: task
 priority: normal
 created_at: 2026-05-06T12:54:18Z
 updated_at: 2026-05-06T12:54:18Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 Adding a new surface token to the old system required three coordinated edits:

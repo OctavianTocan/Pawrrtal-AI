@@ -1,5 +1,5 @@
 ---
-# ai-nexus-os7m
+# pawrrtal-os7m
 title: Fix message send duplicate conversation and chat route failures
 status: completed
 type: bug

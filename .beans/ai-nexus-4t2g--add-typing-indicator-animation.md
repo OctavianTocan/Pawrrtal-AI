@@ -1,5 +1,5 @@
 ---
-# ai-nexus-4t2g
+# pawrrtal-4t2g
 title: Add Typing Indicator Animation
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #55
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-y5xi (Polish streaming animations) which covers typing indicator.
+Duplicate of pawrrtal-y5xi (Polish streaming animations) which covers typing indicator.

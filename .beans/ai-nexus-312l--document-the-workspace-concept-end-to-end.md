@@ -1,5 +1,5 @@
 ---
-# ai-nexus-312l
+# pawrrtal-312l
 title: Document the workspace concept end-to-end
 status: todo
 type: task
@@ -10,7 +10,7 @@ updated_at: 2026-05-07T16:21:03Z
 
 ## Goal
 
-There is currently no canonical document explaining what a "workspace" actually is in AI Nexus, how it's created, where its files live, what its lifecycle is, and what consumes it. That gap leads to confusion (e.g. duplicate Workspace rows being silently created, agents not actually consuming the workspace files even though we ship them).
+There is currently no canonical document explaining what a "workspace" actually is in Pawrrtal, how it's created, where its files live, what its lifecycle is, and what consumes it. That gap leads to confusion (e.g. duplicate Workspace rows being silently created, agents not actually consuming the workspace files even though we ship them).
 
 ## Required content
 
@@ -32,13 +32,13 @@ A new doc at ``docs/architecture/workspaces.md`` (or extension to an existing ar
 
 ### 3. Consumers
 - ``app/core/workspace.py`` is the canonical module owning seed + create + lookup.
-- Today the LLM providers **don't** read workspace files (Gemini has a ``# TODO: wire filesystem`` placeholder; Claude has a ``cwd`` field that's never set). Cross-reference ai-nexus-dmor for the fix bean.
-- Long-term: workspace is the substrate for agent skills, memory, tool outputs, and agentic-stack templates (cross-ref ai-nexus-8kxs).
+- Today the LLM providers **don't** read workspace files (Gemini has a ``# TODO: wire filesystem`` placeholder; Claude has a ``cwd`` field that's never set). Cross-reference pawrrtal-dmor for the fix bean.
+- Long-term: workspace is the substrate for agent skills, memory, tool outputs, and agentic-stack templates (cross-ref pawrrtal-8kxs).
 
 ### 4. Known issues
-- Duplicate-default-workspace race (cross-ref ai-nexus-pq4r).
-- Agents can't see workspace files (cross-ref ai-nexus-dmor).
-- Workspace template direction (cross-ref ai-nexus-8kxs).
+- Duplicate-default-workspace race (cross-ref pawrrtal-pq4r).
+- Agents can't see workspace files (cross-ref pawrrtal-dmor).
+- Workspace template direction (cross-ref pawrrtal-8kxs).
 
 ### 5. Operations
 - How to inspect a workspace as a human (``ls $WORKSPACE_BASE_DIR/<uuid>``).

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6fid
+# pawrrtal-6fid
 title: Fix onboarding cursor and selection affordances
 status: completed
 type: bug

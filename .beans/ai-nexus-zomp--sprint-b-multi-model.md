@@ -1,5 +1,5 @@
 ---
-# ai-nexus-zomp
+# pawrrtal-zomp
 title: 'Sprint B: Multi-Model'
 status: scrapped
 type: milestone

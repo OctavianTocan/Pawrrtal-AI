@@ -93,7 +93,7 @@ test.describe('onboarding', () => {
 		// Use Stagehand's extract to read the visible page state. If
 		// the modal is still up, the extracted shell title will mention
 		// "Let's get to know you" or similar; if it's gone, the chat
-		// composer placeholder ("Ask AI Nexus anything…") is visible.
+		// composer placeholder ("Ask Pawrrtal anything…") is visible.
 		const { hasComposer, hasModal } = await stagehand.extract(
 			'Inspect the page: is the chat composer at the bottom visible? Is any onboarding/welcome modal still open?',
 			z.object({

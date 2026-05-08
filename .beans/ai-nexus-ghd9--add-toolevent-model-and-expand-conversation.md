@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ghd9
+# pawrrtal-ghd9
 title: Add model field to Conversation
 status: scrapped
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:34Z
 updated_at: 2026-03-07T21:51:35Z
-parent: ai-nexus-9ygz
+parent: pawrrtal-9ygz
 ---
 
 Both ToolEvent and model field scrapped — Agno already stores both natively:

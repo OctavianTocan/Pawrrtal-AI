@@ -1,5 +1,5 @@
 ---
-# ai-nexus-8hop
+# pawrrtal-8hop
 title: Fix @octavian-tocan/react-dropdown — selection not propagating reliably
 status: completed
 type: bug
@@ -54,7 +54,7 @@ The vendored library at ``frontend/lib/react-dropdown/`` (``@octavian-tocan/reac
 
 ## Related
 
-- ai-nexus-s8na (whimsy generator) — currently bypassing SelectButton for the Mode toggle and Preset picker; revertible once the library is fixed.
+- pawrrtal-s8na (whimsy generator) — currently bypassing SelectButton for the Mode toggle and Preset picker; revertible once the library is fixed.
 
 ## Workaround note
 

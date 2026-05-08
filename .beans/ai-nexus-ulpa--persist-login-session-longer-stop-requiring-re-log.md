@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ulpa
+# pawrrtal-ulpa
 title: Persist login session longer (stop requiring re-login every time)
 status: todo
 type: bug

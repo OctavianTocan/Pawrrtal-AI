@@ -1,5 +1,5 @@
 ---
-# ai-nexus-yyug
+# pawrrtal-yyug
 title: 'react-dropdown: Linear-snappy motion + filter blur + globalized backdrop blur'
 status: completed
 type: feature

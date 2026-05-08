@@ -1,12 +1,12 @@
 ---
-# ai-nexus-03sh
+# pawrrtal-03sh
 title: 'Swap Python dependencies: aiosqlite → psycopg'
 status: todo
 type: task
 priority: high
 created_at: 2026-03-19T23:10:10Z
 updated_at: 2026-03-19T23:10:10Z
-parent: ai-nexus-inwh
+parent: pawrrtal-inwh
 ---
 
 ## Description

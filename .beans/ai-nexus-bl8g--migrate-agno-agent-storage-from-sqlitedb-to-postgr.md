@@ -1,14 +1,14 @@
 ---
-# ai-nexus-bl8g
+# pawrrtal-bl8g
 title: Migrate Agno agent storage from SqliteDb to PostgresDb
 status: scrapped
 type: task
 priority: high
 created_at: 2026-03-19T23:10:10Z
 updated_at: 2026-05-07T16:25:30Z
-parent: ai-nexus-inwh
+parent: pawrrtal-inwh
 blocked_by:
-    - ai-nexus-cx7v
+    - pawrrtal-cx7v
 ---
 
 ## Description
@@ -55,4 +55,4 @@ agno_db = PostgresDb(db_url=settings.db_url_sync)
 
 ## Reasons for Scrapping
 
-User confirmed 2026-05-07: nothing more is being done with Agno. `app/core/agents.py` and `app/core/providers/agno_provider.py` are dead code and excluded from mypy in commit `e49d664`. The provider direction is Gemini + Claude. Closing the Agno cluster: ai-nexus-bl8g, ai-nexus-d2ke, ai-nexus-cocq, ai-nexus-7xc0.
+User confirmed 2026-05-07: nothing more is being done with Agno. `app/core/agents.py` and `app/core/providers/agno_provider.py` are dead code and excluded from mypy in commit `e49d664`. The provider direction is Gemini + Claude. Closing the Agno cluster: pawrrtal-bl8g, pawrrtal-d2ke, pawrrtal-cocq, pawrrtal-7xc0.

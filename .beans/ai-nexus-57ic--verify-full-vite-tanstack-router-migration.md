@@ -1,14 +1,14 @@
 ---
-# ai-nexus-57ic
+# pawrrtal-57ic
 title: Verify full Vite + TanStack Router migration
 status: scrapped
 type: task
 priority: normal
 created_at: 2026-03-26T17:29:23Z
 updated_at: 2026-05-07T16:24:57Z
-parent: ai-nexus-id67
+parent: pawrrtal-id67
 blocked_by:
-    - ai-nexus-335f
+    - pawrrtal-335f
 ---
 
 Final verification after all Next.js code is removed.
@@ -30,4 +30,4 @@ Final verification after all Next.js code is removed.
 
 ## Reasons for Scrapping
 
-User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: ai-nexus-id67, ai-nexus-91ch, ai-nexus-ow61, ai-nexus-57ic, ai-nexus-hogv, ai-nexus-335f, ai-nexus-fc8j.
+User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: pawrrtal-id67, pawrrtal-91ch, pawrrtal-ow61, pawrrtal-57ic, pawrrtal-hogv, pawrrtal-335f, pawrrtal-fc8j.

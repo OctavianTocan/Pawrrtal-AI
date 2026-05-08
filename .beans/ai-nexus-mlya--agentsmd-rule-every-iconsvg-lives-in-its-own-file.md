@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mlya
+# pawrrtal-mlya
 title: 'AGENTS.md rule: every icon/svg lives in its own file'
 status: completed
 type: task

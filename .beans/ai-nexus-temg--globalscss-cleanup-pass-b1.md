@@ -1,5 +1,5 @@
 ---
-# ai-nexus-temg
+# pawrrtal-temg
 title: globals.css cleanup pass (B1)
 status: todo
 type: task

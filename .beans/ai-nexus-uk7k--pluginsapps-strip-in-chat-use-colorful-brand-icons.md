@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uk7k
+# pawrrtal-uk7k
 title: 'Plugins/apps strip in chat: use colorful brand icons'
 status: completed
 type: feature

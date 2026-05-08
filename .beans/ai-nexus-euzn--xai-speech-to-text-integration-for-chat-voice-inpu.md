@@ -1,5 +1,5 @@
 ---
-# ai-nexus-euzn
+# pawrrtal-euzn
 title: xAI Speech-to-Text integration for chat voice input
 status: completed
 type: feature

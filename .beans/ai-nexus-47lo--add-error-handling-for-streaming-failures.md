@@ -1,5 +1,5 @@
 ---
-# ai-nexus-47lo
+# pawrrtal-47lo
 title: Add Error Handling for Streaming Failures
 status: todo
 type: task

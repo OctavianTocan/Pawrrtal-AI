@@ -15,7 +15,7 @@ import { SettingsPage } from '../primitives';
  * flag back to `false` via the existing PATCH mutation.
  *
  * Mirrors the Codex reference layout (Image #37): row title, "Mar 27,
- * 2026, 6:30 PM · ai-nexus" metadata line, Unarchive button on the right.
+ * 2026, 6:30 PM · pawrrtal" metadata line, Unarchive button on the right.
  */
 export function ArchivedChatsSection(): React.JSX.Element {
 	const { data: conversations, isLoading } = useGetConversations();
@@ -103,7 +103,7 @@ function ArchivedChatRow({
 					{conversation.title || 'Untitled chat'}
 				</span>
 				<span className="truncate text-sm text-muted-foreground">
-					{formatted} · ai-nexus
+					{formatted} · pawrrtal
 				</span>
 			</div>
 			<Button

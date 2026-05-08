@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uuza
+# pawrrtal-uuza
 title: 'Fix chat 500: missing limit param in get_messages_for_conversation + bad gemini_utils model'
 status: completed
 type: bug

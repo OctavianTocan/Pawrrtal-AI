@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ily6
+# pawrrtal-ily6
 title: 'Sprint A: Foundation'
 status: completed
 type: milestone

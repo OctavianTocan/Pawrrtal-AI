@@ -1,5 +1,5 @@
 ---
-# ai-nexus-hq07
+# pawrrtal-hq07
 title: Browser-Use E2E test suite (next branch after Electron)
 status: completed
 type: feature

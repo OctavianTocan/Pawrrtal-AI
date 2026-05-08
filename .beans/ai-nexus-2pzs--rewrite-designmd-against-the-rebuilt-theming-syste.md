@@ -1,12 +1,12 @@
 ---
-# ai-nexus-2pzs
+# pawrrtal-2pzs
 title: Rewrite DESIGN.md against the rebuilt theming system
 status: todo
 type: task
 priority: normal
 created_at: 2026-05-06T12:54:53Z
 updated_at: 2026-05-06T12:54:53Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 DESIGN.md is currently lying about the system. It documents `--sidebar = --background-elevated`, an elevation hierarchy of `background < sidebar < card < popover`, and a 1.5% foreground mix formula — none of which match the code as of the 2026-05-06 rip.

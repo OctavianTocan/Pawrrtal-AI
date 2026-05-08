@@ -41,7 +41,7 @@ import { pollForAssistantReply, typeAndSendChatMessage } from './helpers';
 const REPLY_BUDGET_MS = 60_000;
 
 // Onboarding is auto-suppressed by the fixture's `addInitScript` that
-// sets `ai-nexus:e2e-skip-onboarding=1` in localStorage before any
+// sets `pawrrtal:e2e-skip-onboarding=1` in localStorage before any
 // page script runs (see `fixtures.ts` and
 // `features/onboarding/v2/OnboardingFlow.tsx`). The first paint lands
 // on a clean chat surface with no modal in the way — no per-spec

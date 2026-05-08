@@ -1,5 +1,5 @@
 ---
-# ai-nexus-tr56
+# pawrrtal-tr56
 title: 'Polish chat UI: agent spinner, scrollbar, AI message typography'
 status: completed
 type: task

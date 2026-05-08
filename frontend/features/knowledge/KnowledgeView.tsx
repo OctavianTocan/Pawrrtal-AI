@@ -3,7 +3,7 @@
 /**
  * Pure presentation shell for the Knowledge surface.
  *
- * Layout shape (AI Nexus.ai reference, images #31–#33, #35, #45):
+ * Layout shape (Pawrrtal.ai reference, images #31–#33, #35, #45):
  *
  * - The chat-inset slot hosts TWO sibling elevated panels with a small gap
  *   between them. Each panel is its own rounded-`surface-lg` card with the

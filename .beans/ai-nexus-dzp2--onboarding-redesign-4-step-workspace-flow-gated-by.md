@@ -1,5 +1,5 @@
 ---
-# ai-nexus-dzp2
+# pawrrtal-dzp2
 title: Onboarding redesign — 4-step workspace flow gated by 'New workspace'
 status: completed
 type: feature

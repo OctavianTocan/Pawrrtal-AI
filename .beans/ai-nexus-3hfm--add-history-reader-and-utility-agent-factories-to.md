@@ -1,12 +1,12 @@
 ---
-# ai-nexus-3hfm
+# pawrrtal-3hfm
 title: Add history reader and utility agent factories to agents.py
 status: completed
 type: task
 priority: high
 created_at: 2026-03-04T23:40:06Z
 updated_at: 2026-03-04T23:56:35Z
-parent: ai-nexus-pva0
+parent: pawrrtal-pva0
 ---
 
 Extract the two ad-hoc Agent() calls in conversations.py into dedicated factory functions in app/core/agents.py:

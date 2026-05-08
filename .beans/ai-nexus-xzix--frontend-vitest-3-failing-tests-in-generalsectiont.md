@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xzix
+# pawrrtal-xzix
 title: 'Frontend Vitest: 3 failing tests in GeneralSection.test.tsx (stale UI strings)'
 status: todo
 type: bug
@@ -33,7 +33,7 @@ The current rendered DOM (per the test output) contains rows like "What should w
 
 ## Why it surfaced now
 
-Discovered while wiring `tests.yml` into CI (`ai-nexus-anju`). The new workflow runs `bun run test` and correctly catches this. Locally, nobody had run the suite recently.
+Discovered while wiring `tests.yml` into CI (`pawrrtal-anju`). The new workflow runs `bun run test` and correctly catches this. Locally, nobody had run the suite recently.
 
 ## Plan
 
@@ -46,4 +46,4 @@ Discovered while wiring `tests.yml` into CI (`ai-nexus-anju`). The new workflow 
 ## Notes
 
 - This bean blocks the frontend job in `tests.yml` from going green.
-- Coordinate with `ai-nexus-cigl` (push frontend test coverage from 36% to 70%) — fixing stale tests is prerequisite to credibly measuring coverage.
+- Coordinate with `pawrrtal-cigl` (push frontend test coverage from 36% to 70%) — fixing stale tests is prerequisite to credibly measuring coverage.

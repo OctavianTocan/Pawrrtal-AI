@@ -1,5 +1,5 @@
 ---
-# ai-nexus-lwh8
+# pawrrtal-lwh8
 title: Fix light mode onboarding and composer focus styling
 status: completed
 type: bug

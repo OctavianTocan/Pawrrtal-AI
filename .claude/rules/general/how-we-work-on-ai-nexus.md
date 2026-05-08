@@ -1,9 +1,9 @@
 ---
-name: how-we-work-on-ai-nexus
+name: how-we-work-on-pawrrtal
 paths: ["**/*"]
 ---
 
-# How We Work on AI Nexus
+# How We Work on Pawrrtal
 
 Working agreement for this repo. These rules came out of a session of
 visible behavioural drift — the same mistakes recurring across days

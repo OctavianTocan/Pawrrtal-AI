@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ups6
+# pawrrtal-ups6
 title: Adopt sentrux for architectural quality gating
 status: completed
 type: feature

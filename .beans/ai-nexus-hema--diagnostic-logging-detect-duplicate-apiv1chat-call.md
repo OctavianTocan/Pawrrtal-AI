@@ -1,5 +1,5 @@
 ---
-# ai-nexus-hema
+# pawrrtal-hema
 title: 'Diagnostic logging: detect duplicate /api/v1/chat calls'
 status: completed
 type: task

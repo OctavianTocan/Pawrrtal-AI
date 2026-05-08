@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ruy8
+# pawrrtal-ruy8
 title: Wire native menu File→New Chat to FE route handler
 status: todo
 type: task
@@ -12,10 +12,10 @@ The Electron menu's File → New Chat (Cmd/Ctrl+N) sends the IPC channel \`deskt
 
 **Scope.**
 - In \`frontend/components/app-layout.tsx\` (or a small wrapper hook), call \`onMenuNewChat\` once on mount; on fire, call \`router.replace('/')\` (the home page is where new chats start).
-- Add a unit test: when window.aiNexus injects an onMenuNewChat that fires the handler, the router replace is called with '/'.
+- Add a unit test: when window.pawrrtal injects an onMenuNewChat that fires the handler, the router replace is called with '/'.
 
 ## Todo
 - [ ] Add useEffect in app-layout (or a useMenuNewChat hook in features/electron/)
 - [ ] Route to / on fire
-- [ ] Vitest test with mocked aiNexus + mocked router
+- [ ] Vitest test with mocked pawrrtal + mocked router
 - [ ] Smoke test in Electron: Cmd+N navigates home

@@ -478,7 +478,7 @@ Expected: No errors
 
 - [ ] **Step 3: Start dev server and test visually**
 
-Run: `cd "/Volumes/Crucial X10/Projects/ai-nexus" && bun run frontend:dev`
+Run: `cd "/Volumes/Crucial X10/Projects/pawrrtal" && bun run frontend:dev`
 Navigate to: `http://localhost:3001/dev/access-requests`
 
 Verify:

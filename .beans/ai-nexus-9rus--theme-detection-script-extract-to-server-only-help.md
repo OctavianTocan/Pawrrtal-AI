@@ -1,5 +1,5 @@
 ---
-# ai-nexus-9rus
+# pawrrtal-9rus
 title: 'Theme detection script: extract to server-only helper module'
 status: completed
 type: bug

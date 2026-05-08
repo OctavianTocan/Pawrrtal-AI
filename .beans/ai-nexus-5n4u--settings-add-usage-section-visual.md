@@ -1,5 +1,5 @@
 ---
-# ai-nexus-5n4u
+# pawrrtal-5n4u
 title: Settings — add Usage section (visual)
 status: completed
 type: feature

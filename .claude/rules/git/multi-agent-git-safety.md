@@ -15,7 +15,7 @@ Each agent works on its own branch from a clean checkout state.
 
 **Why:** Stashes and worktrees create hidden state that confuses other agents working the same repo. One agent's stash can block another agent's checkout. Branch switching leaves uncommitted debris.
 
-**Learned from:** ai-nexus (OctavianTocan/ai-nexus) — multi-agent collaboration rules.
+**Learned from:** pawrrtal (OctavianTocan/pawrrtal) — multi-agent collaboration rules.
 
 ## Verify
 

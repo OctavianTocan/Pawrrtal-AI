@@ -9,7 +9,7 @@ tags:
     submenu,
     disabled-state,
     @source,
-    ai-nexus,
+    pawrrtal,
   ]
 symptoms:
   - DropdownMenuItem with disabled=true showed little or no difference from enabled rows
@@ -23,7 +23,7 @@ root_cause: >-
 
 ## Problem
 
-Profile menu items such as “Get apps and extensions” and “Gift AI Nexus” were marked
+Profile menu items such as “Get apps and extensions” and “Gift Pawrrtal” were marked
 `disabled`, but users could not **see** that they were unavailable—styling did not
 land or did not contrast enough with normal rows.
 

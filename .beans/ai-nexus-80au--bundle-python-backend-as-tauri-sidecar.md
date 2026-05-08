@@ -1,14 +1,14 @@
 ---
-# ai-nexus-80au
+# pawrrtal-80au
 title: Bundle Python backend as Tauri sidecar
 status: todo
 type: task
 priority: high
 created_at: 2026-03-04T22:13:15Z
 updated_at: 2026-03-04T22:13:15Z
-parent: ai-nexus-8ty6
+parent: pawrrtal-8ty6
 blocked_by:
-    - ai-nexus-i0co
+    - pawrrtal-i0co
 ---
 
 Package the FastAPI backend as a sidecar binary that Tauri launches and manages alongside the desktop app.
@@ -19,7 +19,7 @@ Package the FastAPI backend as a sidecar binary that Tauri launches and manages 
 - Configure Tauri sidecar in `tauri.conf.json`:
   ```json
   "bundle": {
-    "externalBin": ["binaries/ai-nexus-backend"]
+    "externalBin": ["binaries/pawrrtal-backend"]
   }
   ```
 - Add `tauri-plugin-shell` for sidecar management

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-i0of
+# pawrrtal-i0of
 title: User profile pictures (settings + Google auto-import)
 status: todo
 type: feature
@@ -60,4 +60,4 @@ Users can have a profile picture rendered next to their name in the user dropdow
 
 ## Related
 
-- Coordinates with the primitive components epic (ai-nexus-kds0) — the avatar widget itself is a primitive worth landing through that lens.
+- Coordinates with the primitive components epic (pawrrtal-kds0) — the avatar widget itself is a primitive worth landing through that lens.

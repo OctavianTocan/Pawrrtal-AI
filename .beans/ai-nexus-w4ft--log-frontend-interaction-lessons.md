@@ -1,5 +1,5 @@
 ---
-# ai-nexus-w4ft
+# pawrrtal-w4ft
 title: Log frontend interaction lessons
 status: completed
 type: task

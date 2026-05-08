@@ -1,5 +1,5 @@
 ---
-# ai-nexus-m4k2
+# pawrrtal-m4k2
 title: Improve Home Page Design
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #48
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-ke9c (Redesign empty chat state). The home page IS the chat view with empty state.
+Duplicate of pawrrtal-ke9c (Redesign empty chat state). The home page IS the chat view with empty state.

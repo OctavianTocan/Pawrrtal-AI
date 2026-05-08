@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7tr6
+# pawrrtal-7tr6
 title: Load Google Sans via stylesheet (drop next/font warnings)
 status: completed
 type: bug

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-f7k0
+# pawrrtal-f7k0
 title: Add Connect your apps strip under chat input
 status: completed
 type: feature

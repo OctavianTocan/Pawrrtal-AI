@@ -1,5 +1,5 @@
 ---
-# ai-nexus-u374
+# pawrrtal-u374
 title: Frontend TSDoc and explanatory comments pass
 status: completed
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6b25
+# pawrrtal-6b25
 title: Tighten sidebar text sizes and shrink composer footer/connect strip
 status: completed
 type: task

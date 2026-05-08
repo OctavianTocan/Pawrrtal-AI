@@ -1,5 +1,5 @@
 ---
-# ai-nexus-400y
+# pawrrtal-400y
 title: Mirage virtual filesystem capability (Notion read-only first)
 status: todo
 type: feature
@@ -10,7 +10,7 @@ tags:
 created_at: 2026-05-07T02:39:47Z
 updated_at: 2026-05-07T02:39:47Z
 blocked_by:
-    - ai-nexus-4956
+    - pawrrtal-4956
 ---
 
 Adopt strukto-ai/mirage to expose external services (Notion, GDrive, S3,
@@ -26,7 +26,7 @@ speaks fluently.
 
 ## Depends on
 
-- ai-nexus-4956 — provider-agnostic capability/tool registry. Mirage
+- pawrrtal-4956 — provider-agnostic capability/tool registry. Mirage
   registers as one capability against that registry. Without the
   registry, Mirage would re-introduce the same per-provider shim
   problem we are deleting.
@@ -51,7 +51,7 @@ speaks fluently.
   blocks? (Affects prompt instructions and what `cat` returns.)
 - How does Mirage handle Notion rate limits? (Notion API is 3 req/s;
   an agent doing `grep alert /notion/**/*.md` could fan out fast.)
-- License compatibility with AI Nexus.
+- License compatibility with Pawrrtal.
 - Maturity — read NotionResource source, scan issues/PRs, decide
   whether to bet on it now or wait a release.
 - Whether `Workspace.execute` is safe to expose directly or whether
@@ -79,7 +79,7 @@ speaks fluently.
       additional Mirage resources (S3, GDrive, Slack, GitHub) in a
       follow-up.
 - [ ] **Zero provider-specific Mirage shim.** All integration is via
-      the capability registry from ai-nexus-4956.
+      the capability registry from pawrrtal-4956.
 
 ## Out of scope (this bean)
 

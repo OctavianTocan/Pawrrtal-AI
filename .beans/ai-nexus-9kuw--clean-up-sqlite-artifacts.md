@@ -1,14 +1,14 @@
 ---
-# ai-nexus-9kuw
+# pawrrtal-9kuw
 title: Clean up SQLite artifacts
 status: todo
 type: task
 priority: normal
 created_at: 2026-03-19T23:10:10Z
 updated_at: 2026-03-21T17:42:49Z
-parent: ai-nexus-inwh
+parent: pawrrtal-inwh
 blocked_by:
-    - ai-nexus-bdm0
+    - pawrrtal-bdm0
 ---
 
 ## Description

@@ -112,7 +112,7 @@ bunx @biomejs/biome check --no-errors-on-unmatched \
 
 ## Related work tracking (optional)
 
-A beans task was created/closed to track this: title along the lines of *fix NavChats NavChatsView prop wiring* (id like `ai-nexus-s41r` at time of writing), with a **Summary of Changes** in the bean body matching this document.
+A beans task was created/closed to track this: title along the lines of *fix NavChats NavChatsView prop wiring* (id like `pawrrtal-s41r` at time of writing), with a **Summary of Changes** in the bean body matching this document.
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ntkp
+# pawrrtal-ntkp
 title: 'Epic 4: Settings API & UI'
 status: todo
 type: epic
@@ -10,10 +10,10 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:07Z
 updated_at: 2026-02-27T16:10:35Z
-parent: ai-nexus-qk1f
+parent: pawrrtal-qk1f
 blocked_by:
-    - ai-nexus-pva0
-    - ai-nexus-9ygz
+    - pawrrtal-pva0
+    - pawrrtal-9ygz
 ---
 
 Settings CRUD endpoints. API key management with encryption. Settings page with tabs (General, Models, Appearance). API key form UI.

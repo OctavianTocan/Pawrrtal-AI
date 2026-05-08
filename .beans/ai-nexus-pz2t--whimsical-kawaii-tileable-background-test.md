@@ -1,5 +1,5 @@
 ---
-# ai-nexus-pz2t
+# pawrrtal-pz2t
 title: Whimsical kawaii tileable background test
 status: completed
 type: task

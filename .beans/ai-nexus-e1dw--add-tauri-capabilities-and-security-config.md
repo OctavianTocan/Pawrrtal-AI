@@ -1,14 +1,14 @@
 ---
-# ai-nexus-e1dw
+# pawrrtal-e1dw
 title: Add Tauri capabilities and security config
 status: todo
 type: task
 priority: normal
 created_at: 2026-03-04T22:13:34Z
 updated_at: 2026-03-04T22:13:34Z
-parent: ai-nexus-8ty6
+parent: pawrrtal-8ty6
 blocked_by:
-    - ai-nexus-i0co
+    - pawrrtal-i0co
 ---
 
 Set up Tauri v2 capabilities and CSP for the desktop app's security model.

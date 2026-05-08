@@ -1,5 +1,5 @@
 ---
-# ai-nexus-vj5l
+# pawrrtal-vj5l
 title: Configure Production Environment Variables
 status: scrapped
 type: task
@@ -29,4 +29,4 @@ Also need:
 
 ## Reasons for Scrapping
 
-Merged into ai-nexus-sx1v (Set Up Production Deployment). Env var configuration is part of the deployment setup, not a separate task.
+Merged into pawrrtal-sx1v (Set Up Production Deployment). Env var configuration is part of the deployment setup, not a separate task.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7r28
+# pawrrtal-7r28
 title: Remove thirdear/TwinMind references from tracked files
 status: completed
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uyh5
+# pawrrtal-uyh5
 title: Diagnose & fix Electron desktop shell not opening
 status: completed
 type: bug
@@ -29,7 +29,7 @@ Root cause: `titleBarStyle: 'hiddenInset'` (electron/src/main.ts:70) keeps the s
 
 ## Summary of Changes
 
-- **electron/src/preload.ts** — exposed `platform: process.platform` synchronously on the `aiNexus` bridge so the renderer can make first-paint layout decisions without an async IPC round-trip.
+- **electron/src/preload.ts** — exposed `platform: process.platform` synchronously on the `pawrrtal` bridge so the renderer can make first-paint layout decisions without an async IPC round-trip.
 - **frontend/lib/desktop.ts** — added `platform: NodeJS.Platform` to the typed `DesktopBridge` and exported `getDesktopPlatformSync()` (returns `null` on web/SSR).
 - **frontend/components/app-layout.tsx** — added `useIsMacDesktop()` hook plus `MAC_TRAFFIC_LIGHT_RESERVE_PX = 80` constant. `AppHeader` now applies a 80px left padding via inline style only on macOS desktop, keeping `pl-3` for web/Windows/Linux. Hook starts `false` so SSR/initial-client renders match (no hydration mismatch), then flips on mount.
 

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-sxbu
+# pawrrtal-sxbu
 title: 'Epic 11: Empty States & Onboarding'
 status: todo
 type: epic
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:15Z
 updated_at: 2026-03-07T21:30:16Z
-parent: ai-nexus-h10p
+parent: pawrrtal-h10p
 ---
 
 Empty chat state redesign with gradient text, suggested prompts. First-time onboarding modal.

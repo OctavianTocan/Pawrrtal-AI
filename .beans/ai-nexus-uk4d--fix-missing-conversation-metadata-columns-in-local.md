@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uk4d
+# pawrrtal-uk4d
 title: Fix missing conversation metadata columns in local database
 status: completed
 type: bug

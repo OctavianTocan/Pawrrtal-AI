@@ -1,5 +1,5 @@
 ---
-# ai-nexus-j51n
+# pawrrtal-j51n
 title: Improve Empty Chat State
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #54
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-ke9c (Redesign empty chat state) in Epic 11.
+Duplicate of pawrrtal-ke9c (Redesign empty chat state) in Epic 11.

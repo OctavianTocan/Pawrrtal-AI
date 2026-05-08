@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7hip
+# pawrrtal-7hip
 title: Settings page (Codex-style) with Appearance + Personalization sections
 status: completed
 type: feature

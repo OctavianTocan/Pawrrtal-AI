@@ -1,5 +1,5 @@
 ---
-# ai-nexus-61e5
+# pawrrtal-61e5
 title: Add Backend Tests
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #46
 
 ## Reasons for Scrapping
 
-Vague duplicate of ai-nexus-mjru (Set up pytest infrastructure and write first test suite) which is more specific.
+Vague duplicate of pawrrtal-mjru (Set up pytest infrastructure and write first test suite) which is more specific.

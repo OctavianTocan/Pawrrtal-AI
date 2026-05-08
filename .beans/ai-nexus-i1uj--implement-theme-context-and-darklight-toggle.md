@@ -1,5 +1,5 @@
 ---
-# ai-nexus-i1uj
+# pawrrtal-i1uj
 title: Implement theme context and dark/light toggle
 status: todo
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:52Z
 updated_at: 2026-03-07T22:26:00Z
-parent: ai-nexus-5e5d
+parent: pawrrtal-5e5d
 ---
 
 CSS variables for .dark already fully defined in globals.css (all color tokens, glass effects, code blocks). Remaining work:

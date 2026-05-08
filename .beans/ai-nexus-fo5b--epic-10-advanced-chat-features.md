@@ -1,5 +1,5 @@
 ---
-# ai-nexus-fo5b
+# pawrrtal-fo5b
 title: 'Epic 10: Advanced Chat Features'
 status: todo
 type: epic
@@ -9,9 +9,9 @@ tags:
     - frontend
 created_at: 2026-02-27T16:09:13Z
 updated_at: 2026-02-27T16:10:35Z
-parent: ai-nexus-swdp
+parent: pawrrtal-swdp
 blocked_by:
-    - ai-nexus-7k7w
+    - pawrrtal-7k7w
 ---
 
 Token counter in input (Tokenlens). Conversation forking from any message. Regenerate with different model.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-pdfp
+# pawrrtal-pdfp
 title: Fix app chrome layout regression
 status: completed
 type: bug

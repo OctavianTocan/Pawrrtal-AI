@@ -1,5 +1,5 @@
 ---
-# ai-nexus-qapx
+# pawrrtal-qapx
 title: Add Password Strength Validation
 status: todo
 type: task

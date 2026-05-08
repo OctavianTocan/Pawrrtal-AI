@@ -1,5 +1,5 @@
 ---
-# ai-nexus-kvzq
+# pawrrtal-kvzq
 title: Wire Appearance panel to backend with live token propagation + Mistral defaults
 status: completed
 type: feature

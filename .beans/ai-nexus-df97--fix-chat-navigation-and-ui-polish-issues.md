@@ -1,5 +1,5 @@
 ---
-# ai-nexus-df97
+# pawrrtal-df97
 title: Fix chat navigation and UI polish issues
 status: completed
 type: bug

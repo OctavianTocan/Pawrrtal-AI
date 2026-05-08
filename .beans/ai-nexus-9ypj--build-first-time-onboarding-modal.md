@@ -1,5 +1,5 @@
 ---
-# ai-nexus-9ypj
+# pawrrtal-9ypj
 title: Build first-time onboarding modal
 status: completed
 type: task
@@ -9,7 +9,7 @@ tags:
     - frontend
 created_at: 2026-02-27T16:10:19Z
 updated_at: 2026-05-02T21:07:17Z
-parent: ai-nexus-sxbu
+parent: pawrrtal-sxbu
 ---
 
 Modal on first login: welcome message, set API keys, pick theme, choose default model. Dismissable, stores seen flag in settings.

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6d31
+# pawrrtal-6d31
 title: Adopt @octavian-tocan/react-dropdown for data-driven select pickers
 status: completed
 type: feature
@@ -13,7 +13,7 @@ Adopt @octavian-tocan/react-dropdown alongside (not replacing) Radix DropdownMen
 ## Decision: Fork B (peer primitive, not wholesale replacement)
 
 ### Why not A (replace Radix DropdownMenu wholesale)
-- ~10 existing DropdownMenu usages in ai-nexus are arbitrary JSX-children action menus (Sign out / Settings / row actions). Forcing them through react-dropdown's items-array API loses idiomatic JSX flexibility for icons, keyboard shortcuts, separators.
+- ~10 existing DropdownMenu usages in pawrrtal are arbitrary JSX-children action menus (Sign out / Settings / row actions). Forcing them through react-dropdown's items-array API loses idiomatic JSX flexibility for icons, keyboard shortcuts, separators.
 - Big surface area, behavior risk for no clear win.
 
 ### Why not C (replace combobox)
@@ -25,7 +25,7 @@ Adopt @octavian-tocan/react-dropdown alongside (not replacing) Radix DropdownMen
 
 ### Reference
 - thirdear-webapp src/components/navigation/NavigationMenuDropdown.tsx — canonical compound API usage.
-- ai-nexus pattern parallel: components/ui/responsive-modal.tsx wraps @octavian-tocan/react-overlay the same way the new wrapper will wrap react-dropdown.
+- pawrrtal pattern parallel: components/ui/responsive-modal.tsx wraps @octavian-tocan/react-overlay the same way the new wrapper will wrap react-dropdown.
 
 
 

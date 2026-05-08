@@ -1,11 +1,11 @@
 ---
-# ai-nexus-4chl
+# pawrrtal-4chl
 title: Add preferred_model to UserPreferences and settings endpoint
 status: todo
 type: task
 created_at: 2026-03-09T23:20:21Z
 updated_at: 2026-03-09T23:20:21Z
-parent: ai-nexus-7k7w
+parent: pawrrtal-7k7w
 ---
 
 Add preferred_model field to UserPreferences and expose GET/PATCH /api/v1/settings so the frontend can persist the user's selected model across sessions.

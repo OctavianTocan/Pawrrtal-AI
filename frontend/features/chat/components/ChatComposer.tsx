@@ -93,13 +93,13 @@ function usePlanModeVisible(): readonly [
 }
 
 const EMPTY_COMPOSER_PLACEHOLDERS = [
-	'Ask AI Nexus anything. @ to mention context',
+	'Ask Pawrrtal anything. @ to mention context',
 	'Press Cmd+B to toggle the sidebar',
 	'Type @ to mention files, folders, or skills',
 	'Attach files with +',
-	'Use Auto-review to let AI Nexus inspect changes',
+	'Use Auto-review to let Pawrrtal inspect changes',
 ] as const;
-const DEFAULT_EMPTY_COMPOSER_PLACEHOLDER = 'Ask AI Nexus anything. @ to mention context';
+const DEFAULT_EMPTY_COMPOSER_PLACEHOLDER = 'Ask Pawrrtal anything. @ to mention context';
 /** Milliseconds between rotating empty-composer placeholder tips. */
 const PLACEHOLDER_ROTATION_INTERVAL_MS = 5200;
 

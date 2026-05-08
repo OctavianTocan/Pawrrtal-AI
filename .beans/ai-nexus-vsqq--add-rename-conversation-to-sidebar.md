@@ -1,5 +1,5 @@
 ---
-# ai-nexus-vsqq
+# pawrrtal-vsqq
 title: Add Rename Conversation to Sidebar
 status: scrapped
 type: task

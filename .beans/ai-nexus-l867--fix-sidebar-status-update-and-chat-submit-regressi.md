@@ -1,5 +1,5 @@
 ---
-# ai-nexus-l867
+# pawrrtal-l867
 title: Fix sidebar status update and chat submit regressions
 status: completed
 type: bug

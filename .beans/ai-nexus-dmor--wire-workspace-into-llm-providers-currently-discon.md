@@ -1,5 +1,5 @@
 ---
-# ai-nexus-dmor
+# pawrrtal-dmor
 title: Wire workspace into LLM providers — currently disconnected
 status: todo
 type: bug

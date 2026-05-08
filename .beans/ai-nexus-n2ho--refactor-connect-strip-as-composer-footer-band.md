@@ -1,5 +1,5 @@
 ---
-# ai-nexus-n2ho
+# pawrrtal-n2ho
 title: Refactor Connect strip as composer footer band
 status: completed
 type: bug

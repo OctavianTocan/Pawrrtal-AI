@@ -1,5 +1,5 @@
 ---
-# ai-nexus-qzre
+# pawrrtal-qzre
 title: Create guaranteed seamless whimsical chat texture prototype
 status: completed
 type: task

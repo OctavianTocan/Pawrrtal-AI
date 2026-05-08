@@ -1,5 +1,5 @@
 ---
-# ai-nexus-9k23
+# pawrrtal-9k23
 title: Access Request Notification Banner
 status: scrapped
 type: feature

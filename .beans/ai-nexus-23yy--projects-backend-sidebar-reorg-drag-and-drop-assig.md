@@ -1,5 +1,5 @@
 ---
-# ai-nexus-23yy
+# pawrrtal-23yy
 title: 'Projects: backend + sidebar reorg + drag-and-drop assignment'
 status: completed
 type: feature

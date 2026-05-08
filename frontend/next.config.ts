@@ -1,5 +1,5 @@
 /**
- * Next.js configuration for the AI Nexus frontend.
+ * Next.js configuration for the Pawrrtal frontend.
  *
  * @fileoverview Sets Turborepo monorepo root for Turbopack, enables
  * `authInterrupts` for `unauthorized()`, and rewrites barrel-style imports

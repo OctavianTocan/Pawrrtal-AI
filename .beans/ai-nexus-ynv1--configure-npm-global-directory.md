@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ynv1
+# pawrrtal-ynv1
 title: Configure npm global directory
 status: completed
 type: task

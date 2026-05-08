@@ -1,5 +1,5 @@
 ---
-# ai-nexus-0oxn
+# pawrrtal-0oxn
 title: 'Chat permission modes: distinct color + icon per mode'
 status: completed
 type: feature

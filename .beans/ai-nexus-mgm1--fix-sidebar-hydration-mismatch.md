@@ -1,5 +1,5 @@
 ---
-# ai-nexus-mgm1
+# pawrrtal-mgm1
 title: Fix Sidebar Hydration Mismatch
 status: completed
 type: bug

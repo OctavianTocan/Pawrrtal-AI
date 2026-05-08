@@ -1,12 +1,12 @@
 ---
-# ai-nexus-y021
+# pawrrtal-y021
 title: Define semantic surface vocabulary for the rebuilt theming system
 status: todo
 type: task
 priority: high
 created_at: 2026-05-06T12:53:58Z
 updated_at: 2026-05-06T12:53:58Z
-parent: ai-nexus-9kov
+parent: pawrrtal-9kov
 ---
 
 Pick a vocabulary of surface tokens that names what surfaces are *for*, not how dark they are. Strawman:

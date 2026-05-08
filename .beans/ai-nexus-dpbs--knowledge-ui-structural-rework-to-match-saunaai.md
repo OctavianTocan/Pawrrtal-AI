@@ -1,5 +1,5 @@
 ---
-# ai-nexus-dpbs
+# pawrrtal-dpbs
 title: 'Knowledge UI: structural rework to match Sauna.ai'
 status: completed
 type: feature
@@ -46,7 +46,7 @@ Current /knowledge route is visually nothing like the Sauna.ai reference: missin
 - `BrainAccessPanel.tsx` becomes a simple empty state (collapse into EmptyState use)
 
 **No-go:**
-- AppLayout.tsx untouched (icon rail = ai-nexus existing global sidebar)
+- AppLayout.tsx untouched (icon rail = pawrrtal existing global sidebar)
 - Dev server can't bind in sandbox; iterate from reference images
 
 **Branches not in this run:** the multi-column layout when the user is exactly between memory list and an opened-card-document state is treated as a single `memory` view that conditionally shows the right doc panel — same pattern as my-files.
@@ -71,7 +71,7 @@ Current /knowledge route is visually nothing like the Sauna.ai reference: missin
 - frontend/features/knowledge/components/KnowledgeHeader.tsx (replaced by KnowledgePageHeader)
 
 ### App-layout
-**Not touched.** The Sauna icon-rail is THEIR app's global sidebar. ai-nexus's existing global sidebar (NavChats / NavUser) is the equivalent in spirit. No app-layout.tsx changes needed.
+**Not touched.** The Sauna icon-rail is THEIR app's global sidebar. pawrrtal's existing global sidebar (NavChats / NavUser) is the equivalent in spirit. No app-layout.tsx changes needed.
 
 ### Live comparison
 Browser MCP NOT used. Dev server failed to bind in sandbox (EPERM on 0.0.0.0:3001). Worked entirely from the 8 reference images.

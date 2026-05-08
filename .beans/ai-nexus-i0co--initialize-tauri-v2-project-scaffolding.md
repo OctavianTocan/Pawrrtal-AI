@@ -1,12 +1,12 @@
 ---
-# ai-nexus-i0co
+# pawrrtal-i0co
 title: Initialize Tauri v2 project scaffolding
 status: todo
 type: task
 priority: high
 created_at: 2026-03-04T22:12:53Z
 updated_at: 2026-03-04T22:12:53Z
-parent: ai-nexus-8ty6
+parent: pawrrtal-8ty6
 ---
 
 Set up the Tauri v2 project structure inside the existing monorepo.

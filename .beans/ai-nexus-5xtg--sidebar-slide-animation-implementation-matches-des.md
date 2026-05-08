@@ -1,5 +1,5 @@
 ---
-# ai-nexus-5xtg
+# pawrrtal-5xtg
 title: 'Sidebar slide animation: implementation matches DESIGN.md spec'
 status: todo
 type: feature

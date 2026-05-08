@@ -1,5 +1,5 @@
 ---
-# ai-nexus-q8p8
+# pawrrtal-q8p8
 title: Hoist CONVERSATION_DRAG_MIME + conversation primitives to lib/conversations/
 status: todo
 type: task
@@ -10,7 +10,7 @@ tags:
     - refactor
 created_at: 2026-05-06T16:51:24Z
 updated_at: 2026-05-06T16:52:16Z
-parent: ai-nexus-ey9p
+parent: pawrrtal-ey9p
 ---
 
 ## Why
@@ -46,10 +46,10 @@ Removes ~3 cross-feature edges and breaks the implicit `nav-chats` hub pattern. 
 ## Notes
 
 - Stage A is independently shippable.
-- Stage B may interact with the existing `ai-nexus-23yy` (Projects sidebar reorg) and any pending nav-chats work; coordinate before starting.
+- Stage B may interact with the existing `pawrrtal-23yy` (Projects sidebar reorg) and any pending nav-chats work; coordinate before starting.
 
 ## Coordination
 
-Stage A (the  hoist) is independent of `ai-nexus-3rqh` (sidebar composition decision) and can ship anytime.
+Stage A (the  hoist) is independent of `pawrrtal-3rqh` (sidebar composition decision) and can ship anytime.
 
-Stage B (extracting `chat-activity-context` and `use-conversation-mutations` into a `conversations` feature) should land *after* `ai-nexus-3rqh` resolves, since the chosen sidebar shape determines whether `conversations` becomes a peer feature or a sublibrary.
+Stage B (extracting `chat-activity-context` and `use-conversation-mutations` into a `conversations` feature) should land *after* `pawrrtal-3rqh` resolves, since the chosen sidebar shape determines whether `conversations` becomes a peer feature or a sublibrary.

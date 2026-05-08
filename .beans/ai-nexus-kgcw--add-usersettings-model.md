@@ -1,5 +1,5 @@
 ---
-# ai-nexus-kgcw
+# pawrrtal-kgcw
 title: Add UserSettings model
 status: completed
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:33Z
 updated_at: 2026-03-07T22:02:05Z
-parent: ai-nexus-9ygz
+parent: pawrrtal-9ygz
 ---
 
 Add UserSettings table: custom_instructions (text, nullable — user's global system prompt), accent_color, font_size. FK to user with CASCADE delete. Keep it minimal — add more fields when we actually need them.

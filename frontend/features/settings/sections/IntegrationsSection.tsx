@@ -23,7 +23,7 @@ export function IntegrationsSection(): React.JSX.Element {
 
 	return (
 		<SettingsPage
-			description="Connect AI Nexus to your tools so it can read context and run actions."
+			description="Connect Pawrrtal to your tools so it can read context and run actions."
 			title="Integrations"
 		>
 			<SettingsCard>
@@ -38,7 +38,7 @@ export function IntegrationsSection(): React.JSX.Element {
 							Add integration
 						</button>
 					}
-					description="Apps and services AI Nexus is currently connected to."
+					description="Apps and services Pawrrtal is currently connected to."
 					title="Your integrations"
 				/>
 				<div className="flex flex-col gap-2 pt-3">

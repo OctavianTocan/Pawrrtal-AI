@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xtxb
+# pawrrtal-xtxb
 title: Code signing + notarization for Electron macOS builds
 status: todo
 type: task

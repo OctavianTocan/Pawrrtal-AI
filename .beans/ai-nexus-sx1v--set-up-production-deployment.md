@@ -1,5 +1,5 @@
 ---
-# ai-nexus-sx1v
+# pawrrtal-sx1v
 title: Set Up Production Deployment
 status: scrapped
 type: feature
@@ -10,13 +10,13 @@ tags:
 created_at: 2026-02-27T15:02:15Z
 updated_at: 2026-05-07T16:33:41Z
 blocked_by:
-    - ai-nexus-47mi
-    - ai-nexus-05rb
-    - ai-nexus-vj5l
-    - ai-nexus-tl20
+    - pawrrtal-47mi
+    - pawrrtal-05rb
+    - pawrrtal-vj5l
+    - pawrrtal-tl20
 ---
 
-Notion Task #62 — Set up production deployment infrastructure. Merged from ai-nexus-47mi and ai-nexus-vj5l.
+Notion Task #62 — Set up production deployment infrastructure. Merged from pawrrtal-47mi and pawrrtal-vj5l.
 
 ## Deliverables
 

@@ -8,7 +8,7 @@
  * `rm -rf $HOME` from inside an LLM turn.
  *
  * The allowlist is persisted via electron-store so it survives across
- * app launches. Default root is `~/AI-Nexus-Workspace/`, auto-created
+ * app launches. Default root is `~/Pawrrtal-Workspace/`, auto-created
  * on first launch (the user can add more via the workspace settings
  * surface). All path validation happens after symlink resolution so a
  * symlink inside an allowed root pointing OUTSIDE the root is rejected.
@@ -57,7 +57,7 @@ export function ensureDefaultWorkspaceRoot(): void {
 		cachedRoots = existing;
 		return;
 	}
-	const defaultRoot = path.join(app.getPath('home'), 'AI-Nexus-Workspace');
+	const defaultRoot = path.join(app.getPath('home'), 'Pawrrtal-Workspace');
 	try {
 		mkdirSync(defaultRoot, { recursive: true });
 	} catch {

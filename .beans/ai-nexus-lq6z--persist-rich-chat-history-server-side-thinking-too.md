@@ -1,5 +1,5 @@
 ---
-# ai-nexus-lq6z
+# pawrrtal-lq6z
 title: Persist rich chat history server-side (thinking, tool calls, timeline, duration)
 status: completed
 type: task

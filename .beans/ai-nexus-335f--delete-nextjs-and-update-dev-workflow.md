@@ -1,15 +1,15 @@
 ---
-# ai-nexus-335f
+# pawrrtal-335f
 title: Delete Next.js and update dev workflow
 status: scrapped
 type: task
 priority: normal
 created_at: 2026-03-26T17:29:12Z
 updated_at: 2026-05-07T16:24:57Z
-parent: ai-nexus-id67
+parent: pawrrtal-id67
 blocked_by:
-    - ai-nexus-91ch
-    - ai-nexus-8omf
+    - pawrrtal-91ch
+    - pawrrtal-8omf
 ---
 
 Plan Task 7. Remove all Next.js files and update the dev orchestration.
@@ -42,4 +42,4 @@ Plan Task 7. Remove all Next.js files and update the dev orchestration.
 
 ## Reasons for Scrapping
 
-User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: ai-nexus-id67, ai-nexus-91ch, ai-nexus-ow61, ai-nexus-57ic, ai-nexus-hogv, ai-nexus-335f, ai-nexus-fc8j.
+User confirmed 2026-05-07: the Vite + TanStack Router migration is not happening. The codebase has continued deepening Next.js usage (Electron shell mounts the Next app, channels and onboarding routes live under `app/`, no Vite scaffolding exists). Closing this and the rest of the cluster: pawrrtal-id67, pawrrtal-91ch, pawrrtal-ow61, pawrrtal-57ic, pawrrtal-hogv, pawrrtal-335f, pawrrtal-fc8j.

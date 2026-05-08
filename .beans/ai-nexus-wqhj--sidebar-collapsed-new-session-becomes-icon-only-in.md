@@ -1,5 +1,5 @@
 ---
-# ai-nexus-wqhj
+# pawrrtal-wqhj
 title: 'Sidebar collapsed: New Session becomes icon-only in top bar'
 status: todo
 type: feature
@@ -23,7 +23,7 @@ When the sidebar is collapsed/hidden, the "New Session" CTA currently disappears
 ## Where to look
 
 - The button shown in the user feedback: ``<Primitive.button> ... <DropdownContextMenuTrigger> <Slot> <Button> button [New Session]``, DOM ``.flex > .gap-2 > .relative > .group/button``.
-- Sidebar collapsed state lives in ``frontend/features/...`` — the existing ``ai-nexus-xkqf`` "Sidebar slide animation" bean is the closest neighbour.
+- Sidebar collapsed state lives in ``frontend/features/...`` — the existing ``pawrrtal-xkqf`` "Sidebar slide animation" bean is the closest neighbour.
 - Top bar component is in ``frontend/components/app-layout.tsx`` (already flagged for splitting in another bean).
 
 ## Todos

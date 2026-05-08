@@ -1,5 +1,5 @@
 ---
-# ai-nexus-rtko
+# pawrrtal-rtko
 title: Add ARIA Live Regions for Streaming
 status: todo
 type: task

@@ -1,5 +1,5 @@
 ---
-# ai-nexus-9ygz
+# pawrrtal-9ygz
 title: 'Epic 2: Database Schema Expansion'
 status: completed
 type: epic
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:02Z
 updated_at: 2026-03-07T22:03:14Z
-parent: ai-nexus-ily6
+parent: pawrrtal-ily6
 ---
 
 Add new tables: UserPreferences, ApiKey (encrypted). Add custom_instructions text field to UserPreferences (replaces the Persona concept). All FKs use ondelete=CASCADE. ToolEvent and Conversation model field scrapped — Agno already stores tool calls and model info natively in agno_sessions.

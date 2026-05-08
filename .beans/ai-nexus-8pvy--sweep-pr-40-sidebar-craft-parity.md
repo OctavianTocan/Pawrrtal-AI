@@ -1,5 +1,5 @@
 ---
-# ai-nexus-8pvy
+# pawrrtal-8pvy
 title: 'Sweep PR #40: Sidebar Craft parity'
 status: completed
 type: task

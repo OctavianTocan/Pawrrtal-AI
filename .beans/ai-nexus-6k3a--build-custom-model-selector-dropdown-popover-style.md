@@ -1,12 +1,12 @@
 ---
-# ai-nexus-6k3a
+# pawrrtal-6k3a
 title: Build custom model selector dropdown (popover style, grouped by provider)
 status: completed
 type: feature
 priority: high
 created_at: 2026-03-12T00:28:54Z
 updated_at: 2026-05-02T22:32:29Z
-parent: ai-nexus-3i2d
+parent: pawrrtal-3i2d
 ---
 
 ## Goal

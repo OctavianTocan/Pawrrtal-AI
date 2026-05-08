@@ -1,5 +1,5 @@
 ---
-# ai-nexus-126i
+# pawrrtal-126i
 title: Create pydantic-settings config module
 status: completed
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:27Z
 updated_at: 2026-02-28T09:00:30Z
-parent: ai-nexus-pva0
+parent: pawrrtal-pva0
 ---
 
 Create backend/app/core/config.py with Settings class. Replace hardcoded values in db.py and users.py. Add pydantic-settings dependency.
@@ -31,12 +31,12 @@ LSCOLORS=Gxfxcxdxbxegedabagacad
 LS_COLORS=di=1;36:ln=35:so=32:pi=33:ex=31:bd=34;46:cd=34;43:su=30;41:sg=30;46:tw=30;42:ow=30;43
 LaunchInstanceID=93FBA134-A355-4849-8D17-1C464EFCAB1A
 NDK_HOME=/Users/octaviantocan/Library/Android/sdk/ndk/29.0.14206865
-OLDPWD=/Volumes/Crucial X10/Projects/ai-nexus
+OLDPWD=/Volumes/Crucial X10/Projects/pawrrtal
 OSLogRateLimit=64
 PAGER=less
 PATH=/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/opt/ruby/bin:/opt/homebrew/lib/ruby/gems/4.0.0/bin:/opt/homebrew/opt/ruby/bin:/Users/octaviantocan/.bun/bin:/Users/octaviantocan/.local/bin:/Library/Frameworks/Python.framework/Versions/3.14/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/opt/homebrew/bin:/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/opt/ruby/bin:/opt/homebrew/lib/ruby/gems/4.0.0/bin:/Users/octaviantocan/.bun/bin:/Users/octaviantocan/.local/bin:/Library/Frameworks/Python.framework/Versions/3.14/bin:/Users/octaviantocan/Library/pnpm:/Users/octaviantocan/.cargo/bin:/Users/octaviantocan/Library/Android/sdk/platform-tools:/Users/octaviantocan/Library/Android/sdk/cmdline-tools/latest/bin:/Users/octaviantocan/Library/Android/sdk/platform-tools:/Users/octaviantocan/Library/Android/sdk/cmdline-tools/latest/bin
 PNPM_HOME=/Users/octaviantocan/Library/pnpm
-PWD=/Volumes/Crucial X10/Projects/ai-nexus
+PWD=/Volumes/Crucial X10/Projects/pawrrtal
 SECURITYSESSIONID=186b8
 SHELL=/bin/zsh
 SHLVL=2

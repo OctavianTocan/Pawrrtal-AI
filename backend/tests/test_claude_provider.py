@@ -394,7 +394,7 @@ class TestProviderOptions:
         assert options.setting_sources == []
         assert options.permission_mode == "default"
         assert options.max_turns == 1
-        assert options.system_prompt is not None and "AI Nexus" in options.system_prompt
+        assert options.system_prompt is not None and "Pawrrtal" in options.system_prompt
 
     @pytest.mark.anyio
     async def test_first_turn_uses_session_id_not_resume(

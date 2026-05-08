@@ -1,5 +1,5 @@
 ---
-# ai-nexus-uppe
+# pawrrtal-uppe
 title: Telegram /model command — switch model for current conversation
 status: todo
 type: feature

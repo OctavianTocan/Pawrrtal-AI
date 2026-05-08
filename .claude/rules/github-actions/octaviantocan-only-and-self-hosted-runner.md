@@ -6,7 +6,7 @@ globs: .github/workflows/*.yml
 
 This is a public repository wired up to a self-hosted GitHub Actions
 runner pool on Octavian's VPS (`openclaw-vps-NN`, label
-`self-hosted, openclaw-mini, ainexus`). Self-hosted runners on a public
+`self-hosted, openclaw-mini, pawrrtal`). Self-hosted runners on a public
 repo are dangerous unless every workflow refuses untrusted PRs *before*
 any step runs. When creating or modifying a workflow under
 `.github/workflows/`, follow these constraints:
@@ -30,7 +30,7 @@ any step runs. When creating or modifying a workflow under
    is explicitly PR-only (no `push`, no `schedule`, no `workflow_dispatch`).
 
 2. **Default to the self-hosted runner.** New workflows should target
-   `runs-on: [self-hosted, openclaw-mini, ainexus]` unless there's a
+   `runs-on: [self-hosted, openclaw-mini, pawrrtal]` unless there's a
    specific reason GitHub-hosted is the better home (macOS, Windows,
    GPU, untrusted external code that you've already gated separately).
    The runner is faster than `ubuntu-latest` and free at the margin.

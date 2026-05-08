@@ -1,5 +1,5 @@
 ---
-# ai-nexus-np7j
+# pawrrtal-np7j
 title: Slim main.py to app factory pattern
 status: completed
 type: task
@@ -9,7 +9,7 @@ tags:
     - backend
 created_at: 2026-02-27T16:09:27Z
 updated_at: 2026-03-04T09:53:31Z
-parent: ai-nexus-pva0
+parent: pawrrtal-pva0
 ---
 
 Rewrite main.py as create_app() factory. Only app creation, middleware, and router includes. Update db.py and users.py to use config module.
@@ -30,8 +30,8 @@ Do all three beans together as one coupled refactor (no logic changes, pure reor
 - Drop `load_dotenv()` (handled by config.py)
 
 ### Related beans
-- ai-nexus-dsg3 (extract conversation routes)
-- ai-nexus-fxhs (extract chat endpoint + agent factory)
+- pawrrtal-dsg3 (extract conversation routes)
+- pawrrtal-fxhs (extract chat endpoint + agent factory)
 
 ## Summary of Changes
 

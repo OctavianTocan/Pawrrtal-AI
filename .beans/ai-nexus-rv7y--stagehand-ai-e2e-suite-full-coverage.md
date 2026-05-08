@@ -1,5 +1,5 @@
 ---
-# ai-nexus-rv7y
+# pawrrtal-rv7y
 title: 'Stagehand AI E2E suite: full coverage'
 status: in-progress
 type: feature

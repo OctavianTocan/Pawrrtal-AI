@@ -1,5 +1,5 @@
 ---
-# ai-nexus-xst0
+# pawrrtal-xst0
 title: Polish frontend Tailwind v4 design system
 status: completed
 type: task

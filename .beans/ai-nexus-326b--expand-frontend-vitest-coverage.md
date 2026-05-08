@@ -1,5 +1,5 @@
 ---
-# ai-nexus-326b
+# pawrrtal-326b
 title: Expand frontend Vitest coverage
 status: completed
 type: task

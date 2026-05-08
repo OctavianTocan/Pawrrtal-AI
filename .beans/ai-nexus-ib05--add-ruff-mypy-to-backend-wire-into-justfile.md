@@ -1,5 +1,5 @@
 ---
-# ai-nexus-ib05
+# pawrrtal-ib05
 title: Add ruff + mypy to backend, wire into justfile
 status: completed
 type: task

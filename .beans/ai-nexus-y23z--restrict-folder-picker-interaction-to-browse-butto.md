@@ -1,5 +1,5 @@
 ---
-# ai-nexus-y23z
+# pawrrtal-y23z
 title: Restrict folder picker interaction to browse button
 status: completed
 type: bug

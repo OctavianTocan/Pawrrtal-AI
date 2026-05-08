@@ -1,14 +1,14 @@
 ---
-# ai-nexus-a99h
+# pawrrtal-a99h
 title: Configure Next.js for Tauri static export
 status: scrapped
 type: task
 priority: high
 created_at: 2026-03-04T22:13:03Z
 updated_at: 2026-05-07T16:25:47Z
-parent: ai-nexus-8ty6
+parent: pawrrtal-8ty6
 blocked_by:
-    - ai-nexus-i0co
+    - pawrrtal-i0co
 ---
 
 Configure Next.js to support both dev mode (with Tauri devUrl) and production static export for Tauri bundling.

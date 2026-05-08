@@ -1,5 +1,5 @@
 ---
-# ai-nexus-0za3
+# pawrrtal-0za3
 title: Polish settings page UI to Codex-style reference
 status: completed
 type: feature

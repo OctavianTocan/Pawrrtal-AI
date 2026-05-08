@@ -1,5 +1,5 @@
 ---
-# ai-nexus-h10p
+# pawrrtal-h10p
 title: 'Sprint F: Personalization'
 status: todo
 type: milestone

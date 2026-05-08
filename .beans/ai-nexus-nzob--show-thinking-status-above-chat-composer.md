@@ -1,5 +1,5 @@
 ---
-# ai-nexus-nzob
+# pawrrtal-nzob
 title: Show Thinking Status Above Chat Composer
 status: scrapped
 type: task
@@ -15,4 +15,4 @@ Notion Task #55b
 
 ## Reasons for Scrapping
 
-Duplicate of ai-nexus-y5xi (Polish streaming animations). ChatView already has thinking indicator.
+Duplicate of pawrrtal-y5xi (Polish streaming animations). ChatView already has thinking indicator.

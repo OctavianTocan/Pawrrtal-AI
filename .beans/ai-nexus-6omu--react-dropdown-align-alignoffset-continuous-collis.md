@@ -1,5 +1,5 @@
 ---
-# ai-nexus-6omu
+# pawrrtal-6omu
 title: 'react-dropdown: align + alignOffset + continuous collision'
 status: completed
 type: feature

@@ -52,7 +52,7 @@ baseline as a `ResolvedAppearance`. Comment said "must mirror
 
 ### Layer 4 — Presets
 
-`frontend/features/appearance/presets.ts` — three bundles (AI Nexus,
+`frontend/features/appearance/presets.ts` — three bundles (Pawrrtal,
 Mistral, Cursor). Each preset was another `{ light, dark, fonts }` set
 of the 6 slots. Picking a preset wrote those values into the user's
 overrides via the same PUT call. **Presets could not define anything

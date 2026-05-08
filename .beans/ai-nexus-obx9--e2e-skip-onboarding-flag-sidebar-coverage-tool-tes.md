@@ -1,5 +1,5 @@
 ---
-# ai-nexus-obx9
+# pawrrtal-obx9
 title: 'E2E: skip-onboarding flag + sidebar coverage + tool tests + error logging'
 status: completed
 type: feature

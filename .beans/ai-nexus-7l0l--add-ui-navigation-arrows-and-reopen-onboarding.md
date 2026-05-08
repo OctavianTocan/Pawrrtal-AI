@@ -1,5 +1,5 @@
 ---
-# ai-nexus-7l0l
+# pawrrtal-7l0l
 title: Add UI navigation arrows and reopen onboarding
 status: completed
 type: task

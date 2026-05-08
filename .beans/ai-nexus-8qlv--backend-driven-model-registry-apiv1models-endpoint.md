@@ -1,5 +1,5 @@
 ---
-# ai-nexus-8qlv
+# pawrrtal-8qlv
 title: Backend-driven model registry + /api/v1/models endpoint
 status: todo
 type: feature
@@ -65,4 +65,4 @@ GET /api/v1/models
 
 ## Related
 
-- ai-nexus-uppe (Telegram /model) consumes this registry
+- pawrrtal-uppe (Telegram /model) consumes this registry
