@@ -33,8 +33,10 @@ from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
+    handle_model_command,
     handle_plain_message,
     handle_start_command,
+    handle_stop_command,
 )
 
 if TYPE_CHECKING:
@@ -42,6 +44,17 @@ if TYPE_CHECKING:
     from aiogram.types import Message, Update
 
 logger = logging.getLogger(__name__)
+
+# Active streaming tasks keyed by Telegram chat_id.  When a new message
+# arrives we cancel any existing task for that chat (preventing two parallel
+# streams into the same placeholder message), then store the new one so
+# a subsequent /stop can cancel it.
+#
+# IMPORTANT — this dict is PROCESS-LOCAL.  A /stop arriving on worker A
+# cannot cancel a task running on worker B.  This is correct for the current
+# single-worker deployment; promote to a shared store (e.g. Redis pub/sub)
+# before running multiple uvicorn workers.
+_running_tasks: dict[int, asyncio.Task[None]] = {}
 
 
 @dataclass
@@ -73,7 +86,7 @@ def build_telegram_service() -> "TelegramService":
     from aiogram import Bot, Dispatcher  # noqa: PLC0415
     from aiogram.client.default import DefaultBotProperties  # noqa: PLC0415
     from aiogram.enums import ParseMode  # noqa: PLC0415
-    from aiogram.filters import CommandStart  # noqa: PLC0415
+    from aiogram.filters import Command, CommandStart  # noqa: PLC0415
 
     if not settings.telegram_bot_token:
         raise RuntimeError(
@@ -97,6 +110,30 @@ def build_telegram_service() -> "TelegramService":
         async with async_session_maker() as session:
             reply = await handle_start_command(
                 sender=sender, payload=payload, session=session
+            )
+        await message.answer(reply)
+
+    @dispatcher.message(Command("stop"))
+    async def _on_stop(message: "Message") -> None:
+        chat_id = message.chat.id
+        task = _running_tasks.pop(chat_id, None)
+        was_running = task is not None and not task.done()
+        if was_running:
+            task.cancel()  # type: ignore[union-attr]
+        # handle_stop_command is a plain sync function — no await.
+        reply = handle_stop_command(was_running=was_running)
+        await message.answer(reply)
+
+    @dispatcher.message(Command("model"))
+    async def _on_model(message: "Message") -> None:
+        text = message.text or ""
+        # Strip the "/model" prefix (plus optional @botname) and grab the rest.
+        parts = text.strip().split(maxsplit=1)
+        model_arg = parts[1].strip() if len(parts) > 1 else ""
+        sender = _sender_from_message(message)
+        async with async_session_maker() as session:
+            reply = await handle_model_command(
+                sender=sender, model_arg=model_arg, session=session
             )
         await message.answer(reply)
 
@@ -135,14 +172,30 @@ def build_telegram_service() -> "TelegramService":
         provider = resolve_llm(context.model_id)
         channel = resolve_channel(SURFACE_TELEGRAM)
 
-        raw_stream = provider.stream(
-            message.text,
-            context.conversation_id,
-            context.nexus_user_id,
-            history=[],
-        )
-        async for _ in channel.deliver(raw_stream, channel_message):
-            pass  # delivery is a side-effect; nothing yielded by TelegramChannel
+        async def _do_stream() -> None:
+            raw_stream = provider.stream(
+                message.text,
+                context.conversation_id,
+                context.nexus_user_id,
+                history=[],
+            )
+            async for _ in channel.deliver(raw_stream, channel_message):
+                pass  # delivery is a side-effect; nothing yielded by TelegramChannel
+
+        # Cancel any previous stream for this chat before starting the new one.
+        chat_id = message.chat.id
+        old_task = _running_tasks.pop(chat_id, None)
+        if old_task is not None and not old_task.done():
+            old_task.cancel()
+
+        task: asyncio.Task[None] = asyncio.create_task(_do_stream())
+        _running_tasks[chat_id] = task
+        try:
+            await task
+        except asyncio.CancelledError:
+            logger.info("TELEGRAM_STREAM_CANCELLED chat_id=%s", chat_id)
+        finally:
+            _running_tasks.pop(chat_id, None)
 
     return TelegramService(bot=bot, dispatcher=dispatcher)
 
