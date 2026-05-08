@@ -9,7 +9,7 @@ import { QueryDevtools } from './query-devtools';
 /**
  * App-root provider tree.
  *
- * Mounts TanStack Query (with devtools) and the global Sonner toaster.
+ * Mounts TanStack Query and the global Sonner toaster.
  *
  * The `<AppearanceProvider>` that used to sit here was removed as part of
  * the 2026-05-06 theming-system rip
