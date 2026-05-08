@@ -1,0 +1,6 @@
+# Each spike installs and builds independently — none of these belong in git.
+**/node_modules
+**/dist
+**/.svelte-kit
+**/build
+**/.env

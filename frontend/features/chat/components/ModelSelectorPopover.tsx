@@ -342,10 +342,10 @@ export function ModelSelectorPopover({
 										selectedModel.provider === row.provider;
 									return (
 										<DropdownSubmenu>
-											<DropdownSubmenuTrigger
-												showChevron={false}
-												className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
-											>
+											{/* `showChevron={false}` was a temporary prop on the
+											    upstream lib that's since been removed.  Hide via CSS
+											    if needed; chevron is baked into the trigger now. */}
+											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
 												<ProviderLogo provider={row.provider} />
 												<span className="min-w-0 flex-1 truncate text-left">
 													{PROVIDER_LABELS[row.provider]}

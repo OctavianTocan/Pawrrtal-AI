@@ -128,9 +128,12 @@ agno.db-wal
 .sentrux/baseline.json
 package-lock.json
 
-# react-dropdown local checkout — nested git repo, push changes back via
-# frontend/lib/react-dropdown/ independently of ai-nexus history.
-frontend/lib/react-dropdown/
+# react-dropdown is now a git submodule under frontend/lib/react-dropdown
+# (managed by .gitmodules).  The previous "nested git repo" pattern broke
+# CI because the directory wasn't present on fresh checkouts; submodule
+# tracking fixes that without forcing the package source into the parent
+# repo's history.
+# (No ignore needed — submodules are tracked normally by git.)
 
 # Cursor IDE runtime state (generated every session, not config)
 .cursor/hooks/state/

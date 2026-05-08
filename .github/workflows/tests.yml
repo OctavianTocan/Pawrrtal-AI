@@ -41,11 +41,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Build local libs (frontend/lib/* submodules)
+        run: bash scripts/build-local-libs.sh
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -99,6 +104,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -115,6 +122,19 @@ jobs:
       - name: Run pytest
         id: test
         working-directory: backend
+        # Settings (pydantic-settings) requires these at import time, even
+        # for tests against in-memory SQLite that never call out to the
+        # real services.  Hardcoded test values are deliberate: any leak
+        # is obvious and the secrets aren't load-bearing during pytest.
+        env:
+          AUTH_SECRET: pytest-not-a-secret
+          GOOGLE_API_KEY: pytest-not-a-key
+          # Fernet expects a 32-byte url-safe base64 key.  Generated once
+          # via `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+          # and pinned here so test runs are deterministic.
+          FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          CORS_ORIGINS: '["http://localhost:3001"]'
+          DATABASE_URL: 'sqlite+aiosqlite:///:memory:'
         run: |
           set +e
           uv run pytest 2>&1 | tee ../backend-test-output.txt

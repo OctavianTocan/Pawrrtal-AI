@@ -1,0 +1,22 @@
+:root {
+	color-scheme: light dark;
+	font-family: system-ui, -apple-system, sans-serif;
+	line-height: 1.5;
+}
+body { margin: 0; }
+main { max-width: 720px; margin: 0 auto; padding: 2rem 1rem; }
+.messages { list-style: decimal-leading-zero; padding-left: 2rem; margin: 1.5rem 0; }
+.msg { margin: 0.5rem 0; }
+.msg-user strong { color: #2563eb; }
+.msg-assistant strong { color: #16a34a; }
+form { display: flex; gap: 0.5rem; flex-direction: column; }
+textarea {
+	font: inherit; padding: 0.6rem; border-radius: 6px;
+	border: 1px solid #ccc; resize: vertical;
+}
+button {
+	align-self: flex-end; padding: 0.5rem 1rem; border-radius: 6px;
+	border: 0; background: #2563eb; color: white; cursor: pointer;
+}
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+.error { color: #dc2626; white-space: pre-wrap; }

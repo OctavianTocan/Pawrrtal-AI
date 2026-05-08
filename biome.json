@@ -25,7 +25,8 @@
 			"!**/.stagehand-cache",
 			"!**/playwright-report",
 			"!**/test-results",
-			"!frontend/e2e/output"
+			"!frontend/e2e/output",
+			"!frontend/lib/**"
 		]
 	},
 	"formatter": {
