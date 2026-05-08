@@ -8,7 +8,10 @@ import { defineConfig } from 'vitest/config';
 // `render` helper.  Set as early as possible — the React plugin reads
 // it during module init.
 if (process.env.NODE_ENV === undefined) {
-	process.env.NODE_ENV = 'test';
+	// `process.env.NODE_ENV` is typed `readonly` under @types/node when
+	// strictly resolved, even though the runtime mutation works fine.
+	// Cast through `unknown` to keep TS happy without disabling strict.
+	(process.env as unknown as Record<string, string>).NODE_ENV = 'test';
 }
 
 export default defineConfig({
