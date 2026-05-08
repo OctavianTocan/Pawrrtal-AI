@@ -9,6 +9,8 @@ The loop owns:
   - Tool call execution (sequential, with before/after hooks TBD)
   - Context transform before each LLM call
   - shouldStopAfterTurn early exit
+  - Safety layer: max_iterations, max_wall_clock, retry-with-backoff,
+    consecutive-error termination.  See :class:`AgentSafetyConfig`.
 
 Each provider supplies a StreamFn — the only provider-specific code.
 The loop never imports any provider SDK directly.
@@ -16,7 +18,11 @@ The loop never imports any provider SDK directly.
 
 from __future__ import annotations
 
+import asyncio
+import logging
+import time
 from collections.abc import AsyncIterator
+from typing import Any
 
 from .types import (
     AgentContext,
@@ -24,9 +30,12 @@ from .types import (
     AgentEvent,
     AgentLoopConfig,
     AgentMessage,
+    AgentSafetyConfig,
     AgentStartEvent,
+    AgentTerminatedEvent,
     AgentTool,
     AssistantMessage,
+    LLMEvent,
     MessageEndEvent,
     MessageStartEvent,
     StreamFn,
@@ -42,6 +51,8 @@ from .types import (
     TurnStartEvent,
 )
 
+_log = logging.getLogger(__name__)
+
 
 async def agent_loop(
     prompts: list[AgentMessage],
@@ -51,37 +62,15 @@ async def agent_loop(
 ) -> AsyncIterator[AgentEvent]:
     """Run the agent loop and yield AgentEvents.
 
-    Args:
-        prompts: The new user message(s) for this turn.
-        context: Shared context — system prompt, prior messages, tools.
-                 Mutated in place as the loop accumulates messages.
-        config: Loop configuration — convert_to_llm, transform_context,
-                should_stop_after_turn.
-        stream_fn: Provider-specific streaming function.  Accepts the
-                   current message list (after transform + convert) and
-                   tool list; yields LLMEvents.
-
-    Yields:
-        AgentEvents in the sequence:
-          agent_start
-            turn_start
-              message_start / message_end  (for each prompt)
-              text_delta*                  (streamed text)
-              tool_call_start / tool_call_end / tool_result  (when tools used)
-            turn_end
-          [more turns if tool calls triggered a loop-back]
-          agent_end
+    See module docstring for the safety guarantees.  Configuration is
+    via ``config.safety`` (an :class:`AgentSafetyConfig`).
     """
-    # Build up the list of all new messages produced in this invocation.
     new_messages: list[AgentMessage] = list(prompts)
-
-    # Add prompts to context so the LLM sees them in the first call.
     current_messages = list(context.messages) + list(prompts)
 
     yield AgentStartEvent(type="agent_start")
     yield TurnStartEvent(type="turn_start")
 
-    # Emit start/end events for the incoming prompt(s).
     for prompt in prompts:
         yield MessageStartEvent(type="message_start", message=prompt)
         yield MessageEndEvent(type="message_end", message=prompt)
@@ -99,51 +88,93 @@ async def _run_loop(
     config: AgentLoopConfig,
     stream_fn: StreamFn,
 ) -> AsyncIterator[AgentEvent]:
-    """Inner loop — handles multiple turns when tool calls require looping back."""
+    """Inner loop with the safety layer wired in.
+
+    The pre-turn safety checks fire *before* incrementing the iteration
+    counter so a freshly-started loop with ``max_iterations=0`` would
+    bail immediately rather than running one turn (consistent with the
+    intuitive reading of "max").  Wall-clock is sampled at the same
+    pre-turn point so we never start a brand-new turn that we can't
+    afford to finish.
+    """
+    safety = config.safety
+    iteration = 0
+    started_at = time.monotonic()
+    consecutive_llm_errors = 0
+    consecutive_tool_errors = 0
     first_turn = True
 
     while True:
+        # ── Pre-turn safety checks ────────────────────────────────────────
+        if (
+            safety.max_iterations is not None
+            and iteration >= safety.max_iterations
+        ):
+            yield _terminated(
+                reason="max_iterations",
+                message=(
+                    f"Agent stopped: hit max_iterations cap of "
+                    f"{safety.max_iterations}.  This usually means the "
+                    "model got stuck in a tool-call loop.  Reply with "
+                    "new context or raise the cap if the work needs "
+                    "more steps."
+                ),
+                limit=safety.max_iterations,
+                observed=iteration,
+            )
+            break
+
+        elapsed = time.monotonic() - started_at
+        if (
+            safety.max_wall_clock_seconds is not None
+            and elapsed >= safety.max_wall_clock_seconds
+        ):
+            yield _terminated(
+                reason="max_wall_clock",
+                message=(
+                    f"Agent stopped: hit wall-clock budget of "
+                    f"{safety.max_wall_clock_seconds:.0f}s.  Raise "
+                    "`max_wall_clock_seconds` for legitimately long "
+                    "turns."
+                ),
+                limit_seconds=safety.max_wall_clock_seconds,
+                observed_seconds=round(elapsed, 2),
+                iterations=iteration,
+            )
+            break
+
         if not first_turn:
             yield TurnStartEvent(type="turn_start")
         first_turn = False
+        iteration += 1
 
         # ── Context transform (e.g. sliding window, compaction) ──────────
         transformed = messages
         if config.transform_context is not None:
             transformed = await config.transform_context(list(messages))
 
-        # ── Convert to LLM-compatible format ─────────────────────────────
         llm_messages = config.convert_to_llm(transformed)
 
-        # ── Stream the assistant response ─────────────────────────────────
-        assistant_content: list[TextContent | ToolCallContent] = []
-        stop_reason = "stop"
+        # ── Stream the assistant response (with retry) ────────────────────
+        stream_outcome = await _stream_with_retry(
+            stream_fn=stream_fn,
+            llm_messages=llm_messages,
+            tools=tools,
+            safety=safety,
+            consecutive_llm_errors=consecutive_llm_errors,
+        )
 
-        async for llm_event in stream_fn(llm_messages, tools):
-            # Narrow the LLMEvent union by its ``type`` discriminant so
-            # field access types correctly without an ``assert isinstance``
-            # + ``# type: ignore`` dance (and so bandit B101 stays clean).
-            if llm_event["type"] == "text_delta":
-                yield TextDeltaEvent(type="text_delta", text=llm_event["text"])
+        if stream_outcome.terminated_event is not None:
+            yield stream_outcome.terminated_event
+            break
 
-            elif llm_event["type"] == "tool_call":
-                yield ToolCallStartEvent(
-                    type="tool_call_start",
-                    tool_call_id=llm_event["tool_call_id"],
-                    name=llm_event["name"],
-                )
-                yield ToolCallEndEvent(
-                    type="tool_call_end",
-                    tool_call_id=llm_event["tool_call_id"],
-                    name=llm_event["name"],
-                    arguments=llm_event["arguments"],
-                )
+        for ev in stream_outcome.events:
+            yield ev
 
-            elif llm_event["type"] == "done":
-                assistant_content = llm_event["content"]
-                stop_reason = llm_event["stop_reason"]
+        consecutive_llm_errors = stream_outcome.consecutive_llm_errors_after
+        assistant_content = stream_outcome.assistant_content
+        stop_reason = stream_outcome.stop_reason
 
-        # Build the AssistantMessage for this turn.
         assistant_msg = AssistantMessage(
             role="assistant",
             content=assistant_content,
@@ -155,14 +186,12 @@ async def _run_loop(
         # ── Execute tool calls if any ─────────────────────────────────────
         tool_calls = [b for b in assistant_content if b["type"] == "toolCall"]
         tool_results: list[ToolResultMessage] = []
+        tool_safety_terminated: AgentTerminatedEvent | None = None
 
         if tool_calls:
             tool_map = {t.name: t for t in tools}
 
             for tc in tool_calls:
-                # Already filtered by ``b["type"] == "toolCall"`` above,
-                # but mypy doesn't carry that narrowing through the list
-                # comp — this if-branch tells the checker explicitly.
                 if tc["type"] != "toolCall":
                     continue
                 tool = tool_map.get(tc["name"])
@@ -198,11 +227,41 @@ async def _run_loop(
                 messages.append(tool_result_msg)
                 new_messages.append(tool_result_msg)
 
+                if is_error:
+                    consecutive_tool_errors += 1
+                    if (
+                        safety.max_consecutive_tool_errors is not None
+                        and consecutive_tool_errors
+                        >= safety.max_consecutive_tool_errors
+                    ):
+                        tool_safety_terminated = _terminated(
+                            reason="consecutive_tool_errors",
+                            message=(
+                                "Agent stopped: "
+                                f"{consecutive_tool_errors} tool calls "
+                                "failed back-to-back.  The model is "
+                                "likely retrying a broken tool with the "
+                                "same arguments.  Inspect the last tool "
+                                "errors and either fix the inputs or "
+                                "raise `max_consecutive_tool_errors`."
+                            ),
+                            limit=safety.max_consecutive_tool_errors,
+                            observed=consecutive_tool_errors,
+                            iterations=iteration,
+                        )
+                        break
+                else:
+                    consecutive_tool_errors = 0
+
         yield TurnEndEvent(
             type="turn_end",
             message=assistant_msg,
             tool_results=tool_results,
         )
+
+        if tool_safety_terminated is not None:
+            yield tool_safety_terminated
+            break
 
         # ── Check stop conditions ─────────────────────────────────────────
         if stop_reason in {"error", "aborted"}:
@@ -213,21 +272,218 @@ async def _run_loop(
             if config.should_stop_after_turn(fake_ctx):
                 break
 
-        # Loop back only if there were tool calls (and no stop triggered).
         if not tool_calls:
             break
 
     yield AgentEndEvent(type="agent_end", messages=new_messages)
 
 
+# ---------------------------------------------------------------------------
+# Stream-with-retry helper
+# ---------------------------------------------------------------------------
+
+
+class _StreamOutcome:
+    """Result of one (possibly retried) stream attempt.
+
+    Either the stream succeeded — in which case ``events`` holds the
+    AgentEvents we want the caller to yield in order, ``assistant_content``
+    + ``stop_reason`` carry the final assistant message, and
+    ``terminated_event`` is ``None`` — or every retry was exhausted, in
+    which case ``terminated_event`` carries the safety termination notice
+    and the other fields are empty defaults.
+    """
+
+    __slots__ = (
+        "events",
+        "assistant_content",
+        "stop_reason",
+        "consecutive_llm_errors_after",
+        "terminated_event",
+    )
+
+    def __init__(
+        self,
+        events: list[AgentEvent],
+        assistant_content: list[TextContent | ToolCallContent],
+        stop_reason: str,
+        consecutive_llm_errors_after: int,
+        terminated_event: AgentTerminatedEvent | None,
+    ) -> None:
+        self.events = events
+        self.assistant_content = assistant_content
+        self.stop_reason = stop_reason
+        self.consecutive_llm_errors_after = consecutive_llm_errors_after
+        self.terminated_event = terminated_event
+
+
+async def _stream_with_retry(
+    stream_fn: StreamFn,
+    llm_messages: list[AgentMessage],
+    tools: list[AgentTool],
+    safety: AgentSafetyConfig,
+    consecutive_llm_errors: int,
+) -> _StreamOutcome:
+    """Stream one assistant turn, retrying transient provider errors.
+
+    The retry budget is ``safety.max_consecutive_llm_errors`` — the
+    cumulative count of failures since the last successful stream, not
+    per-call.  This avoids the bug where two transient failures in two
+    different turns silently consume the same budget.
+
+    On success we reset the counter to 0.  On exhaustion we return a
+    :class:`_StreamOutcome` carrying the terminal event so the caller
+    can yield it cleanly.
+    """
+    backoff = max(safety.llm_retry_backoff_seconds, 0.0)
+    max_errors = safety.max_consecutive_llm_errors
+    attempts = 0
+
+    while True:
+        attempts += 1
+        events: list[AgentEvent] = []
+        assistant_content: list[TextContent | ToolCallContent] = []
+        stop_reason = "stop"
+
+        try:
+            async for llm_event in stream_fn(llm_messages, tools):
+                done = _consume_llm_event(llm_event, events)
+                # `done` is non-None only on the terminal ``done`` event;
+                # we keep iterating in case the SDK emits trailers, but
+                # the assignments here capture the final state.
+                assistant_content = done["content"] if done else assistant_content
+                stop_reason = done["stop_reason"] if done else stop_reason
+        except Exception as exc:  # noqa: BLE001 — re-raised after budget check
+            consecutive_llm_errors += 1
+            _log.warning(
+                "agent_loop: provider stream failed (attempt %d, "
+                "consecutive=%d/%s): %s",
+                attempts,
+                consecutive_llm_errors,
+                max_errors if max_errors is not None else "∞",
+                exc,
+            )
+            exhausted = _retry_budget_exhausted(
+                max_errors=max_errors,
+                consecutive_llm_errors=consecutive_llm_errors,
+                exc=exc,
+            )
+            if exhausted is not None:
+                return exhausted
+
+            if backoff > 0:
+                wait = min(backoff * (2 ** (attempts - 1)), 30.0)
+                await asyncio.sleep(wait)
+            continue
+
+        return _StreamOutcome(
+            events=events,
+            assistant_content=assistant_content,
+            stop_reason=stop_reason,
+            consecutive_llm_errors_after=0,
+            terminated_event=None,
+        )
+
+
+def _retry_budget_exhausted(
+    *,
+    max_errors: int | None,
+    consecutive_llm_errors: int,
+    exc: Exception,
+) -> _StreamOutcome | None:
+    """Return a terminating :class:`_StreamOutcome` if retry budget exhausted.
+
+    Pulled out of :func:`_stream_with_retry` so the inner loop stays
+    within the project's nesting-depth budget (depth 3) — enforced by
+    ``scripts/check-nesting.py``.  Returns ``None`` when the budget
+    still has room and the caller should retry.
+    """
+    if max_errors is None or consecutive_llm_errors < max_errors:
+        return None
+    terminated = _terminated(
+        reason="consecutive_llm_errors",
+        message=(
+            "Agent stopped: "
+            f"{consecutive_llm_errors} provider errors in a "
+            "row.  The upstream model is likely down or "
+            "rate-limiting.  Try again, switch model, or "
+            "raise `max_consecutive_llm_errors`.  Last "
+            f"error: {exc}"
+        ),
+        limit=max_errors,
+        observed=consecutive_llm_errors,
+        last_error=str(exc),
+    )
+    return _StreamOutcome(
+        events=[],
+        assistant_content=[],
+        stop_reason="error",
+        consecutive_llm_errors_after=consecutive_llm_errors,
+        terminated_event=terminated,
+    )
+
+
+def _consume_llm_event(
+    llm_event: LLMEvent,
+    events: list[AgentEvent],
+) -> dict[str, Any] | None:
+    """Translate one LLMEvent into AgentEvents and append to ``events``.
+
+    Returns the payload for the terminal ``done`` event
+    (``{content, stop_reason}``) when the consumed event was that
+    terminator; otherwise ``None``.  Returning instead of using a
+    mutable out-param keeps the caller's loop body flat enough to fit
+    inside the project nesting-depth budget.
+    """
+    if llm_event["type"] == "text_delta":
+        events.append(TextDeltaEvent(type="text_delta", text=llm_event["text"]))
+        return None
+    if llm_event["type"] == "tool_call":
+        events.append(
+            ToolCallStartEvent(
+                type="tool_call_start",
+                tool_call_id=llm_event["tool_call_id"],
+                name=llm_event["name"],
+            )
+        )
+        events.append(
+            ToolCallEndEvent(
+                type="tool_call_end",
+                tool_call_id=llm_event["tool_call_id"],
+                name=llm_event["name"],
+                arguments=llm_event["arguments"],
+            )
+        )
+        return None
+    if llm_event["type"] == "done":
+        return {
+            "content": llm_event["content"],
+            "stop_reason": llm_event["stop_reason"],
+        }
+    return None
+
+
+def _terminated(
+    *,
+    reason: str,
+    message: str,
+    **details: Any,
+) -> AgentTerminatedEvent:
+    """Build an :class:`AgentTerminatedEvent` with structured details.
+
+    Centralised so every termination path uses the same dict shape.
+    """
+    return AgentTerminatedEvent(  # type: ignore[typeddict-item]
+        type="agent_terminated",
+        reason=reason,  # type: ignore[typeddict-item]
+        details=details,
+        message=message,
+    )
+
+
 def _make_context_snapshot(
     messages: list[AgentMessage],
     tools: list[AgentTool],
 ) -> AgentContext:
-    """Build an AgentContext snapshot for the shouldStopAfterTurn callback.
-
-    ``system_prompt`` isn't surfaced to stop predicates today (callers
-    inspect ``messages``/``tools``), so we pass an empty string rather
-    than threading it through an extra parameter.
-    """
+    """Build an AgentContext snapshot for the should_stop_after_turn predicate."""
     return AgentContext(system_prompt="", messages=messages, tools=tools)

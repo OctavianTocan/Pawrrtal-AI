@@ -58,6 +58,35 @@ class Settings(BaseSettings):
     registration_secret: str = ""
     # The base directory where workspaces will be stored. Each workspace can contain files, configurations, and other resources specific to a user's project or environment.
     workspace_base_dir: str = "/data/workspaces"
+
+    # ── Agent loop safety ────────────────────────────────────────────────
+    # See backend/app/core/agent_loop/types.py::AgentSafetyConfig for the
+    # behavioural contract.  All four caps accept None to opt out of the
+    # specific guard (set the matching env var to an empty string in
+    # ``.env`` and Pydantic will coerce to None — or pass --None).
+
+    # Hard cap on assistant turns per chat invocation.  Default 25 covers
+    # multi-step refactors and deep research; runaway tool loops trip
+    # well before this.  Set 0/empty to disable.
+    agent_max_iterations: int | None = 25
+
+    # Wall-clock budget (seconds) for one chat invocation.  Counted from
+    # entry to ``agent_loop``.  Default 300 (5 min); raise for long-
+    # running automations.
+    agent_max_wall_clock_seconds: float | None = 300.0
+
+    # Back-to-back stream errors before the loop bails.  Resets on any
+    # successful stream.  Default 3 — covers transient provider blips
+    # while still bailing out of a real outage quickly.
+    agent_max_consecutive_llm_errors: int | None = 3
+
+    # Back-to-back tool failures before the loop bails.  Resets on any
+    # successful tool call.  Default 5.
+    agent_max_consecutive_tool_errors: int | None = 5
+
+    # Base backoff (seconds) between LLM retries; doubles each retry,
+    # capped at 30s inside the loop.  Set 0 for instant retry.
+    agent_llm_retry_backoff_seconds: float = 1.0
     # Admin user credentials (for testing).
     admin_email: str | None = None
     admin_password: str | None = None
