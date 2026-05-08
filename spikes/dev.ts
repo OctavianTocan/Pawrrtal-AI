@@ -49,7 +49,12 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // a committed lockfile; running install up-front is idempotent when
 // nothing changed and fast on repeat.
 console.log(`📦 Ensuring ${spikeDir} dependencies are installed…`);
-const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
+// See spikes/dev-electron.ts for why we disable strict-dep-builds.
+const install = spawn(
+	'pnpm',
+	['install', '--config.strictDepBuilds=false'],
+	{ cwd: spikeDir, stdio: 'inherit' },
+);
 const installCode: number = await new Promise((resolve) => install.on('close', (c) => resolve(c ?? 1)));
 if (installCode !== 0) {
 	console.error(`pnpm install failed (exit ${installCode}) in ${spikeDir}`);

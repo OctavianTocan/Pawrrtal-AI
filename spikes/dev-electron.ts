@@ -94,7 +94,18 @@ await $`lsof -ti:8000 | xargs kill -9`.quiet().nothrow();
 // transitive version skewed.  Running install up-front is idempotent
 // when nothing changed and fast on repeat.
 console.log(`📦 Ensuring ${spikeDir} dependencies are installed…`);
-const install = spawn('pnpm', ['install'], { cwd: spikeDir, stdio: 'inherit' });
+// `--config.strictDepBuilds=false` prevents pnpm 11 from exiting
+// non-zero when a dep declares a postinstall script.  esbuild needs
+// its postinstall to download the platform binary; the spike's
+// package.json whitelists it via pnpm.onlyBuiltDependencies, but the
+// strict-dep-builds gate fires before the whitelist is consulted in
+// some pnpm 11 versions.  Disabling the gate is safe here because
+// these are spikes, not production deps.
+const install = spawn(
+	'pnpm',
+	['install', '--config.strictDepBuilds=false'],
+	{ cwd: spikeDir, stdio: 'inherit' },
+);
 const installCode: number = await new Promise((resolve) =>
 	install.on('close', (c) => resolve(c ?? 1)),
 );
