@@ -3,10 +3,10 @@
  * overrides.
  *
  * Container that wires:
- *   * `useWorkspaceEnv()` — TanStack Query GET of the user's overrides.
- *   * `useUpsertWorkspaceEnv()` — TanStack mutation that PATCHes new
+ *   - `useWorkspaceEnv()` — TanStack Query GET of the user's overrides.
+ *   - `useUpsertWorkspaceEnv()` — TanStack mutation that PATCHes new
  *     values onto the encrypted .env file.
- *   * `WorkspacesSectionView` — pure presentation; receives the working
+ *   - `WorkspacesSectionView` — pure presentation; receives the working
  *     copy + handlers as props.
  *
  * The container owns the working-copy state (form edits before Save) and
