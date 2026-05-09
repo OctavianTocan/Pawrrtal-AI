@@ -7,7 +7,7 @@ import {
 	DropdownSubmenuTrigger,
 	useDropdownContext,
 } from '@octavian-tocan/react-dropdown';
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -342,9 +342,13 @@ export function ModelSelectorPopover({
 										selectedModel.provider === row.provider;
 									return (
 										<DropdownSubmenu>
-											{/* `showChevron={false}` was a temporary prop on the
-											    upstream lib that's since been removed.  Hide via CSS
-											    if needed; chevron is baked into the trigger now. */}
+											{/* `DropdownSubmenuTrigger` bakes in its own
+											    flyout chevron — rendering an explicit
+											    ChevronRightIcon here used to produce two
+											    arrows side-by-side. We only emit the
+											    "active provider" check now; the library's
+											    chevron handles the "expand" affordance for
+											    every row. */}
 											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
 												<ProviderLogo provider={row.provider} />
 												<span className="min-w-0 flex-1 truncate text-left">
@@ -355,12 +359,7 @@ export function ModelSelectorPopover({
 														aria-hidden="true"
 														className="size-3.5 shrink-0 text-foreground"
 													/>
-												) : (
-													<ChevronRightIcon
-														aria-hidden="true"
-														className="size-3.5 shrink-0 text-muted-foreground"
-													/>
-												)}
+												) : null}
 											</DropdownSubmenuTrigger>
 											<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-64">
 												{models.map((model) => (
