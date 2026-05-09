@@ -357,7 +357,9 @@ class TestWorkspaceService:
             except SAIntegrityError:
                 caught = True
 
-        assert caught, "Expected IntegrityError from unique index — constraint is not applied"
+        assert caught, (
+            "Expected IntegrityError from unique index — constraint is not applied"
+        )
 
         # Only the first workspace must remain.
         from sqlalchemy import func

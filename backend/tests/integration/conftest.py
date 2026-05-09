@@ -42,7 +42,9 @@ def claude_oauth_token() -> str:
     """
     token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN")
     if not token:
-        pytest.skip("CLAUDE_CODE_OAUTH_TOKEN not set — skipping Claude integration test.")
+        pytest.skip(
+            "CLAUDE_CODE_OAUTH_TOKEN not set — skipping Claude integration test."
+        )
     return token
 
 

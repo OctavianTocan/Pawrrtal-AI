@@ -320,9 +320,7 @@ class TestHandleModelCommand:
         """Calling /model with no argument returns the usage hint."""
         sender = TelegramSender(user_id=1, chat_id=1, username=None, full_name=None)
         session = AsyncMock()
-        reply = await handle_model_command(
-            sender=sender, model_arg="", session=session
-        )
+        reply = await handle_model_command(sender=sender, model_arg="", session=session)
         assert "usage" in reply.lower() or "/model" in reply.lower()
 
     async def test_unknown_model_prefix_returns_error(self) -> None:
@@ -346,7 +344,9 @@ class TestHandleModelCommand:
             new=AsyncMock(return_value=None),
         ):
             reply = await handle_model_command(
-                sender=sender, model_arg="google/gemini-3-flash-preview", session=session
+                sender=sender,
+                model_arg="google/gemini-3-flash-preview",
+                session=session,
             )
         assert isinstance(reply, str)
         assert "connect" in reply.lower() or "account" in reply.lower()
@@ -417,4 +417,8 @@ class TestHandleModelCommand:
             )
 
         assert isinstance(reply, str)
-        assert "couldn't" in reply.lower() or "fail" in reply.lower() or "try" in reply.lower()
+        assert (
+            "couldn't" in reply.lower()
+            or "fail" in reply.lower()
+            or "try" in reply.lower()
+        )
