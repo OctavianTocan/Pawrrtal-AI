@@ -1,0 +1,8 @@
+.{
+    .name = .ai_nexus,
+    .fingerprint = 0x68f103c5a700070,
+    .version = "1.0.0",
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{ "build.zig", "build.zig.zon", "src", "assets", "app.zon", "README.md" },
+}

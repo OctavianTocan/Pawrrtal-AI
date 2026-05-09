@@ -1,0 +1,32 @@
+.{
+    .id = "ai.nexus.desktop",
+    .name = "ai-nexus",
+    .display_name = "AI Nexus",
+    .version = "1.0.0",
+    .icons = .{ "assets/icon.icns" },
+    .platforms = .{ "macos", "linux" },
+    .permissions = .{ "window" },
+    .capabilities = .{ "webview", "js_bridge" },
+    .frontend = .{
+        .dist = "../frontend/out",
+        .entry = "index.html",
+        .spa_fallback = true,
+        .dev = .{
+            .url = "http://127.0.0.1:3001/",
+            .command = .{},
+            .ready_path = "/",
+            .timeout_ms = 60000,
+        },
+    },
+    .security = .{
+        .navigation = .{
+            .allowed_origins = .{ "zero://app", "http://127.0.0.1:3001" },
+            .external_links = .{ .action = "deny" },
+        },
+    },
+    .web_engine = "system",
+    .cef = .{ .dir = "third_party/cef/macos", .auto_install = false },
+    .windows = .{
+        .{ .label = "main", .title = "AI Nexus", .width = 1280, .height = 820, .restore_state = true },
+    },
+}
