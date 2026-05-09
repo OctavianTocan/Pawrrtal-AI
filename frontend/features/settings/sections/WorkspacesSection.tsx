@@ -1,26 +1,42 @@
 /**
- * Settings → Workspaces — per-workspace environment variable overrides.
+ * @fileoverview Settings → Workspaces — per-workspace environment variable
+ * overrides.
  *
- * Users can supply their own API keys here to override the gateway defaults.
- * Values are encrypted at rest and stored in /workspace/{user_id}/.env on the server.
+ * Container that wires:
+ *   * `useWorkspaceEnv()` — TanStack Query GET of the user's overrides.
+ *   * `useUpsertWorkspaceEnv()` — TanStack mutation that PATCHes new
+ *     values onto the encrypted .env file.
+ *   * `WorkspacesSectionView` — pure presentation; receives the working
+ *     copy + handlers as props.
  *
- * @fileoverview Workspaces settings section.
+ * The container owns the working-copy state (form edits before Save) and
+ * the per-key visibility toggle. The query/mutation handle abort-on-unmount,
+ * caching, and dedup automatically.
  */
 
 'use client';
 
-import { Eye, EyeOff, RotateCcw, Save } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { SettingsCard, SettingsPage, SettingsSectionHeader } from '@/features/settings/primitives';
-import { useAuthedFetch } from '@/hooks/use-authed-fetch';
-import { API_ENDPOINTS } from '@/lib/api';
+import type * as React from 'react';
+import { useEffect, useState } from 'react';
+import {
+	extractApiErrorMessage,
+	useUpsertWorkspaceEnv,
+	useWorkspaceEnv,
+	WORKSPACE_ENV_KEY_IDS,
+	type WorkspaceEnvKey,
+} from '@/features/settings/workspace-env/use-workspace-env';
+import {
+	type WorkspaceEnvKeyMeta,
+	WorkspacesSectionView,
+} from '@/features/settings/workspace-env/WorkspacesSectionView';
 
-interface WorkspaceEnvResponse {
-	vars: Record<string, string>;
-}
-
-const OVERRIDABLE_KEYS = [
+/**
+ * UI-facing metadata for each overridable key. Pure presentation concern
+ * (label, help text, where to get the key) — kept on the frontend so
+ * adding a new copy tweak doesn't require a backend deploy. The `key`
+ * field is the contract with the backend allowlist.
+ */
+const KEY_METAS: readonly WorkspaceEnvKeyMeta[] = [
 	{
 		key: 'GEMINI_API_KEY',
 		label: 'Gemini API Key',
@@ -31,7 +47,7 @@ const OVERRIDABLE_KEYS = [
 	{
 		key: 'CLAUDE_CODE_OAUTH_TOKEN',
 		label: 'Claude OAuth Token',
-		description: 'Run claude setup-token while logged in to Claude Code to get this.',
+		description: 'Run `claude setup-token` while logged in to Claude Code to get this.',
 		placeholder: 'sk-ant-...',
 		url: 'https://docs.anthropic.com/en/docs/claude-code',
 	},
@@ -51,157 +67,91 @@ const OVERRIDABLE_KEYS = [
 	},
 ];
 
+/** Empty record with every overridable key seeded to the empty string. */
+function emptyEnvRecord(): Record<WorkspaceEnvKey, string> {
+	const result = {} as Record<WorkspaceEnvKey, string>;
+	for (const key of WORKSPACE_ENV_KEY_IDS) {
+		result[key] = '';
+	}
+	return result;
+}
+
+/**
+ * Settings → Workspaces container component.
+ *
+ * Manages local form state, kicks off the GET on mount via TanStack
+ * Query, and submits edits via the upsert mutation. Renders nothing of
+ * its own — delegates all presentation to {@link WorkspacesSectionView}.
+ */
 export function WorkspacesSection(): React.JSX.Element {
-	const authedFetch = useAuthedFetch();
-	const [envVars, setEnvVars] = useState<Record<string, string>>({});
-	const [savedVars, setSavedVars] = useState<Record<string, string>>({});
+	const query = useWorkspaceEnv();
+	const mutation = useUpsertWorkspaceEnv();
+
+	// Working copy: starts empty and is replaced once the query lands.
+	// Edits are tracked locally so Discard can revert to the last
+	// server-known state (`query.data`) without an extra fetch.
+	const [values, setValues] = useState<Record<WorkspaceEnvKey, string>>(emptyEnvRecord);
+	const [showTokens, setShowTokens] = useState<Partial<Record<WorkspaceEnvKey, boolean>>>({});
 	const [isDirty, setIsDirty] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
-	const [showTokens, setShowTokens] = useState<Record<string, boolean>>({});
-	const [error, setError] = useState<string | null>(null);
 
-	const fetchEnv = useCallback(async () => {
-		try {
-			const res = await authedFetch(API_ENDPOINTS.workspace.env);
-			const data = (await res.json()) as WorkspaceEnvResponse;
-			setEnvVars(data.vars);
-			setSavedVars(data.vars);
-			setIsDirty(false);
-			setError(null);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to load environment variables');
-		}
-	}, [authedFetch]);
-
+	// Sync server data into the working copy when it arrives or refreshes,
+	// but only while the form is clean. Without the `isDirty` guard, a
+	// background refetch (e.g. on window focus) would clobber unsaved edits.
 	useEffect(() => {
-		void fetchEnv();
-	}, [fetchEnv]);
+		if (!query.data || isDirty) return;
+		setValues({ ...emptyEnvRecord(), ...query.data.vars });
+	}, [query.data, isDirty]);
 
-	const handleChange = (key: string, value: string) => {
-		setEnvVars((prev) => ({ ...prev, [key]: value }));
+	const handleValueChange = (key: WorkspaceEnvKey, value: string): void => {
+		setValues((current) => ({ ...current, [key]: value }));
 		setIsDirty(true);
 	};
 
-	const handleSave = async () => {
-		setIsSaving(true);
-		try {
-			const res = await authedFetch(API_ENDPOINTS.workspace.env, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ vars: envVars }),
-			});
-			const data = (await res.json()) as WorkspaceEnvResponse;
-			setSavedVars(data.vars);
-			setEnvVars(data.vars);
-			setIsDirty(false);
-			setError(null);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Failed to save');
-		} finally {
-			setIsSaving(false);
-		}
+	const handleToggleVisibility = (key: WorkspaceEnvKey): void => {
+		setShowTokens((current) => ({ ...current, [key]: !current[key] }));
 	};
 
-	const handleDiscard = () => {
-		setEnvVars(savedVars);
+	const handleSave = (): void => {
+		mutation.mutate(values, {
+			onSuccess: () => {
+				setIsDirty(false);
+			},
+		});
+	};
+
+	const handleDiscard = (): void => {
+		setValues({ ...emptyEnvRecord(), ...(query.data?.vars ?? {}) });
 		setIsDirty(false);
+		mutation.reset();
 	};
 
-	const toggleShowToken = (key: string) => {
-		setShowTokens((prev) => ({ ...prev, [key]: !prev[key] }));
-	};
+	// Surface the most relevant error: mutation errors override query
+	// errors because the user just attempted an action and expects
+	// feedback on it. `extractApiErrorMessage` parses the FastAPI
+	// `detail` body out of the fetch wrapper's "API Error: ..." string.
+	let errorMessage: string | null = null;
+	if (mutation.error !== null) {
+		errorMessage = extractApiErrorMessage(
+			mutation.error,
+			'Failed to save workspace environment.'
+		);
+	} else if (query.error !== null) {
+		errorMessage = extractApiErrorMessage(query.error, 'Failed to load workspace environment.');
+	}
 
 	return (
-		<SettingsPage
-			description="Override gateway environment variables for your workspace. Leave blank to use the gateway default."
-			title="Workspaces"
-		>
-			<SettingsCard
-				description="Per-workspace environment variables override gateway defaults."
-				title="Environment Variables"
-			>
-				<SettingsSectionHeader
-					description="Values are encrypted at rest on the server."
-					noDivider
-					title="API Keys"
-				/>
-				<div className="flex flex-col gap-4 py-2">
-					{OVERRIDABLE_KEYS.map(({ key, label, description, placeholder, url }) => (
-						<div key={key} className="flex flex-col gap-1.5">
-							<div className="flex items-center justify-between">
-								<label
-									className="text-sm font-medium text-foreground"
-									htmlFor={`env-${key}`}
-								>
-									{label}
-								</label>
-								<a
-									className="text-xs text-muted-foreground underline"
-									href={url}
-									rel="noopener noreferrer"
-									target="_blank"
-								>
-									Get key
-								</a>
-							</div>
-							<div className="relative flex items-center">
-								<input
-									className="flex h-9 w-full rounded-md border border-border bg-background px-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground"
-									id={`env-${key}`}
-									onChange={(e) => {
-										handleChange(key, e.target.value);
-									}}
-									placeholder={placeholder}
-									type={showTokens[key] ? 'text' : 'password'}
-									value={envVars[key] ?? ''}
-								/>
-								<button
-									className="absolute right-2 flex size-5 items-center justify-center text-muted-foreground hover:text-foreground"
-									onClick={() => toggleShowToken(key)}
-									type="button"
-								>
-									{showTokens[key] ? (
-										<EyeOff className="size-3.5" />
-									) : (
-										<Eye className="size-3.5" />
-									)}
-								</button>
-							</div>
-							<span className="text-xs text-muted-foreground">{description}</span>
-						</div>
-					))}
-				</div>
-			</SettingsCard>
-
-			{error && (
-				<div className="rounded-[12px] border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-					{error}
-				</div>
-			)}
-
-			<div className="flex items-center gap-3">
-				<Button
-					className="gap-1.5"
-					disabled={!isDirty || isSaving}
-					onClick={() => {
-						void handleSave();
-					}}
-				>
-					<Save className="size-4" />
-					{isSaving ? 'Saving…' : 'Save'}
-				</Button>
-				<Button
-					className="gap-1.5"
-					disabled={!isDirty || isSaving}
-					onClick={() => {
-						void handleDiscard();
-					}}
-					variant="outline"
-				>
-					<RotateCcw className="size-4" />
-					Discard
-				</Button>
-			</div>
-		</SettingsPage>
+		<WorkspacesSectionView
+			errorMessage={errorMessage}
+			isDirty={isDirty}
+			isLoading={query.isLoading}
+			isSaving={mutation.isPending}
+			keyMetas={KEY_METAS}
+			onDiscard={handleDiscard}
+			onSave={handleSave}
+			onToggleVisibility={handleToggleVisibility}
+			onValueChange={handleValueChange}
+			showTokens={showTokens}
+			values={values}
+		/>
 	);
 }
