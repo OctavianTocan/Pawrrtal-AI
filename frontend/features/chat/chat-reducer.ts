@@ -112,6 +112,18 @@ export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): Ag
 		case 'error':
 			// Should be unreachable — the transport surfaces errors by throwing.
 			return { ...message, content: `Error: ${event.content}`, assistant_status: 'failed' };
+		case 'agent_terminated':
+			// Safety layer fired a controlled stop (iteration cap, wall-clock
+			// budget, or consecutive-error threshold).  Append the explanation
+			// to whatever content the model produced before stopping, and mark
+			// the message complete so it doesn’t linger in a streaming state.
+			return {
+				...message,
+				content:
+					(message.content ? message.content + '\n\n' : '') +
+					`⚠️ ${event.content}`,
+				assistant_status: 'complete',
+			};
 		default:
 			return message;
 	}

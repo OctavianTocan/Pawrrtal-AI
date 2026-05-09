@@ -15,7 +15,14 @@ import type { ChatStreamEvent } from '../types';
 const STREAM_DONE = Symbol('STREAM_DONE');
 
 /** Allowed `type` field values for chat SSE events. */
-const CHAT_EVENT_TYPES = ['delta', 'thinking', 'tool_use', 'tool_result', 'error'] as const;
+const CHAT_EVENT_TYPES = [
+	'delta',
+	'thinking',
+	'tool_use',
+	'tool_result',
+	'error',
+	'agent_terminated',
+] as const;
 
 /**
  * Narrow an unknown JSON payload to a {@link ChatStreamEvent}.
@@ -69,6 +76,9 @@ function* parseFrameBatch(frames: string[]): Generator<ChatStreamEvent, 'done' |
 		if (parsed.type === 'error') {
 			throw new Error(parsed.content || 'Chat stream failed.');
 		}
+		// agent_terminated is a controlled stop, not an exception — yield it
+		// to the reducer so the UI can display a distinct notice rather than
+		// a generic error banner.
 		yield parsed;
 	}
 	return 'continue';

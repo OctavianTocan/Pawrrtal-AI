@@ -28,6 +28,7 @@ from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
+from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.config import settings
 from .base import StreamEvent
 
@@ -277,7 +278,14 @@ class GeminiLLM:
             tools=list(tools or []),
         )
         prompt = UserMessage(role="user", content=question)
-        config = AgentLoopConfig(convert_to_llm=_identity_convert)
+        # Safety config is read from app settings so limits are tuneable via
+        # environment variables (AGENT_MAX_ITERATIONS, AGENT_MAX_WALL_CLOCK_SECONDS,
+        # etc.) without a code deploy.  Defaults are conservative and appropriate
+        # for the interactive chat path; raise them for long-running automations.
+        config = AgentLoopConfig(
+            convert_to_llm=_identity_convert,
+            safety=safety_from_settings(settings),
+        )
 
         try:
             async for event in agent_loop([prompt], context, config, self._stream_fn):
@@ -299,6 +307,21 @@ class GeminiLLM:
                         type="tool_result",
                         content=event["content"],
                         tool_use_id=event["tool_call_id"],
+                    )
+
+                elif event["type"] == "agent_terminated":
+                    # Safety layer tripped — forward the structured event so
+                    # the frontend can render a distinct termination notice
+                    # instead of a generic error banner.  ``reason`` is the
+                    # machine-readable label; ``message`` is the human copy.
+                    logger.warning(
+                        "AGENT_TERMINATED reason=%s details=%s",
+                        event["reason"],
+                        event["details"],
+                    )
+                    yield StreamEvent(
+                        type="agent_terminated",
+                        content=event["message"],
                     )
 
                 elif event["type"] == "agent_end":
