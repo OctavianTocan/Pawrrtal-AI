@@ -54,6 +54,10 @@ export interface KnowledgeUrlState {
 	crumbs: ReturnType<typeof buildBreadcrumbs>;
 	openFile: { name: string; markdown: string } | null;
 	tree: { isLoading: boolean; isError: boolean; error: Error | null };
+	/** Workspace UUID for the active workspace; `null` while it's loading. */
+	workspaceId: string | null;
+	/** Workspace-relative path of the currently-open file, or `null`. */
+	openFilePath: string | null;
 }
 
 /**
@@ -151,5 +155,7 @@ export function useKnowledgeUrlState(): KnowledgeUrlState {
 		crumbs,
 		openFile,
 		tree: { isLoading: treeLoading, isError: treeError, error },
+		workspaceId,
+		openFilePath,
 	};
 }

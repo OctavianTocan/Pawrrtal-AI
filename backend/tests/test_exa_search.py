@@ -1,20 +1,19 @@
-"""Tests for the provider-agnostic Exa web-search tool and its adapters.
+"""Tests for the provider-agnostic Exa web-search core and its Agno adapter.
 
 Coverage layers:
 
 * Core (``app.core.tools.exa_search``) — payload shape, headers, error
   branches, response normalisation, num-results clamping, and the
   Markdown formatter.
-* Claude SDK adapter (``app.core.tools.exa_search_claude``) — empty-query
-  guard, MCP tool ID composition, ``is_error`` propagation, MCP server
-  builder.
 * Agno adapter (``app.core.tools.exa_search_agno``) — Toolkit
   registration, num-results capping, async-from-sync bridge.
-* ClaudeLLM wiring (``app.core.providers.claude_provider``) —
-  ``enable_exa_search`` toggle gates ``mcp_servers`` and the
-  whitelist entry.
-* Factory routing (``app.core.providers.factory``) — ``EXA_API_KEY``
-  presence flips ``ClaudeLLMConfig.enable_exa_search``.
+
+The Claude-specific Exa adapter was removed when tool composition
+moved into the chat router.  Exa now flows through the same
+:class:`app.core.agent_loop.types.AgentTool` path as every other
+app-defined tool, bridged by
+:mod:`app.core.providers._claude_tool_bridge` for the Claude provider
+— see ``test_claude_tool_bridge.py``.
 
 The HTTP boundary is mocked with ``httpx.MockTransport`` so no test
 ever talks to the real Exa API.
@@ -40,8 +39,6 @@ from uuid import uuid4
 import httpx
 import pytest
 
-from app.core.providers import factory
-from app.core.providers.claude_provider import ClaudeLLM, ClaudeLLMConfig
 from app.core.tools.exa_search import (
     DEFAULT_NUM_RESULTS,
     EXA_API_URL,
@@ -52,13 +49,6 @@ from app.core.tools.exa_search import (
     format_results_as_markdown,
 )
 from app.core.tools.exa_search_agno import ExaTools
-from app.core.tools.exa_search_claude import (
-    CLAUDE_TOOL_ID,
-    MCP_SERVER_NAME,
-    MCP_TOOL_NAME,
-    _exa_search_tool,
-    build_exa_mcp_server,
-)
 
 # ---------------------------------------------------------------------------
 # httpx mock plumbing
@@ -421,97 +411,6 @@ def test_format_results_as_markdown_renders_hits_with_links_and_highlights() -> 
 
 
 # ---------------------------------------------------------------------------
-# Claude SDK adapter
-# ---------------------------------------------------------------------------
-
-
-def test_claude_tool_id_matches_mcp_naming_convention() -> None:
-    """The whitelist entry MUST be ``mcp__<server>__<tool>`` per the SDK contract."""
-    assert f"mcp__{MCP_SERVER_NAME}__{MCP_TOOL_NAME}" == CLAUDE_TOOL_ID
-
-
-@pytest.mark.anyio
-async def test_claude_tool_rejects_empty_query() -> None:
-    response = await _exa_search_tool.handler({"query": "   "})
-
-    assert response["is_error"] is True
-    assert "non-empty" in response["content"][0]["text"]
-
-
-@pytest.mark.anyio
-async def test_claude_tool_returns_text_content_on_success(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]})
-    )
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    response = await _exa_search_tool.handler({"query": "hyperloop"})
-
-    assert response.get("is_error") in (False, None)
-    assert len(response["content"]) == 1
-    body = response["content"][0]["text"]
-    assert SAMPLE_HIT["title"] in body
-    assert SAMPLE_HIT["url"] in body
-
-
-@pytest.mark.anyio
-async def test_claude_tool_marks_is_error_when_core_returns_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _error_response(429, {"error": "rate limit"})
-    )
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    response = await _exa_search_tool.handler({"query": "anything"})
-
-    assert response["is_error"] is True
-    assert "rate limit" in response["content"][0]["text"]
-
-
-@pytest.mark.anyio
-async def test_claude_tool_passes_num_results_through(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    await _exa_search_tool.handler({"query": "q", "num_results": 7})
-
-    body = json.loads(captured[0].content)
-    assert body["numResults"] == 7
-
-
-@pytest.mark.anyio
-async def test_claude_tool_falls_back_to_default_num_results_for_bad_input(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    await _exa_search_tool.handler({"query": "q", "num_results": "not-a-number"})
-
-    body = json.loads(captured[0].content)
-    assert body["numResults"] == DEFAULT_NUM_RESULTS
-
-
-def test_build_exa_mcp_server_returns_named_config_with_one_tool() -> None:
-    config = build_exa_mcp_server()
-    # ``McpSdkServerConfig`` is a TypedDict-shaped mapping the SDK
-    # accepts; verify the surface our provider depends on rather than
-    # importing the internal type to avoid coupling to the SDK layout.
-    assert isinstance(config, dict)
-    assert config.get("type") == "sdk"
-    assert config.get("name") == MCP_SERVER_NAME
-
-
-# ---------------------------------------------------------------------------
 # Agno adapter
 # ---------------------------------------------------------------------------
 
@@ -563,73 +462,3 @@ def test_agno_exa_search_renders_error_for_missing_key(
     assert "EXA_API_KEY" in rendered
 
 
-# ---------------------------------------------------------------------------
-# ClaudeLLM wiring
-# ---------------------------------------------------------------------------
-
-
-def test_provider_options_omit_exa_when_disabled() -> None:
-    provider = ClaudeLLM(
-        "claude-haiku-4-5",
-        config=ClaudeLLMConfig(oauth_token=None, enable_exa_search=False),
-    )
-
-    options = provider._build_options(uuid4())
-
-    assert options.tools == []
-    # When disabled, no MCP server should be wired.
-    assert options.mcp_servers == {} or options.mcp_servers is None
-
-
-def test_provider_options_mount_exa_mcp_server_when_enabled() -> None:
-    provider = ClaudeLLM(
-        "claude-haiku-4-5",
-        config=ClaudeLLMConfig(oauth_token=None, enable_exa_search=True),
-    )
-
-    options = provider._build_options(uuid4())
-
-    tools = options.tools or []
-    assert isinstance(tools, list)
-    assert CLAUDE_TOOL_ID in tools
-    assert isinstance(options.mcp_servers, dict)
-    assert MCP_SERVER_NAME in options.mcp_servers
-
-
-def test_provider_options_does_not_duplicate_exa_tool_when_already_listed() -> None:
-    provider = ClaudeLLM(
-        "claude-haiku-4-5",
-        config=ClaudeLLMConfig(
-            tools=[CLAUDE_TOOL_ID],  # already in the whitelist
-            oauth_token=None,
-            enable_exa_search=True,
-        ),
-    )
-
-    options = provider._build_options(uuid4())
-
-    tools = options.tools or []
-    assert isinstance(tools, list)
-    assert tools.count(CLAUDE_TOOL_ID) == 1
-
-
-# ---------------------------------------------------------------------------
-# Factory routing
-# ---------------------------------------------------------------------------
-
-
-def test_factory_enables_exa_when_api_key_is_set() -> None:
-    with patch.object(factory.settings, "exa_api_key", "ek"):
-        provider = factory.resolve_llm("claude-haiku-4-5")
-
-    # The factory only constructs ClaudeLLM for claude-* model IDs.
-    assert isinstance(provider, ClaudeLLM)
-    assert provider._config.enable_exa_search is True
-
-
-def test_factory_disables_exa_when_api_key_is_empty() -> None:
-    with patch.object(factory.settings, "exa_api_key", ""):
-        provider = factory.resolve_llm("claude-haiku-4-5")
-
-    assert isinstance(provider, ClaudeLLM)
-    assert provider._config.enable_exa_search is False
