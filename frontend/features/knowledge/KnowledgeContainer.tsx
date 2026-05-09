@@ -30,8 +30,9 @@
  */
 
 import { AlertCircleIcon, LoaderIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback } from 'react';
 import { KNOWLEDGE_VIEWS } from './constants';
+import { useWriteWorkspaceFile } from './hooks/use-write-workspace-file';
 import { KnowledgeView } from './KnowledgeView';
 import { KNOWLEDGE_MEMORY_CARDS } from './mock-data';
 import { useKnowledgeNavigation } from './use-knowledge-navigation';
@@ -72,9 +73,36 @@ function TreeErrorState({ message }: { message: string }): ReactNode {
  * component because the underlying hooks need `useSearchParams`.
  */
 export function KnowledgeContainer(): ReactNode {
-	const { activeView, folderSegments, currentNode, crumbs, openFile, tree } =
-		useKnowledgeUrlState();
+	const {
+		activeView,
+		folderSegments,
+		currentNode,
+		crumbs,
+		openFile,
+		tree,
+		workspaceId,
+		openFilePath,
+	} = useKnowledgeUrlState();
 	const handlers = useKnowledgeNavigation(folderSegments);
+
+	// File-write mutation. The hook is always called (Rules of Hooks); when
+	// `workspaceId` is null the mutation rejects, which is surfaced as an
+	// inline banner inside the DocumentViewer.
+	const writeFile = useWriteWorkspaceFile(workspaceId);
+
+	// Save handler: only constructed when there's an open file path so the
+	// `Edit` button stays hidden on folder views (the viewer hides it when
+	// `onSave` is undefined).
+	const handleSaveFile = useCallback(
+		async (newContent: string) => {
+			if (!openFilePath) {
+				throw new Error('No file is open — cannot save.');
+			}
+			await writeFile.mutateAsync({ filePath: openFilePath, content: newContent });
+		},
+		[openFilePath, writeFile]
+	);
+	const onSaveFile = openFilePath ? handleSaveFile : undefined;
 
 	// Surface tree loading / error inline so the sub-sidebar stays
 	// visible (the user can still switch to Memory / Brain Access while
@@ -117,6 +145,7 @@ export function KnowledgeContainer(): ReactNode {
 			currentNode={currentNode}
 			crumbs={crumbs}
 			openFile={openFile}
+			onSaveFile={onSaveFile}
 			memoryCards={KNOWLEDGE_MEMORY_CARDS}
 			{...handlers}
 		/>
