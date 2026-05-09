@@ -30,7 +30,7 @@ from app.core.agent_system_prompt import (
 )
 from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.config import settings
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -104,18 +104,35 @@ def _build_gemini_contents(
     return contents
 
 
-def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID) -> StreamFn:
+def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
-    Returns an async generator that yields LLMEvents.  The generator is
-    provider-specific; the calling agent_loop() is not.
+    Args:
+        model_id: Gemini model identifier (e.g. ``"gemini-3.1-flash-lite-preview"``).
+        user_id: Authenticated user UUID, used to resolve a per-workspace
+            ``GEMINI_API_KEY`` override. When ``None`` the gateway-global
+            ``settings.google_api_key`` is used directly, matching
+            ``ClaudeLLM``'s optional ``user_id`` contract for unauthenticated
+            background work (e.g. utility agents).
+
+    Returns:
+        An async generator factory that yields ``LLMEvent``s. The generator
+        is provider-specific; the calling ``agent_loop()`` is not.
     """
 
     async def stream_fn(
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
-        api_key = resolve_api_key(user_id, "GEMINI_API_KEY") or settings.google_api_key
+        # Per-user override takes precedence; ``resolve_api_key`` falls back
+        # to ``settings.google_api_key`` automatically when no override is
+        # set, so the explicit ``or settings.google_api_key`` is dead code
+        # and has been removed. For unauthenticated calls (no user_id), we
+        # read the gateway global directly.
+        if user_id is not None:
+            api_key = resolve_api_key(user_id, "GEMINI_API_KEY")
+        else:
+            api_key = settings.google_api_key
         client = genai.Client(api_key=api_key)
         contents = _build_gemini_contents(messages)
         # ``GenerateContentConfig.tools`` is typed as the wider union
@@ -225,7 +242,16 @@ class GeminiLLM:
     chat.py).  Tools are injected per-request via the AgentContext.
     """
 
-    def __init__(self, model_id: str, *, user_id: uuid.UUID) -> None:
+    def __init__(self, model_id: str, *, user_id: uuid.UUID | None = None) -> None:
+        """Construct a Gemini provider.
+
+        Args:
+            model_id: Gemini model identifier.
+            user_id: Authenticated user UUID, optional. When supplied, a
+                per-workspace ``GEMINI_API_KEY`` override is honoured;
+                otherwise the gateway-global key is used. Optional to match
+                ``ClaudeLLM``'s contract for unauthenticated callers.
+        """
         self._model_id = model_id
         self._stream_fn = make_gemini_stream_fn(model_id, user_id)
 

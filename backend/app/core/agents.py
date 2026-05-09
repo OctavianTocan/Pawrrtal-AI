@@ -11,7 +11,7 @@ from agno.tools.local_file_system import LocalFileSystemTools
 from agno.tools.mcp.mcp import MCPTools
 
 from app.core.config import settings
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from app.core.tools.exa_search_agno import ExaTools
 from app.core.workspace import _workspace_path
 
@@ -45,8 +45,10 @@ def create_agent(
         MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp"),
         LocalFileSystemTools(target_directory=user_workspace),
     ]
-    exa_key = resolve_api_key(user_id, "EXA_API_KEY") if user_id else None
-    if exa_key or (not user_id and settings.exa_api_key):
+    # `resolve_api_key` already falls back to `settings.exa_api_key` when the
+    # user has no workspace override, so a truthy result here means "key is
+    # available somewhere" — workspace-first, gateway-second.
+    if resolve_api_key(user_id, "EXA_API_KEY"):
         tools.append(ExaTools(user_id=user_id))
 
     agno_agent = Agent(

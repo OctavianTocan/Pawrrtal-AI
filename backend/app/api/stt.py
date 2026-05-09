@@ -12,8 +12,7 @@ import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-from app.core import config
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from app.db import User
 from app.users import current_active_user
 
@@ -57,7 +56,9 @@ def get_stt_router() -> APIRouter:
         Returns the upstream JSON response unmodified so the frontend has
         access to ``text``, ``duration``, and the optional ``words`` array.
         """
-        api_key = resolve_api_key(user.id, "XAI_API_KEY") or config.settings.xai_api_key
+        # `resolve_api_key` already falls back to `settings.xai_api_key`, so
+        # the caller doesn't need a manual `or settings.x` suffix.
+        api_key = resolve_api_key(user.id, "XAI_API_KEY")
         if not api_key:
             raise HTTPException(
                 status_code=503,

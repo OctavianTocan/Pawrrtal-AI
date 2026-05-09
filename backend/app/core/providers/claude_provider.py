@@ -57,7 +57,7 @@ from claude_agent_sdk import (
 )
 
 from app.core.agent_loop.types import AgentTool
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
@@ -451,8 +451,11 @@ def _session_exists(session_id: str, directory: str | None) -> bool:
 # Event-translation helpers live in ``_claude_events`` so this file
 # stays under the 500-line gate.  Re-exported here because the existing
 # tests + provider code import them from this module — keeping the
-# import surface stable means the split is internal-only.
-from ._claude_events import (
+# import surface stable means the split is internal-only. Late import is
+# intentional: it must follow the class definitions above so the module
+# graph round-trips without a circular reference; ruff's E402 doesn't
+# express this constraint, so it's silenced explicitly.
+from ._claude_events import (  # noqa: E402  (deliberate post-class re-export)
     _error_event,
     _events_from_assistant,
     _events_from_message,

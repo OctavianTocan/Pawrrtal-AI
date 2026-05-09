@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 
 from app.core.agent_loop.types import AgentTool
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from app.core.tools.exa_search import (
     MAX_NUM_RESULTS,
     exa_search,

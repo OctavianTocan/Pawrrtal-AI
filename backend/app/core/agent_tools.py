@@ -31,7 +31,7 @@ import uuid
 
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
@@ -74,14 +74,15 @@ def build_agent_tools(
     tools.extend(make_workspace_tools(workspace_root))
 
     # Web search via Exa.  Capability-gated on a key being configured —
-    # either globally or per-workspace.  If no key is available, web
-    # search is silently absent rather than the agent calling a tool
-    # that errors at runtime with "missing key".
-    exa_key = None
-    if user_id:
+    # either per-workspace or globally.  When `user_id` is supplied,
+    # `resolve_api_key` already handles workspace-then-settings fallback,
+    # so a single call is sufficient. The unauthenticated fallback (no
+    # `user_id` — e.g. background jobs) reads `settings.exa_api_key`
+    # directly.
+    if user_id is not None:
         exa_key = resolve_api_key(user_id, "EXA_API_KEY")
-    if exa_key is None:
-        exa_key = settings.exa_api_key
+    else:
+        exa_key = settings.exa_api_key or None
     if exa_key:
         tools.append(make_exa_search_tool(user_id=user_id))
 

@@ -13,7 +13,7 @@ import uuid
 
 from agno.tools.toolkit import Toolkit
 
-from app.core.providers.keys import resolve_api_key
+from app.core.keys import resolve_api_key
 
 from .exa_search import (
     DEFAULT_NUM_RESULTS,
