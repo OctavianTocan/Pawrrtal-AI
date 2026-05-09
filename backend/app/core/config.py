@@ -53,10 +53,6 @@ class Settings(BaseSettings):
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     # If True, forces the Secure flag on cookies. If False, forces HTTP allowed. If None, auto-detects based on is_production.
     cookie_secure: bool | None = None
-    # Optional secret required to register a new account. When set, anyone
-    # attempting to register must supply this value as ``invite_code`` in the
-    # request body. Leave unset (or empty) to allow open registration.
-    registration_secret: str = ""
     # The base directory where workspaces will be stored. Each workspace can contain files, configurations, and other resources specific to a user's project or environment.
     workspace_base_dir: str = "/data/workspaces"
 

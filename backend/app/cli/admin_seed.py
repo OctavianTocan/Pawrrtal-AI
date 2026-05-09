@@ -26,7 +26,6 @@ async def seed_admin_user() -> None:
                 UserCreate(
                     email=settings.admin_email,
                     password=settings.admin_password,
-                    invite_code=settings.registration_secret,
                 ),
                 safe=False,
             )

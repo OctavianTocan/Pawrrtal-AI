@@ -9,7 +9,6 @@ from fastapi_users import (
     BaseUserManager,
     FastAPIUsers,
     UUIDIDMixin,
-    schemas,
 )
 from fastapi_users.authentication import (
     AuthenticationBackend,
@@ -38,14 +37,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 status_code=400,
                 detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
             )
-
-    async def create(
-        self,
-        user_create: schemas.BaseUserCreate,
-        safe: bool = False,
-        request: Request | None = None,
-    ) -> User:
-        return await super().create(user_create, safe=safe, request=request)
 
     async def on_after_register(
         self, user: User, request: Request | None = None
