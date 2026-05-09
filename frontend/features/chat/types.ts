@@ -45,13 +45,27 @@ export interface ChatErrorEvent {
 	content: string;
 }
 
+/**
+ * Emitted when the agent safety layer terminates the loop early.
+ *
+ * Distinct from `error` — this is a controlled stop (hit an iteration cap,
+ * wall-clock budget, or consecutive-error threshold) rather than an
+ * unexpected failure. The `content` field carries a human-readable
+ * explanation of why the agent stopped.
+ */
+export interface ChatAgentTerminatedEvent {
+	type: 'agent_terminated';
+	content: string;
+}
+
 /** Discriminated union of every event the backend chat stream can emit. */
 export type ChatStreamEvent =
 	| ChatDeltaEvent
 	| ChatThinkingEvent
 	| ChatToolUseEvent
 	| ChatToolResultEvent
-	| ChatErrorEvent;
+	| ChatErrorEvent
+	| ChatAgentTerminatedEvent;
 
 /** Lifecycle of a single tool invocation as observed from the SSE stream. */
 export type ChatToolCallStatus = 'pending' | 'completed' | 'failed';
