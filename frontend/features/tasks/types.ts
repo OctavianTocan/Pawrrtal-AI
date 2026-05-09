@@ -2,7 +2,7 @@
  * Type definitions for the Tasks feature.
  *
  * The Tasks surface is a multi-view editorial todo list inspired by Todoist,
- * translated into the AI Nexus warm-cream visual language. All shapes here
+ * translated into the Pawrrtal warm-cream visual language. All shapes here
  * describe in-memory mock data — there is no backend integration yet. Once
  * a real source materialises, these types stay as-is and only the data
  * fetcher swaps.

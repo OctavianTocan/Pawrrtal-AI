@@ -58,7 +58,7 @@ Memory view becomes actively misleading.
 
 const ONBOARDING_WELCOME = `# Welcome
 
-Welcome to AI Nexus. This Knowledge folder is your scratch space —
+Welcome to Pawrrtal. This Knowledge folder is your scratch space —
 anything you save here becomes context for future conversations.
 
 ## What lives here
@@ -164,7 +164,7 @@ export const KNOWLEDGE_MEMORY_CARDS: readonly MemoryCardData[] = [
 	{
 		id: 'preferences',
 		title: 'User Preferences',
-		description: 'Tone, length, formatting defaults AI Nexus picked up over time.',
+		description: 'Tone, length, formatting defaults Pawrrtal picked up over time.',
 		tone: 'accent',
 		count: '24 entries',
 	},

@@ -20,7 +20,7 @@ const WORKSPACE_OPTIONS = [
 	{
 		icon: CloudServerIcon,
 		title: 'Connect to remote server',
-		description: 'Use a remote AI Nexus worker.',
+		description: 'Use a remote Pawrrtal worker.',
 		status: 'upcoming',
 	},
 ] as const;

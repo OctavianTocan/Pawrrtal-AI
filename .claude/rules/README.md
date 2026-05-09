@@ -77,7 +77,7 @@ Claude Code loads rules matching the current file's path against the `paths` glo
 Rules extracted from real projects:
 
 - **tap** — Rust Telegram bot / multi-agent gateway (provider traits, subprocess testing)
-- **ai-nexus** — TypeScript full-stack app (Biome, multi-agent git safety)
+- **pawrrtal** — TypeScript full-stack app (Biome, multi-agent git safety)
 - **openclaw-notion/todoist** — Agent plugins (per-agent auth, test isolation)
 - CI pipelines across self-hosted Mac Mini runners, GitHub Actions, and Gradle builds
 

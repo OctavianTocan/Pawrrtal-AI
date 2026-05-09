@@ -2,12 +2,12 @@
  * Single typed entrypoint for desktop-only features.
  *
  * The Electron preload script (`electron/src/preload.ts`) injects an
- * `aiNexus` object onto `window` via `contextBridge`. This module is
+ * `pawrrtal` object onto `window` via `contextBridge`. This module is
  * the FE's only allowed reader of that object — every component that
  * wants to call into the desktop shell goes through here so we have:
  *
  *   1. **One detection point** for `isDesktop()` (no per-component
- *      `typeof window.aiNexus` checks scattered through the codebase).
+ *      `typeof window.pawrrtal` checks scattered through the codebase).
  *   2. **Web-safe fallbacks** for every method, so the same call site
  *      works in both shells (e.g. `openExternal` falls back to
  *      `window.open(...)` in the browser).
@@ -137,13 +137,13 @@ interface DesktopBridge {
 declare global {
 	interface Window {
 		/** Present only when running inside the Electron desktop shell. */
-		aiNexus?: DesktopBridge;
+		pawrrtal?: DesktopBridge;
 	}
 }
 
 /** True when the app is running inside the Electron desktop shell. */
 export function isDesktop(): boolean {
-	return typeof window !== 'undefined' && typeof window.aiNexus !== 'undefined';
+	return typeof window !== 'undefined' && typeof window.pawrrtal !== 'undefined';
 }
 
 /**
@@ -153,8 +153,8 @@ export function isDesktop(): boolean {
  */
 export async function openExternal(url: string): Promise<void> {
 	try {
-		if (window.aiNexus) {
-			await window.aiNexus.openExternal(url);
+		if (window.pawrrtal) {
+			await window.pawrrtal.openExternal(url);
 			return;
 		}
 		window.open(url, '_blank', 'noopener,noreferrer');
@@ -169,13 +169,13 @@ export async function openExternal(url: string): Promise<void> {
  * `<input type="file" webkitdirectory>` only exposes file blobs).
  */
 export async function showOpenFolderDialog(): Promise<string | null> {
-	if (window.aiNexus) return window.aiNexus.showOpenFolderDialog();
+	if (window.pawrrtal) return window.pawrrtal.showOpenFolderDialog();
 	return null;
 }
 
 /** Resolve the host platform; returns 'web' when not running in Electron. */
 export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
-	if (window.aiNexus) return window.aiNexus.getPlatform();
+	if (window.pawrrtal) return window.pawrrtal.getPlatform();
 	return 'web';
 }
 
@@ -192,12 +192,12 @@ export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
  */
 export function getDesktopPlatformSync(): NodeJS.Platform | null {
 	if (typeof window === 'undefined') return null;
-	return window.aiNexus?.platform ?? null;
+	return window.pawrrtal?.platform ?? null;
 }
 
 /** Resolve the desktop app version, or `null` on web. */
 export async function getDesktopVersion(): Promise<string | null> {
-	if (window.aiNexus) return window.aiNexus.getVersion();
+	if (window.pawrrtal) return window.pawrrtal.getVersion();
 	return null;
 }
 
@@ -206,7 +206,7 @@ export async function getDesktopVersion(): Promise<string | null> {
  * No-op + null unsubscribe on web.
  */
 export function onMenuNewChat(handler: () => void): () => void {
-	if (window.aiNexus) return window.aiNexus.onMenuNewChat(handler);
+	if (window.pawrrtal) return window.pawrrtal.onMenuNewChat(handler);
 	return () => {
 		/* no-op on web */
 	};
@@ -225,7 +225,7 @@ const WEB_ONLY_FAIL = { ok: false as const, reason: 'desktop-only' };
 
 /** List the current workspace allowlist. Empty array on web. */
 export async function listWorkspaceRoots(): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.listRoots();
+	if (window.pawrrtal) return window.pawrrtal.workspace.listRoots();
 	return [];
 }
 
@@ -234,46 +234,46 @@ export async function listWorkspaceRoots(): Promise<string[]> {
  * folder picker on desktop. No-op + empty list on web.
  */
 export async function addWorkspaceRoot(rootPath?: string): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.addRoot(rootPath);
+	if (window.pawrrtal) return window.pawrrtal.workspace.addRoot(rootPath);
 	return [];
 }
 
 export async function removeWorkspaceRoot(rootPath: string): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.removeRoot(rootPath);
+	if (window.pawrrtal) return window.pawrrtal.workspace.removeRoot(rootPath);
 	return [];
 }
 
 // --- fs ---------------------------------------------------------------------
 
 export async function readFile(filePath: string): Promise<DesktopResult<{ content: string }>> {
-	if (window.aiNexus) return window.aiNexus.fs.readFile(filePath);
+	if (window.pawrrtal) return window.pawrrtal.fs.readFile(filePath);
 	return WEB_ONLY_FAIL;
 }
 
 export async function writeFile(filePath: string, content: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.fs.writeFile(filePath, content);
+	if (window.pawrrtal) return window.pawrrtal.fs.writeFile(filePath, content);
 	return WEB_ONLY_FAIL;
 }
 
 export async function listDirectory(
 	dirPath: string
 ): Promise<DesktopResult<{ entries: DirEntry[] }>> {
-	if (window.aiNexus) return window.aiNexus.fs.listDirectory(dirPath);
+	if (window.pawrrtal) return window.pawrrtal.fs.listDirectory(dirPath);
 	return WEB_ONLY_FAIL;
 }
 
 export async function watchDirectory(dirPath: string): Promise<DesktopResult<{ id: string }>> {
-	if (window.aiNexus) return window.aiNexus.fs.watchDirectory(dirPath);
+	if (window.pawrrtal) return window.pawrrtal.fs.watchDirectory(dirPath);
 	return WEB_ONLY_FAIL;
 }
 
 export async function unwatchDirectory(id: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.fs.unwatch(id);
+	if (window.pawrrtal) return window.pawrrtal.fs.unwatch(id);
 	return WEB_ONLY_FAIL;
 }
 
 export function onFsWatchEvent(handler: (event: WatchEvent) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.fs.onWatchEvent(handler);
+	if (window.pawrrtal) return window.pawrrtal.fs.onWatchEvent(handler);
 	return () => {
 		/* */
 	};
@@ -282,31 +282,31 @@ export function onFsWatchEvent(handler: (event: WatchEvent) => void): () => void
 // --- shell ------------------------------------------------------------------
 
 export async function runShell(request: ShellRunRequest): Promise<DesktopResult<ShellRunResult>> {
-	if (window.aiNexus) return window.aiNexus.shell.run(request);
+	if (window.pawrrtal) return window.pawrrtal.shell.run(request);
 	return WEB_ONLY_FAIL;
 }
 
 export async function spawnShellStreaming(
 	request: ShellRunRequest
 ): Promise<DesktopResult<{ jobId: string }>> {
-	if (window.aiNexus) return window.aiNexus.shell.spawnStreaming(request);
+	if (window.pawrrtal) return window.pawrrtal.shell.spawnStreaming(request);
 	return WEB_ONLY_FAIL;
 }
 
 export async function killShellJob(jobId: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.shell.kill(jobId);
+	if (window.pawrrtal) return window.pawrrtal.shell.kill(jobId);
 	return WEB_ONLY_FAIL;
 }
 
 export function onShellStream(handler: (event: ShellStreamEvent) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.shell.onStream(handler);
+	if (window.pawrrtal) return window.pawrrtal.shell.onStream(handler);
 	return () => {
 		/* */
 	};
 }
 
 export function onShellStreamEnd(handler: (event: ShellStreamEnd) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.shell.onStreamEnd(handler);
+	if (window.pawrrtal) return window.pawrrtal.shell.onStreamEnd(handler);
 	return () => {
 		/* */
 	};
@@ -315,23 +315,23 @@ export function onShellStreamEnd(handler: (event: ShellStreamEnd) => void): () =
 // --- permissions ------------------------------------------------------------
 
 export async function getPermissionMode(): Promise<PermissionMode | 'web'> {
-	if (window.aiNexus) return window.aiNexus.permissions.getMode();
+	if (window.pawrrtal) return window.pawrrtal.permissions.getMode();
 	return 'web';
 }
 
 export async function setPermissionMode(mode: PermissionMode): Promise<PermissionMode | 'web'> {
-	if (window.aiNexus) return window.aiNexus.permissions.setMode(mode);
+	if (window.pawrrtal) return window.pawrrtal.permissions.setMode(mode);
 	return 'web';
 }
 
 export function respondToPermissionPrompt(response: PermissionPromptResponse): void {
-	window.aiNexus?.permissions.respond(response);
+	window.pawrrtal?.permissions.respond(response);
 }
 
 export function onPermissionPrompt(
 	handler: (request: PermissionPromptRequest) => void
 ): () => void {
-	if (window.aiNexus) return window.aiNexus.permissions.onPrompt(handler);
+	if (window.pawrrtal) return window.pawrrtal.permissions.onPrompt(handler);
 	return () => {
 		/* */
 	};

@@ -27,7 +27,7 @@ export function GeneralSection(): React.JSX.Element {
 		>
 			<SettingsCard>
 				<SettingsSectionHeader
-					description="How you appear inside AI Nexus and how it should address you."
+					description="How you appear inside Pawrrtal and how it should address you."
 					title="Profile"
 				/>
 				<SettingsRow label="Avatar">
@@ -48,7 +48,7 @@ export function GeneralSection(): React.JSX.Element {
 				<SettingsRow
 					className="items-start"
 					description="Kept in mind across chats."
-					label="Instructions for AI Nexus"
+					label="Instructions for Pawrrtal"
 				>
 					<Textarea
 						className="min-h-24 w-72 resize-none"
@@ -65,11 +65,11 @@ export function GeneralSection(): React.JSX.Element {
 
 			<SettingsCard>
 				<SettingsSectionHeader
-					description="System-level alerts AI Nexus can surface to you."
+					description="System-level alerts Pawrrtal can surface to you."
 					title="Notifications"
 				/>
 				<SettingsRow
-					description="Get notified when AI Nexus has finished a response. Useful for long-running tasks."
+					description="Get notified when Pawrrtal has finished a response. Useful for long-running tasks."
 					label="Response completions"
 				>
 					<Switch defaultChecked />

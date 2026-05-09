@@ -2,7 +2,7 @@
 	"turbo": false,
 	"apps": {
 		"frontend": {
-			"name": "app.nexus-ai",
+			"name": "pawrrtal",
 			"script": "dev:app",
 			"appPort": 3001
 		}

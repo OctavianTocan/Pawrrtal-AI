@@ -1,8 +1,8 @@
 {
 	"$schema": "https://raw.githubusercontent.com/yamadashy/repomix/main/schemas/repomix.config.schema.json",
 	"version": "1.0.0",
-	"projectName": "ai-nexus",
-	"description": "AI Nexus - A modern AI chat application with user authentication and conversation management",
+	"projectName": "pawrrtal",
+	"description": "Pawrrtal - A modern AI chat application with user authentication and conversation management",
 	"author": "Octavian Tocan",
 	"license": "MIT",
 	"output": {
@@ -86,7 +86,7 @@
 		"lineEnding": "lf"
 	},
 	"customMetadata": {
-		"repositoryUrl": "https://github.com/OctavianTocan/ai-nexus",
+		"repositoryUrl": "https://github.com/OctavianTocan/pawrrtal",
 		"projectType": "full-stack",
 		"technologies": [
 			"Next.js",

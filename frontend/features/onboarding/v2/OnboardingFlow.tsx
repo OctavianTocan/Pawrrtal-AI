@@ -19,7 +19,7 @@ import { StepMessaging } from './step-messaging';
 import { StepPersonality } from './step-personality';
 
 /** Browser event used by app chrome to open the onboarding flow. */
-export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
+export const OPEN_ONBOARDING_FLOW_EVENT = 'pawrrtal:open-onboarding-flow';
 
 /**
  * Localstorage flag + query-string param that suppress the auto-open
@@ -31,7 +31,7 @@ export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
  * tool E2Es fast and deterministic.
  *
  * Triggered by either:
- *   - `localStorage.setItem('ai-nexus:e2e-skip-onboarding', '1')` (set
+ *   - `localStorage.setItem('pawrrtal:e2e-skip-onboarding', '1')` (set
  *     by `fixtures.ts` via an `addInitScript` before navigation), OR
  *   - visiting any URL with `?e2e_skip_onboarding=1` (manual debugging).
  *
@@ -39,7 +39,7 @@ export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
  * those signals is present, and the workspace selector's "Add Workspace"
  * dropdown still opens the (separate) `OnboardingModal` either way.
  */
-export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'ai-nexus:e2e-skip-onboarding';
+export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'pawrrtal:e2e-skip-onboarding';
 export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
 
 /** Wizard step IDs in render order. */

@@ -1,8 +1,8 @@
 {
-	"name": "@ai-nexus/electron",
+	"name": "@pawrrtal/electron",
 	"version": "0.1.0",
 	"private": true,
-	"description": "AI Nexus desktop shell — wraps the Next.js frontend in an Electron BrowserWindow.",
+	"description": "Pawrrtal desktop shell — wraps the Next.js frontend in an Electron BrowserWindow.",
 	"main": "dist/main.js",
 	"scripts": {
 		"dev": "tsc --watch --preserveWatchOutput",
@@ -33,7 +33,7 @@
 	},
 	"build": {
 		"appId": "ai.nexus.desktop",
-		"productName": "AI Nexus",
+		"productName": "Pawrrtal",
 		"directories": {
 			"buildResources": "build",
 			"output": "dist-app"

@@ -148,7 +148,7 @@ async function attachToDevServer(): Promise<StartedServer> {
 			'  terminal first, then re-run electron-dev:',
 			'',
 			'    just dev                # both frontend + backend',
-			'    bun --filter app.nexus-ai dev   # frontend only',
+			'    bun --filter pawrrtal dev   # frontend only',
 			'',
 			'  Or run the combined recipe that orchestrates both for you:',
 			'',

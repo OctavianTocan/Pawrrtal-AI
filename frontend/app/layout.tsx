@@ -55,7 +55,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: 'AI Nexus',
+	title: 'Pawrrtal',
 	description:
 		'An AI chat application built with Next.js and FastAPI, all by hand, no code generation tools (or AI) used.',
 };

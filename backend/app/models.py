@@ -142,7 +142,7 @@ class UserAppearance(Base):
     means "use the system defaults everywhere."
 
     Light and dark mode are tracked separately because dark mode is
-    Codex/GitHub-adjacent in the AI Nexus design system, not just
+    Codex/GitHub-adjacent in the Pawrrtal design system, not just
     inverted from light.
     """
 

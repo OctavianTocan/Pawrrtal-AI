@@ -41,7 +41,7 @@ interface UserConfig {
 
 ## Origin
 
-ai-nexus PR #80 — Copilot and Codex both flagged @property tags as invisible to IDEs. Converted to inline docs across all interfaces.
+pawrrtal PR #80 — Copilot and Codex both flagged @property tags as invisible to IDEs. Converted to inline docs across all interfaces.
 
 ## Verify
 

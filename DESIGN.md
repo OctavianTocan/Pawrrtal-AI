@@ -1,6 +1,6 @@
 ---
 version: alpha
-name: AI Nexus
+name: Pawrrtal
 description: >
   Craft Agents-inspired chat interface with a flat, editorial aesthetic. Six
   semantic colors, neutral interpolation variants, and a 16px-rooted Tailwind v4
@@ -190,7 +190,7 @@ components:
 
 ## Overview
 
-AI Nexus is a chat-first AI workspace with a **Craft Agents-inspired** visual
+Pawrrtal is a chat-first AI workspace with a **Craft Agents-inspired** visual
 language: warm, flat, and editorial. Surfaces are matte (**no decorative gradients on
 buttons/cards**); hierarchy comes from typography, neutral interpolation, and a single
 brand accent. **Overlay / frosted stacks** (blur + tint—see **Overlay & frosted surfaces**)

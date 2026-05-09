@@ -12,7 +12,7 @@ const wrap = (node: React.ReactElement): React.ReactElement => (
 describe('OnboardingWelcomeStep', () => {
 	it('renders the welcome heading + tagline + feature grid', () => {
 		const { container } = render(wrap(<OnboardingWelcomeStep onContinue={() => undefined} />));
-		expect(container.textContent).toContain('Welcome to AI Nexus');
+		expect(container.textContent).toContain('Welcome to Pawrrtal');
 		expect(container.textContent).toContain('Edit spreadsheets');
 		expect(container.textContent).toContain('Run agents');
 	});

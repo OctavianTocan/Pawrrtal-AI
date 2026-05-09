@@ -1,6 +1,6 @@
 # Craft resizable multi-panel app shell: extracted code + analysis
 
-Source tree analyzed: `apps/electron/src/renderer` in `~/.openclaw/workspace/_local/ai-nexus-craft-source`
+Source tree analyzed: `apps/electron/src/renderer` in `~/.openclaw/workspace/_local/pawrrtal-craft-source`
 
 This document extracts the exact components and logic Craft uses for its split-pane shell. The important bit: Craft does **not** use a single static CSS grid for the whole app. It combines:
 

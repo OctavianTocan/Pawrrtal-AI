@@ -9,7 +9,7 @@ Use conventional commit format: `fix:`, `feat:`, `refactor:`, `chore:`, `test:`,
 
 **Why:** Conventional commits enable automatic changelog generation, semantic versioning, and filtered history searches. Small commits make bisect useful. Atomic commits make revert safe.
 
-**Learned from:** Multi-repo convention across the vendored app, ai-nexus, tap, openclaw plugins.
+**Learned from:** Multi-repo convention across the vendored app, pawrrtal, tap, openclaw plugins.
 
 ## Verify
 

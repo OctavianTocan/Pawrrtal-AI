@@ -169,7 +169,7 @@ const desktopApi = {
 	},
 };
 
-contextBridge.exposeInMainWorld('aiNexus', desktopApi);
+contextBridge.exposeInMainWorld('pawrrtal', desktopApi);
 
 /** Type augmentation consumed by `frontend/lib/desktop.ts`. */
 export type DesktopApi = typeof desktopApi;

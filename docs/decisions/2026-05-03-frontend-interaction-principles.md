@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 Status: Accepted
 
-Related bean: `ai-nexus-w4ft`
+Related bean: `pawrrtal-w4ft`
 
 ## Context
 
@@ -26,7 +26,7 @@ should apply to future frontend work in this repository.
 
 ## Decision
 
-Use the following principles for AI Nexus app chrome, navigation, onboarding,
+Use the following principles for Pawrrtal app chrome, navigation, onboarding,
 and other dense work surfaces.
 
 1. Persistent navigation text should be stable by default.

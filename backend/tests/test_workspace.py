@@ -315,7 +315,7 @@ class TestWorkspaceService:
     async def test_unique_index_blocks_duplicate_default_insert(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        """Regression test for ai-nexus-pq4r.
+        """Regression test for pawrrtal-pq4r.
 
         Applies the partial unique index from migration 009 directly to the
         in-memory test DB and verifies that a second direct INSERT of a default

@@ -63,7 +63,7 @@ export function OnboardingLocalWorkspaceStep({
 					Choose folder
 				</div>
 				<DialogDescription className="max-w-[26rem] text-[0.9375rem] leading-relaxed text-muted-foreground">
-					Pick the folder AI Nexus can use as this workspace.
+					Pick the folder Pawrrtal can use as this workspace.
 				</DialogDescription>
 			</DialogHeader>
 

@@ -1,6 +1,6 @@
 # Stagehand AI E2E Suite
 
-LLM-driven end-to-end tests for AI Nexus, using [Stagehand v3](https://docs.stagehand.dev/v3) in `env: "LOCAL"` mode (no Browserbase account required).
+LLM-driven end-to-end tests for Pawrrtal, using [Stagehand v3](https://docs.stagehand.dev/v3) in `env: "LOCAL"` mode (no Browserbase account required).
 
 ## Why a separate suite?
 
@@ -84,7 +84,7 @@ Project rules (`.claude/rules/stagehand/stagehand-v3-typescript-patterns.md`):
 
 ## Onboarding suppression for E2E
 
-The v2 `OnboardingFlow` modal at `frontend/features/onboarding/v2/OnboardingFlow.tsx` is mounted with `initialOpen=true` in `components/app-layout.tsx`, so production users see it on every visit to `/`. For E2E the fixture sets `localStorage['ai-nexus:e2e-skip-onboarding'] = '1'` via `addInitScript` BEFORE any page script runs — the gate inside `OnboardingFlow.tsx` reads this lazily inside its `useState` initializer, so the dialog hydrates closed and never flashes onto the page.
+The v2 `OnboardingFlow` modal at `frontend/features/onboarding/v2/OnboardingFlow.tsx` is mounted with `initialOpen=true` in `components/app-layout.tsx`, so production users see it on every visit to `/`. For E2E the fixture sets `localStorage['pawrrtal:e2e-skip-onboarding'] = '1'` via `addInitScript` BEFORE any page script runs — the gate inside `OnboardingFlow.tsx` reads this lazily inside its `useState` initializer, so the dialog hydrates closed and never flashes onto the page.
 
 Two ways to opt out (i.e. force the wizard open, useful when testing the wizard itself):
 

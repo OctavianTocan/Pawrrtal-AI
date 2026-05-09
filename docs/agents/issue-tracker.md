@@ -4,7 +4,7 @@ Issues and tasks for this repo live as markdown files in `.beans/`, managed with
 
 ## Conventions
 
-- One bean file per task, named `.beans/ai-nexus-<id>--<slug>.md`
+- One bean file per task, named `.beans/pawrrtal-<id>--<slug>.md`
 - Frontmatter fields: `title`, `status`, `type`, `priority`, `tags`, `created_at`, `updated_at`
 - Valid `status` values: `todo`, `in-progress`, `completed`
 - Valid `type` values: `task`, `feature`, `milestone`, `bug`
@@ -12,7 +12,7 @@ Issues and tasks for this repo live as markdown files in `.beans/`, managed with
 
 ## When a skill says "publish to the issue tracker"
 
-Run `beans create <title>` from the repo root — it creates a `.beans/ai-nexus-<id>--<slug>.md` file with properly formatted frontmatter. The skill will document the newly created bean path.
+Run `beans create <title>` from the repo root — it creates a `.beans/pawrrtal-<id>--<slug>.md` file with properly formatted frontmatter. The skill will document the newly created bean path.
 
 ## When a skill says "fetch the relevant ticket"
 

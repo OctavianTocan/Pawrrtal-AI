@@ -166,7 +166,7 @@ function ChatView({
 						    the composer; `mb-6` parked them too tight against each
 						    other for a landing surface. */}
 						<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
-							What should we build in AI Nexus?
+							What should we build in Pawrrtal?
 						</h1>
 						<ChatComposer
 							message={message}

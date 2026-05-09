@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * TSDoc coverage auditor for the AI Nexus frontend.
+ * TSDoc coverage auditor for the Pawrrtal frontend.
  *
  * Scans TypeScript/TSX source files and reports exported declarations that are
  * missing TSDoc/JSDoc block comments (`/** ... *\/`). Outputs per-file findings,

@@ -1,5 +1,5 @@
 /**
- * Electron main process for the AI Nexus desktop shell.
+ * Electron main process for the Pawrrtal desktop shell.
  *
  * Responsible for:
  *   1. Acquiring a single-instance lock so launching the app twice
@@ -12,7 +12,7 @@
  *   5. Wiring the IPC API surfaced via `preload.ts`.
  *
  * The renderer never gets Node integration; all privileged operations
- * cross the contextBridge through the typed `aiNexus` channel.
+ * cross the contextBridge through the typed `pawrrtal` channel.
  */
 
 import path from 'node:path';
@@ -72,7 +72,7 @@ function buildSplashDataUrl(): string {
 	// title bar is draggable; we don't need `-webkit-app-region: drag` here.
 	const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
-<title>AI Nexus</title>
+<title>Pawrrtal</title>
 <style>
 	html, body { margin: 0; padding: 0; height: 100%; }
 	body {
@@ -98,7 +98,7 @@ function buildSplashDataUrl(): string {
 <body>
 	<div class="box">
 		<div class="spinner" aria-hidden="true"></div>
-		<h1>Starting AI Nexus…</h1>
+		<h1>Starting Pawrrtal…</h1>
 		<p>Waiting for dev server on :3001</p>
 	</div>
 </body></html>`;
@@ -119,7 +119,7 @@ function buildErrorDataUrl(reason: string): string {
 	const safeReason = reason.replace(/[<>&]/g, '');
 	const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8" />
-<title>AI Nexus — dev server unreachable</title>
+<title>Pawrrtal — dev server unreachable</title>
 <style>
 	html, body { margin: 0; padding: 0; height: 100%; }
 	body {
@@ -172,7 +172,7 @@ function createWindow(targetUrl: string): BrowserWindow {
 		y: stored.y,
 		minWidth: 720,
 		minHeight: 480,
-		title: 'AI Nexus',
+		title: 'Pawrrtal',
 		backgroundColor: '#F7F4ED',
 		frame: true,
 		// See `window-chrome.ts`: overlay styles (`hidden` / `hiddenInset`) paint

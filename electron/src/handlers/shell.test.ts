@@ -25,7 +25,7 @@ vi.mock('electron', () => ({
 			if (key === 'userData') return tempUserData;
 			return tempUserData;
 		},
-		getName: (): string => 'ai-nexus-shell-test',
+		getName: (): string => 'pawrrtal-shell-test',
 		getVersion: (): string => '0.0.0-test',
 	},
 	ipcMain: {
@@ -64,9 +64,9 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 beforeEach(() => {
-	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-shell-userdata-'));
-	tempHome = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-shell-home-'));
-	tempRoot = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-shell-root-'));
+	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-shell-userdata-'));
+	tempHome = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-shell-home-'));
+	tempRoot = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-shell-root-'));
 });
 
 afterEach(() => {

@@ -5,7 +5,7 @@ paths: ["**/*.{ts,tsx}"]
 
 # Use @octavian-tocan/react-overlay for Modals and Bottom Sheets
 
-All new modal, dialog, and bottom-sheet UI in ai-nexus must be built on
+All new modal, dialog, and bottom-sheet UI in pawrrtal must be built on
 `@octavian-tocan/react-overlay` — not raw Radix `Dialog`, shadcn
 `<Dialog>` / `<AlertDialog>`, or hand-rolled overlays. The package gives
 us a single responsive primitive (`Modal` on desktop, `BottomSheet` on

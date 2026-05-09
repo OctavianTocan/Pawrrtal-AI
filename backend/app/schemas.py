@@ -177,7 +177,7 @@ class PersonalizationProfile(BaseModel):
 
 
 class ThemeColors(BaseModel):
-    """Per-mode color overrides for the AI Nexus design system.
+    """Per-mode color overrides for the Pawrrtal design system.
 
     All fields optional — a missing key means "use the system default"
     (the Mistral-inspired tokens in ``frontend/app/globals.css``). Each

@@ -19,4 +19,4 @@ export type ProjectsStorageKey = (typeof PROJECTS_STORAGE_KEYS)[keyof typeof PRO
  * is being dragged onto a project. Custom string so the drop target can
  * tell our payload apart from arbitrary text/uri-list drags.
  */
-export const CONVERSATION_DRAG_MIME = 'application/x-ai-nexus-conversation';
+export const CONVERSATION_DRAG_MIME = 'application/x-pawrrtal-conversation';
