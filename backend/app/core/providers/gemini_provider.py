@@ -30,6 +30,7 @@ from app.core.agent_system_prompt import (
 )
 from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.config import settings
+from app.core.providers.keys import resolve_api_key
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -103,18 +104,19 @@ def _build_gemini_contents(
     return contents
 
 
-def make_gemini_stream_fn(model_id: str) -> StreamFn:
+def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
     Returns an async generator that yields LLMEvents.  The generator is
     provider-specific; the calling agent_loop() is not.
     """
-    client = genai.Client(api_key=settings.google_api_key)
 
     async def stream_fn(
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
+        api_key = resolve_api_key(user_id, "GEMINI_API_KEY") or settings.google_api_key
+        client = genai.Client(api_key=api_key)
         contents = _build_gemini_contents(messages)
         # ``GenerateContentConfig.tools`` is typed as the wider union
         # ``list[Tool | Callable | mcp.Tool | ClientSession] | None``;
@@ -223,9 +225,9 @@ class GeminiLLM:
     chat.py).  Tools are injected per-request via the AgentContext.
     """
 
-    def __init__(self, model_id: str) -> None:
+    def __init__(self, model_id: str, *, user_id: uuid.UUID) -> None:
         self._model_id = model_id
-        self._stream_fn = make_gemini_stream_fn(model_id)
+        self._stream_fn = make_gemini_stream_fn(model_id, user_id)
 
     async def stream(
         self,

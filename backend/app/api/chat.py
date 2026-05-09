@@ -152,7 +152,7 @@ def get_chat_router() -> APIRouter:
         # short-lived session inside the generator for the final UPDATE.
         await session.commit()
 
-        provider = resolve_llm(model_id)
+        provider = resolve_llm(model_id, user_id=user.id)
 
         # Resolve the user's default workspace.  A workspace is created as
         # part of onboarding, so its absence means the user hasn't finished
@@ -182,7 +182,7 @@ def get_chat_router() -> APIRouter:
         # per-agent / per-user permission gating will land).  Provider
         # files stay tool-agnostic; see
         # `.claude/rules/architecture/no-tools-in-providers.md`.
-        agent_tools = build_agent_tools(workspace_root=root)
+        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id)
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate

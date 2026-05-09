@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     env: str = "dev"
     # The API key for Google services.
     google_api_key: str
-    # Fernet Encryption Key (used to encrypt API keys)
-    fernet_key: str
+    # Encryption key for per-user workspace .env files.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    workspace_encryption_key: str
     # OAuth token used by the Claude Agent SDK to authenticate the bundled
     # Claude Code CLI subprocess. Optional — only required when a chat
     # request resolves to a Claude model. Generate with `claude setup-token`.
@@ -226,4 +227,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()  # type: ignore[call-arg]
-

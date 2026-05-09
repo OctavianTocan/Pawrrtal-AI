@@ -10,15 +10,16 @@ Usage::
 
     from app.core.tools.exa_search_agent import make_exa_search_tool
 
-    tools = [make_exa_search_tool()] if settings.exa_api_key else []
+    tools = [make_exa_search_tool(user_id=user.id)] if settings.exa_api_key else []
     context = AgentContext(system_prompt=..., messages=..., tools=tools)
 """
 
 from __future__ import annotations
 
-import json
+import uuid
 
 from app.core.agent_loop.types import AgentTool
+from app.core.providers.keys import resolve_api_key
 from app.core.tools.exa_search import (
     MAX_NUM_RESULTS,
     exa_search,
@@ -73,11 +74,12 @@ _PARAMETERS: dict = {
 }
 
 
-def make_exa_search_tool() -> AgentTool:
+def make_exa_search_tool(*, user_id: uuid.UUID | None = None) -> AgentTool:
     """Return an :class:`AgentTool` wrapping the Exa web-search core.
 
-    The tool is intentionally stateless — callers should create a fresh
-    instance per request if needed, though in practice reuse is fine.
+    Args:
+        user_id: Authenticated user UUID, used to resolve per-workspace
+            API key overrides. When ``None`` the global settings key is used.
 
     Returns:
         A configured :class:`AgentTool` ready to be appended to
@@ -89,11 +91,14 @@ def make_exa_search_tool() -> AgentTool:
         query = str(kwargs.get("query") or "")
         num_results = int(kwargs.get("num_results") or 5)
         include_full_text = bool(kwargs.get("include_full_text") or False)
-
+        api_key = None
+        if user_id:
+            api_key = resolve_api_key(user_id, "EXA_API_KEY")
         result = await exa_search(
             query,
             num_results=num_results,
             include_full_text=include_full_text,
+            api_key=api_key,
         )
         return format_results_as_markdown(result)
 

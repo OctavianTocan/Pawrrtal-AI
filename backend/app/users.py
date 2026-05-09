@@ -45,13 +45,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         safe: bool = False,
         request: Request | None = None,
     ) -> User:
-        """Check invite_code before delegating to the default create logic."""
-        expected = settings.registration_secret
-        invite_code = getattr(user_create, "invite_code", "")
-        if expected and invite_code != expected:
-            raise HTTPException(
-                status_code=403, detail="Invalid or missing invite code."
-            )
         return await super().create(user_create, safe=safe, request=request)
 
     async def on_after_register(
