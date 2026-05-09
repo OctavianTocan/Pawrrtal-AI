@@ -142,7 +142,7 @@ class TestExaSearchToolExecute:
 
 
 # ---------------------------------------------------------------------------
-# GeminiLLM wiring — tool is included/excluded based on EXA_API_KEY
+# GeminiLLM wiring — tool list flows through the real agent_loop unchanged
 # ---------------------------------------------------------------------------
 
 
@@ -153,28 +153,38 @@ class TestGeminiToolPassthrough:
     Tool composition (which tools the agent gets) is the chat router's
     job — the provider is just a translator.  See
     `.claude/rules/architecture/no-tools-in-providers.md`.
+
+    These tests use a *recording* StreamFn and let the real ``agent_loop``
+    run — no ``agent_loop`` monkeypatching.  This verifies the full path:
+    ``provider.stream()`` → ``AgentContext.tools`` → ``StreamFn`` receives
+    the tools list, not just that someone set a field somewhere.
     """
 
     async def test_provider_passes_tools_through_unchanged(self) -> None:
+        """Tools supplied by the caller arrive at the StreamFn unmodified."""
         import uuid
 
+        from app.core.agent_loop.types import AgentMessage, AgentTool
         from app.core.providers.gemini_provider import GeminiLLM
 
-        provider = GeminiLLM("gemini-2.5-flash-preview-05-20")
         in_tools = [make_exa_search_tool()]
+        captured_tools: list[AgentTool] | None = None
 
-        captured_tools: list | None = None
-
-        async def _fake_loop(new_messages, ctx, cfg, stream_fn):  # type: ignore[return]
+        async def recording_stream_fn(messages: list[AgentMessage], tools: list[AgentTool]):
             nonlocal captured_tools
-            captured_tools = list(ctx.tools)
-            return
-            yield
+            captured_tools = list(tools)
+            # Yield a clean stop so agent_loop exits immediately.
+            from app.core.agent_loop.types import LLMDoneEvent, TextContent
 
-        with patch(
-            "app.core.providers.gemini_provider.agent_loop",
-            side_effect=_fake_loop,
-        ):
+            yield LLMDoneEvent(
+                type="done",
+                stop_reason="stop",
+                content=[TextContent(type="text", text="")],
+            )
+
+        provider = GeminiLLM("gemini-test")
+        # Inject our recording StreamFn so no real API calls are made.
+        with patch.object(provider, "_stream_fn", recording_stream_fn):
             async for _ in provider.stream(
                 "hello",
                 uuid.uuid4(),
@@ -188,26 +198,33 @@ class TestGeminiToolPassthrough:
         assert [t.name for t in captured_tools] == ["exa_search"]
 
     async def test_provider_does_not_inject_tools_when_caller_passes_none(self) -> None:
+        """Provider must NOT inject its own tools when the caller passes none.
+
+        Even if EXA_API_KEY is set in the environment, tool composition is the
+        chat router's responsibility — the provider stays tool-agnostic.
+        """
         import uuid
 
+        from app.core.agent_loop.types import AgentMessage, AgentTool
         from app.core.providers.gemini_provider import GeminiLLM
 
-        provider = GeminiLLM("gemini-2.5-flash-preview-05-20")
+        captured_tools: list[AgentTool] | None = None
 
-        captured_tools: list | None = None
-
-        async def _fake_loop(new_messages, ctx, cfg, stream_fn):  # type: ignore[return]
+        async def recording_stream_fn(messages: list[AgentMessage], tools: list[AgentTool]):
             nonlocal captured_tools
-            captured_tools = list(ctx.tools)
-            return
-            yield
+            captured_tools = list(tools)
+            from app.core.agent_loop.types import LLMDoneEvent, TextContent
 
+            yield LLMDoneEvent(
+                type="done",
+                stop_reason="stop",
+                content=[TextContent(type="text", text="")],
+            )
+
+        provider = GeminiLLM("gemini-test")
         with (
             patch("app.core.config.settings.exa_api_key", "test-key"),
-            patch(
-                "app.core.providers.gemini_provider.agent_loop",
-                side_effect=_fake_loop,
-            ),
+            patch.object(provider, "_stream_fn", recording_stream_fn),
         ):
             async for _ in provider.stream(
                 "hello", uuid.uuid4(), uuid.uuid4(), history=[]
@@ -217,3 +234,62 @@ class TestGeminiToolPassthrough:
         # Even with EXA_API_KEY set, the provider must NOT inject Exa
         # — that's the chat router's job.
         assert captured_tools == []
+
+    async def test_exa_tool_failure_surfaces_as_tool_result_not_exception(self) -> None:
+        """An Exa API failure produces a graceful tool_result, not a crash.
+
+        The tool's ``execute()`` returns an error string (never raises) so the
+        LLM can respond gracefully rather than the agent loop seeing an
+        unexpected exception.
+        """
+        import uuid
+
+        from app.core.agent_loop.types import AgentMessage, AgentTool
+        from app.core.providers.gemini_provider import GeminiLLM
+        from tests.agent_harness import ScriptedStreamFn, text_turn, tool_call_turn
+
+        exa_tool = make_exa_search_tool()
+
+        # Script: LLM calls exa_search, Exa fails (returns error result),
+        # then LLM replies with an apology.
+        script = ScriptedStreamFn([
+            tool_call_turn("exa_search", {"query": "python"}, turn_id="tc-exa"),
+            text_turn("I was unable to search right now."),
+        ])
+
+        provider = GeminiLLM("gemini-test")
+        patch.object(provider, "_stream_fn", script)
+
+        error_result = {
+            "query": "python",
+            "results": [],
+            "error": "Exa API key is not configured on the server.",
+        }
+
+        events = []
+        with (
+            patch(
+                "app.core.tools.exa_search_agent.exa_search",
+                new=AsyncMock(return_value=error_result),
+            ),
+            patch.object(provider, "_stream_fn", script),
+        ):
+            async for event in provider.stream(
+                "Search for python",
+                uuid.uuid4(),
+                uuid.uuid4(),
+                history=[],
+                tools=[exa_tool],
+            ):
+                events.append(event)
+
+        # The tool error becomes a tool_result event (not an uncaught exception).
+        tool_results = [e for e in events if e["type"] == "tool_result"]
+        assert len(tool_results) == 1
+        # Error text surfaces in the result content so the LLM can see it.
+        assert "not configured" in tool_results[0]["content"].lower() or \
+               "failed" in tool_results[0]["content"].lower()
+
+        # The LLM's graceful reply also arrives.
+        delta_events = [e for e in events if e["type"] == "delta"]
+        assert any("unable" in e.get("content", "").lower() for e in delta_events)
