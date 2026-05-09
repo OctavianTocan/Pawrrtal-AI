@@ -356,6 +356,7 @@ export function ChatComposer({
 							<VoiceMeter
 								elapsedSeconds={recordingSeconds}
 								isTranscribing={isTranscribing}
+								meterLevel={voice.meterLevel}
 								onSend={handleSendRecording}
 								onStop={handleStopRecording}
 							/>

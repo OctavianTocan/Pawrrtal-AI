@@ -3,7 +3,6 @@
 import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import {
 	ArrowUpIcon,
-	CheckIcon,
 	ChevronDownIcon,
 	HandIcon,
 	ListChecksIcon,
@@ -212,8 +211,10 @@ interface SafetyModeMeta {
 	label: string;
 	/** Lucide icon used as the leading affordance for this mode. */
 	Icon: typeof ShieldCheckIcon;
-	/** Tailwind text color token applied to the trigger + icon for this mode. */
+	/** Tailwind text color token applied to the trigger label + chevron. */
 	colorClass: string;
+	/** Optional icon-only tint on the composer trigger (inherits `colorClass` when omitted). */
+	iconClass?: string;
 	/** Tailwind background tint applied behind the icon for this mode. */
 	bgClass: string;
 }
@@ -236,7 +237,8 @@ const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
 	'default-permissions': {
 		label: 'Default permissions',
 		Icon: HandIcon,
-		colorClass: 'text-info',
+		colorClass: 'text-foreground',
+		iconClass: 'text-info',
 		bgClass: 'bg-info/15',
 	},
 	'auto-review': {
@@ -322,7 +324,10 @@ export function AutoReviewSelector(): React.JSX.Element {
 									type="button"
 									variant="ghost"
 								>
-									<ActiveIcon aria-hidden="true" className="size-3.5" />
+									<ActiveIcon
+										aria-hidden="true"
+										className={cn('size-3.5', activeMeta.iconClass)}
+									/>
 									{activeMeta.label}
 									<ChevronDownIcon aria-hidden="true" className="size-3" />
 								</Button>
@@ -352,7 +357,10 @@ function SafetyModeMenuItem({
 
 	return (
 		<button
-			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			className={cn(
+				'flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
+				isSelected && 'bg-foreground/[0.06]'
+			)}
 			onClick={() => onSelect(mode)}
 			type="button"
 		>
@@ -369,9 +377,6 @@ function SafetyModeMenuItem({
 				</span>
 				{label}
 			</span>
-			{isSelected ? (
-				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-			) : null}
 		</button>
 	);
 }
@@ -380,18 +385,21 @@ function SafetyModeMenuItem({
 export function VoiceMeter({
 	elapsedSeconds,
 	isTranscribing,
+	meterLevel,
 	onSend,
 	onStop,
 }: {
 	elapsedSeconds: number;
 	/** When true, swap the stop button for a loader and disable Send. */
 	isTranscribing?: boolean;
+	/** Live mic RMS (0–1) from {@link useVoiceTranscribe}; animates bar heights. */
+	meterLevel: number;
 	onSend: () => void;
 	onStop: () => void;
 }): React.JSX.Element {
 	return (
 		<div className="ml-2 flex min-w-0 flex-1 items-center gap-2">
-			<WaveformTimeline isPaused={Boolean(isTranscribing)} />
+			<WaveformTimeline isPaused={Boolean(isTranscribing)} meterLevel={meterLevel} />
 			<span className="w-9 text-right text-[12px] text-muted-foreground tabular-nums">
 				{formatRecordingTime(elapsedSeconds)}
 			</span>
@@ -441,12 +449,22 @@ export function VoiceMeter({
  * UI feels frozen on the captured timeline rather than ticking forward
  * after the recording ended.
  */
-function WaveformTimeline({ isPaused }: { isPaused: boolean }): React.JSX.Element {
+function WaveformTimeline({
+	isPaused,
+	meterLevel,
+}: {
+	isPaused: boolean;
+	/** Normalized RMS (0–1); scales bar heights while recording. */
+	meterLevel: number;
+}): React.JSX.Element {
+	const level = Number.isFinite(meterLevel) ? meterLevel : 0;
+	const gain = 0.35 + level * 0.85;
+
 	return (
-		<div className="relative flex h-8 min-w-0 flex-1 items-center overflow-hidden">
+		<div className="relative flex h-8 min-w-0 flex-1 justify-end overflow-hidden">
 			<div
 				aria-hidden="true"
-				className="flex h-full items-center gap-[3px]"
+				className="ml-auto flex h-full items-end gap-[3px]"
 				style={{
 					animation: isPaused ? undefined : 'waveform-scroll 6s linear infinite',
 				}}
@@ -456,16 +474,16 @@ function WaveformTimeline({ isPaused }: { isPaused: boolean }): React.JSX.Elemen
 						className="w-[2px] shrink-0 rounded-full bg-foreground/75"
 						key={`bar-${index}-${height}`}
 						style={{
-							height,
+							height: Math.max(3, height * gain),
 							opacity: 0.4 + ((index % 5) / 5) * 0.6,
 						}}
 					/>
 				))}
 			</div>
-			{/* Subtle right-side fade so the scroll edge doesn't read as a hard cut. */}
+			{/* Fade the seam on the left where older samples scroll away. */}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-foreground-5 to-transparent"
+				className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[color:var(--background-elevated)] to-transparent"
 			/>
 		</div>
 	);

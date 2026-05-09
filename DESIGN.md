@@ -772,6 +772,14 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
   follows the standard `h3` heading + `body-md` body + `caption` helper
   pattern — it does **not** introduce new font sizes. Dismiss closes
   for the session only; no localStorage flag while WIP.
+- **`deferred-fetch-on-surface-open`** — Any panel, step, or popover that
+  must hit the network the moment it becomes visible should show an
+  explicit **loading state** (spinner, skeleton, or muted pulse) until
+  the first response resolves — never render a false empty/disconnected
+  state while the request is in flight. After data arrives, swap to the
+  resolved UI in one transition. Onboarding “Connect Telegram” uses a
+  row-level spinner; reuse the same pattern for future channel pickers
+  or permission probes.
 - **`project-row` (drop target)** — Sidebar Projects row. Full-row drop
   target (the whole `<button>` listens for `dragover`/`drop`), `min-h-9`
   for hit area, `cursor-pointer` always, `cursor-copy` while a valid

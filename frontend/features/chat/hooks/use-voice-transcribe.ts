@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
 import { toast } from '@/lib/toast';
+import { attachVoiceAnalyserMeter, detachVoiceAnalyserMeter } from './voice-analyser-meter';
 
 /** Lifecycle states the recorder cycles through. */
 export type VoiceRecordingStatus =
@@ -19,6 +20,11 @@ export interface UseVoiceTranscribeResult {
 	status: VoiceRecordingStatus;
 	/** Last error message when `status === "error"`. */
 	error: string | null;
+	/**
+	 * Normalized microphone level (0–1) while recording; near zero otherwise.
+	 * Driven from a Web Audio `AnalyserNode` on the capture stream.
+	 */
+	meterLevel: number;
 	/** Begin capturing microphone audio. Resolves once recording is live. */
 	startRecording: () => Promise<void>;
 	/**
@@ -70,6 +76,31 @@ function buildSttFormData(audio: Blob, mimeType: string): FormData {
 	return formData;
 }
 
+type AuthedFetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * POSTs captured audio to the STT proxy and returns trimmed transcript text,
+ * or an error message when the network/parse path fails.
+ */
+async function requestVoiceTranscription(
+	fetcher: AuthedFetchLike,
+	audio: Blob,
+	mimeType: string
+): Promise<{ transcript: string | null; errorMessage: string | null }> {
+	try {
+		const response = await fetcher(API_ENDPOINTS.stt.transcribe, {
+			method: 'POST',
+			body: buildSttFormData(audio, mimeType),
+		});
+		const payload = (await response.json()) as { text?: string };
+		const transcript = (payload.text ?? '').trim();
+		return { transcript: transcript || null, errorMessage: null };
+	} catch (cause) {
+		const message = cause instanceof Error ? cause.message : 'Transcription failed.';
+		return { transcript: null, errorMessage: message };
+	}
+}
+
 /**
  * Awaits the recorder's `stop` event with the joined audio blob.
  *
@@ -113,12 +144,17 @@ export function useVoiceTranscribe(): UseVoiceTranscribeResult {
 	const streamRef = useRef<MediaStream | null>(null);
 	const chunksRef = useRef<Blob[]>([]);
 	const mimeTypeRef = useRef<string>('');
+	const audioContextRef = useRef<AudioContext | null>(null);
+	const meterRafRef = useRef<number | null>(null);
+	const [meterLevel, setMeterLevel] = useState(0);
 	// Latch for stopRecording's `dataavailable` → `stop` race: when the
 	// recorder stops, we wait on this promise to resolve with the final
 	// blob before posting. Reset every recording cycle.
 	const finalBlobResolverRef = useRef<((blob: Blob | null) => void) | null>(null);
 
 	const releaseStream = useCallback((): void => {
+		detachVoiceAnalyserMeter({ audioContextRef, meterRafRef }, setMeterLevel);
+
 		const stream = streamRef.current;
 		if (stream) {
 			for (const track of stream.getTracks()) {
@@ -165,6 +201,8 @@ export function useVoiceTranscribe(): UseVoiceTranscribeResult {
 			streamRef.current = stream;
 			recorderRef.current = recorder;
 
+			await attachVoiceAnalyserMeter(stream, { audioContextRef, meterRafRef }, setMeterLevel);
+
 			recorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
 					chunksRef.current.push(event.data);
@@ -179,9 +217,7 @@ export function useVoiceTranscribe(): UseVoiceTranscribeResult {
 				finalBlobResolverRef.current = null;
 			};
 
-			// 250 ms chunking keeps latency low on the final flush — the
-			// `stop` event fires before all in-flight `dataavailable` events
-			// drain otherwise.
+			// 250 ms timeslice so `stop` waits for in-flight `dataavailable` chunks.
 			recorder.start(250);
 			setStatus('recording');
 		} catch (capturedError) {
@@ -209,30 +245,25 @@ export function useVoiceTranscribe(): UseVoiceTranscribeResult {
 			return null;
 		}
 
-		try {
-			const response = await fetcher(API_ENDPOINTS.stt.transcribe, {
-				method: 'POST',
-				body: buildSttFormData(finalBlob, mimeTypeRef.current),
-			});
-			const payload = (await response.json()) as { text?: string };
-			const transcript = (payload.text ?? '').trim();
-			setStatus('idle');
-			return transcript || null;
-		} catch (capturedError) {
+		const { transcript, errorMessage } = await requestVoiceTranscription(
+			fetcher,
+			finalBlob,
+			mimeTypeRef.current
+		);
+		if (errorMessage !== null) {
 			setStatus('error');
-			const message =
-				capturedError instanceof Error ? capturedError.message : 'Transcription failed.';
-			setError(message);
+			setError(errorMessage);
 			toast.error('Transcription failed. Try again in a moment.');
 			return null;
 		}
+		setStatus('idle');
+		return transcript;
 	}, [fetcher, releaseStream]);
 
 	const cancelRecording = useCallback((): void => {
 		const recorder = recorderRef.current;
 		if (recorder && recorder.state !== 'inactive') {
-			// Drop the final blob promise so the cancellation doesn't
-			// trigger an upload via the `stop` resolver.
+			// Swallow the final blob so `stop` never triggers an upload.
 			finalBlobResolverRef.current = () => {
 				/* swallow */
 			};
@@ -243,5 +274,5 @@ export function useVoiceTranscribe(): UseVoiceTranscribeResult {
 		setError(null);
 	}, [releaseStream]);
 
-	return { status, error, startRecording, stopRecording, cancelRecording };
+	return { status, error, meterLevel, startRecording, stopRecording, cancelRecording };
 }

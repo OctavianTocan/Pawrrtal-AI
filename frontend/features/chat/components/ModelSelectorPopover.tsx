@@ -7,7 +7,7 @@ import {
 	DropdownSubmenuTrigger,
 	useDropdownContext,
 } from '@octavian-tocan/react-dropdown';
-import { CheckIcon, ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -220,7 +220,10 @@ function ModelRow({
 	return (
 		<button
 			type="button"
-			className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			className={cn(
+				'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
+				isSelected && 'bg-foreground/[0.07]'
+			)}
 			onClick={() => {
 				onSelect(model.id);
 				closeDropdown();
@@ -232,9 +235,6 @@ function ModelRow({
 					{model.description}
 				</span>
 			</div>
-			{isSelected ? (
-				<CheckIcon aria-hidden="true" className="size-3.5 shrink-0 text-foreground" />
-			) : null}
 		</button>
 	);
 }
@@ -255,16 +255,16 @@ function ReasoningRow({
 	return (
 		<button
 			type="button"
-			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			className={cn(
+				'flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
+				isSelected && 'bg-foreground/[0.07]'
+			)}
 			onClick={() => {
 				onSelect(option.id);
 				closeDropdown();
 			}}
 		>
 			<span>{option.label}</span>
-			{isSelected ? (
-				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-			) : null}
 		</button>
 	);
 }
@@ -349,17 +349,16 @@ export function ModelSelectorPopover({
 											    "active provider" check now; the library's
 											    chevron handles the "expand" affordance for
 											    every row. */}
-											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
+											<DropdownSubmenuTrigger
+												className={cn(
+													'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
+													isActiveProvider && 'bg-foreground/[0.07]'
+												)}
+											>
 												<ProviderLogo provider={row.provider} />
 												<span className="min-w-0 flex-1 truncate text-left">
 													{PROVIDER_LABELS[row.provider]}
 												</span>
-												{isActiveProvider ? (
-													<CheckIcon
-														aria-hidden="true"
-														className="size-3.5 shrink-0 text-foreground"
-													/>
-												) : null}
 											</DropdownSubmenuTrigger>
 											<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-64">
 												{models.map((model) => (
