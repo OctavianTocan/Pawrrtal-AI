@@ -1,6 +1,6 @@
 ---
 name: check-maestro-view-hierarchy-first
-paths: ["**/*.yaml", "**/*.yml", "**/*.{kt,java}"]
+paths: [".no-match"]
 ---
 
 # Check Maestro View Hierarchy Before Writing Assertions - IDs May Not Be What You Expect

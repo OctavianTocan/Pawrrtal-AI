@@ -1,6 +1,6 @@
 ---
 name: singleton-before-db
-paths: ["**/*.{ts,tsx,kt,swift}"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 # Update In-Memory State Before DB Writes
 

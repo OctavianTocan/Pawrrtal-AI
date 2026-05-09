@@ -1,6 +1,6 @@
 ---
 name: bundle-js-into-aar
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Bundle JavaScript Into the Brownfield AAR, Not as a Separate Asset

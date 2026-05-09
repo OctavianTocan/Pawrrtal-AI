@@ -169,6 +169,8 @@ interface ComposerSendClusterProps {
 	onSelectModel: ChatComposerProps['onSelectModel'];
 	onSelectReasoning: ChatComposerProps['onSelectReasoning'];
 	onStartRecording: () => void;
+	/** When true, both Plan and Send buttons share a yellow accent. */
+	isPlanMode?: boolean;
 }
 
 /**
@@ -186,6 +188,7 @@ function ComposerSendCluster({
 	onSelectModel,
 	onSelectReasoning,
 	onStartRecording,
+	isPlanMode = false,
 }: ComposerSendClusterProps): React.JSX.Element {
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
@@ -216,10 +219,12 @@ function ComposerSendCluster({
 			</ComposerTooltip>
 			<ComposerTooltip content={isTranscribing ? 'Wait for transcription' : 'Send message'}>
 				<PromptInputSubmit
-					// Match the mic + model-selector siblings on this row at size-8
-					// (32 px). The previous size-9 (36 px) made the submit pill
-					// visually heavier than the rest of the toolbar.
-					className="size-8 cursor-pointer rounded-full bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60"
+					className={cn(
+						'size-8 cursor-pointer rounded-full',
+						isPlanMode
+							? 'bg-info text-background hover:bg-info/90 disabled:bg-foreground/20 disabled:text-background/60'
+							: 'bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60'
+					)}
 					disabled={!hasContent || isLoading || isTranscribing}
 					status={isLoading ? 'streaming' : 'ready'}
 				>
@@ -362,7 +367,12 @@ export function ChatComposer({
 							/>
 						) : (
 							<>
-								{isPlanTagVisible ? <PlanButton /> : null}
+								{isPlanTagVisible ? (
+									<PlanButton
+										isActive={isPlanTagVisible}
+										onToggle={() => setIsPlanTagVisible(false)}
+									/>
+								) : null}
 								<AutoReviewSelector />
 							</>
 						)}
@@ -378,6 +388,7 @@ export function ChatComposer({
 						onSelectModel={onSelectModel}
 						onSelectReasoning={onSelectReasoning}
 						onStartRecording={startRecording}
+						isPlanMode={isPlanTagVisible}
 					/>
 				</PromptInputFooter>
 			</PromptInput>

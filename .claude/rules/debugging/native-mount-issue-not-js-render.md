@@ -1,6 +1,6 @@
 ---
 name: native-mount-issue-not-js-render
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # When a Native View Mounts Incorrectly, Fix the Native Layout - Not the JS Render

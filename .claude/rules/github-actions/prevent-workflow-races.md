@@ -1,6 +1,8 @@
 ---
+
 description: Ensure GitHub Actions workflows are safe from concurrency and race conditions
 globs: .github/workflows/*.yml
+paths: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 # Prevent Workflow Races
 

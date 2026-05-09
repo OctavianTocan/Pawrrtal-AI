@@ -1,6 +1,8 @@
 ---
+
 description: Limit nesting depth to improve code readability and maintainability
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: Limit Nesting Depth
 

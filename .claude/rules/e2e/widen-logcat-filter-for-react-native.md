@@ -1,6 +1,6 @@
 ---
 name: widen-logcat-filter-for-react-native
-paths: ["**/*.yaml", "**/*.yml", "**/*.{kt,java}"]
+paths: [".no-match"]
 ---
 
 # Widen logcat Filter Pattern for React Native Debugging - Default Tag Misses Most Logs

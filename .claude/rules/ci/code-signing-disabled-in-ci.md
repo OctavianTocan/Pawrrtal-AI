@@ -1,6 +1,6 @@
 ---
 name: code-signing-disabled-in-ci
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Disable Code Signing in CI

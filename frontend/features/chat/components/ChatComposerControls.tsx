@@ -185,12 +185,24 @@ export function AttachButton(): React.JSX.Element {
 }
 
 /** Renders the compact plan-mode trigger used in the composer toolbar. */
-export function PlanButton(): React.JSX.Element {
+export function PlanButton({
+	isActive = false,
+	onToggle,
+}: {
+	isActive?: boolean;
+	onToggle?: () => void;
+}): React.JSX.Element {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
-					className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
+					className={cn(
+						'h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal',
+						isActive
+							? 'bg-info/20 text-info hover:bg-info/25'
+							: 'text-muted-foreground hover:text-foreground'
+					)}
+					onClick={onToggle}
 					type="button"
 					variant="ghost"
 				>
@@ -237,7 +249,7 @@ const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
 	'default-permissions': {
 		label: 'Default permissions',
 		Icon: HandIcon,
-		colorClass: 'text-foreground',
+		colorClass: 'text-foreground/90',
 		iconClass: 'text-info',
 		bgClass: 'bg-info/15',
 	},
@@ -347,7 +359,7 @@ interface SafetyModeMenuItemProps {
 	onSelect: (mode: SafetyMode) => void;
 }
 
-/** Single dropdown row for a safety mode, with a leading icon and trailing checkmark when active. */
+/** Single dropdown row for a safety mode. Selected mode uses a filled dot instead of a checkmark. */
 function SafetyModeMenuItem({
 	mode,
 	isSelected,
@@ -375,8 +387,9 @@ function SafetyModeMenuItem({
 				>
 					<Icon className="size-3" />
 				</span>
-				{label}
+				<span className={isSelected ? 'font-medium' : undefined}>{label}</span>
 			</span>
+			{isSelected ? <span className="size-1.5 shrink-0 rounded-full bg-foreground" /> : null}
 		</button>
 	);
 }
@@ -464,7 +477,7 @@ function WaveformTimeline({
 		<div className="relative flex h-8 min-w-0 flex-1 justify-end overflow-hidden">
 			<div
 				aria-hidden="true"
-				className="ml-auto flex h-full items-end gap-[3px]"
+				className="flex h-full items-end gap-[3px]"
 				style={{
 					animation: isPaused ? undefined : 'waveform-scroll 6s linear infinite',
 				}}
@@ -480,10 +493,10 @@ function WaveformTimeline({
 					/>
 				))}
 			</div>
-			{/* Fade the seam on the left where older samples scroll away. */}
+			{/* Fade the seam on the right where older samples scroll away. */}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-[color:var(--background-elevated)] to-transparent"
+				className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[color:var(--background-elevated)] to-transparent"
 			/>
 		</div>
 	);

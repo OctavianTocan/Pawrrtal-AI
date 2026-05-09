@@ -1,6 +1,6 @@
 ---
 name: pnpm-store-dir-on-external-drive
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # pnpm Store on External Drives Needs Explicit store-dir Config - Default Path Breaks

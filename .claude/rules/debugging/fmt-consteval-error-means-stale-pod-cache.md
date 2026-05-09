@@ -1,6 +1,6 @@
 ---
 name: fmt-consteval-error-means-stale-pod-cache
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # fmt consteval Compilation Errors After an Xcode Upgrade Mean Stale CocoaPods Artifacts - Clean Build

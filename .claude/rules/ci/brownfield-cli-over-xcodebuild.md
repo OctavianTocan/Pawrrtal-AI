@@ -1,6 +1,6 @@
 ---
 name: brownfield-cli-over-xcodebuild
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Brownfield CLI Over Raw xcodebuild

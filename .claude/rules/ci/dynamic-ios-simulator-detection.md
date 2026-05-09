@@ -1,6 +1,6 @@
 ---
 name: dynamic-ios-simulator-detection
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Dynamically Find Available iOS Simulator Runtime and Device ID

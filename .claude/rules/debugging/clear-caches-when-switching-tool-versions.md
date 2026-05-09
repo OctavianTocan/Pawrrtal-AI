@@ -1,6 +1,6 @@
 ---
 name: clear-caches-when-switching-tool-versions
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # Clear Dependency Caches When Switching Major Tool Versions (Xcode, Node, Gradle) - Stale Artifacts Cause Cryptic Errors

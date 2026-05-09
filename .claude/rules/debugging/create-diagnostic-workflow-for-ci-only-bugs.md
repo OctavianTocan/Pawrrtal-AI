@@ -1,6 +1,6 @@
 ---
 name: create-diagnostic-workflow-for-ci-only-bugs
-paths: ["**/*"]
+paths: [".github/workflows/**"]
 ---
 
 # Bugs That Only Reproduce in CI Get a Dedicated Diagnostic Workflow, Not Guesswork

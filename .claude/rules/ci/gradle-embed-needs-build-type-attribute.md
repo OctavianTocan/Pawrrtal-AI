@@ -1,6 +1,6 @@
 ---
 name: gradle-embed-needs-build-type-attribute
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Gradle embed() Needs BuildTypeAttr for Multi-Variant Dependencies - Add It or Get Resolution Errors

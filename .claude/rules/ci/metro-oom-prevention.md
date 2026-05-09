@@ -1,6 +1,6 @@
 ---
 name: metro-oom-prevention
-paths: [".github/workflows/*.{yml,yaml}"]
+paths: [".no-match"]
 ---
 # Prevent Metro OOM in CI
 

@@ -1,6 +1,8 @@
 ---
+
 description: Ensure code adheres to General Clean Code principles
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: General & Design Rules
 

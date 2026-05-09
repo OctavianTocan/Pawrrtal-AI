@@ -1,6 +1,6 @@
 ---
 name: list-build-outputs-before-workaround
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # List Actual Build Outputs Before Applying Workarounds for Missing Artifacts

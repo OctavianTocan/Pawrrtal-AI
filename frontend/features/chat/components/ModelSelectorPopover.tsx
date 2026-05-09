@@ -222,7 +222,7 @@ function ModelRow({
 			type="button"
 			className={cn(
 				'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
-				isSelected && 'bg-foreground/[0.07]'
+				isSelected && 'bg-foreground/[0.07] font-medium'
 			)}
 			onClick={() => {
 				onSelect(model.id);
@@ -235,6 +235,9 @@ function ModelRow({
 					{model.description}
 				</span>
 			</div>
+			{isSelected ? (
+				<span className="ml-1 size-1.5 shrink-0 rounded-full bg-foreground" />
+			) : null}
 		</button>
 	);
 }

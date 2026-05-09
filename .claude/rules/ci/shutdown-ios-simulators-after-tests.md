@@ -1,6 +1,6 @@
 ---
 name: shutdown-ios-simulators-after-tests
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Shut Down iOS Simulators After E2E Tests to Free Resources for Next Run

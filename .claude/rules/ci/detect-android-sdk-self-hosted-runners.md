@@ -1,6 +1,6 @@
 ---
 name: detect-android-sdk-self-hosted-runners
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Detect Android SDK Path Dynamically on Self-Hosted Runners

@@ -1,6 +1,6 @@
 ---
 name: pnpm-only-package-manager
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # pnpm Only

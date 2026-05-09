@@ -22,7 +22,6 @@
     ]
   },
   "enabledPlugins": {
-    "notion-workspace-plugin@notion-plugin-marketplace": true,
     "pyright-lsp@claude-plugins-official": true,
     "claude-md-management@claude-plugins-official": true,
     "serena@claude-plugins-official": true,

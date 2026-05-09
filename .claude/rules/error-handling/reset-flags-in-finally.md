@@ -1,6 +1,6 @@
 ---
 name: reset-flags-in-finally
-paths: ["**/*.{ts,tsx,kt,swift}"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 # Reset Guard Flags in Finally Blocks
 

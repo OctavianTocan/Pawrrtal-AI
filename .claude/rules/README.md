@@ -1,3 +1,8 @@
+---
+name: readme
+paths: [".no-match"]
+---
+
 # claude-rules
 
 Personal coding rules for [Claude Code](https://claude.ai/code), auto-loaded via `~/.claude/rules/`. Every rule exists because something went wrong without it.
