@@ -180,7 +180,8 @@ function StaleWarningBanner({
 		<div className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
 			<span className="shrink-0">⚠</span>
 			<span className="flex-1">
-				This file changed externally while you were editing. Saving now will overwrite the newer version.
+				This file changed externally while you were editing. Saving now will overwrite the
+				newer version.
 			</span>
 			<button
 				type="button"
