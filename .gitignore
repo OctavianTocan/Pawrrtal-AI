@@ -145,3 +145,8 @@ package-lock.json
 
 # OpenCode internal generated artifacts
 .opencode/package-lock.json
+
+# zero-native / Zig build artifacts
+desktop/zig-out/
+desktop/.zig-cache/
+desktop/third_party/

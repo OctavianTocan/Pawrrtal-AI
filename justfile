@@ -110,49 +110,42 @@ e2e:
     cd frontend && bunx --bun playwright install --with-deps chromium
     cd frontend && bunx --bun playwright test
 
-# --- Electron desktop shell -------------------------------------------------
+# --- Desktop shell (zero-native) --------------------------------------------
+# Requires: Zig 0.16+, `npm install -g zero-native`
+# Setup:    git clone https://github.com/vercel-labs/zero-native third_party/zero-native
 
-# Compile the Electron main + preload TypeScript once.
-electron-build:
-    cd electron && bun run build
+# Compile the Zig shell. Run this after any changes to desktop/src/.
+desktop-build:
+    cd desktop && zig build
 
-# Run the Electron shell against the running Next.js dev server.
-# Requires `just dev` in another terminal so the FE is already on :3001.
-# The shell waits for the dev server before opening the BrowserWindow,
-# so order doesn't matter beyond eventually being up.
-electron-dev: electron-build
-    cd electron && bun run start:dev
+# Run the zero-native dev server against the already-running dev servers.
+# Requires `just dev` in another terminal so :3001 and :8000 are already up.
+desktop-dev: desktop-build
+    cd desktop && zero-native dev --manifest app.zon --binary zig-out/bin/ai-nexus
 
-# One-shot dev: spin up the Next.js dev server AND launch Electron in
-# a single terminal. Best for desktop-only iteration where you don't
-# need the backend running. For full-stack dev, run `just dev` and
-# `just electron-dev` in two terminals instead.
-electron-dev-all: electron-build
-    cd electron && bun run dev:all
+# Full-stack one-shot: starts the dev servers, waits for :3001, then opens
+# the zero-native desktop shell. Ctrl-C tears the whole stack down.
+desktop-dev-full:
+    bun run dev.ts & \
+    until curl -sf http://localhost:3001 > /dev/null 2>&1; do sleep 1; done && \
+    cd desktop && zero-native dev --manifest app.zon --binary zig-out/bin/ai-nexus
 
-# Full-stack one-shot: backend + frontend + Electron in a single
-# terminal. Spawns the root dev orchestrator (`bun run dev.ts`),
-# waits for :3001 to come up, then launches the Electron shell. Use
-# this for full-stack desktop iteration when you don't want to juggle
-# multiple terminals. Ctrl-C tears the whole stack down.
-electron-dev-full: electron-build
-    cd electron && bun run dev:all:full
-
-# Build the Next.js standalone bundle the desktop app spawns at runtime.
-electron-frontend-build:
+# Build the Next.js static export for production packaging.
+desktop-frontend-build:
     cd frontend && bun run build
 
-# Full production-style run inside Electron (no external dev server):
-# build the FE, build the shell, launch it pointing at the spawned
-# Next.js standalone server.
-electron-prod: electron-frontend-build electron-build
-    cd electron && bun run start
+# Full production-style run: build frontend export + Zig shell + run.
+desktop-prod: desktop-frontend-build desktop-build
+    cd desktop && zig build run
 
-# Package the desktop app via electron-builder. Outputs to electron/dist-app/.
-# Defaults to the host platform; pass --mac/--win/--linux via electron-builder
-# directly if you need a cross-target build.
-electron-dist: electron-frontend-build
-    cd electron && bun run dist
+# Package the desktop app via zero-native. Outputs to desktop/zig-out/package/.
+# Defaults to the host platform; pass -Dpackage-target=macos|linux|windows to override.
+desktop-package: desktop-frontend-build desktop-build
+    cd desktop && zig build package
+
+# Run the Zig unit tests for the desktop shell.
+desktop-test:
+    cd desktop && zig build test
 
 # --- Stagehand E2E (LLM-driven, lives under frontend/e2e/stagehand) --------
 

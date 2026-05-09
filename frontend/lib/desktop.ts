@@ -1,31 +1,26 @@
 /**
  * Single typed entrypoint for desktop-only features.
  *
- * The Electron preload script (`electron/src/preload.ts`) injects an
- * `aiNexus` object onto `window` via `contextBridge`. This module is
- * the FE's only allowed reader of that object — every component that
- * wants to call into the desktop shell goes through here so we have:
+ * The zero-native shell (`desktop/src/main.zig`) exposes native capabilities
+ * via `window.zero.invoke(command, payload)`. This module is the frontend's
+ * only allowed reader of that object — every component that wants to call
+ * into the desktop shell goes through here so we have:
  *
- *   1. **One detection point** for `isDesktop()` (no per-component
- *      `typeof window.aiNexus` checks scattered through the codebase).
- *   2. **Web-safe fallbacks** for every method, so the same call site
- *      works in both shells (e.g. `openExternal` falls back to
- *      `window.open(...)` in the browser).
- *   3. **Typed surface** mirroring the preload's `DesktopApi` type
- *      without a build-time dependency on the Electron workspace.
+ *   1. **One detection point** for `isDesktop()`.
+ *   2. **Web-safe fallbacks** for every method.
+ *   3. **Typed surface** matching the Zig bridge contract.
+ *
+ * Streaming ops (fs.watchDirectory, shell.spawnStreaming, permissions.onPrompt,
+ * onMenuNewChat) are NOT supported in the zero-native shell. The bridge is
+ * request/response only; push events require a zero-native API that does not
+ * exist yet. These functions return `{ ok: false, reason: 'not-supported' }`
+ * and no-op unsubscribe functions so existing call sites degrade gracefully.
  */
 
-/**
- * Bridge surface exposed by `electron/src/preload.ts`. Mirrored here
- * (rather than imported) because the frontend doesn't depend on the
- * Electron workspace at compile time — the bridge is a runtime
- * contract validated at the seam.
- */
-/**
- * Result envelope every privileged op returns. Web fallbacks return
- * `{ ok: false, reason: 'web' }` so call sites can branch on the same
- * shape regardless of shell.
- */
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 export type DesktopResult<T extends Record<string, unknown> = Record<string, never>> =
 	| ({ ok: true } & T)
 	| { ok: false; reason: string };
@@ -86,253 +81,268 @@ export interface PermissionPromptResponse {
 
 export type PermissionMode = 'default' | 'accept-edits' | 'yolo' | 'plan';
 
-interface WorkspaceBridge {
-	listRoots: () => Promise<string[]>;
-	addRoot: (rootPath?: string) => Promise<string[]>;
-	removeRoot: (rootPath: string) => Promise<string[]>;
-}
-
-interface FsBridge {
-	readFile: (filePath: string) => Promise<DesktopResult<{ content: string }>>;
-	writeFile: (filePath: string, content: string) => Promise<DesktopResult>;
-	listDirectory: (dirPath: string) => Promise<DesktopResult<{ entries: DirEntry[] }>>;
-	watchDirectory: (dirPath: string) => Promise<DesktopResult<{ id: string }>>;
-	unwatch: (id: string) => Promise<DesktopResult>;
-	onWatchEvent: (handler: (event: WatchEvent) => void) => () => void;
-}
-
-interface ShellBridge {
-	run: (request: ShellRunRequest) => Promise<DesktopResult<ShellRunResult>>;
-	spawnStreaming: (request: ShellRunRequest) => Promise<DesktopResult<{ jobId: string }>>;
-	kill: (jobId: string) => Promise<DesktopResult>;
-	onStream: (handler: (event: ShellStreamEvent) => void) => () => void;
-	onStreamEnd: (handler: (event: ShellStreamEnd) => void) => () => void;
-}
-
-interface PermissionsBridge {
-	getMode: () => Promise<PermissionMode>;
-	setMode: (mode: PermissionMode) => Promise<PermissionMode>;
-	respond: (response: PermissionPromptResponse) => void;
-	onPrompt: (handler: (request: PermissionPromptRequest) => void) => () => void;
-}
-
-interface DesktopBridge {
-	/**
-	 * Host platform string, exposed synchronously by the preload script so
-	 * the renderer can make layout decisions (e.g. reserve space for macOS
-	 * traffic-light buttons) without an async IPC round-trip on first paint.
-	 */
-	platform: NodeJS.Platform;
-	openExternal: (url: string) => Promise<void>;
-	showOpenFolderDialog: () => Promise<string | null>;
-	getPlatform: () => Promise<NodeJS.Platform>;
-	getVersion: () => Promise<string>;
-	onMenuNewChat: (handler: () => void) => () => void;
-	workspace: WorkspaceBridge;
-	fs: FsBridge;
-	shell: ShellBridge;
-	permissions: PermissionsBridge;
-}
+// ---------------------------------------------------------------------------
+// Window type augmentation
+// ---------------------------------------------------------------------------
 
 declare global {
 	interface Window {
-		/** Present only when running inside the Electron desktop shell. */
-		aiNexus?: DesktopBridge;
+		/**
+		 * Injected by the zero-native runtime into the WebView before the page
+		 * loads. Present only when running inside the desktop shell.
+		 */
+		zero?: {
+			invoke: (command: string, payload?: Record<string, unknown>) => Promise<unknown>;
+			windows?: {
+				create: (options: Record<string, unknown>) => Promise<unknown>;
+				list: () => Promise<unknown[]>;
+				focus: (id: string) => Promise<void>;
+				close: (id: string) => Promise<void>;
+			};
+		};
 	}
 }
 
-/** True when the app is running inside the Electron desktop shell. */
+// ---------------------------------------------------------------------------
+// Detection
+// ---------------------------------------------------------------------------
+
+/** True when the app is running inside the zero-native desktop shell. */
 export function isDesktop(): boolean {
-	return typeof window !== 'undefined' && typeof window.aiNexus !== 'undefined';
+	return typeof window !== 'undefined' && typeof window.zero !== 'undefined';
 }
 
 /**
- * Open `url` in the user's default browser on desktop, or in a new tab
- * on web. Always swallow failures — opening a link must never crash
- * the calling component.
+ * Synchronous platform getter — kept for API compatibility with prior
+ * Electron shell.
+ *
+ * In the Electron shell this returned `process.platform` synchronously via
+ * the preload bridge. zero-native does not expose a synchronous platform
+ * property. The macOS traffic-light spacing workaround that required this
+ * is no longer needed because zero-native uses the system title bar.
+ *
+ * @returns Always null. Use `getPlatform()` for informational async access.
+ */
+export function getDesktopPlatformSync(): null {
+	return null;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const DESKTOP_ONLY_FAIL = { ok: false as const, reason: 'desktop-only' };
+const NOT_SUPPORTED_FAIL = { ok: false as const, reason: 'not-supported' };
+
+async function invoke<T = unknown>(command: string, payload: Record<string, unknown> = {}): Promise<T> {
+	// biome-ignore lint/style/noNonNullAssertion: callers guard with isDesktop()
+	return window.zero!.invoke(command, payload) as Promise<T>;
+}
+
+// ---------------------------------------------------------------------------
+// Desktop helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Open `url` in the user's default browser on desktop, or in a new tab on
+ * web. Swallows failures so a broken link never crashes the calling component.
  */
 export async function openExternal(url: string): Promise<void> {
 	try {
-		if (window.aiNexus) {
-			await window.aiNexus.openExternal(url);
+		if (isDesktop()) {
+			await invoke('desktop.openExternal', { url });
 			return;
 		}
 		window.open(url, '_blank', 'noopener,noreferrer');
 	} catch {
-		/* swallow — link-opening must never throw */
+		/* swallow */
 	}
 }
 
 /**
- * Show a native folder picker on desktop, or `null` on web (the
- * browser has no equivalent that can return a real filesystem path —
- * `<input type="file" webkitdirectory>` only exposes file blobs).
+ * Show a native folder/file picker on desktop via the zero-native
+ * `zero-native.dialog.openFile` builtin command.
+ * Returns the selected path, or null on web / cancellation.
  */
 export async function showOpenFolderDialog(): Promise<string | null> {
-	if (window.aiNexus) return window.aiNexus.showOpenFolderDialog();
-	return null;
+	if (!isDesktop()) return null;
+	try {
+		const result = await invoke<{ paths?: string[] }>('zero-native.dialog.openFile', {
+			title: 'Select Workspace Folder',
+			allowMultiple: false,
+		});
+		return result.paths?.[0] ?? null;
+	} catch {
+		return null;
+	}
 }
 
-/** Resolve the host platform; returns 'web' when not running in Electron. */
-export async function getPlatform(): Promise<NodeJS.Platform | 'web'> {
-	if (window.aiNexus) return window.aiNexus.getPlatform();
-	return 'web';
+/** Resolve the host platform asynchronously. Returns 'web' when not in the shell. */
+export async function getPlatform(): Promise<string> {
+	if (!isDesktop()) return 'web';
+	const result = await invoke<{ platform: string }>('desktop.getPlatform');
+	return result.platform;
 }
 
-/**
- * Synchronous platform getter intended for layout decisions that have to
- * run on first paint (e.g. macOS Electron drag chrome). Returns `null` when
- * not in Electron or during SSR.
- *
- * Components that read this MUST gate it behind `useEffect` so the
- * initial render matches the SSR output and React doesn't blow up with
- * a hydration mismatch.
- *
- * @returns The Electron host platform, or `null` on web / SSR.
- */
-export function getDesktopPlatformSync(): NodeJS.Platform | null {
-	if (typeof window === 'undefined') return null;
-	return window.aiNexus?.platform ?? null;
-}
-
-/** Resolve the desktop app version, or `null` on web. */
+/** Resolve the desktop app version, or null on web. */
 export async function getDesktopVersion(): Promise<string | null> {
-	if (window.aiNexus) return window.aiNexus.getVersion();
-	return null;
+	if (!isDesktop()) return null;
+	const result = await invoke<{ version: string }>('desktop.getVersion');
+	return result.version;
 }
 
 /**
- * Subscribe to "user picked File → New chat" from the native menu.
- * No-op + null unsubscribe on web.
+ * Subscribe to "File → New Chat" from the native menu.
+ *
+ * NOT SUPPORTED in the zero-native shell — menu events require a push-event
+ * API not yet available. Returns a no-op unsubscribe.
  */
-export function onMenuNewChat(handler: () => void): () => void {
-	if (window.aiNexus) return window.aiNexus.onMenuNewChat(handler);
-	return () => {
-		/* no-op on web */
-	};
+export function onMenuNewChat(_handler: () => void): () => void {
+	return (): void => { /* no-op */ };
 }
 
-// ----------------------------------------------------------------------------
-// Workspace + privileged-op wrappers
-//
-// On web every method returns a `{ ok: false, reason: 'desktop-only' }`
-// envelope so call sites can branch on the same shape. Components that
-// need to surface this to the user should toast "This feature requires
-// the desktop app" — `desktop-only` is the canonical sentinel.
-// ----------------------------------------------------------------------------
-
-const WEB_ONLY_FAIL = { ok: false as const, reason: 'desktop-only' };
+// ---------------------------------------------------------------------------
+// Workspace
+// ---------------------------------------------------------------------------
 
 /** List the current workspace allowlist. Empty array on web. */
 export async function listWorkspaceRoots(): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.listRoots();
-	return [];
+	if (!isDesktop()) return [];
+	const result = await invoke<{ roots: string[] }>('workspace.listRoots');
+	return result.roots ?? [];
 }
 
 /**
- * Add a workspace root. When `rootPath` is omitted, opens the native
- * folder picker on desktop. No-op + empty list on web.
+ * Add a workspace root. When `rootPath` is omitted on desktop, opens the
+ * native folder picker. No-op + empty list on web.
  */
 export async function addWorkspaceRoot(rootPath?: string): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.addRoot(rootPath);
-	return [];
+	if (!isDesktop()) return [];
+	let path = rootPath;
+	if (!path) {
+		path = (await showOpenFolderDialog()) ?? undefined;
+	}
+	if (!path) return listWorkspaceRoots();
+	const result = await invoke<{ roots: string[] }>('workspace.addRoot', { path });
+	return result.roots ?? [];
 }
 
 export async function removeWorkspaceRoot(rootPath: string): Promise<string[]> {
-	if (window.aiNexus) return window.aiNexus.workspace.removeRoot(rootPath);
-	return [];
+	if (!isDesktop()) return [];
+	const result = await invoke<{ roots: string[] }>('workspace.removeRoot', { path: rootPath });
+	return result.roots ?? [];
 }
 
-// --- fs ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Filesystem
+// ---------------------------------------------------------------------------
 
 export async function readFile(filePath: string): Promise<DesktopResult<{ content: string }>> {
-	if (window.aiNexus) return window.aiNexus.fs.readFile(filePath);
-	return WEB_ONLY_FAIL;
+	if (!isDesktop()) return DESKTOP_ONLY_FAIL;
+	return invoke('fs.readFile', { path: filePath }) as Promise<DesktopResult<{ content: string }>>;
 }
 
 export async function writeFile(filePath: string, content: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.fs.writeFile(filePath, content);
-	return WEB_ONLY_FAIL;
+	if (!isDesktop()) return DESKTOP_ONLY_FAIL;
+	return invoke('fs.writeFile', { path: filePath, content }) as Promise<DesktopResult>;
 }
 
 export async function listDirectory(
-	dirPath: string
+	dirPath: string,
 ): Promise<DesktopResult<{ entries: DirEntry[] }>> {
-	if (window.aiNexus) return window.aiNexus.fs.listDirectory(dirPath);
-	return WEB_ONLY_FAIL;
+	if (!isDesktop()) return DESKTOP_ONLY_FAIL;
+	return invoke('fs.listDirectory', { path: dirPath }) as Promise<
+		DesktopResult<{ entries: DirEntry[] }>
+	>;
 }
 
-export async function watchDirectory(dirPath: string): Promise<DesktopResult<{ id: string }>> {
-	if (window.aiNexus) return window.aiNexus.fs.watchDirectory(dirPath);
-	return WEB_ONLY_FAIL;
+/**
+ * NOT SUPPORTED — fs watch events require a push-event API not yet available
+ * in zero-native. Returns the not-supported sentinel.
+ */
+export async function watchDirectory(
+	_dirPath: string,
+): Promise<DesktopResult<{ id: string }>> {
+	return NOT_SUPPORTED_FAIL;
 }
 
-export async function unwatchDirectory(id: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.fs.unwatch(id);
-	return WEB_ONLY_FAIL;
+/** NOT SUPPORTED — see watchDirectory. */
+export async function unwatchDirectory(_id: string): Promise<DesktopResult> {
+	return NOT_SUPPORTED_FAIL;
 }
 
-export function onFsWatchEvent(handler: (event: WatchEvent) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.fs.onWatchEvent(handler);
-	return () => {
-		/* */
-	};
+/** NOT SUPPORTED — see watchDirectory. No-op unsubscribe returned. */
+export function onFsWatchEvent(_handler: (event: WatchEvent) => void): () => void {
+	return (): void => { /* no-op */ };
 }
 
-// --- shell ------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Shell
+// ---------------------------------------------------------------------------
 
-export async function runShell(request: ShellRunRequest): Promise<DesktopResult<ShellRunResult>> {
-	if (window.aiNexus) return window.aiNexus.shell.run(request);
-	return WEB_ONLY_FAIL;
+export async function runShell(
+	request: ShellRunRequest,
+): Promise<DesktopResult<ShellRunResult>> {
+	if (!isDesktop()) return DESKTOP_ONLY_FAIL;
+	return invoke('shell.run', {
+		command: request.command,
+		cwd: request.cwd,
+		timeoutMs: request.timeoutMs ?? 30_000,
+	}) as Promise<DesktopResult<ShellRunResult>>;
 }
 
+/**
+ * NOT SUPPORTED — streaming shell output requires push events not yet
+ * available in the zero-native bridge.
+ */
 export async function spawnShellStreaming(
-	request: ShellRunRequest
+	_request: ShellRunRequest,
 ): Promise<DesktopResult<{ jobId: string }>> {
-	if (window.aiNexus) return window.aiNexus.shell.spawnStreaming(request);
-	return WEB_ONLY_FAIL;
+	return NOT_SUPPORTED_FAIL;
 }
 
-export async function killShellJob(jobId: string): Promise<DesktopResult> {
-	if (window.aiNexus) return window.aiNexus.shell.kill(jobId);
-	return WEB_ONLY_FAIL;
+/** NOT SUPPORTED — see spawnShellStreaming. */
+export async function killShellJob(_jobId: string): Promise<DesktopResult> {
+	return NOT_SUPPORTED_FAIL;
 }
 
-export function onShellStream(handler: (event: ShellStreamEvent) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.shell.onStream(handler);
-	return () => {
-		/* */
-	};
+/** NOT SUPPORTED — see spawnShellStreaming. No-op unsubscribe returned. */
+export function onShellStream(_handler: (event: ShellStreamEvent) => void): () => void {
+	return (): void => { /* no-op */ };
 }
 
-export function onShellStreamEnd(handler: (event: ShellStreamEnd) => void): () => void {
-	if (window.aiNexus) return window.aiNexus.shell.onStreamEnd(handler);
-	return () => {
-		/* */
-	};
+/** NOT SUPPORTED — see spawnShellStreaming. No-op unsubscribe returned. */
+export function onShellStreamEnd(_handler: (event: ShellStreamEnd) => void): () => void {
+	return (): void => { /* no-op */ };
 }
 
-// --- permissions ------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Permissions
+// ---------------------------------------------------------------------------
 
 export async function getPermissionMode(): Promise<PermissionMode | 'web'> {
-	if (window.aiNexus) return window.aiNexus.permissions.getMode();
-	return 'web';
+	if (!isDesktop()) return 'web';
+	const result = await invoke<{ mode: PermissionMode }>('permissions.getMode');
+	return result.mode;
 }
 
 export async function setPermissionMode(mode: PermissionMode): Promise<PermissionMode | 'web'> {
-	if (window.aiNexus) return window.aiNexus.permissions.setMode(mode);
-	return 'web';
+	if (!isDesktop()) return 'web';
+	const result = await invoke<{ mode: PermissionMode }>('permissions.setMode', { mode });
+	return result.mode;
 }
 
-export function respondToPermissionPrompt(response: PermissionPromptResponse): void {
-	window.aiNexus?.permissions.respond(response);
+/**
+ * NOT SUPPORTED — permission prompts are push events; zero-native bridge
+ * has no push mechanism yet. No-op.
+ */
+export function respondToPermissionPrompt(_response: PermissionPromptResponse): void {
+	/* no-op in zero-native shell */
 }
 
+/** NOT SUPPORTED — see respondToPermissionPrompt. No-op unsubscribe returned. */
 export function onPermissionPrompt(
-	handler: (request: PermissionPromptRequest) => void
+	_handler: (request: PermissionPromptRequest) => void,
 ): () => void {
-	if (window.aiNexus) return window.aiNexus.permissions.onPrompt(handler);
-	return () => {
-		/* */
-	};
+	return (): void => { /* no-op */ };
 }
