@@ -41,6 +41,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        sa.text("DROP INDEX IF EXISTS uq_workspaces_one_default_per_user")
-    )
+    op.execute(sa.text("DROP INDEX IF EXISTS uq_workspaces_one_default_per_user"))
