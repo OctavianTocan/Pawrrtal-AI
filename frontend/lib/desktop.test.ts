@@ -1,17 +1,47 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	getDesktopVersion,
+	getPermissionMode,
 	getPlatform,
 	isDesktop,
+	killShellJob,
+	listDirectory,
+	listWorkspaceRoots,
+	onFsWatchEvent,
 	onMenuNewChat,
+	onPermissionPrompt,
+	onShellStream,
+	onShellStreamEnd,
 	openExternal,
+	readFile,
+	removeWorkspaceRoot,
+	respondToPermissionPrompt,
+	runShell,
+	setPermissionMode,
 	showOpenFolderDialog,
+	spawnShellStreaming,
+	unwatchDirectory,
+	watchDirectory,
+	writeFile,
 } from './desktop';
 
-describe('lib/desktop (web shell — no aiNexus bridge)', () => {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+type MockInvoke = ReturnType<typeof vi.fn>;
+
+function makeZeroBridge(invoke: MockInvoke) {
+	return { invoke };
+}
+
+// ---------------------------------------------------------------------------
+// Suite 1: web shell (no zero bridge)
+// ---------------------------------------------------------------------------
+
+describe('lib/desktop (web shell — no zero bridge)', () => {
 	beforeEach(() => {
-		// Make sure no other test left an injected bridge behind.
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { zero?: unknown }).zero = undefined;
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
@@ -42,213 +72,269 @@ describe('lib/desktop (web shell — no aiNexus bridge)', () => {
 	it('returns a no-op unsubscribe from onMenuNewChat', () => {
 		const unsubscribe = onMenuNewChat(() => undefined);
 		expect(typeof unsubscribe).toBe('function');
-		// Should not throw when invoked.
 		expect(() => unsubscribe()).not.toThrow();
 	});
 });
 
-describe('lib/desktop (Electron shell — bridge present)', () => {
+// ---------------------------------------------------------------------------
+// Suite 2: zero-native shell — bridge present
+// ---------------------------------------------------------------------------
+
+describe('lib/desktop (zero-native shell — bridge present)', () => {
+	let invoke: MockInvoke;
+
 	beforeEach(() => {
-		(window as unknown as { aiNexus: unknown }).aiNexus = {
-			openExternal: vi.fn().mockResolvedValue(undefined),
-			showOpenFolderDialog: vi.fn().mockResolvedValue('/Users/me/Code'),
-			getPlatform: vi.fn().mockResolvedValue('darwin' as NodeJS.Platform),
-			getVersion: vi.fn().mockResolvedValue('0.1.0'),
-			onMenuNewChat: vi.fn().mockReturnValue(() => undefined),
-		};
+		invoke = vi.fn();
+		(window as unknown as { zero: unknown }).zero = makeZeroBridge(invoke);
 	});
 	afterEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { zero?: unknown }).zero = undefined;
+		vi.restoreAllMocks();
 	});
 
 	it('reports the app is running on desktop', () => {
 		expect(isDesktop()).toBe(true);
 	});
 
+	// --- openExternal ---
+
 	it('routes openExternal through the bridge', async () => {
+		invoke.mockResolvedValue(undefined);
 		await openExternal('https://example.com');
-		const bridge = (
-			window as unknown as { aiNexus: { openExternal: ReturnType<typeof vi.fn> } }
-		).aiNexus;
-		expect(bridge.openExternal).toHaveBeenCalledWith('https://example.com');
+		expect(invoke).toHaveBeenCalledWith('desktop.openExternal', { url: 'https://example.com' });
 	});
 
-	it('returns the bridge result for showOpenFolderDialog', async () => {
+	// --- showOpenFolderDialog ---
+
+	it('returns selected path from showOpenFolderDialog', async () => {
+		invoke.mockResolvedValue({ paths: ['/Users/me/Code'] });
 		await expect(showOpenFolderDialog()).resolves.toBe('/Users/me/Code');
+		expect(invoke).toHaveBeenCalledWith('zero-native.dialog.openFile', {
+			title: 'Select Workspace Folder',
+			allowMultiple: false,
+		});
 	});
+
+	it('returns null from showOpenFolderDialog when paths is empty', async () => {
+		invoke.mockResolvedValue({ paths: [] });
+		await expect(showOpenFolderDialog()).resolves.toBeNull();
+	});
+
+	it('returns null from showOpenFolderDialog on bridge error', async () => {
+		invoke.mockRejectedValue(new Error('cancelled'));
+		await expect(showOpenFolderDialog()).resolves.toBeNull();
+	});
+
+	// --- getPlatform ---
 
 	it('returns the platform reported by the bridge', async () => {
+		invoke.mockResolvedValue({ platform: 'darwin' });
 		await expect(getPlatform()).resolves.toBe('darwin');
+		expect(invoke).toHaveBeenCalledWith('desktop.getPlatform', {});
 	});
 
+	// --- getDesktopVersion ---
+
 	it('returns the version reported by the bridge', async () => {
-		await expect(getDesktopVersion()).resolves.toBe('0.1.0');
+		invoke.mockResolvedValue({ version: '1.0.0' });
+		await expect(getDesktopVersion()).resolves.toBe('1.0.0');
+		expect(invoke).toHaveBeenCalledWith('desktop.getVersion', {});
+	});
+
+	// --- workspace ---
+
+	it('listWorkspaceRoots routes through bridge', async () => {
+		invoke.mockResolvedValue({ roots: ['/Users/me/Code'] });
+		await expect(listWorkspaceRoots()).resolves.toEqual(['/Users/me/Code']);
+		expect(invoke).toHaveBeenCalledWith('workspace.listRoots', {});
+	});
+
+	it('removeWorkspaceRoot routes through bridge', async () => {
+		invoke.mockResolvedValue({ roots: [] });
+		await expect(removeWorkspaceRoot('/Users/me/Code')).resolves.toEqual([]);
+		expect(invoke).toHaveBeenCalledWith('workspace.removeRoot', { path: '/Users/me/Code' });
+	});
+
+	// --- fs ---
+
+	it('readFile routes through bridge', async () => {
+		invoke.mockResolvedValue({ ok: true, content: 'hello' });
+		await expect(readFile('/x/file.txt')).resolves.toEqual({ ok: true, content: 'hello' });
+		expect(invoke).toHaveBeenCalledWith('fs.readFile', { path: '/x/file.txt' });
+	});
+
+	it('writeFile routes through bridge', async () => {
+		invoke.mockResolvedValue({ ok: true });
+		await expect(writeFile('/x/file.txt', 'hello')).resolves.toEqual({ ok: true });
+		expect(invoke).toHaveBeenCalledWith('fs.writeFile', { path: '/x/file.txt', content: 'hello' });
+	});
+
+	it('listDirectory routes through bridge', async () => {
+		invoke.mockResolvedValue({ ok: true, entries: [] });
+		await expect(listDirectory('/x')).resolves.toEqual({ ok: true, entries: [] });
+		expect(invoke).toHaveBeenCalledWith('fs.listDirectory', { path: '/x' });
+	});
+
+	// --- shell ---
+
+	it('runShell routes through bridge', async () => {
+		invoke.mockResolvedValue({ ok: true, stdout: 'hi\n', stderr: '', exitCode: 0 });
+		const result = await runShell({ command: 'echo hi', cwd: '/x' });
+		expect(result).toEqual({ ok: true, stdout: 'hi\n', stderr: '', exitCode: 0 });
+		expect(invoke).toHaveBeenCalledWith('shell.run', {
+			command: 'echo hi',
+			cwd: '/x',
+			timeoutMs: 30_000,
+		});
+	});
+
+	it('runShell forwards custom timeoutMs', async () => {
+		invoke.mockResolvedValue({ ok: true, stdout: '', stderr: '', exitCode: 0 });
+		await runShell({ command: 'sleep 5', cwd: '/x', timeoutMs: 5_000 });
+		expect(invoke).toHaveBeenCalledWith('shell.run', expect.objectContaining({ timeoutMs: 5_000 }));
+	});
+
+	// --- permissions ---
+
+	it('getPermissionMode routes through bridge', async () => {
+		invoke.mockResolvedValue({ mode: 'default' });
+		await expect(getPermissionMode()).resolves.toBe('default');
+		expect(invoke).toHaveBeenCalledWith('permissions.getMode', {});
+	});
+
+	it('setPermissionMode routes through bridge', async () => {
+		invoke.mockResolvedValue({ mode: 'yolo' });
+		await expect(setPermissionMode('yolo')).resolves.toBe('yolo');
+		expect(invoke).toHaveBeenCalledWith('permissions.setMode', { mode: 'yolo' });
 	});
 });
 
+// ---------------------------------------------------------------------------
+// Suite 3: web fallbacks for privileged ops
+// ---------------------------------------------------------------------------
+
 describe('lib/desktop privileged-op wrappers (web fallbacks)', () => {
 	beforeEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { zero?: unknown }).zero = undefined;
 	});
 
 	it('listWorkspaceRoots returns []', async () => {
-		const { listWorkspaceRoots } = await import('./desktop');
 		await expect(listWorkspaceRoots()).resolves.toEqual([]);
 	});
 
-	it('addWorkspaceRoot returns []', async () => {
-		const { addWorkspaceRoot } = await import('./desktop');
-		await expect(addWorkspaceRoot('/x')).resolves.toEqual([]);
-	});
-
-	it('removeWorkspaceRoot returns []', async () => {
-		const { removeWorkspaceRoot } = await import('./desktop');
-		await expect(removeWorkspaceRoot('/x')).resolves.toEqual([]);
-	});
-
 	it('readFile returns desktop-only fail envelope', async () => {
-		const { readFile } = await import('./desktop');
-		const result = await readFile('/x');
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
+		await expect(readFile('/x')).resolves.toEqual({ ok: false, reason: 'desktop-only' });
 	});
 
 	it('writeFile returns desktop-only fail envelope', async () => {
-		const { writeFile } = await import('./desktop');
-		const result = await writeFile('/x', 'content');
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
+		await expect(writeFile('/x', 'content')).resolves.toEqual({ ok: false, reason: 'desktop-only' });
 	});
 
 	it('listDirectory returns desktop-only fail envelope', async () => {
-		const { listDirectory } = await import('./desktop');
-		const result = await listDirectory('/x');
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
+		await expect(listDirectory('/x')).resolves.toEqual({ ok: false, reason: 'desktop-only' });
 	});
 
 	it('runShell returns desktop-only fail envelope', async () => {
-		const { runShell } = await import('./desktop');
-		const result = await runShell({ command: 'ls', cwd: '/x' });
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
-	});
-
-	it('spawnShellStreaming returns desktop-only fail envelope', async () => {
-		const { spawnShellStreaming } = await import('./desktop');
-		const result = await spawnShellStreaming({ command: 'ls', cwd: '/x' });
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
-	});
-
-	it('killShellJob returns desktop-only fail envelope', async () => {
-		const { killShellJob } = await import('./desktop');
-		const result = await killShellJob('jobId');
-		expect(result).toEqual({ ok: false, reason: 'desktop-only' });
-	});
-
-	it('watchDirectory + unwatchDirectory return desktop-only fail envelope', async () => {
-		const { watchDirectory, unwatchDirectory } = await import('./desktop');
-		await expect(watchDirectory('/x')).resolves.toEqual({ ok: false, reason: 'desktop-only' });
-		await expect(unwatchDirectory('id')).resolves.toEqual({
+		await expect(runShell({ command: 'ls', cwd: '/x' })).resolves.toEqual({
 			ok: false,
 			reason: 'desktop-only',
 		});
 	});
 
-	it('onFsWatchEvent + onShellStream + onShellStreamEnd + onPermissionPrompt return no-op unsubscribers', async () => {
-		const { onFsWatchEvent, onShellStream, onShellStreamEnd, onPermissionPrompt } =
-			await import('./desktop');
-		const unsubs = [
-			onFsWatchEvent(() => undefined),
-			onShellStream(() => undefined),
-			onShellStreamEnd(() => undefined),
-			onPermissionPrompt(() => undefined),
-		];
-		for (const u of unsubs) {
-			expect(typeof u).toBe('function');
-			expect(() => u()).not.toThrow();
-		}
-	});
-
 	it('getPermissionMode returns "web"', async () => {
-		const { getPermissionMode } = await import('./desktop');
 		await expect(getPermissionMode()).resolves.toBe('web');
 	});
 
 	it('setPermissionMode returns "web"', async () => {
-		const { setPermissionMode } = await import('./desktop');
 		await expect(setPermissionMode('default')).resolves.toBe('web');
-	});
-
-	it('respondToPermissionPrompt is a safe no-op on web', async () => {
-		const { respondToPermissionPrompt } = await import('./desktop');
-		expect(() =>
-			respondToPermissionPrompt({ id: 'x', decision: 'allow', scope: 'once' })
-		).not.toThrow();
 	});
 });
 
-describe('lib/desktop privileged-op wrappers (Electron bridge present)', () => {
-	beforeEach(() => {
-		(window as unknown as { aiNexus: unknown }).aiNexus = {
-			openExternal: vi.fn(),
-			showOpenFolderDialog: vi.fn(),
-			getPlatform: vi.fn(),
-			getVersion: vi.fn(),
-			onMenuNewChat: vi.fn(),
-			workspace: {
-				listRoots: vi.fn().mockResolvedValue(['/Users/me/Code']),
-				addRoot: vi.fn().mockResolvedValue(['/Users/me/Code', '/Users/me/Other']),
-				removeRoot: vi.fn().mockResolvedValue(['/Users/me/Code']),
-			},
-			fs: {
-				readFile: vi.fn().mockResolvedValue({ ok: true, content: 'hello' }),
-				writeFile: vi.fn().mockResolvedValue({ ok: true }),
-				listDirectory: vi.fn().mockResolvedValue({ ok: true, entries: [] }),
-				watchDirectory: vi.fn().mockResolvedValue({ ok: true, id: 'w1' }),
-				unwatch: vi.fn().mockResolvedValue({ ok: true }),
-				onWatchEvent: vi.fn().mockReturnValue(() => undefined),
-			},
-			shell: {
-				run: vi
-					.fn()
-					.mockResolvedValue({ ok: true, stdout: 'hi\n', stderr: '', exitCode: 0 }),
-				spawnStreaming: vi.fn().mockResolvedValue({ ok: true, jobId: 'j1' }),
-				kill: vi.fn().mockResolvedValue({ ok: true }),
-				onStream: vi.fn().mockReturnValue(() => undefined),
-				onStreamEnd: vi.fn().mockReturnValue(() => undefined),
-			},
-			permissions: {
-				getMode: vi.fn().mockResolvedValue('default'),
-				setMode: vi.fn().mockResolvedValue('yolo'),
-				respond: vi.fn(),
-				onPrompt: vi.fn().mockReturnValue(() => undefined),
-			},
-		};
-	});
+// ---------------------------------------------------------------------------
+// Suite 4: NOT-SUPPORTED stubs (push-event ops, always fail regardless of shell)
+// ---------------------------------------------------------------------------
+
+describe('lib/desktop NOT-SUPPORTED stubs (streaming / push-event ops)', () => {
+	// These should return not-supported whether or not the shell is present,
+	// because zero-native has no push-event API yet.
+
 	afterEach(() => {
-		(window as unknown as { aiNexus?: unknown }).aiNexus = undefined;
+		(window as unknown as { zero?: unknown }).zero = undefined;
 	});
 
-	it('listWorkspaceRoots routes through bridge', async () => {
-		const { listWorkspaceRoots } = await import('./desktop');
-		await expect(listWorkspaceRoots()).resolves.toEqual(['/Users/me/Code']);
+	for (const shellPresent of [false, true]) {
+		describe(`shell present = ${shellPresent}`, () => {
+			beforeEach(() => {
+				if (shellPresent) {
+					(window as unknown as { zero: unknown }).zero = { invoke: vi.fn() };
+				} else {
+					(window as unknown as { zero?: unknown }).zero = undefined;
+				}
+			});
+
+			it('watchDirectory returns not-supported', async () => {
+				await expect(watchDirectory('/x')).resolves.toEqual({
+					ok: false,
+					reason: 'not-supported',
+				});
+			});
+
+			it('unwatchDirectory returns not-supported', async () => {
+				await expect(unwatchDirectory('id')).resolves.toEqual({
+					ok: false,
+					reason: 'not-supported',
+				});
+			});
+
+			it('spawnShellStreaming returns not-supported', async () => {
+				await expect(spawnShellStreaming({ command: 'ls', cwd: '/x' })).resolves.toEqual({
+					ok: false,
+					reason: 'not-supported',
+				});
+			});
+
+			it('killShellJob returns not-supported', async () => {
+				await expect(killShellJob('jobId')).resolves.toEqual({
+					ok: false,
+					reason: 'not-supported',
+				});
+			});
+		});
+	}
+
+	it('onMenuNewChat returns no-op unsubscribe', () => {
+		const unsub = onMenuNewChat(() => undefined);
+		expect(typeof unsub).toBe('function');
+		expect(() => unsub()).not.toThrow();
 	});
 
-	it('readFile routes through bridge', async () => {
-		const { readFile } = await import('./desktop');
-		await expect(readFile('/x')).resolves.toEqual({ ok: true, content: 'hello' });
+	it('onFsWatchEvent returns no-op unsubscribe', () => {
+		const unsub = onFsWatchEvent(() => undefined);
+		expect(typeof unsub).toBe('function');
+		expect(() => unsub()).not.toThrow();
 	});
 
-	it('runShell routes through bridge', async () => {
-		const { runShell } = await import('./desktop');
-		const result = await runShell({ command: 'echo', cwd: '/x' });
-		expect(result).toEqual({ ok: true, stdout: 'hi\n', stderr: '', exitCode: 0 });
+	it('onShellStream returns no-op unsubscribe', () => {
+		const unsub = onShellStream(() => undefined);
+		expect(typeof unsub).toBe('function');
+		expect(() => unsub()).not.toThrow();
 	});
 
-	it('getPermissionMode routes through bridge', async () => {
-		const { getPermissionMode } = await import('./desktop');
-		await expect(getPermissionMode()).resolves.toBe('default');
+	it('onShellStreamEnd returns no-op unsubscribe', () => {
+		const unsub = onShellStreamEnd(() => undefined);
+		expect(typeof unsub).toBe('function');
+		expect(() => unsub()).not.toThrow();
 	});
 
-	it('setPermissionMode routes through bridge', async () => {
-		const { setPermissionMode } = await import('./desktop');
-		await expect(setPermissionMode('yolo')).resolves.toBe('yolo');
+	it('onPermissionPrompt returns no-op unsubscribe', () => {
+		const unsub = onPermissionPrompt(() => undefined);
+		expect(typeof unsub).toBe('function');
+		expect(() => unsub()).not.toThrow();
+	});
+
+	it('respondToPermissionPrompt is a safe no-op', () => {
+		expect(() =>
+			respondToPermissionPrompt({ id: 'x', decision: 'allow', scope: 'once' })
+		).not.toThrow();
 	});
 });

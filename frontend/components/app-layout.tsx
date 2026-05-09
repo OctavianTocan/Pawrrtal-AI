@@ -231,10 +231,9 @@ function HelpMenu(): React.JSX.Element {
  * selector) stay in their original screen positions even when the sidebar is
  * hidden — the sidebar visually extends underneath this header.
  *
- * macOS Electron uses the **native title bar** (`titleBarStyle: 'default'` in
- * `electron/src/window-chrome.ts`): full-size traffic lights live in the system
- * strip above the web view, so this row does not need extra left inset. If you
- * switch to `hidden` / `hiddenInset`, pad this header in the layout yourself.
+ * zero-native uses the **system title bar** (`web_engine = "system"` in
+ * `desktop/app.zon`): full-size traffic lights live in the system
+ * strip above the web view, so this row does not need extra left inset.
  */
 function AppHeader(): React.JSX.Element {
 	const isMacDesktop = useIsMacDesktop();
