@@ -14,6 +14,10 @@
  * The component manages its own `editContent` draft state so the caller's
  * `markdown` prop stays the source-of-truth for the saved content and we
  * never mutate it directly.
+ *
+ * The toolbar action rows, body, and banners are split into module-level
+ * subcomponents so the main `DocumentViewer` body fits inside Biome's
+ * 120-lines-per-function gate.
  */
 
 import {
@@ -34,6 +38,222 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Streamdown } from 'streamdown';
+
+// ───────────────────────────────────────────────────────────────────────────
+// Subcomponents
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Edit-mode action bar: Cancel + Save. */
+function EditActionsRow({
+	canSave,
+	isSaving,
+	onCancel,
+	onSave,
+}: {
+	canSave: boolean;
+	isSaving: boolean;
+	onCancel: () => void;
+	onSave: () => void;
+}): ReactNode {
+	return (
+		<div className="flex items-center gap-1.5">
+			<button
+				type="button"
+				onClick={onCancel}
+				disabled={isSaving}
+				className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2.5 text-[12px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground-5 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				onClick={onSave}
+				disabled={isSaving || !canSave}
+				className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md bg-foreground px-2.5 text-[12px] font-medium text-background transition-colors duration-150 ease-out hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-50"
+			>
+				{isSaving ? (
+					<Loader2Icon aria-hidden="true" className="size-3.5 animate-spin" />
+				) : (
+					<SaveIcon aria-hidden="true" className="size-3.5" />
+				)}
+				{isSaving ? 'Saving…' : 'Save'}
+			</button>
+		</div>
+	);
+}
+
+/** Read-mode action bar: optional Edit, Publish dropdown, Close. */
+function ReadActionsRow({
+	canEdit,
+	onClose,
+	onEdit,
+}: {
+	canEdit: boolean;
+	onClose: () => void;
+	onEdit: () => void;
+}): ReactNode {
+	return (
+		<div className="flex items-center gap-1.5">
+			{canEdit && (
+				<button
+					type="button"
+					onClick={onEdit}
+					className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-[12px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground-5 hover:text-foreground"
+				>
+					<PencilIcon aria-hidden="true" className="size-3.5" />
+					Edit
+				</button>
+			)}
+
+			<DropdownPanelMenu
+				asChild
+				usePortal
+				align="end"
+				contentClassName="popover-styled p-1 min-w-44"
+				trigger={
+					<button
+						type="button"
+						className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-full bg-foreground-5 pr-1.5 pl-3 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-10"
+					>
+						<SendIcon aria-hidden="true" className="size-3.5" />
+						Publish
+						<ChevronDownIcon aria-hidden="true" className="size-3.5" />
+					</button>
+				}
+			>
+				<DropdownMenuItem>
+					<CopyIcon className="size-3.5" />
+					Copy
+				</DropdownMenuItem>
+				<DropdownMenuItem>
+					<DownloadIcon className="size-3.5" />
+					Download
+				</DropdownMenuItem>
+				<DropdownMenuItem>
+					<DownloadIcon className="size-3.5" />
+					Download as PDF
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem>
+					<SendIcon className="size-3.5" />
+					Publish
+				</DropdownMenuItem>
+				<DropdownMenuItem>
+					<UserPlusIcon className="size-3.5" />
+					Invite
+				</DropdownMenuItem>
+			</DropdownPanelMenu>
+
+			<button
+				type="button"
+				onClick={onClose}
+				aria-label="Close document"
+				className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-foreground-5 hover:text-foreground"
+			>
+				<XIcon aria-hidden="true" className="size-4" />
+			</button>
+		</div>
+	);
+}
+
+/** Save-failed inline banner. */
+function SaveErrorBanner({ message }: { message: string }): ReactNode {
+	return (
+		<div className="mx-4 mb-2 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
+			<span className="mt-0.5 shrink-0">⚠</span>
+			<span>{message}</span>
+		</div>
+	);
+}
+
+/** "File changed externally" warning shown if the upstream markdown drifts mid-edit. */
+function StaleWarningBanner({
+	disabled,
+	onDismiss,
+	onReload,
+}: {
+	disabled: boolean;
+	onDismiss: () => void;
+	onReload: () => void;
+}): ReactNode {
+	return (
+		<div className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+			<span className="shrink-0">⚠</span>
+			<span className="flex-1">
+				This file changed externally while you were editing. Saving now will overwrite the newer version.
+			</span>
+			<button
+				type="button"
+				onClick={onReload}
+				disabled={disabled}
+				className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-amber-500/40 bg-transparent px-2 text-[11px] font-medium text-amber-700 transition-colors duration-150 ease-out hover:bg-amber-500/10 disabled:pointer-events-none disabled:opacity-50 dark:text-amber-300"
+			>
+				Reload from server
+			</button>
+			<button
+				type="button"
+				onClick={onDismiss}
+				disabled={disabled}
+				className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md bg-amber-600 px-2 text-[11px] font-medium text-white transition-colors duration-150 ease-out hover:bg-amber-700 disabled:pointer-events-none disabled:opacity-50"
+			>
+				Keep my draft
+			</button>
+		</div>
+	);
+}
+
+/**
+ * Body switch: edit-mode textarea OR read-mode prose renderer.
+ *
+ * Edit mode uses a plain `<textarea>` rather than a rich editor — Markdown
+ * source editing is already familiar, keeps the bundle small, and avoids
+ * the cursor-sync complexity of a preview-alongside-edit layout.
+ *
+ * Read mode uses the same Streamdown prose renderer the chat surface uses;
+ * `min-h-0` lets the flex child shrink so the scroll container is the
+ * inner div, not the page.
+ */
+function DocumentBody({
+	editContent,
+	isEditing,
+	isSaving,
+	markdown,
+	onChangeContent,
+}: {
+	editContent: string;
+	isEditing: boolean;
+	isSaving: boolean;
+	markdown: string;
+	onChangeContent: (value: string) => void;
+}): ReactNode {
+	if (isEditing) {
+		return (
+			<div className="min-h-0 flex-1 overflow-y-auto px-8 pb-10">
+				<div className="mx-auto max-w-[680px]">
+					<textarea
+						value={editContent}
+						onChange={(e) => onChangeContent(e.target.value)}
+						disabled={isSaving}
+						spellCheck={false}
+						className="w-full resize-none rounded-md border border-border bg-background px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-60"
+						style={{ minHeight: '480px' }}
+					/>
+				</div>
+			</div>
+		);
+	}
+	return (
+		<div className="min-h-0 flex-1 overflow-y-auto px-8 pb-10">
+			<article className="prose prose-sm mx-auto max-w-[680px] text-foreground">
+				<Streamdown>{markdown}</Streamdown>
+			</article>
+		</div>
+	);
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Main component
+// ───────────────────────────────────────────────────────────────────────────
 
 interface DocumentViewerProps {
 	/** Filename label shown at the top-left of the viewer chrome. */
@@ -66,46 +286,27 @@ export function DocumentViewer({
 	const [editContent, setEditContent] = useState('');
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
-	// Markdown the user *started* editing from.  Set on Edit-button click
-	// so we can detect when the file is overwritten externally (e.g. the
-	// agent rewriting the same path) while a draft is in flight.  See the
-	// effect below + the stale-warning banner.  Stays a ref because the
-	// value is read inside callbacks that don't need to re-render when
-	// it changes — only the boolean below drives the UI.
-	const baselineMarkdownRef = useRef<string | null>(null);
-	// Latest editContent mirrored into a ref so handleSave can read the
-	// current value without listing it in its dep list (which would
-	// rebuild the callback on every keystroke for no benefit — the
-	// only consumer is the Save button).
-	const editContentRef = useRef('');
 	const [showStaleWarning, setShowStaleWarning] = useState(false);
+	// Markdown the user *started* editing from. Set on Edit-button click so
+	// we can detect when the file is overwritten externally (typically the
+	// agent rewriting the same path) while a draft is in flight.
+	const baselineMarkdownRef = useRef<string | null>(null);
+	// Latest editContent mirrored into a ref so handleSave can read it
+	// without listing it in its dep list (which would rebuild the callback
+	// on every keystroke for no benefit — the only consumer is one button).
+	const editContentRef = useRef('');
 
-	// Keep the ref in lock-step with the latest editContent so handleSave
-	// always sends what's currently in the textarea.
 	useEffect(() => {
 		editContentRef.current = editContent;
 	}, [editContent]);
 
-	// While the user is editing, watch for the upstream `markdown` prop
-	// changing under us — that means another writer (most often the
-	// agent) overwrote the same file on disk and the cached query has
-	// refetched.  We don't auto-clobber the user's draft; we surface a
-	// banner so they decide between "reload from server" and
-	// "overwrite anyway".
+	// Watch for the upstream markdown drifting from the baseline mid-edit.
+	// We do not auto-clobber the draft; the banner lets the user choose.
 	useEffect(() => {
-		if (!isEditing) return;
-		if (baselineMarkdownRef.current === null) return;
-		if (markdown !== baselineMarkdownRef.current) {
-			setShowStaleWarning(true);
-		}
+		if (!isEditing || baselineMarkdownRef.current === null) return;
+		if (markdown !== baselineMarkdownRef.current) setShowStaleWarning(true);
 	}, [markdown, isEditing]);
 
-	// Seed the draft with the current markdown when the user enters edit
-	// mode.  Moving the seed into the click handler (rather than a
-	// `useEffect`) means the captured value is always the most recent
-	// markdown the user actually saw on screen.  Cross-file resets are
-	// handled by the `key` prop applied to this component in
-	// `KnowledgeView`.
 	const handleEdit = useCallback(() => {
 		setEditContent(markdown);
 		baselineMarkdownRef.current = markdown;
@@ -121,17 +322,12 @@ export function DocumentViewer({
 		baselineMarkdownRef.current = null;
 	}, []);
 
-	// Discard the draft and reload from the latest server markdown.
-	// Used by the stale-warning banner; keeps the user inside edit mode
-	// so they don't lose context if they want to keep tweaking.
 	const handleReload = useCallback(() => {
 		setEditContent(markdown);
 		baselineMarkdownRef.current = markdown;
 		setShowStaleWarning(false);
 	}, [markdown]);
 
-	// Reads the latest editContent from the ref so the dep list stays
-	// at `[onSave]` only — keystrokes don't rebuild the callback.
 	const handleSave = useCallback(async () => {
 		if (!onSave) return;
 		setIsSaving(true);
@@ -150,7 +346,6 @@ export function DocumentViewer({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			{/* ── Toolbar ─────────────────────────────────────────────────────── */}
 			<header className="flex shrink-0 items-center gap-2 px-4 py-2">
 				<span className="flex-1 truncate text-[12px] text-muted-foreground">
 					{filename}
@@ -160,169 +355,36 @@ export function DocumentViewer({
 						</span>
 					)}
 				</span>
-
 				{isEditing ? (
-					/* ── Edit-mode actions ──────────────────────────────────────── */
-					<div className="flex items-center gap-1.5">
-						<button
-							type="button"
-							onClick={handleCancel}
-							disabled={isSaving}
-							className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2.5 text-[12px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground-5 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-						>
-							Cancel
-						</button>
-						<button
-							type="button"
-							onClick={handleSave}
-							disabled={isSaving || !onSave}
-							className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md bg-foreground px-2.5 text-[12px] font-medium text-background transition-colors duration-150 ease-out hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-50"
-						>
-							{isSaving ? (
-								<Loader2Icon aria-hidden="true" className="size-3.5 animate-spin" />
-							) : (
-								<SaveIcon aria-hidden="true" className="size-3.5" />
-							)}
-							{isSaving ? 'Saving…' : 'Save'}
-						</button>
-					</div>
+					<EditActionsRow
+						canSave={Boolean(onSave)}
+						isSaving={isSaving}
+						onCancel={handleCancel}
+						onSave={handleSave}
+					/>
 				) : (
-					/* ── Read-mode actions ──────────────────────────────────────── */
-					<div className="flex items-center gap-1.5">
-						{onSave && (
-							<button
-								type="button"
-								onClick={handleEdit}
-								className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-[12px] font-medium text-muted-foreground transition-colors duration-150 ease-out hover:bg-foreground-5 hover:text-foreground"
-							>
-								<PencilIcon aria-hidden="true" className="size-3.5" />
-								Edit
-							</button>
-						)}
-
-						<DropdownPanelMenu
-							asChild
-							usePortal
-							align="end"
-							contentClassName="popover-styled p-1 min-w-44"
-							trigger={
-								<button
-									type="button"
-									className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-full bg-foreground-5 pr-1.5 pl-3 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground-10"
-								>
-									<SendIcon aria-hidden="true" className="size-3.5" />
-									Publish
-									<ChevronDownIcon aria-hidden="true" className="size-3.5" />
-								</button>
-							}
-						>
-							<DropdownMenuItem>
-								<CopyIcon className="size-3.5" />
-								Copy
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<DownloadIcon className="size-3.5" />
-								Download
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<DownloadIcon className="size-3.5" />
-								Download as PDF
-							</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem>
-								<SendIcon className="size-3.5" />
-								Publish
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<UserPlusIcon className="size-3.5" />
-								Invite
-							</DropdownMenuItem>
-						</DropdownPanelMenu>
-
-						<button
-							type="button"
-							onClick={onClose}
-							aria-label="Close document"
-							className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-foreground-5 hover:text-foreground"
-						>
-							<XIcon aria-hidden="true" className="size-4" />
-						</button>
-					</div>
+					<ReadActionsRow
+						canEdit={Boolean(onSave)}
+						onClose={onClose}
+						onEdit={handleEdit}
+					/>
 				)}
 			</header>
-
-			{/* ── Save error banner ────────────────────────────────────────────── */}
-			{saveError && (
-				<div className="mx-4 mb-2 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
-					<span className="mt-0.5 shrink-0">⚠</span>
-					<span>{saveError}</span>
-				</div>
-			)}
-
-			{/* Stale-on-save warning: the upstream `markdown` prop changed
-			   under us while the user was editing (typically the agent
-			   overwriting the same file). Surface a banner so the user
-			   chooses between reloading the server copy or keeping their
-			   draft and overwriting on Save. */}
+			{saveError && <SaveErrorBanner message={saveError} />}
 			{showStaleWarning && (
-				<div className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
-					<span className="shrink-0">⚠</span>
-					<span className="flex-1">
-						This file changed externally while you were editing. Saving
-						now will overwrite the newer version.
-					</span>
-					<button
-						type="button"
-						onClick={handleReload}
-						disabled={isSaving}
-						className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-amber-500/40 bg-transparent px-2 text-[11px] font-medium text-amber-700 transition-colors duration-150 ease-out hover:bg-amber-500/10 disabled:pointer-events-none disabled:opacity-50 dark:text-amber-300"
-					>
-						Reload from server
-					</button>
-					<button
-						type="button"
-						onClick={() => setShowStaleWarning(false)}
-						disabled={isSaving}
-						className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md bg-amber-600 px-2 text-[11px] font-medium text-white transition-colors duration-150 ease-out hover:bg-amber-700 disabled:pointer-events-none disabled:opacity-50"
-					>
-						Keep my draft
-					</button>
-				</div>
+				<StaleWarningBanner
+					disabled={isSaving}
+					onDismiss={() => setShowStaleWarning(false)}
+					onReload={handleReload}
+				/>
 			)}
-
-			{/* ── Document body ────────────────────────────────────────────────── */}
-			{isEditing ? (
-				/*
-				 * Edit mode: a monospace textarea. We deliberately use a plain
-				 * <textarea> rather than a rich editor — Markdown source editing
-				 * is already familiar, keeps the bundle small, and avoids the
-				 * cursor-sync complexity of a preview-alongside-edit layout.
-				 */
-				<div className="min-h-0 flex-1 overflow-y-auto px-8 pb-10">
-					<div className="mx-auto max-w-[680px]">
-						<textarea
-							value={editContent}
-							onChange={(e) => setEditContent(e.target.value)}
-							disabled={isSaving}
-							spellCheck={false}
-							className="w-full resize-none rounded-md border border-border bg-background px-4 py-3 font-mono text-[13px] leading-relaxed text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-60"
-							// CSS min-height avoids recalculating rows on every keystroke.
-							style={{ minHeight: '480px' }}
-						/>
-					</div>
-				</div>
-			) : (
-				/*
-				 * Read mode: the same prose renderer the chat surface uses.
-				 * `min-h-0` lets the flex child shrink so the scroll container is
-				 * the inner div, not the page.
-				 */
-				<div className="min-h-0 flex-1 overflow-y-auto px-8 pb-10">
-					<article className="prose prose-sm mx-auto max-w-[680px] text-foreground">
-						<Streamdown>{markdown}</Streamdown>
-					</article>
-				</div>
-			)}
+			<DocumentBody
+				editContent={editContent}
+				isEditing={isEditing}
+				isSaving={isSaving}
+				markdown={markdown}
+				onChangeContent={setEditContent}
+			/>
 		</div>
 	);
 }
