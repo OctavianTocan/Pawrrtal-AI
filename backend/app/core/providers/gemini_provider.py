@@ -25,22 +25,29 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.agent_loop.types import TextContent, ToolCallContent
+from app.core.agent_system_prompt import (
+    DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
+)
 from app.core.config import settings
-from app.core.tools.exa_search_agent import make_exa_search_tool
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
 
-# Last-resort fallback when no caller (frontend, chat router, AGENTS.md
-# loader) supplies a system prompt.  Kept intentionally generic — the real
-# system prompt should be assembled by the caller (workspace AGENTS.md
-# wins; see PR #113) and passed in via ``stream(system_prompt=...)``.
-# This constant exists only so unit tests and direct API callers can run
-# the provider without wiring up the assembly pipeline.
-_FALLBACK_SYSTEM_PROMPT = (
-    "You are a helpful AI assistant. "
-    "Be concise, accurate, and thoughtful in your responses."
-)
+# `_FALLBACK_SYSTEM_PROMPT` is the system prompt this provider uses
+# when *no caller supplies one*.  In production the chat router
+# always supplies one (assembled from the workspace's SOUL.md +
+# AGENTS.md per PR #113), so this fallback only fires for unit tests
+# and direct-script callers that don't wire up the assembly
+# pipeline.
+#
+# It's imported from `app.core.agent_system_prompt` instead of being
+# a string literal here so that the Gemini and Claude providers fall
+# back to the **same** constant.  Otherwise the agent's identity
+# would silently change when the user switched models — which is the
+# behaviour AGENTS.md was meant to make impossible.
+#
+# The local alias is kept for grep continuity with the previous
+# in-file constant of the same name.
 
 _GEMINI_ROLE = {"user": "user", "assistant": "model"}
 
@@ -259,20 +266,15 @@ class GeminiLLM:
                     )
                 )
 
-        # Start from the caller-supplied tools (e.g. workspace file tools
-        # built by ``make_workspace_tools`` — see PR #112) so we don't
-        # silently drop them, then append the Exa web-search tool when
-        # the API key is configured.  Exa is instantiated per-request so
-        # it's trivially mockable in tests by patching
-        # ``make_exa_search_tool`` before calling ``stream()``.
-        effective_tools: list[AgentTool] = list(tools or [])
-        if settings.exa_api_key:
-            effective_tools.append(make_exa_search_tool())
-
+        # The chat router composes the full tool list (workspace tools,
+        # web search, future capabilities) and hands it in via *tools*.
+        # The provider stays tool-agnostic on purpose — see
+        # `.claude/rules/architecture/no-tools-in-providers.md` and the
+        # gate at `scripts/check-no-tools-in-providers.py`.
         context = AgentContext(
             system_prompt=system_prompt or _FALLBACK_SYSTEM_PROMPT,
             messages=prior,
-            tools=effective_tools,
+            tools=list(tools or []),
         )
         prompt = UserMessage(role="user", content=question)
         config = AgentLoopConfig(convert_to_llm=_identity_convert)

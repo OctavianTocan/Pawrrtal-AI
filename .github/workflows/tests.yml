@@ -14,6 +14,7 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - 'scripts/check-nesting.py'
+      - 'scripts/check-no-tools-in-providers.py'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/tests.yml'
@@ -23,6 +24,7 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - 'scripts/check-nesting.py'
+      - 'scripts/check-no-tools-in-providers.py'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/tests.yml'
@@ -122,6 +124,12 @@ jobs:
         # functions that exceed the nesting budget (default depth 3).
         # Exemption list lives at the top of the script.
         run: python3 scripts/check-nesting.py
+
+      - name: Check no-tools-in-providers
+        # Architectural gate: providers must not import from
+        # app.core.tools.*.  See
+        # .claude/rules/architecture/no-tools-in-providers.md.
+        run: python3 scripts/check-no-tools-in-providers.py
 
       - name: Install backend dependencies
         working-directory: backend

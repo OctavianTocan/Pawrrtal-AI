@@ -1,0 +1,85 @@
+# AI Nexus — local development stack
+#
+# Starts PostgreSQL and the FastAPI backend together.  The frontend is
+# intentionally omitted from this Compose file — run it with `bun dev`
+# (or `npm run dev`) in a separate terminal so Next.js hot-reload keeps
+# working normally.
+#
+# Quick-start:
+#
+#   cp backend/.env.docker backend/.env   # fill in your API keys
+#   docker compose up --build
+#
+# The backend will be available at http://localhost:8000.
+# The postgres port is also exposed at localhost:5432 so you can
+# connect with any database client without extra config.
+#
+# Migrations run automatically on backend startup; no manual step needed.
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_dev
+      POSTGRES_DB: nexus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # FastAPI backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override the DATABASE_URL from .env so it points at the compose
+      # postgres service regardless of what the user typed in .env.
+      DATABASE_URL: "postgresql://nexus:nexus_dev@postgres:5432/nexus"
+      # watchfiles uses kernel inotify by default, which doesn't fire
+      # reliably for changes made on the host through a Docker bind mount.
+      # Force polling so uvicorn --reload actually reloads on every save.
+      WATCHFILES_FORCE_POLLING: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Override the production CMD: run migrations (with retry) then start
+    # uvicorn with --reload so source-mount edits apply immediately.
+    command: >
+      sh -c '
+        until alembic upgrade head; do
+          echo "[docker-compose] alembic failed, retrying in 2s…" && sleep 2;
+        done &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      '
+    volumes:
+      # Mount the backend source for hot-reload: uvicorn --reload detects
+      # file changes inside the container and restarts the worker in-place.
+      # New files in the image layer (e.g. alembic versions) still require
+      # `docker compose build backend` + restart.
+      - ./backend/app:/app/app
+      # Workspace data lives outside the container so it persists across
+      # restarts and is not wiped by `docker compose down`.
+      - workspace_data:/data/workspaces
+
+volumes:
+  postgres_data:
+  workspace_data:
