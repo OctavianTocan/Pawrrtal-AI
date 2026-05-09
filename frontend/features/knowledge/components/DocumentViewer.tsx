@@ -32,7 +32,7 @@ import {
 	UserPlusIcon,
 	XIcon,
 } from 'lucide-react';
-import { type ReactNode, useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Streamdown } from 'streamdown';
 
 interface DocumentViewerProps {
@@ -66,36 +66,87 @@ export function DocumentViewer({
 	const [editContent, setEditContent] = useState('');
 	const [isSaving, setIsSaving] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
+	// Markdown the user *started* editing from.  Set on Edit-button click
+	// so we can detect when the file is overwritten externally (e.g. the
+	// agent rewriting the same path) while a draft is in flight.  See the
+	// effect below + the stale-warning banner.  Stays a ref because the
+	// value is read inside callbacks that don't need to re-render when
+	// it changes — only the boolean below drives the UI.
+	const baselineMarkdownRef = useRef<string | null>(null);
+	// Latest editContent mirrored into a ref so handleSave can read the
+	// current value without listing it in its dep list (which would
+	// rebuild the callback on every keystroke for no benefit — the
+	// only consumer is the Save button).
+	const editContentRef = useRef('');
+	const [showStaleWarning, setShowStaleWarning] = useState(false);
 
-	// Seed the draft with the current markdown when the user enters edit mode.
-	// Moving this into the event handler (rather than a useEffect) means the
-	// captured value is always fresh and we don't need a ref to guard against
-	// mid-edit overwrites.  Cross-file resets are handled by the `key` prop
-	// applied to this component in KnowledgeView.
+	// Keep the ref in lock-step with the latest editContent so handleSave
+	// always sends what's currently in the textarea.
+	useEffect(() => {
+		editContentRef.current = editContent;
+	}, [editContent]);
+
+	// While the user is editing, watch for the upstream `markdown` prop
+	// changing under us — that means another writer (most often the
+	// agent) overwrote the same file on disk and the cached query has
+	// refetched.  We don't auto-clobber the user's draft; we surface a
+	// banner so they decide between "reload from server" and
+	// "overwrite anyway".
+	useEffect(() => {
+		if (!isEditing) return;
+		if (baselineMarkdownRef.current === null) return;
+		if (markdown !== baselineMarkdownRef.current) {
+			setShowStaleWarning(true);
+		}
+	}, [markdown, isEditing]);
+
+	// Seed the draft with the current markdown when the user enters edit
+	// mode.  Moving the seed into the click handler (rather than a
+	// `useEffect`) means the captured value is always the most recent
+	// markdown the user actually saw on screen.  Cross-file resets are
+	// handled by the `key` prop applied to this component in
+	// `KnowledgeView`.
 	const handleEdit = useCallback(() => {
 		setEditContent(markdown);
+		baselineMarkdownRef.current = markdown;
 		setSaveError(null);
+		setShowStaleWarning(false);
 		setIsEditing(true);
 	}, [markdown]);
 
 	const handleCancel = useCallback(() => {
 		setIsEditing(false);
 		setSaveError(null);
+		setShowStaleWarning(false);
+		baselineMarkdownRef.current = null;
 	}, []);
 
+	// Discard the draft and reload from the latest server markdown.
+	// Used by the stale-warning banner; keeps the user inside edit mode
+	// so they don't lose context if they want to keep tweaking.
+	const handleReload = useCallback(() => {
+		setEditContent(markdown);
+		baselineMarkdownRef.current = markdown;
+		setShowStaleWarning(false);
+	}, [markdown]);
+
+	// Reads the latest editContent from the ref so the dep list stays
+	// at `[onSave]` only — keystrokes don't rebuild the callback.
 	const handleSave = useCallback(async () => {
 		if (!onSave) return;
 		setIsSaving(true);
 		setSaveError(null);
 		try {
-			await onSave(editContent);
+			await onSave(editContentRef.current);
 			setIsEditing(false);
+			setShowStaleWarning(false);
+			baselineMarkdownRef.current = null;
 		} catch (err) {
 			setSaveError(err instanceof Error ? err.message : 'Save failed — please try again.');
 		} finally {
 			setIsSaving(false);
 		}
-	}, [onSave, editContent]);
+	}, [onSave]);
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
@@ -205,6 +256,37 @@ export function DocumentViewer({
 				<div className="mx-4 mb-2 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-[12px] text-destructive">
 					<span className="mt-0.5 shrink-0">⚠</span>
 					<span>{saveError}</span>
+				</div>
+			)}
+
+			{/* Stale-on-save warning: the upstream `markdown` prop changed
+			   under us while the user was editing (typically the agent
+			   overwriting the same file). Surface a banner so the user
+			   chooses between reloading the server copy or keeping their
+			   draft and overwriting on Save. */}
+			{showStaleWarning && (
+				<div className="mx-4 mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-700 dark:text-amber-300">
+					<span className="shrink-0">⚠</span>
+					<span className="flex-1">
+						This file changed externally while you were editing. Saving
+						now will overwrite the newer version.
+					</span>
+					<button
+						type="button"
+						onClick={handleReload}
+						disabled={isSaving}
+						className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-amber-500/40 bg-transparent px-2 text-[11px] font-medium text-amber-700 transition-colors duration-150 ease-out hover:bg-amber-500/10 disabled:pointer-events-none disabled:opacity-50 dark:text-amber-300"
+					>
+						Reload from server
+					</button>
+					<button
+						type="button"
+						onClick={() => setShowStaleWarning(false)}
+						disabled={isSaving}
+						className="inline-flex h-6 cursor-pointer items-center gap-1 rounded-md bg-amber-600 px-2 text-[11px] font-medium text-white transition-colors duration-150 ease-out hover:bg-amber-700 disabled:pointer-events-none disabled:opacity-50"
+					>
+						Keep my draft
+					</button>
 				</div>
 			)}
 
