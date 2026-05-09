@@ -5,9 +5,10 @@ const TraceOption = enum { off, events, runtime, all };
 const WebEngineOption = enum { system, chromium };
 const PackageTarget = enum { macos, windows, linux };
 
-/// Path to the zero-native framework checkout.
-/// Override with: zig build -Dzero-native-path=/your/path
-const default_zero_native_path = "../third_party/zero-native";
+/// Path to the zero-native framework. Resolved in this order:
+///   1. -Dzero-native-path=<path>  (CLI override)
+///   2. $(npm prefix -g)/lib/node_modules/zero-native  (global npm install)
+///   3. ../third_party/zero-native  (local fallback)
 const app_exe_name = "ai-nexus";
 
 pub fn build(b: *std.Build) void {
@@ -21,7 +22,7 @@ pub fn build(b: *std.Build) void {
     const cef_dir_override = b.option([]const u8, "cef-dir", "Override CEF root directory");
     const cef_auto_install_override = b.option(bool, "cef-auto-install", "Override CEF auto-install setting");
     const package_target = b.option(PackageTarget, "package-target", "Package target: macos, windows, linux") orelse .macos;
-    const zero_native_path = b.option([]const u8, "zero-native-path", "Path to zero-native framework") orelse default_zero_native_path;
+    const zero_native_path = b.option([]const u8, "zero-native-path", "Path to zero-native framework") orelse resolveNpmZeroNative(b);
     const optimize_name = @tagName(optimize);
 
     const selected_platform: PlatformOption = switch (platform_option) {
@@ -276,6 +277,24 @@ fn objectSection(source: []const u8, field: []const u8) ?[]const u8 {
         }
     }
     return null;
+}
+
+/// Locate the zero-native framework via `npm prefix -g`, falling back to a
+/// local third_party clone if npm is unavailable or the package isn't installed.
+fn resolveNpmZeroNative(b: *std.Build) []const u8 {
+    const result = std.process.Child.run(.{
+        .allocator = b.allocator,
+        .argv = &.{ "npm", "prefix", "-g" },
+    }) catch return "../third_party/zero-native";
+    defer b.allocator.free(result.stdout);
+    defer b.allocator.free(result.stderr);
+    if (result.term == .Exited and result.term.Exited == 0) {
+        const prefix = std.mem.trim(u8, result.stdout, " \t\r\n");
+        if (prefix.len > 0) {
+            return b.pathJoin(&.{ prefix, "lib", "node_modules", "zero-native" });
+        }
+    }
+    return "../third_party/zero-native";
 }
 
 fn boolField(source: []const u8, field: []const u8) ?bool {
