@@ -1,8 +1,17 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import dynamic from 'next/dynamic';
 import type * as React from 'react';
+
+// Lazy-load devtools so they are never included in the SSR pass.
+// A static import causes a 'No QueryClient set' hydration error in the
+// Next.js App Router because the devtools try to read React context before
+// the client tree is mounted.
+const ReactQueryDevtools = dynamic(
+	() => import('@tanstack/react-query-devtools').then((m) => ({ default: m.ReactQueryDevtools })),
+	{ ssr: false },
+);
 import { Toaster } from 'sonner';
 import { getQueryClient } from './get-query-client';
 

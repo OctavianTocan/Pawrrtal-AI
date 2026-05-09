@@ -123,12 +123,12 @@ desktop-build:
 desktop-dev: desktop-build
     cd desktop && zero-native dev --manifest app.zon --binary zig-out/bin/ai-nexus
 
-# Full-stack one-shot: starts the dev servers, waits for :3001, then opens
-# the zero-native desktop shell. Ctrl-C tears the whole stack down.
+# Full-stack one-shot: starts the dev servers, waits for :3001, then builds
+# the Zig shell and opens the zero-native desktop window. Ctrl-C tears down.
 desktop-dev-full:
     bun run dev.ts & \
     until curl -sf http://localhost:3001 > /dev/null 2>&1; do sleep 1; done && \
-    cd desktop && zero-native dev --manifest app.zon --binary zig-out/bin/ai-nexus
+    cd desktop && zig build && zero-native dev --manifest app.zon --binary zig-out/bin/ai-nexus
 
 # Build the Next.js static export for production packaging.
 desktop-frontend-build:
