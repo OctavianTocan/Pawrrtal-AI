@@ -40,7 +40,7 @@ concurrency:
 jobs:
   frontend:
     name: Frontend Vitest
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -103,7 +103,7 @@ jobs:
 
   backend:
     name: Backend pytest
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
