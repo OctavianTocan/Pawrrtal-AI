@@ -10,8 +10,7 @@
 import type { ComponentRenderProps } from '@json-render/react';
 import type { ReactNode } from 'react';
 
-const cls = (...names: (string | false | undefined | null)[]) =>
-	names.filter(Boolean).join(' ');
+const cls = (...names: (string | false | undefined | null)[]) => names.filter(Boolean).join(' ');
 
 type RendererMap = {
 	[name: string]: (
@@ -80,7 +79,9 @@ export const artifactComponents: RendererMap = {
 	ColumnList: ({ props }) => (
 		<div className={cls('artifact-col', `artifact-col-${props.kind}`)}>
 			<h3 className="artifact-col-title">
-				<span className={cls('artifact-tag', `artifact-tag-${props.kind}`)}>{props.kind}</span>{' '}
+				<span className={cls('artifact-tag', `artifact-tag-${props.kind}`)}>
+					{props.kind}
+				</span>{' '}
 				{props.title}
 			</h3>
 			<ul>

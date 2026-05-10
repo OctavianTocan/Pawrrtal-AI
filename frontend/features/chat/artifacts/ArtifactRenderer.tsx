@@ -8,7 +8,7 @@
  * provider plumbing so callers don't repeat them.
  */
 
-import { JSONUIProvider, Renderer, defineRegistry } from '@json-render/react';
+import { defineRegistry, JSONUIProvider, Renderer } from '@json-render/react';
 import type { ReactNode } from 'react';
 import type { ChatArtifactPayload } from '../types';
 import { artifactCatalog } from './catalog';

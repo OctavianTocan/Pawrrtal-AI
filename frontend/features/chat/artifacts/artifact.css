@@ -16,7 +16,9 @@
 	background: var(--background-elevated, var(--background));
 	cursor: pointer;
 	text-align: left;
-	transition: background 0.15s ease, transform 0.15s ease;
+	transition:
+		background 0.15s ease,
+		transform 0.15s ease;
 }
 .artifact-preview-card:hover {
 	background: var(--foreground-5);
@@ -89,7 +91,9 @@
 	background: transparent;
 	color: var(--muted-foreground);
 	cursor: pointer;
-	transition: background 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
 }
 .artifact-dialog-close:hover {
 	background: var(--foreground-5);

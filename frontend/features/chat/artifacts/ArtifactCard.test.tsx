@@ -39,9 +39,7 @@ describe('ArtifactCard', () => {
 	it('renders the title and a button with an accessible name', () => {
 		render(<ArtifactCard artifact={_SAMPLE} />);
 		expect(screen.getByText('A useful comparison')).toBeInTheDocument();
-		expect(
-			screen.getByRole('button', { name: /open artifact/i })
-		).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: /open artifact/i })).toBeInTheDocument();
 	});
 
 	it('opens the dialog on click and shows a Close button', () => {

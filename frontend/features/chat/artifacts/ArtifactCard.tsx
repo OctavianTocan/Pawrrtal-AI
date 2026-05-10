@@ -40,9 +40,7 @@ export function ArtifactCard({ artifact }: ArtifactCardProps): ReactNode {
 					<ExpandIcon className="size-4" />
 				</div>
 			</button>
-			{open ? (
-				<ArtifactDialog artifact={artifact} onClose={() => setOpen(false)} />
-			) : null}
+			{open ? <ArtifactDialog artifact={artifact} onClose={() => setOpen(false)} /> : null}
 		</>
 	);
 }

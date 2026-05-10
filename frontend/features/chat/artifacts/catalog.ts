@@ -63,8 +63,7 @@ export const artifactCatalog = defineCatalog(schema, {
 				value: z.string(),
 				label: z.string(),
 			}),
-			description:
-				'Number + label chip. Use inside a Hero or stand-alone for a stat-row.',
+			description: 'Number + label chip. Use inside a Hero or stand-alone for a stat-row.',
 		},
 		CardRow: {
 			props: z.object({
