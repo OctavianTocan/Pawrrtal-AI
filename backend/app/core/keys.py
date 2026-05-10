@@ -49,6 +49,7 @@ OVERRIDABLE_KEYS: frozenset[str] = frozenset(
         "CLAUDE_CODE_OAUTH_TOKEN",
         "EXA_API_KEY",
         "XAI_API_KEY",
+        "OPENAI_CODEX_OAUTH_TOKEN",
     }
 )
 
@@ -61,6 +62,7 @@ _SETTINGS_ATTR_MAP: dict[str, str] = {
     "CLAUDE_CODE_OAUTH_TOKEN": "claude_code_oauth_token",
     "EXA_API_KEY": "exa_api_key",
     "XAI_API_KEY": "xai_api_key",
+    "OPENAI_CODEX_OAUTH_TOKEN": "openai_codex_oauth_token",
 }
 
 

@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     # Leave empty to disable web search; the tool returns a clear
     # "not configured" error rather than crashing the turn.
     exa_api_key: str = ""
+    # OAuth token used by the Codex CLI to authenticate image generation
+    # requests routed through the OpenAI Codex Responses backend
+    # (https://chatgpt.com/backend-api/codex/responses).  Leave empty to
+    # fall back to the token stored in $CODEX_HOME/auth.json by
+    # ``@openai/codex`` / the bundled Codex agent.  When both are absent
+    # the image-generation tool returns a descriptive error.
+    openai_codex_oauth_token: str = ""
     # API key for xAI (https://x.ai). Powers the speech-to-text proxy
     # endpoint at POST /api/v1/stt — the frontend records audio with the
     # browser's MediaRecorder, uploads the blob, and the backend forwards
@@ -97,9 +104,7 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     # Where Google redirects back to after auth. Must be an authorized
     # redirect URI on the OAuth client. Default targets local dev.
-    google_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/google/callback"
-    )
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
 
     # --- OAuth: Apple ---
     # Apple Sign In requires four pieces: services ID (acts as client_id),
@@ -109,9 +114,7 @@ class Settings(BaseSettings):
     apple_oauth_team_id: str = ""
     apple_oauth_key_id: str = ""
     apple_oauth_private_key: str = ""
-    apple_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/apple/callback"
-    )
+    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
 
     # Where to send the user after a successful OAuth sign-in. Override in
     # production to point at the deployed frontend (e.g. https://app/...).
@@ -157,9 +160,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
-        secure = (
-            self.cookie_secure if self.cookie_secure is not None else self.is_production
-        )
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."

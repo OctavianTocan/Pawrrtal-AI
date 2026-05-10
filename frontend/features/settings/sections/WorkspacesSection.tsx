@@ -65,6 +65,14 @@ const KEY_METAS: readonly WorkspaceEnvKeyMeta[] = [
 		placeholder: 'Your xAI API key',
 		url: 'https://x.ai',
 	},
+	{
+		key: 'OPENAI_CODEX_OAUTH_TOKEN',
+		label: 'OpenAI Codex OAuth Token',
+		description:
+			'Powers image generation via gpt-image-2. Run `codex auth` to sign in; the token is loaded automatically from $CODEX_HOME/auth.json. Paste your access token here only if you need a per-workspace override.',
+		placeholder: 'Codex OAuth access token',
+		url: 'https://github.com/openai/codex',
+	},
 ];
 
 /** Empty record with every overridable key seeded to the empty string. */

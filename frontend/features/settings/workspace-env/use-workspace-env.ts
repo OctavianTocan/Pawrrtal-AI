@@ -19,6 +19,7 @@ export const WORKSPACE_ENV_KEY_IDS = [
 	'CLAUDE_CODE_OAUTH_TOKEN',
 	'EXA_API_KEY',
 	'XAI_API_KEY',
+	'OPENAI_CODEX_OAUTH_TOKEN',
 ] as const satisfies readonly string[];
 
 /** Union of valid workspace env key names. Derived from `WORKSPACE_ENV_KEY_IDS`. */
