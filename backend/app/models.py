@@ -12,10 +12,6 @@ from typing import Any
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
-from sqlalchemy_utils import StringEncryptedType
-from sqlalchemy_utils.types.encrypted.encrypted_type import FernetEngine
-
-from app.core import config
 
 from .db import Base
 
@@ -164,22 +160,6 @@ class UserAppearance(Base):
     # for the canonical shape.
     options: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-
-
-class APIKey(Base):
-    """API key for a user's provider account."""
-
-    __tablename__ = "api_keys"
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
-    provider: Mapped[str] = mapped_column(String(50))
-    encrypted_key: Mapped[str] = mapped_column(
-        StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
-    )
-    is_active: Mapped[bool] = mapped_column(default=True)
 
 
 class ChannelBinding(Base):

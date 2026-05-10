@@ -1,6 +1,8 @@
 ---
+
 description: Ensure code adheres to Clean Code Understandability and Naming conventions
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: Understandability & Naming
 

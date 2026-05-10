@@ -88,6 +88,17 @@ const inputGroupButtonVariants = cva('flex items-center gap-2 rounded-4xl text-s
 	},
 });
 
+/** Maps compact input-group sizes to `Button` sizes so height/padding stay in sync with toolbar icons. */
+const INPUT_GROUP_TO_BUTTON_SIZE = {
+	xs: 'xs',
+	sm: 'sm',
+	'icon-xs': 'icon-xs',
+	'icon-sm': 'icon-sm',
+} as const satisfies Record<
+	NonNullable<VariantProps<typeof inputGroupButtonVariants>['size']>,
+	NonNullable<React.ComponentProps<typeof Button>['size']>
+>;
+
 function InputGroupButton({
 	className,
 	type = 'button',
@@ -96,10 +107,13 @@ function InputGroupButton({
 	...props
 }: Omit<React.ComponentProps<typeof Button>, 'size'> &
 	VariantProps<typeof inputGroupButtonVariants>) {
+	const buttonSize = INPUT_GROUP_TO_BUTTON_SIZE[size ?? 'xs'];
+
 	return (
 		<Button
 			type={type}
 			data-size={size}
+			size={buttonSize}
 			variant={variant}
 			className={cn(inputGroupButtonVariants({ size }), className)}
 			{...props}

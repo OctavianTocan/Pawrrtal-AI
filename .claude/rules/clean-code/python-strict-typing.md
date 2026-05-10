@@ -1,6 +1,8 @@
 ---
+
 description: Python-specific clean code rules (Pydantic, typing)
 globs: **/*.py
+paths: ["**/*.py"]
 ---
 # Clean Code: Python
 

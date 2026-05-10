@@ -5,18 +5,18 @@ paths: ["**/*"]
 
 # Verify Locally Before CI
 
-Run the project's full local verification suite (`pnpm check`, `pnpm test`, `tsc --noEmit`, etc.) before pushing to CI. Don't use CI as your test runner.
+Run the project's full local verification suite before pushing to CI. Don't use CI as your test runner.
 
 ## Rule
 
 Before `git push`:
 
-1. Run the formatter: `pnpm format` or `biome check --fix`
-2. Run type checks: `tsc --noEmit` or `pnpm typecheck`
-3. Run tests: `pnpm test` or `vitest run`
-4. Run linting: `pnpm lint` or `biome lint`
+1. Run the unified gate: `just check` (ruff + Biome)
+2. Run type checks: `bun run typecheck`
+3. Run tests: `just test` (pytest) and/or `bun run test`
+4. Full gate before pushing: `just check-all` (ruff + Biome + bandit + mypy)
 
-If the project has a unified check command (`pnpm check`), run that.
+If touching only frontend, `just check` + `bun run typecheck` is the fast loop.
 
 ## Why
 
@@ -39,8 +39,9 @@ git add -A && git commit -m "feat: new feature" && git push
 Good — local verification first:
 
 ```bash
-pnpm check  # format + typecheck + lint + test
-# Fix any issues locally
+just check          # biome + ruff (fast)
+bun run typecheck   # tsc --noEmit
+just test           # pytest
 git add -A && git commit -m "feat: new feature" && git push
 # CI passes on first try
 ```

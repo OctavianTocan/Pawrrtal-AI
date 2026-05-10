@@ -85,7 +85,9 @@ _MODEL_MISSING_MESSAGE = (
     "  /model google/gemini-3-flash-preview\n"
     "  /model anthropic/claude-opus-4-5"
 )
-_MODEL_NOT_BOUND_MESSAGE = "You need to connect your account first before switching models."
+_MODEL_NOT_BOUND_MESSAGE = (
+    "You need to connect your account first before switching models."
+)
 _MODEL_UNKNOWN_PREFIX_MESSAGE = (
     "Unknown model prefix. Supported prefixes: google/, anthropic/\n\n"
     "Examples:\n"

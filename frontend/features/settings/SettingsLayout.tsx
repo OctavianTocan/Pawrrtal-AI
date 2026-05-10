@@ -14,6 +14,7 @@ import { IntegrationsSection } from './sections/IntegrationsSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
 import { PlaceholderSection } from './sections/PlaceholderSection';
 import { UsageSection } from './sections/UsageSection';
+import { WorkspacesSection } from './sections/WorkspacesSection';
 
 /**
  * Renders the right-pane body for the currently selected section.
@@ -24,6 +25,7 @@ import { UsageSection } from './sections/UsageSection';
  */
 function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'general') return <GeneralSection />;
+	if (activeId === 'workspaces') return <WorkspacesSection />;
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
 	if (activeId === 'integrations') return <IntegrationsSection />;

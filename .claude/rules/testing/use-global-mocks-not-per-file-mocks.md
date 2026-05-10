@@ -1,6 +1,6 @@
 ---
 name: use-global-mocks-not-per-file-mocks
-paths: ["**/*"]
+paths: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/vitest.config.*"]
 ---
 
 # Set Up Global Mocks in Setup Files, Not Per-Test-File - Shared Mocks Prevent Drift Between Tests

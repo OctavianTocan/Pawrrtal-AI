@@ -1,6 +1,6 @@
 ---
 name: android-accessibility-id-underscores
-paths: ["**/*.yaml", "**/*.yml", "**/*.{kt,java}"]
+paths: [".no-match"]
 ---
 
 # Android Accessibility IDs with Underscores Can Fail in Maestro - Use Hyphens

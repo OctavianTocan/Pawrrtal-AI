@@ -1,6 +1,6 @@
 ---
 name: vitest-mock-flow-types
-paths: ["**/package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml"]
+paths: [".no-match"]
 ---
 
 # Mock Flow-Typed React Native Packages in Vitest

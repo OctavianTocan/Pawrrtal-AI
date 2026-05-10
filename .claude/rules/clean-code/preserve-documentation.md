@@ -1,6 +1,8 @@
 ---
+
 description: Preserve existing documentation when modifying code
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Preserve Existing Documentation
 

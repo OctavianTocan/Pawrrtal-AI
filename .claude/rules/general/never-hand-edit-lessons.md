@@ -1,6 +1,6 @@
 ---
 name: never-hand-edit-lessons
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # Never Hand-Edit LESSONS.md

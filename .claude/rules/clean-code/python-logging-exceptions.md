@@ -1,6 +1,8 @@
 ---
+
 description: Python logging rules — use logging module, narrow exceptions
 globs: "**/*.py"
+paths: ["**/*.py"]
 ---
 # Python Logging and Exception Handling
 

@@ -1,6 +1,6 @@
 ---
 name: diff-config-after-directory-rename
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # After Renaming Directories, Diff All Config Files to Find Stale Path References

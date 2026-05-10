@@ -1,6 +1,6 @@
 ---
 name: readelf-abi-before-fixing-linker-errors
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # Use readelf to Verify Actual .so ABI Before Attempting Linker Fix Workarounds

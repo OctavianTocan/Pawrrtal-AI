@@ -1,6 +1,6 @@
 ---
 name: stopping-state-for-async-teardown
-paths: ["**/*"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # Add a Stopping State Between Active and Idle to Prevent Double-Resource Creation During Async Teardown

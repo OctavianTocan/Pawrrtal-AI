@@ -28,7 +28,9 @@ from app.core.providers.claude_provider import ClaudeLLM, ClaudeLLMConfig
 pytestmark = pytest.mark.anyio
 
 
-async def _drain(provider: ClaudeLLM, prompt: str, *, tools: list[AgentTool] | None = None) -> list[StreamEvent]:
+async def _drain(
+    provider: ClaudeLLM, prompt: str, *, tools: list[AgentTool] | None = None
+) -> list[StreamEvent]:
     """Run one turn against the provider and collect every emitted event."""
     events: list[StreamEvent] = []
     async for event in provider.stream(
@@ -106,9 +108,7 @@ async def test_agent_tool_round_trips_through_claude_bridge(
         claude_model_id,
         config=ClaudeLLMConfig(oauth_token=claude_oauth_token),
     )
-    events = await _drain(
-        provider, "ping for echo test", tools=[echo_tool]
-    )
+    events = await _drain(provider, "ping for echo test", tools=[echo_tool])
 
     # Strong signal the bridge is wired correctly: our handler ran.
     assert invocations, (
@@ -120,4 +120,6 @@ async def test_agent_tool_round_trips_through_claude_bridge(
     # frontend can render it.  Don't assert on the body (Claude
     # picks the wording); just on the presence.
     tool_results = [e for e in events if e["type"] == "tool_result"]
-    assert tool_results, f"no tool_result events emitted; got types {[e['type'] for e in events]}"
+    assert tool_results, (
+        f"no tool_result events emitted; got types {[e['type'] for e in events]}"
+    )

@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
-/** Registration form with invite code gate (when enabled server-side). */
+/** Self-service registration form. */
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	const [errorMessage, setErrorMessage] = useState('');
 	// To disable buttons while submitting.
@@ -28,7 +28,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	const emailId = useId();
 	const passwordId = useId();
 	const confirmPasswordId = useId();
-	const inviteCodeId = useId();
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		// Stops the page from refreshing.
@@ -41,7 +40,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 		const email = formData.get('email')?.toString() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
 		const confirmPassword = formData.get('confirm-password')?.toString() ?? '';
-		const inviteCode = formData.get('invite-code')?.toString() ?? '';
 		if (password !== confirmPassword) {
 			setErrorMessage('Passwords do not match');
 			// Enable the button again.
@@ -58,7 +56,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 			body: JSON.stringify({
 				email: email,
 				password: password,
-				invite_code: inviteCode,
 			}),
 		});
 
@@ -158,19 +155,6 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 								name="confirm-password"
 							/>
 							<FieldDescription>Please confirm your password.</FieldDescription>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor={inviteCodeId}>Invite Code</FieldLabel>
-							<Input
-								id={inviteCodeId}
-								type="password"
-								required
-								name="invite-code"
-								placeholder="Enter your invite code"
-							/>
-							<FieldDescription>
-								An invite code is required to create an account.
-							</FieldDescription>
 						</Field>
 						<FieldGroup>
 							<Field>

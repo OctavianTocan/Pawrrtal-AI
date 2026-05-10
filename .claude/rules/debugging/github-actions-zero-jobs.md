@@ -1,6 +1,6 @@
 ---
 name: github-actions-zero-jobs
-paths: ["**/*"]
+paths: [".github/workflows/**"]
 ---
 
 # GitHub Actions "0 jobs" means YAML parse failure, not runner issue

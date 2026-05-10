@@ -1,6 +1,6 @@
 ---
 name: dispatch-inputs-empty-on-push-trigger
-paths: ["**/*"]
+paths: [".github/workflows/**"]
 ---
 
 # workflow_dispatch Inputs Are Empty When the Same Workflow Is Triggered by a Push

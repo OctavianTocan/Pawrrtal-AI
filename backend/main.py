@@ -22,6 +22,7 @@ from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
 from app.api.workspace import get_workspace_router
+from app.api.workspace_env import get_workspace_env_router
 from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
@@ -121,6 +122,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_workspace_router(),
+    )
+    fastapi_app.include_router(
+        get_workspace_env_router(),
     )
 
     @fastapi_app.get("/api/v1/health", tags=["health"], include_in_schema=False)

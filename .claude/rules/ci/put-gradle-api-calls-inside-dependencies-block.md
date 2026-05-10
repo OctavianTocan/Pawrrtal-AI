@@ -1,6 +1,6 @@
 ---
 name: put-gradle-api-calls-inside-dependencies-block
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Gradle api() Calls Fail When Injected Outside the dependencies {} Block - Check Scope

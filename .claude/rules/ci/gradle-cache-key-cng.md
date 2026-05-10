@@ -1,6 +1,6 @@
 ---
 name: gradle-cache-key-cng
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Hash source files for Gradle cache keys, not CNG-generated output

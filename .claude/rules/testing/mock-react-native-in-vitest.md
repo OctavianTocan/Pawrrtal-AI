@@ -1,6 +1,6 @@
 ---
 name: mock-react-native-in-vitest
-paths: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"]
+paths: [".no-match"]
 ---
 
 # Mock React Native in Vitest

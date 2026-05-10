@@ -2,6 +2,10 @@ import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { StepMessaging } from './step-messaging';
 
+vi.mock('@/lib/channels', () => ({
+	listChannels: vi.fn().mockResolvedValue([]),
+}));
+
 describe('StepMessaging', () => {
 	it('renders every channel as a Connect row', () => {
 		const { getByText } = render(

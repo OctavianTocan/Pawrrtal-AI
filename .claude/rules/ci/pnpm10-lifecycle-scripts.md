@@ -1,6 +1,6 @@
 ---
 name: pnpm10-lifecycle-scripts
-paths: ["package.json", "pnpm-lock.yaml", ".github/workflows/*.{yml,yaml}"]
+paths: [".no-match"]
 ---
 # pnpm 10 Blocks Native Addon Lifecycle Scripts
 

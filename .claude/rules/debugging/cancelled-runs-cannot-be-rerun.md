@@ -1,6 +1,6 @@
 ---
 name: cancelled-runs-cannot-be-rerun
-paths: ["**/*"]
+paths: [".github/workflows/**"]
 ---
 
 # Cancelled GitHub Actions Runs Cannot Be Re-Run - Trigger a New Dispatch Instead

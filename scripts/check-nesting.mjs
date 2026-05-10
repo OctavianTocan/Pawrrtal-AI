@@ -44,9 +44,9 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
-import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
 
@@ -230,7 +230,7 @@ async function checkFile(filePath, repoRelative) {
 		source,
 		ts.ScriptTarget.Latest,
 		/* setParentNodes */ true,
-		scriptKind,
+		scriptKind
 	);
 	const offenders = analyse(sourceFile);
 	return offenders
@@ -264,13 +264,13 @@ async function main() {
 
 	all.sort((a, b) => b.deepest - a.deepest || a.path.localeCompare(b.path) || a.line - b.line);
 	console.error(
-		`check-nesting (frontend): ${all.length} function(s) exceed depth ${MAX_DEPTH}:\n`,
+		`check-nesting (frontend): ${all.length} function(s) exceed depth ${MAX_DEPTH}:\n`
 	);
 	for (const o of all) {
 		console.error(`  depth=${o.deepest}  ${o.path}:${o.line}  in ${o.name}()`);
 	}
 	console.error(
-		'\nFlatten with guard clauses or extract helpers to bring each function under the budget.',
+		'\nFlatten with guard clauses or extract helpers to bring each function under the budget.'
 	);
 	process.exitCode = 1;
 }

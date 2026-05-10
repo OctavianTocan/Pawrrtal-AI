@@ -1,6 +1,6 @@
 ---
 name: tsdoc-on-every-exported-function
-paths: ["**/*"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # TSDoc Comments Required on Every Exported Function, Type, and Module

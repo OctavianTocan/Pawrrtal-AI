@@ -1,6 +1,8 @@
 ---
+
 description: Avoid redundant state representations in React components
 globs: **/*.{ts,tsx,js,jsx}
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 # Clean Code: Avoid Redundant State
 

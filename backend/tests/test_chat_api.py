@@ -78,7 +78,9 @@ async def test_chat_streams_provider_events(
     )
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
-        lambda _model_id: FakeProvider([{"type": "delta", "content": "hello"}]),
+        lambda _model_id, **kwargs: FakeProvider(
+            [{"type": "delta", "content": "hello"}]
+        ),
     )
 
     response = await client.post(
@@ -104,7 +106,7 @@ async def test_chat_persists_requested_model_id(
     )
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
-        lambda _model_id: FakeProvider([{"type": "delta", "content": "ok"}]),
+        lambda _model_id, **kwargs: FakeProvider([{"type": "delta", "content": "ok"}]),
     )
 
     response = await client.post(
@@ -146,7 +148,9 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
 
-    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: FailingProvider())
+    monkeypatch.setattr(
+        "app.api.chat.resolve_llm", lambda _model_id, **kwargs: FailingProvider()
+    )
 
     response = await client.post(
         "/api/v1/chat/",
@@ -191,7 +195,7 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     monkeypatch.setattr(provider, "_stream_fn", script)
 
     # Inject both the provider and the echo tool into the chat path.
-    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
     monkeypatch.setattr(
         "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo]
     )
@@ -263,7 +267,7 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
         ),
     )
 
-    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
     monkeypatch.setattr(
         "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")]
     )

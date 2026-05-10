@@ -1,6 +1,5 @@
 """API tests for conversation routes."""
 
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -133,6 +132,7 @@ async def test_generate_conversation_title_persists_usable_title(
     """Title generation persists normalized provider output."""
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Old"})
+
     # The conversations route was refactored from `create_utility_agent`
     # (Agno) to `generate_text_once` (gemini-utils).  Monkeypatch the
     # actual call site so the test isn't pinned to the old indirection.

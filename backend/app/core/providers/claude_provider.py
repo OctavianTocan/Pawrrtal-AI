@@ -57,6 +57,7 @@ from claude_agent_sdk import (
 )
 
 from app.core.agent_loop.types import AgentTool
+from app.core.keys import resolve_api_key
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
@@ -160,8 +161,6 @@ class ClaudeLLMConfig:
     """Additional environment variables forwarded to the CLI subprocess."""
 
 
-
-
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
@@ -175,9 +174,11 @@ class ClaudeLLM:
         model_id: str,
         *,
         config: ClaudeLLMConfig | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> None:
         self._model_id = model_id
         self._config = config or ClaudeLLMConfig()
+        self._user_id = user_id
 
     async def stream(
         self,
@@ -204,7 +205,6 @@ class ClaudeLLM:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
             events, an optional rate-limit warning, and any error events.
         """
-        del user_id  # reserved for future per-user routing
         options = self._build_options(
             conversation_id,
             system_prompt=system_prompt,
@@ -217,7 +217,9 @@ class ClaudeLLM:
             # so the path is uniform regardless of whether bridged
             # tools are mounted; uniform path means one shape to test
             # and reason about.
-            async for message in query(prompt=_aiter_user_prompt(question), options=options):
+            async for message in query(
+                prompt=_aiter_user_prompt(question), options=options
+            ):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -293,7 +295,9 @@ class ClaudeLLM:
         # Local tool whitelist for the Claude SDK's built-in CLI tools
         # (read/write filesystem, etc.).  Distinct from ``agent_tools``
         # — those are app-defined tools we bridge into an MCP server.
-        local_tools = list(self._config.tools) if self._config.tools is not None else None
+        local_tools = (
+            list(self._config.tools) if self._config.tools is not None else None
+        )
         mcp_servers: dict[str, Any] = {}
 
         # Bridge the cross-provider AgentTool list into a single MCP
@@ -358,9 +362,12 @@ class ClaudeLLM:
     def _build_env(self) -> dict[str, str]:
         """Compose the env dict forwarded to the CLI subprocess."""
         env: dict[str, str] = dict(self._config.extra_env)
-        token = self._config.oauth_token
-        if token:
-            env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+        if self._user_id:
+            token = resolve_api_key(self._user_id, "CLAUDE_CODE_OAUTH_TOKEN")
+            if token:
+                env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+        elif self._config.oauth_token:
+            env["CLAUDE_CODE_OAUTH_TOKEN"] = self._config.oauth_token
         return env
 
 
@@ -444,8 +451,11 @@ def _session_exists(session_id: str, directory: str | None) -> bool:
 # Event-translation helpers live in ``_claude_events`` so this file
 # stays under the 500-line gate.  Re-exported here because the existing
 # tests + provider code import them from this module — keeping the
-# import surface stable means the split is internal-only.
-from ._claude_events import (
+# import surface stable means the split is internal-only. Late import is
+# intentional: it must follow the class definitions above so the module
+# graph round-trips without a circular reference; ruff's E402 doesn't
+# express this constraint, so it's silenced explicitly.
+from ._claude_events import (  # noqa: E402  (deliberate post-class re-export)
     _error_event,
     _events_from_assistant,
     _events_from_message,

@@ -7,6 +7,8 @@ by passing :class:`ClaudeLLMConfig` directly.
 
 from __future__ import annotations
 
+import uuid
+
 from app.core.config import settings
 
 from .base import AILLM
@@ -20,7 +22,7 @@ _GEMINI_PREFIXES = ("gemini-",)
 _CLAUDE_PREFIXES = ("claude-",)
 
 
-def resolve_llm(model_id: str | None) -> AILLM:
+def resolve_llm(model_id: str | None, *, user_id: uuid.UUID | None = None) -> AILLM:
     """Return the correct :class:`AILLM` for the given model ID.
 
     Routing:
@@ -30,6 +32,8 @@ def resolve_llm(model_id: str | None) -> AILLM:
 
     Args:
         model_id: Frontend model identifier, or ``None`` to use the default.
+        user_id: Authenticated user UUID, used to resolve per-workspace API key
+            overrides. When ``None`` the global settings key is used.
 
     Returns:
         A provider instance ready to ``stream()``.
@@ -39,5 +43,5 @@ def resolve_llm(model_id: str | None) -> AILLM:
         config = ClaudeLLMConfig(
             oauth_token=settings.claude_code_oauth_token or None,
         )
-        return ClaudeLLM(resolved, config=config)
-    return GeminiLLM(resolved)
+        return ClaudeLLM(resolved, config=config, user_id=user_id)
+    return GeminiLLM(resolved, user_id=user_id)

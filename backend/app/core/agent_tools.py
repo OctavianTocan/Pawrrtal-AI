@@ -15,7 +15,7 @@ Why a dedicated module instead of inlining in ``app.api.chat``:
     that logic in the chat handler would tangle it with the streaming
     code; putting it here keeps the gate testable in isolation.
   * It gives the test suite a single function to drive when verifying
-    \"does the agent see Exa when EXA_API_KEY is configured?\"
+    "does the agent see Exa when EXA_API_KEY is configured?"
     end-to-end — no mocking the FastAPI request cycle.
 
 The function is sync on purpose: every tool factory it calls is sync,
@@ -27,14 +27,20 @@ to ``await`` for no benefit.
 from __future__ import annotations
 
 from pathlib import Path
+import uuid
 
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
+from app.core.keys import resolve_api_key
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
 
-def build_agent_tools(*, workspace_root: Path) -> list[AgentTool]:
+def build_agent_tools(
+    *,
+    workspace_root: Path,
+    user_id: uuid.UUID | None = None,
+) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
     Args:
@@ -49,6 +55,8 @@ def build_agent_tools(*, workspace_root: Path) -> list[AgentTool]:
             Until those land (see bean ``ai-nexus-wsiq``), treat the
             boundary as a strong invariant we haven't yet proved
             under prompt pressure.
+        user_id: Authenticated user UUID, used to resolve per-workspace
+            API key overrides for tools that call external services.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -65,11 +73,17 @@ def build_agent_tools(*, workspace_root: Path) -> list[AgentTool]:
     # primitives it edits with.
     tools.extend(make_workspace_tools(workspace_root))
 
-    # Web search via Exa.  Capability-gated on the API key being
-    # configured — if the operator hasn't set ``EXA_API_KEY``, web
-    # search is silently absent rather than the agent calling a tool
-    # that errors at runtime with \"missing key\".
-    if settings.exa_api_key:
-        tools.append(make_exa_search_tool())
+    # Web search via Exa.  Capability-gated on a key being configured —
+    # either per-workspace or globally.  When `user_id` is supplied,
+    # `resolve_api_key` already handles workspace-then-settings fallback,
+    # so a single call is sufficient. The unauthenticated fallback (no
+    # `user_id` — e.g. background jobs) reads `settings.exa_api_key`
+    # directly.
+    if user_id is not None:
+        exa_key = resolve_api_key(user_id, "EXA_API_KEY")
+    else:
+        exa_key = settings.exa_api_key or None
+    if exa_key:
+        tools.append(make_exa_search_tool(user_id=user_id))
 
     return tools

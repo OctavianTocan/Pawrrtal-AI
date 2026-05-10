@@ -1,5 +1,7 @@
 ---
+
 name: Use Stagehand documentation index and MCP servers
+paths: ["frontend/e2e/**", "**/*.spec.ts", "**/*.spec.tsx"]
 ---
 
 # Use Stagehand documentation index and MCP servers

@@ -9,8 +9,11 @@ generates the function-calling schema for Gemini / OpenAI / etc.
 from __future__ import annotations
 
 import asyncio
+import uuid
 
 from agno.tools.toolkit import Toolkit
+
+from app.core.keys import resolve_api_key
 
 from .exa_search import (
     DEFAULT_NUM_RESULTS,
@@ -28,8 +31,9 @@ class ExaTools(Toolkit):
     parameter docstring is intentionally rich — it is what Gemini sees.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, user_id: uuid.UUID | None = None) -> None:
         super().__init__(name="ExaTools", tools=[self.exa_search])
+        self._user_id = user_id
 
     def exa_search(self, query: str, num_results: int = DEFAULT_NUM_RESULTS) -> str:
         """Search the public web through Exa.
@@ -53,9 +57,12 @@ class ExaTools(Toolkit):
             line so the model can apologise gracefully.
         """
         capped = max(1, min(num_results, MAX_NUM_RESULTS))
+        api_key = None
+        if self._user_id:
+            api_key = resolve_api_key(self._user_id, "EXA_API_KEY")
         # Agno's ``agent.run(stream=True)`` already runs in a worker
         # thread (see ``AgnoProvider``), so spinning a private event
         # loop here is the cleanest way to call the async core without
         # leaking back into the calling thread's loop.
-        result = asyncio.run(exa_search(query, num_results=capped))
+        result = asyncio.run(exa_search(query, num_results=capped, api_key=api_key))
         return format_results_as_markdown(result)

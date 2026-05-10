@@ -33,8 +33,6 @@ pytest.importorskip("agno", reason="agno is no longer a runtime dependency")
 import json
 from collections.abc import Callable
 from typing import Any
-from unittest.mock import patch
-from uuid import uuid4
 
 import httpx
 import pytest
@@ -460,5 +458,3 @@ def test_agno_exa_search_renders_error_for_missing_key(
 
     assert rendered.startswith("_Web search failed:")
     assert "EXA_API_KEY" in rendered
-
-

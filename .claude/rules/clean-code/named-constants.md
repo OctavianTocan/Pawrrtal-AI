@@ -1,6 +1,8 @@
 ---
+
 description: Extract magic numbers into named constants
 globs: "**/*.{ts,tsx,py}"
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Named Constants Over Magic Numbers
 

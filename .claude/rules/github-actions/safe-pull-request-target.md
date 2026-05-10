@@ -1,6 +1,8 @@
 ---
+
 description: Ensure safe usage of elevated pull_request_target permissions
 globs: .github/workflows/*.yml
+paths: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 # Safe pull_request_target Usage
 

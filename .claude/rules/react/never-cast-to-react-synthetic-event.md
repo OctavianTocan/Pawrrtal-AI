@@ -1,6 +1,6 @@
 ---
 name: never-cast-to-react-synthetic-event
-paths: ["**/*"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # Never Cast Plain Objects to React Synthetic Event Types - They Lack preventDefault/stopPropagation

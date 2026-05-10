@@ -1,6 +1,8 @@
 ---
+
 description: Ensure code adheres to Clean Code Functions and Objects rules
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: Functions, Objects, & Data Structures
 

@@ -1,6 +1,6 @@
 ---
 name: no-xcodeversion-in-xcodegen-spec
-paths: [".github/workflows/*.{yml,yaml}", "Dockerfile", "**/*.sh"]
+paths: [".no-match"]
 ---
 
 # Do Not Set XcodeVersion in XcodeGen Spec - It Conflicts with CI Xcode Selection
