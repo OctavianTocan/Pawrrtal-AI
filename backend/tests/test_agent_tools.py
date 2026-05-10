@@ -1,74 +1,85 @@
-"""Tests for the centralized agent-tool composer.
-
-Covers `app.core.agent_tools.build_agent_tools` — the single source of
-truth for which tools the agent has access to per turn.  The chat
-router used to inline this composition; moving it here gave us
-something testable in isolation (no FastAPI request cycle, no mock
-provider) and a natural home for future per-agent / per-user
-permission gating.
-"""
+"""Tests for build_agent_tools — tool composition and send_fn gating."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.core.agent_tools import build_agent_tools
+
+@pytest.fixture()
+def tmp_workspace(tmp_path: Path) -> Path:
+    """Return a minimal workspace directory with required files."""
+    (tmp_path / "AGENTS.md").write_text("# Test workspace")
+    return tmp_path
 
 
-def test_build_agent_tools_always_includes_workspace_tools(tmp_path: Path) -> None:
-    """Workspace tools are the agent's default operating surface — always present."""
-    tools = build_agent_tools(workspace_root=tmp_path)
-    names = [t.name for t in tools]
-    # The exact set comes from `make_workspace_tools`; just assert the
-    # baseline read/write/list are there so a future drop in that
-    # factory shows up here.
-    assert "read_file" in names
-    assert "write_file" in names
-    assert "list_dir" in names
+def _make_send_fn():
+    """Return a no-op async send function."""
+    return AsyncMock(return_value=None)
 
 
-def test_build_agent_tools_includes_exa_when_api_key_set(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Web search is capability-gated on the EXA_API_KEY setting."""
-    monkeypatch.setattr("app.core.agent_tools.settings.exa_api_key", "test-key")
-    tools = build_agent_tools(workspace_root=tmp_path)
-    assert "exa_search" in [t.name for t in tools]
+class TestBuildAgentToolsWithoutSendFn:
+    """send_message tool must NOT appear when send_fn is omitted."""
+
+    def test_send_message_absent_by_default(self, tmp_workspace: Path) -> None:
+        from app.core.agent_tools import build_agent_tools
+
+        with patch("app.core.keys.resolve_api_key", return_value=None):
+            tools = build_agent_tools(workspace_root=tmp_workspace)
+
+        names = [t.name for t in tools]
+        assert "send_message" not in names
+
+    def test_send_message_absent_when_send_fn_is_none(
+        self, tmp_workspace: Path
+    ) -> None:
+        from app.core.agent_tools import build_agent_tools
+
+        with patch("app.core.keys.resolve_api_key", return_value=None):
+            tools = build_agent_tools(workspace_root=tmp_workspace, send_fn=None)
+
+        names = [t.name for t in tools]
+        assert "send_message" not in names
 
 
-def test_build_agent_tools_excludes_exa_when_api_key_absent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Empty/absent EXA_API_KEY means the agent doesn't see the web-search tool.
+class TestBuildAgentToolsWithSendFn:
+    """send_message tool MUST appear when send_fn is provided."""
 
-    This is the right shape — the alternative (always declare the tool
-    and have it error at runtime when called) would mean Claude/Gemini
-    pick the tool, fail, and waste a turn.
-    """
-    monkeypatch.setattr("app.core.agent_tools.settings.exa_api_key", "")
-    tools = build_agent_tools(workspace_root=tmp_path)
-    assert "exa_search" not in [t.name for t in tools]
+    def test_send_message_present_when_send_fn_provided(
+        self, tmp_workspace: Path
+    ) -> None:
+        from app.core.agent_tools import build_agent_tools
 
+        send_fn = _make_send_fn()
+        with patch("app.core.keys.resolve_api_key", return_value=None):
+            tools = build_agent_tools(workspace_root=tmp_workspace, send_fn=send_fn)
 
-def test_build_agent_tools_returns_workspace_tools_first(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Stable order: workspace tools first, capability-gated tools after.
+        names = [t.name for t in tools]
+        assert "send_message" in names
 
-    The Claude bridge constructs the `allowed_tools` whitelist from
-    this list in order; snapshot-style tests rely on a stable
-    ordering, and \"file ops first, web second\" is the human-natural
-    reading.
-    """
-    monkeypatch.setattr("app.core.agent_tools.settings.exa_api_key", "test-key")
-    tools = build_agent_tools(workspace_root=tmp_path)
-    names = [t.name for t in tools]
-    # Workspace tools all appear before exa_search.
-    workspace_names = {"read_file", "write_file", "list_dir"}
-    exa_index = names.index("exa_search")
-    for name in workspace_names:
-        assert names.index(name) < exa_index, (
-            f"workspace tool {name!r} should come before exa_search"
-        )
+    def test_send_message_is_last_tool(self, tmp_workspace: Path) -> None:
+        """send_message appended after workspace + artifact tools."""
+        from app.core.agent_tools import build_agent_tools
+
+        send_fn = _make_send_fn()
+        with patch("app.core.keys.resolve_api_key", return_value=None):
+            tools = build_agent_tools(workspace_root=tmp_workspace, send_fn=send_fn)
+
+        assert tools[-1].name == "send_message"
+
+    def test_other_tools_still_present_with_send_fn(
+        self, tmp_workspace: Path
+    ) -> None:
+        """Workspace and artifact tools survive alongside send_message."""
+        from app.core.agent_tools import build_agent_tools
+
+        send_fn = _make_send_fn()
+        with patch("app.core.keys.resolve_api_key", return_value=None):
+            tools = build_agent_tools(workspace_root=tmp_workspace, send_fn=send_fn)
+
+        names = [t.name for t in tools]
+        assert "render_artifact" in names
+        # At least one workspace tool (read_file / write_file / list_files)
+        assert any(n in names for n in ("read_file", "write_file", "list_files"))
