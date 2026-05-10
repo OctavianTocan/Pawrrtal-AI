@@ -1,21 +1,21 @@
 [project]
-name = "api-app-nexus-ai"
+name = "pawrrtal-api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "aiogram>=3.13.0",
+    "aiogram>=3.27.0",
     "alembic>=1.13.0",
     "aiosqlite>=0.22.1",
     "anyio>=4.0.0",
     "claude-agent-sdk",
     "fastapi-users[sqlalchemy]>=15.0.3",
-    "fastapi[standard]>=0.127.0",
+    "fastapi[standard]>=0.136.0",
     "google-genai>=1.56.0",
-    "mcp>=1.25.0",
+    "mcp>=1.27.0",
     "psycopg>=3.3.3",
-    "pydantic>=2.12.5",
+    "pydantic>=2.12.5,<2.14",
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy-utils>=0.42.1",
@@ -23,8 +23,193 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.6.0",
+    "pre-commit>=4.0.0",
     "pytest>=9.0.2",
+    "ruff>=0.14.0",
+    "mypy>=1.18.0",
+    "bandit[toml]>=1.7.10",
+    "pre-commit>=4.0.0",
+    "types-pyyaml>=6.0.12",
+]
+
+# --- ruff: linter + formatter ----------------------------------------------
+# Replaces black, isort, flake8, pyupgrade. Config aligned with the project's
+# clean-code rules (type hints, docstrings on exports, no magic numbers, etc).
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [
+    ".venv",
+    "alembic/versions",  # auto-generated migrations
+    "workspaces",        # ephemeral runtime data
+    # Agentic tooling / editor metadata directories — never lint these.
+    ".agents",
+    ".claude",
+    ".cursor",
+    ".pi",
+    ".opencode",
+    ".crush",
+    ".codex",
+    ".beans",
+    ".zed",
+    ".vscode",
+    ".sentrux",
+]
+
+[tool.ruff.lint]
+# Strict ruleset. Each family adds a class of catch:
+#   E, W    = pycodestyle errors/warnings
+#   F       = pyflakes (unused imports, undefined names)
+#   I       = isort (import sorting)
+#   N       = pep8-naming (consistent naming conventions)
+#   B       = flake8-bugbear (real bugs: mutable defaults, etc.)
+#   A       = flake8-builtins (don't shadow builtins)
+#   C4      = flake8-comprehensions (idiomatic comprehensions)
+#   C90     = mccabe complexity (function complexity cap)
+#   UP      = pyupgrade (modernize syntax for target Python)
+#   SIM     = flake8-simplify (collapse redundant patterns)
+#   ASYNC   = flake8-async (async/await footguns)
+#   PERF    = perflint (avoid known-slow patterns)
+#   PL      = pylint (subset)
+#   PT      = flake8-pytest-style (idiomatic pytest)
+#   PTH     = flake8-use-pathlib (prefer pathlib over os.path)
+#   RET     = flake8-return (clean control flow on returns)
+#   RUF     = ruff-specific (latest catches)
+#   S       = flake8-bandit (security: hardcoded secrets, weak crypto, eval, etc.)
+#   T20     = flake8-print (no stray print statements)
+#   TID     = flake8-tidy-imports (banned-imports + relative-import policy)
+#   TRY     = tryceratops (exception-handling antipatterns)
+#   D       = pydocstyle (docstrings on public API — matches project rule)
+select = [
+    "E", "W", "F", "I", "N", "B", "A", "C4", "C90", "UP", "SIM", "ASYNC",
+    "PERF", "PL", "PT", "PTH", "RET", "RUF", "S", "T20", "TID", "TRY", "D",
+]
+ignore = [
+    "E501",     # line length — handled by formatter, soft cap only
+    "D100",     # missing module docstring (too noisy on small modules)
+    "D104",     # missing docstring in __init__.py
+    "D107",     # missing docstring in __init__ method (covered by class docstring)
+    "D203",     # incompatible with D211 (no blank line before class)
+    "D213",     # incompatible with D212 (multi-line summary on first line)
+    "PLR0913",  # too many args — FastAPI handlers regularly need many deps
+    "B008",     # function call in default arg — required for FastAPI Depends()
+    "TRY003",   # long exception messages — over-prescriptive
+    "TRY300",   # else-after-try — clearer to keep return inline for short paths
+    "TRY301",   # raise within try — sometimes clearer for explicit re-raise
+    "RET504",   # unnecessary assignment before return — assignment often aids readability
+    "S101",     # assert in tests is fine (per-file ignore covers tests; this catches asserts in app code only)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "D",       # tests don't need docstrings on every fn
+    "PLR2004", # magic numbers in test data are fine
+    "S101",    # assert is the whole point of pytest
+    "S105",    # hardcoded password strings (test fixtures)
+    "S106",    # hardcoded password (function arg)
+    "S108",    # /tmp paths in test scenarios are fine
+    "PT018",   # compound asserts in tests are fine if they're checking related state
+]
+"tests/conftest.py" = ["D", "E402"]   # sys.path manipulation must come before imports
+"alembic/**" = ["D", "E", "I", "S"]   # migrations are auto-generated
+"app/cli/**" = [
+    "T20",   # CLI scripts legitimately use print
+    "S603",  # subprocess calls in CLI are operator-driven, not user-input
+    "S607",  # `git` and similar trusted binaries on PATH are intentional
+]
+
+[tool.ruff.lint.mccabe]
+# Cap cyclomatic complexity. Functions above this should be split.
+max-complexity = 12
+
+[tool.ruff.lint.flake8-tidy-imports]
+# "parents" allows same-package relative imports (from .base import X) but
+# bans parent-traversing ones (from ..foo). The all-relative ban produced
+# 12 violations in legitimate intra-package imports.
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+# --- mypy: static type checker ---------------------------------------------
+# Strict-ish defaults. Project rule forbids cast(Any, ...), so we want mypy
+# to surface real type holes rather than letting them slip through.
+[tool.mypy]
+python_version = "3.13"
+strict = true
+# Targeted relaxations — strict mode is too loud against FastAPI/SQLAlchemy
+# ecosystems where many third-party annotations are still incomplete.
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_decorators = false  # FastAPI/pytest decorators trip this
+# Required because ``app.models`` and ``app.api.models`` both end with ``models.py``
+# — without explicit package bases, mypy can't disambiguate them.
+explicit_package_bases = true
+mypy_path = "."
+plugins = ["pydantic.mypy"]
+exclude = [
+    "alembic/versions/",
+    "workspaces/",
+    ".venv/",
+    # Agentic tooling / editor metadata directories.
+    "\\.agents/",
+    "\\.claude/",
+    "\\.cursor/",
+    "\\.pi/",
+    "\\.opencode/",
+    "\\.crush/",
+    "\\.codex/",
+    "\\.beans/",
+    "\\.zed/",
+    "\\.vscode/",
+    "\\.sentrux/",
+]
+files = ["app", "tests", "main.py"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false  # test fixtures are fine without explicit types
+
+[[tool.mypy.overrides]]
+# Third-party packages without complete type stubs.
+module = ["sqlalchemy_utils.*", "agno.*", "mcp.*"]
+ignore_missing_imports = true
+
+# --- bandit: security scanner ------------------------------------------------
+# Catches hardcoded secrets, weak crypto, shell injection, unsafe deserialization.
+# Ruff already covers most flake8-bandit (S) rules during lint, but bandit's
+# AST-based checks find a few extras that ruff doesn't yet implement.
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    ".venv",
+    "alembic/versions",
+    "workspaces",
+    "app/cli",  # CLI subprocess calls are operator-driven; ruff S-rules with per-file ignore handles them
+    # Agentic tooling / editor metadata directories.
+    ".agents",
+    ".claude",
+    ".cursor",
+    ".pi",
+    ".opencode",
+    ".crush",
+    ".codex",
+    ".beans",
+    ".zed",
+    ".vscode",
+    ".sentrux",
+]
+skips = [
+    "B101",  # assert_used — covered by ruff S101 with its own per-file ignore policy
 ]
 
 # Without `explicit_package_bases`, mypy collapses `app/api/channels.py`
@@ -32,38 +217,3 @@ dev = [
 # and aborts with "duplicate module" before checking anything else.
 # Naming the package roots makes mypy resolve them as `app.api.channels`
 # and `app.channels`, which are distinct.
-[tool.mypy]
-files = ["app", "tests"]
-explicit_package_bases = true
-namespace_packages = true
-# ``app/core/agents.py`` and ``app/core/providers/agno_provider.py`` are
-# the agno-based experiment that's been superseded by the gemini and
-# claude providers; nothing imports them outside their own module pair.
-# Excluding them from mypy avoids chasing typing through a dead branch.
-exclude = [
-    "^app/core/agents\\.py$",
-    "^app/core/providers/agno_provider\\.py$",
-]
-
-# sqlalchemy_utils ships without ``py.typed`` so mypy whines on every
-# import. We use the encrypted-string column type and that's it; ignore
-# the missing stubs rather than maintain a private stub file.
-[[tool.mypy.overrides]]
-module = ["sqlalchemy_utils.*"]
-ignore_missing_imports = true
-
-# ``alembic/env.py`` and ``tests/conftest.py`` need to mutate ``sys.path``
-# (or read ``alembic.config`` state) before they can import the
-# application package. Permitting non-top-level imports in those two
-# files lets us keep ruff's E402 enabled everywhere else.
-[tool.ruff.lint.per-file-ignores]
-"alembic/env.py" = ["E402"]
-"tests/conftest.py" = ["E402"]
-
-# Bandit configuration — the pre-commit hook reads this file. Skip
-# ``app/cli/`` (developer tooling that legitimately shells out to
-# ``git`` and is never reachable from a request handler), matching the
-# intent the pre-commit comment already documents
-# ("tests/cli are excluded by config").
-[tool.bandit]
-exclude_dirs = ["app/cli"]
