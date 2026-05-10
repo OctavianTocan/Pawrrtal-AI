@@ -5,6 +5,11 @@
  * {@link BottomSheet} on mobile. This is the project standard for any new
  * modal/sheet UI — see `.claude/rules/react/use-octavian-overlay-for-modals.md`.
  *
+ * Prefer **`header`** and **`footer`** so {@link BottomSheet} uses sticky
+ * header/footer regions (snap/scroll math) and desktop {@link Modal} keeps
+ * titles/actions out of the scrollable body — compose with {@link ModalHeader},
+ * {@link ModalDescription}, etc. from the package.
+ *
  * @fileoverview Responsive Modal/BottomSheet wrapper for pawrrtal.
  */
 
@@ -24,11 +29,29 @@ export interface ResponsiveModalProps {
 	open: boolean;
 	/** Called when the overlay should close (overlay click, escape key, drag-down on mobile). */
 	onDismiss: () => void;
-	/** Overlay body. Sticky chrome (titles, footers) should be wrapped here too — desktop has no separate footer slot. */
+	/**
+	 * Main body (form fields, descriptions — typically everything between
+	 * {@link ModalHeader} and action buttons). When **`header`** or **`footer`**
+	 * is set, keep chrome out of `children` so mobile gets correct sheet regions.
+	 */
 	children: React.ReactNode;
 	/**
-	 * Optional sticky footer for the mobile {@link BottomSheet}. Ignored on desktop —
-	 * include any desktop footer markup inside `children` instead.
+	 * Header row (e.g. {@link ModalHeader} from `@octavian-tocan/react-overlay`).
+	 * Passed to {@link BottomSheet} `header` on mobile and rendered above `children` on desktop.
+	 */
+	header?: React.ReactNode;
+	/**
+	 * Footer row (primary actions). Passed to {@link BottomSheet} `footer` on mobile
+	 * and rendered below `children` on desktop.
+	 */
+	footer?: React.ReactNode;
+	/**
+	 * Short title forwarded to {@link BottomSheet} `title` for handle/backdrop
+	 * `aria-label` text when a string title is not otherwise supplied.
+	 */
+	sheetTitle?: string;
+	/**
+	 * @deprecated Use **`footer`** — still supported as a fallback when **`footer`** is omitted.
 	 */
 	mobileFooter?: React.ReactNode;
 	/** Modal size preset (desktop only). Default `md`. */
@@ -62,6 +85,9 @@ export function ResponsiveModal({
 	open,
 	onDismiss,
 	children,
+	header,
+	footer,
+	sheetTitle,
 	mobileFooter,
 	size = 'md',
 	closeOnOverlayClick = true,
@@ -73,6 +99,8 @@ export function ResponsiveModal({
 	testId,
 }: ResponsiveModalProps): React.JSX.Element {
 	const isMobile = useIsMobile();
+	const footerNode = footer ?? mobileFooter;
+	const usesChromeSlots = header !== undefined || footerNode !== undefined;
 	// Mounting flag so we don't try to portal during SSR — `document` is
 	// undefined on the server and the first render has to match.
 	// `useLayoutEffect` (not `useEffect`) so the first client paint already
@@ -84,20 +112,35 @@ export function ResponsiveModal({
 	}, []);
 
 	if (isMobile) {
-		// BottomSheet has no aria* props of its own — wrap children in a
-		// labelled `role="dialog"` region so screen readers still announce
-		// the sheet correctly. BottomSheet manages focus trap + scroll lock.
+		const sheetDismiss = showDismissButton
+			? { show: true as const, position: 'right' as const }
+			: undefined;
+		const sheetBody = usesChromeSlots ? (
+			children
+		) : (
+			// BottomSheet has no aria* props of its own — wrap body in a labelled
+			// `role="dialog"` region when we are not using explicit header/footer slots.
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-label={ariaLabel}
+				aria-labelledby={ariaLabelledBy}
+				aria-describedby={ariaDescribedBy}
+			>
+				{children}
+			</div>
+		);
 		return (
-			<BottomSheet open={open} onDismiss={onDismiss} footer={mobileFooter} testId={testId}>
-				<div
-					role="dialog"
-					aria-modal="true"
-					aria-label={ariaLabel}
-					aria-labelledby={ariaLabelledBy}
-					aria-describedby={ariaDescribedBy}
-				>
-					{children}
-				</div>
+			<BottomSheet
+				open={open}
+				onDismiss={onDismiss}
+				header={header}
+				footer={footerNode}
+				title={sheetTitle}
+				testId={testId}
+				dismissButton={sheetDismiss}
+			>
+				{sheetBody}
 			</BottomSheet>
 		);
 	}
@@ -115,7 +158,15 @@ export function ResponsiveModal({
 			ariaDescribedBy={ariaDescribedBy}
 			testId={testId}
 		>
-			{children}
+			{usesChromeSlots ? (
+				<div className="flex flex-col gap-5 text-foreground">
+					{header}
+					<div className="min-h-0">{children}</div>
+					{footerNode}
+				</div>
+			) : (
+				children
+			)}
 		</Modal>
 	);
 

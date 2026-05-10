@@ -1,6 +1,7 @@
 'use client';
 
-import { useId } from 'react';
+import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
+import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
@@ -30,8 +31,36 @@ export function ConversationDeleteDialog({
 	onOpenChange,
 	onConfirm,
 }: ConversationDeleteDialogProps): React.JSX.Element {
-	const headingId = useId();
-	const descriptionId = useId();
+	const header = (
+		<ModalHeader
+			icon={<AlertTriangle aria-hidden className="size-4 text-white" />}
+			title="Delete Conversation?"
+		/>
+	);
+
+	const footer = (
+		<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+			<Button
+				disabled={isPending}
+				onClick={() => onOpenChange(false)}
+				type="button"
+				variant="outline"
+			>
+				Cancel
+			</Button>
+			<Button
+				disabled={isPending}
+				onClick={(event) => {
+					event.preventDefault();
+					onConfirm();
+				}}
+				type="button"
+				variant="destructive"
+			>
+				{isPending ? 'Deleting...' : 'Delete'}
+			</Button>
+		</div>
+	);
 
 	return (
 		<ResponsiveModal
@@ -43,44 +72,17 @@ export function ConversationDeleteDialog({
 			}}
 			closeOnOverlayClick={!isPending}
 			closeOnEscape={!isPending}
-			ariaLabelledBy={headingId}
-			ariaDescribedBy={descriptionId}
-			size="sm"
+			ariaLabel="Delete Conversation"
+			footer={footer}
+			header={header}
 			showDismissButton={!isPending}
+			sheetTitle="Delete Conversation"
+			size="sm"
 			testId="conversation-delete-dialog"
 		>
-			<div className="flex flex-col gap-4 p-6 text-foreground">
-				<header className="flex flex-col gap-1.5">
-					<h2 id={headingId} className="text-lg font-semibold leading-none">
-						Delete Conversation?
-					</h2>
-					<p id={descriptionId} className="text-sm text-muted-foreground">
-						This removes the conversation from your sidebar. This action cannot be
-						undone.
-					</p>
-				</header>
-				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => onOpenChange(false)}
-						disabled={isPending}
-					>
-						Cancel
-					</Button>
-					<Button
-						type="button"
-						variant="destructive"
-						disabled={isPending}
-						onClick={(event) => {
-							event.preventDefault();
-							onConfirm();
-						}}
-					>
-						{isPending ? 'Deleting...' : 'Delete'}
-					</Button>
-				</div>
-			</div>
+			<ModalDescription className="text-muted-foreground">
+				This removes the conversation from your sidebar. This action cannot be undone.
+			</ModalDescription>
 		</ResponsiveModal>
 	);
 }

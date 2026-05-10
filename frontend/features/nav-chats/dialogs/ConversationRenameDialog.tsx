@@ -1,5 +1,7 @@
 'use client';
 
+import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
+import { Pencil } from 'lucide-react';
 import { useId } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,62 +40,67 @@ export function ConversationRenameDialog({
 	onOpenChange,
 	onSubmit,
 }: ConversationRenameDialogProps): React.JSX.Element {
+	const formId = useId();
 	const titleInputId = useId();
-	const headingId = useId();
-	const descriptionId = useId();
+
+	const header = (
+		<ModalHeader
+			icon={<Pencil aria-hidden className="size-4 text-white" />}
+			title="Rename Conversation"
+		/>
+	);
+
+	const footer = (
+		<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+			<Button
+				disabled={isPending}
+				onClick={() => onOpenChange(false)}
+				type="button"
+				variant="outline"
+			>
+				Cancel
+			</Button>
+			<Button disabled={!draftTitle.trim() || isPending} form={formId} type="submit">
+				{isPending ? 'Saving...' : 'Save'}
+			</Button>
+		</div>
+	);
 
 	return (
 		<ResponsiveModal
 			open={isOpen}
 			onDismiss={() => onOpenChange(false)}
-			ariaLabelledBy={headingId}
-			ariaDescribedBy={descriptionId}
-			size="md"
+			ariaLabel="Rename Conversation"
+			footer={footer}
+			header={header}
 			showDismissButton
+			sheetTitle="Rename Conversation"
+			size="md"
 			testId="conversation-rename-dialog"
 		>
-			<div className="flex flex-col gap-4 p-6 text-foreground">
-				<header className="flex flex-col gap-1.5">
-					<h2 id={headingId} className="text-lg font-semibold leading-none">
-						Rename Conversation
-					</h2>
-					<p id={descriptionId} className="text-sm text-muted-foreground">
-						Update the sidebar title for this conversation.
-					</p>
-				</header>
-				<form
-					className="grid gap-4"
-					onSubmit={(event) => {
-						event.preventDefault();
-						onSubmit();
-					}}
-				>
-					<Label htmlFor={titleInputId} className="sr-only">
-						Conversation title
-					</Label>
-					<Input
-						id={titleInputId}
-						value={draftTitle}
-						onChange={(event) => onDraftTitleChange(event.target.value)}
-						placeholder="Conversation title"
-						maxLength={255}
-						autoFocus
-					/>
-					<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => onOpenChange(false)}
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" disabled={!draftTitle.trim() || isPending}>
-							{isPending ? 'Saving...' : 'Save'}
-						</Button>
-					</div>
-				</form>
-			</div>
+			<form
+				className="grid gap-4 text-foreground"
+				id={formId}
+				onSubmit={(event) => {
+					event.preventDefault();
+					onSubmit();
+				}}
+			>
+				<ModalDescription className="text-muted-foreground">
+					Update the sidebar title for this conversation.
+				</ModalDescription>
+				<Label htmlFor={titleInputId} className="sr-only">
+					Conversation title
+				</Label>
+				<Input
+					id={titleInputId}
+					value={draftTitle}
+					onChange={(event) => onDraftTitleChange(event.target.value)}
+					placeholder="Conversation title"
+					maxLength={255}
+					autoFocus
+				/>
+			</form>
 		</ResponsiveModal>
 	);
 }

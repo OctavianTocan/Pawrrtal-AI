@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronDown, ChevronRight, FolderPlus } from 'lucide-react';
+import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
+import { ChevronDown, ChevronRight, FolderPlus, Pencil } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveModal } from '@/components/ui/responsive-modal';
@@ -244,29 +245,49 @@ function RenameProjectModalInner({
 	onDismiss: () => void;
 	onSubmit: (next: string) => void;
 }): React.JSX.Element {
+	const formId = useId();
 	const [draft, setDraft] = useState(project.name);
+
+	const header = (
+		<ModalHeader
+			icon={<Pencil aria-hidden className="size-4 text-white" />}
+			title="Rename project"
+		/>
+	);
+
+	const footer = (
+		<div className="flex justify-end gap-2">
+			<Button disabled={isPending} onClick={onDismiss} type="button" variant="outline">
+				Cancel
+			</Button>
+			<Button disabled={!draft.trim() || isPending} form={formId} type="submit">
+				{isPending ? 'Saving…' : 'Save'}
+			</Button>
+		</div>
+	);
 
 	return (
 		<ResponsiveModal
 			ariaLabel="Rename project"
+			footer={footer}
+			header={header}
 			onDismiss={onDismiss}
 			open
 			showDismissButton
+			sheetTitle="Rename project"
 			size="md"
 		>
 			<form
-				className="flex flex-col gap-4 p-6 text-foreground"
+				className="flex flex-col gap-4 text-foreground"
+				id={formId}
 				onSubmit={(event) => {
 					event.preventDefault();
 					onSubmit(draft);
 				}}
 			>
-				<header className="flex flex-col gap-1.5">
-					<h2 className="text-lg font-semibold leading-none">Rename project</h2>
-					<p className="text-sm text-muted-foreground">
-						Update the sidebar name for this project.
-					</p>
-				</header>
+				<ModalDescription className="text-muted-foreground">
+					Update the sidebar name for this project.
+				</ModalDescription>
 				<Input
 					autoFocus
 					maxLength={255}
@@ -274,19 +295,6 @@ function RenameProjectModalInner({
 					placeholder="Project name"
 					value={draft}
 				/>
-				<div className="flex justify-end gap-2">
-					<Button
-						disabled={isPending}
-						onClick={onDismiss}
-						type="button"
-						variant="outline"
-					>
-						Cancel
-					</Button>
-					<Button disabled={!draft.trim() || isPending} type="submit">
-						{isPending ? 'Saving…' : 'Save'}
-					</Button>
-				</div>
 			</form>
 		</ResponsiveModal>
 	);
