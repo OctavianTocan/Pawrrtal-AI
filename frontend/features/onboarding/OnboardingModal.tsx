@@ -12,7 +12,7 @@ import { OnboardingWelcomeStep } from '@/features/onboarding/onboarding-welcome-
 type OnboardingStep = 'welcome' | 'create' | 'local';
 
 /** Browser event used by app chrome to reopen the cosmetic onboarding flow. */
-export const OPEN_ONBOARDING_EVENT = 'ai-nexus:open-onboarding';
+export const OPEN_ONBOARDING_EVENT = 'pawrrtal:open-onboarding';
 
 /** Props for the onboarding modal host. */
 export interface OnboardingModalProps {
@@ -79,7 +79,7 @@ export function OnboardingModal({
 
 	const accessibleTitle =
 		step === 'welcome'
-			? 'Welcome to AI Nexus'
+			? 'Welcome to Pawrrtal'
 			: step === 'create'
 				? 'Create workspace'
 				: 'Local workspace';
@@ -99,7 +99,10 @@ export function OnboardingModal({
 						<OnboardingWelcomeStep onContinue={() => setStep('create')} />
 					) : null}
 					{step === 'create' ? (
-						<OnboardingCreateWorkspaceStep onPickLocal={() => setStep('local')} />
+						<OnboardingCreateWorkspaceStep
+							onPickLocal={() => setStep('local')}
+							onClose={() => setOpen(false)}
+						/>
 					) : null}
 					{step === 'local' ? (
 						<OnboardingLocalWorkspaceStep

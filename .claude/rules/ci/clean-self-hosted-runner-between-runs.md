@@ -69,4 +69,4 @@ runs:
 
 ## Origin
 
-TwinMind iOS CI on Mac Mini — stale Pods directory from a previous build caused intermittent CocoaPods resolution failures.
+a prior iOS CI on Mac Mini — stale Pods directory from a previous build caused intermittent CocoaPods resolution failures.

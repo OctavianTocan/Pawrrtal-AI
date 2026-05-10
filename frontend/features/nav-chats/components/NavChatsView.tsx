@@ -1,23 +1,16 @@
-import { Inbox, Search } from 'lucide-react';
 import type {
 	KeyboardEvent as ReactKeyboardEvent,
 	MouseEvent as ReactMouseEvent,
 	RefObject,
 } from 'react';
-import { Fragment } from 'react';
+import { useRef } from 'react';
 import { ProjectsList } from '@/features/projects/components/ProjectsList';
+import { useScrollEdges } from '@/hooks/use-scroll-edges';
 import type { ConversationGroup } from '@/lib/conversation-groups';
-import { highlightMatch } from '@/lib/highlight-match';
 import type { Conversation, ConversationStatus } from '@/lib/types';
 import type { ContentSearchResult } from '../hooks/use-conversation-search';
-import { CollapsibleGroupHeader } from './CollapsibleGroupHeader';
-import { ConversationIndicators } from './ConversationIndicators';
-import { ConversationLabelBadge } from './ConversationLabelBadge';
 import { ConversationSearchHeader } from './ConversationSearchHeader';
-import { ConversationSidebarItem } from './ConversationSidebarItem';
-import { ConversationsEmptyState } from './ConversationsEmptyState';
-import { SearchCountBadge } from './SearchCountBadge';
-import { SectionHeader } from './SectionHeader';
+import { NavChatsContent } from './NavChatsContent';
 
 export interface NavChatsViewProps {
 	/** Current search input value. */
@@ -92,335 +85,6 @@ export interface NavChatsViewProps {
 	onNavigatorMouseDown: () => void;
 }
 
-/** Renders a single conversation row within a group, computing derived state from search results. */
-function ConversationRow({
-	conversation,
-	index,
-	visibleIndex,
-	isSearchActive,
-	searchQuery,
-	multiSelectedIds,
-	contentSearchResults,
-	activeChatMatchInfo,
-	onConversationClick,
-	onConversationMouseDown,
-	onConversationKeyDown,
-	registerConversationElement,
-	onNavigate,
-	onRename,
-	onDelete,
-	onArchive,
-	onFlag,
-	onSetStatus,
-	onMarkUnread,
-	onRegenerateTitle,
-	onToggleLabel,
-	onExportMarkdown,
-}: {
-	conversation: Conversation;
-	index: number;
-	visibleIndex: number;
-	isSearchActive: boolean;
-	searchQuery: string;
-	multiSelectedIds: Set<string>;
-	contentSearchResults: Map<string, ContentSearchResult>;
-	activeChatMatchInfo?: { sessionId: string; count: number } | null;
-	onConversationClick: (conversationId: string, index: number, href: string) => void;
-	onConversationMouseDown: (
-		event: ReactMouseEvent,
-		conversationId: string,
-		index: number
-	) => void;
-	onConversationKeyDown: (
-		event: ReactKeyboardEvent,
-		conversation: Conversation,
-		index: number
-	) => void;
-	registerConversationElement: (conversationId: string, element: HTMLDivElement | null) => void;
-	onNavigate: (href: string) => void;
-	onRename: (conversationId: string) => void;
-	onDelete: (conversationId: string) => void;
-	onArchive: (conversationId: string) => void;
-	onFlag: (conversationId: string) => void;
-	onSetStatus: (conversationId: string, status: ConversationStatus) => void;
-	onMarkUnread: (conversationId: string) => void;
-	onRegenerateTitle: (conversationId: string) => void;
-	onToggleLabel: (conversationId: string, labelId: string) => void;
-	onExportMarkdown: (conversationId: string) => void;
-}): React.JSX.Element {
-	const href = `/c/${conversation.id}`;
-	const isSelected = multiSelectedIds.has(conversation.id);
-	const searchCount =
-		activeChatMatchInfo?.sessionId === conversation.id
-			? activeChatMatchInfo.count
-			: contentSearchResults.get(conversation.id)?.matchCount;
-	const labels = conversation.labels ?? [];
-	const isProcessing = Boolean(conversation.is_processing);
-	// Only override the row's left icon slot when the row has live activity
-	// (processing spinner, server-side unread meta, plan, queued prompts).
-	// Otherwise let `ConversationSidebarItemView`'s status glyph fallback
-	// render — that's what makes the colored dot reflect status changes.
-	const hasLiveIndicators =
-		isProcessing ||
-		Boolean(conversation.has_unread_meta) ||
-		conversation.last_message_role === 'plan' ||
-		(conversation.pending_prompt_count ?? 0) > 0;
-
-	return (
-		<ConversationSidebarItem
-			id={conversation.id}
-			title={
-				isSearchActive
-					? highlightMatch(conversation.title, searchQuery)
-					: conversation.title
-			}
-			updatedAt={conversation.updated_at}
-			icon={
-				hasLiveIndicators ? (
-					<ConversationIndicators
-						conversation={conversation}
-						isProcessing={isProcessing}
-					/>
-				) : undefined
-			}
-			badges={
-				labels.length > 0
-					? labels.map((label) => {
-							const labelKey =
-								typeof label === 'string' ? label : (label.id ?? label.name);
-							return (
-								<ConversationLabelBadge
-									key={`${conversation.id}-${labelKey}`}
-									label={label}
-								/>
-							);
-						})
-					: undefined
-			}
-			titleTrailing={
-				searchCount && searchCount > 0 ? (
-					<SearchCountBadge count={searchCount} isSelected={isSelected} />
-				) : undefined
-			}
-			isInMultiSelect={multiSelectedIds.size > 1 && isSelected}
-			showSeparator={index > 0}
-			onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
-			onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
-			buttonProps={{
-				ref: (element: HTMLDivElement | null) =>
-					registerConversationElement(conversation.id, element),
-				// TODO(#83): tabIndex should be driven by focusedConversationId (roving tabindex)
-				// so the keyboard-focused item gets 0 and all others get -1. Currently falls
-				// back to isSelected until the orchestration layer wires focusedConversationId
-				// through to ConversationRow.
-				tabIndex: isSelected ? 0 : -1,
-				role: 'option',
-				'aria-selected': isSelected,
-				onKeyDown: (event: ReactKeyboardEvent) =>
-					onConversationKeyDown(event, conversation, visibleIndex),
-			}}
-			isArchived={conversation.is_archived}
-			isFlagged={conversation.is_flagged}
-			isUnread={conversation.is_unread}
-			status={conversation.status}
-			appliedLabelIds={labels.filter((label): label is string => typeof label === 'string')}
-			onNavigate={onNavigate}
-			onRename={onRename}
-			onDelete={onDelete}
-			onArchive={onArchive}
-			onFlag={onFlag}
-			onSetStatus={onSetStatus}
-			onMarkUnread={onMarkUnread}
-			onRegenerateTitle={onRegenerateTitle}
-			onToggleLabel={onToggleLabel}
-			onExportMarkdown={onExportMarkdown}
-		/>
-	);
-}
-
-/**
- * Builds the inner content of the conversation list: loading placeholder,
- * empty states, or the grouped conversation rows. Extracted from NavChatsView
- * to keep the main component under the Biome line-count threshold.
- */
-function NavChatsContent({
-	isLoading,
-	isEmpty,
-	isSearchActive,
-	resultCount,
-	filteredGroups,
-	collapsedGroups,
-	navigatorRef,
-	searchQuery,
-	multiSelectedIds,
-	contentSearchResults,
-	activeChatMatchInfo,
-	onToggleGroup,
-	onNewSession,
-	onNavigate,
-	onRename,
-	onDelete,
-	onArchive,
-	onFlag,
-	onSetStatus,
-	onMarkUnread,
-	onRegenerateTitle,
-	onToggleLabel,
-	onExportMarkdown,
-	onConversationClick,
-	onConversationMouseDown,
-	onConversationKeyDown,
-	registerConversationElement,
-	onNavigatorMouseDown,
-}: Pick<
-	NavChatsViewProps,
-	| 'isLoading'
-	| 'isEmpty'
-	| 'isSearchActive'
-	| 'resultCount'
-	| 'filteredGroups'
-	| 'collapsedGroups'
-	| 'navigatorRef'
-	| 'searchQuery'
-	| 'multiSelectedIds'
-	| 'contentSearchResults'
-	| 'activeChatMatchInfo'
-	| 'onToggleGroup'
-	| 'onNewSession'
-	| 'onNavigate'
-	| 'onRename'
-	| 'onDelete'
-	| 'onArchive'
-	| 'onFlag'
-	| 'onSetStatus'
-	| 'onMarkUnread'
-	| 'onRegenerateTitle'
-	| 'onToggleLabel'
-	| 'onExportMarkdown'
-	| 'onConversationClick'
-	| 'onConversationMouseDown'
-	| 'onConversationKeyDown'
-	| 'registerConversationElement'
-	| 'onNavigatorMouseDown'
->): React.JSX.Element | null {
-	if (isLoading) {
-		return null;
-	}
-
-	if (isEmpty) {
-		return (
-			<ConversationsEmptyState
-				icon={<Inbox className="h-4 w-4" />}
-				title="No sessions yet"
-				description="Sessions with your agent appear here. Start one to get going."
-				buttonLabel="New Session"
-				onAction={onNewSession}
-			/>
-		);
-	}
-
-	if (isSearchActive && resultCount === 0) {
-		return (
-			<ConversationsEmptyState
-				icon={<Search className="h-4 w-4" />}
-				title="No matching sessions"
-				description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
-			/>
-		);
-	}
-
-	// Pre-compute collapsed state and flat indices outside the JSX to:
-	// 1. Avoid duplicated isCollapsible/isCollapsed logic (DRY)
-	// 2. Avoid mutable closures that break under React StrictMode
-	const canCollapse = !isSearchActive && filteredGroups.length > 1;
-	const collapsedKeys = canCollapse ? collapsedGroups : new Set<string>();
-	const flatIndexMap = new Map<string, number>();
-	let fi = 0;
-	for (const group of filteredGroups) {
-		if (!collapsedKeys.has(group.key)) {
-			for (const conversation of group.items) {
-				flatIndexMap.set(conversation.id, fi++);
-			}
-		}
-	}
-
-	return (
-		<div
-			ref={navigatorRef}
-			// Scrolling lives on the parent wrapper in NavChatsView so the
-			// projects list and the conversation list scroll together as one
-			// group. This element keeps the listbox role + keyboard focus
-			// handling but no longer owns the overflow. `mt-3` gives the
-			// Today/Yesterday/Archived groups breathing room from the Projects
-			// section above, matching the ChatGPT-style section rhythm.
-			className="mt-3 pt-1 outline-none"
-			role="listbox"
-			aria-label="Sessions"
-			aria-multiselectable="true"
-			onMouseDown={onNavigatorMouseDown}
-		>
-			<ul className="flex w-full min-w-0 flex-col gap-0">
-				{filteredGroups.map((group) => {
-					const isCollapsed = collapsedKeys.has(group.key);
-
-					return (
-						<Fragment key={group.key}>
-							{canCollapse ? (
-								<CollapsibleGroupHeader
-									label={group.label}
-									isCollapsed={isCollapsed}
-									itemCount={group.items.length}
-									onToggle={() => onToggleGroup(group.key)}
-								/>
-							) : (
-								<SectionHeader label={group.label} />
-							)}
-							{isCollapsed
-								? null
-								: group.items.map((conversation, index) => (
-										<ConversationRow
-											key={conversation.id}
-											conversation={conversation}
-											index={index}
-											visibleIndex={flatIndexMap.get(conversation.id) ?? 0}
-											isSearchActive={isSearchActive}
-											searchQuery={searchQuery}
-											multiSelectedIds={multiSelectedIds}
-											contentSearchResults={contentSearchResults}
-											activeChatMatchInfo={activeChatMatchInfo}
-											onConversationClick={onConversationClick}
-											onConversationMouseDown={onConversationMouseDown}
-											onConversationKeyDown={onConversationKeyDown}
-											registerConversationElement={
-												registerConversationElement
-											}
-											onNavigate={onNavigate}
-											onRename={onRename}
-											onDelete={onDelete}
-											onArchive={onArchive}
-											onFlag={onFlag}
-											onSetStatus={onSetStatus}
-											onMarkUnread={onMarkUnread}
-											onRegenerateTitle={onRegenerateTitle}
-											onToggleLabel={onToggleLabel}
-											onExportMarkdown={onExportMarkdown}
-										/>
-									))}
-						</Fragment>
-					);
-				})}
-			</ul>
-		</div>
-	);
-}
-
-/**
- * Pure presentation layer for the sidebar conversation list.
- *
- * Renders the search bar (directly under the New Session control in the
- * layout), the projects section, empty states, and grouped conversation
- * items. All data and callbacks are received via props — no hooks.
- */
 export function NavChatsView({
 	searchQuery,
 	onSearchChange,
@@ -456,6 +120,14 @@ export function NavChatsView({
 	registerConversationElement,
 	onNavigatorMouseDown,
 }: NavChatsViewProps): React.JSX.Element {
+	// Drives the top/bottom mask-fade gradient on the scroll container —
+	// same pattern the prompt textarea uses (`[data-prompt-textarea]` rules
+	// in globals.css). The hook reports `canScrollUp` / `canScrollDown` so
+	// the CSS can show the gradient only at edges that actually have hidden
+	// content, instead of always rendering both edges.
+	const scrollRef = useRef<HTMLDivElement>(null);
+	const { canScrollUp, canScrollDown } = useScrollEdges(scrollRef);
+
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
 			<ConversationSearchHeader
@@ -469,8 +141,18 @@ export function NavChatsView({
 			    than the projects sticking under the search bar while the
 			    chats scroll behind them. `scrollbar-hover` fades the
 			    webkit scrollbar in when an ancestor `.group` element is
-			    hovered (the sidebar shell — see app-layout.tsx). */}
-			<div className="scrollbar-hover min-h-0 flex-1 overflow-y-auto">
+			    hovered (the sidebar shell — see app-layout.tsx).
+			    `data-nav-chats-scroll` + the `data-scroll-up` / `data-scroll-down`
+			    attributes drive the top/bottom fade gradients in globals.css
+			    so list rows softly fade out when there's more content above
+			    or below the visible window. */}
+			<div
+				ref={scrollRef}
+				data-nav-chats-scroll=""
+				data-scroll-up={canScrollUp ? 'true' : 'false'}
+				data-scroll-down={canScrollDown ? 'true' : 'false'}
+				className="scrollbar-hover min-h-0 flex-1 overflow-y-auto"
+			>
 				<ProjectsList />
 				<NavChatsContent
 					isLoading={isLoading}

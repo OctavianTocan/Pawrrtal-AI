@@ -35,7 +35,7 @@ Self-hosted runners persist state between runs. A left-running simulator accumul
 
 ## References
 
-- TwinMind E2E: iOS job lacked simulator cleanup, Android had emulator kill
+- a prior E2E project: iOS job lacked simulator cleanup, Android had emulator kill
 
 ## Verify
 

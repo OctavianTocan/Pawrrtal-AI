@@ -16,7 +16,7 @@
  *          on the FastAPI backend, injected into the BrowserContext
  *          BEFORE the spec navigates. Per the project's
  *          API-setup-not-UI rule.
- *        - `ai-nexus:e2e-skip-onboarding` localStorage flag injected
+ *        - `pawrrtal:e2e-skip-onboarding` localStorage flag injected
  *          via `addInitScript` so the v2 OnboardingFlow never auto-opens
  *          on `/`. The flag is honored inside `OnboardingFlow.tsx` and
  *          gates both the initial open and the workspace-selector open
@@ -141,7 +141,7 @@ interface StagehandFixtures {
 	 * for the DOM to be ready. Pass an app-relative path (`/settings`);
 	 * the helper joins it with `E2E_BASE_URL`.
 	 *
-	 * Onboarding is auto-skipped via the `ai-nexus:e2e-skip-onboarding`
+	 * Onboarding is auto-skipped via the `pawrrtal:e2e-skip-onboarding`
 	 * localStorage flag set in the Stagehand init script — every spec
 	 * lands signed-in with no modal in the way.
 	 */

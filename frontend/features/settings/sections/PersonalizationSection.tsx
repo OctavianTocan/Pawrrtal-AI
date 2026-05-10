@@ -69,7 +69,7 @@ export function PersonalizationSection(): React.JSX.Element {
 
 	return (
 		<SettingsPage
-			description="Tune how AI Nexus addresses you, what context it carries between chats, and how it builds memory."
+			description="Tune how Pawrrtal addresses you, what context it carries between chats, and how it builds memory."
 			title="Personalization"
 		>
 			<SettingsCard>

@@ -21,7 +21,7 @@ vi.mock('electron', () => ({
 			if (key === 'userData') return tempUserData;
 			return tempUserData;
 		},
-		getName: (): string => 'ai-nexus-workspace-test',
+		getName: (): string => 'pawrrtal-workspace-test',
 		getVersion: (): string => '0.0.0-test',
 	},
 }));
@@ -35,8 +35,8 @@ async function loadWorkspace() {
 }
 
 beforeEach(() => {
-	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-userdata-'));
-	tempHome = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-home-'));
+	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-userdata-'));
+	tempHome = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-home-'));
 });
 
 afterEach(() => {
@@ -45,12 +45,12 @@ afterEach(() => {
 });
 
 describe('ensureDefaultWorkspaceRoot', () => {
-	it('creates ~/AI-Nexus-Workspace and registers it as the only root', async () => {
+	it('creates ~/Pawrrtal-Workspace and registers it as the only root', async () => {
 		const { ensureDefaultWorkspaceRoot, listRoots } = await loadWorkspace();
 		ensureDefaultWorkspaceRoot();
 		const roots = listRoots();
 		expect(roots).toHaveLength(1);
-		expect(roots[0]).toContain('AI-Nexus-Workspace');
+		expect(roots[0]).toContain('Pawrrtal-Workspace');
 	});
 
 	it('is idempotent across calls', async () => {
@@ -62,7 +62,7 @@ describe('ensureDefaultWorkspaceRoot', () => {
 
 	it('does not overwrite a user-configured set of roots', async () => {
 		const { ensureDefaultWorkspaceRoot, addRoot, listRoots } = await loadWorkspace();
-		const customRoot = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-custom-'));
+		const customRoot = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-custom-'));
 		try {
 			ensureDefaultWorkspaceRoot();
 			addRoot(customRoot);
@@ -77,7 +77,7 @@ describe('ensureDefaultWorkspaceRoot', () => {
 describe('addRoot / removeRoot', () => {
 	it('adds a new root and dedupes on repeat add', async () => {
 		const { addRoot, listRoots } = await loadWorkspace();
-		const target = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-add-'));
+		const target = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-add-'));
 		try {
 			addRoot(target);
 			addRoot(target);
@@ -89,7 +89,7 @@ describe('addRoot / removeRoot', () => {
 
 	it('removes a root cleanly and is idempotent on absent entries', async () => {
 		const { addRoot, removeRoot, listRoots } = await loadWorkspace();
-		const target = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-rm-'));
+		const target = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-rm-'));
 		try {
 			addRoot(target);
 			removeRoot(target);
@@ -111,7 +111,7 @@ describe('validateFilePath', () => {
 	it('accepts a path inside an allowlisted root', async () => {
 		const { addRoot, validateFilePath } = await loadWorkspace();
 		const { realpathSync } = await import('node:fs');
-		const root = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-ok-'));
+		const root = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-ok-'));
 		try {
 			addRoot(root);
 			const target = path.join(root, 'subdir', 'note.md');
@@ -130,7 +130,7 @@ describe('validateFilePath', () => {
 
 	it('rejects a path outside every allowlisted root', async () => {
 		const { addRoot, validateFilePath } = await loadWorkspace();
-		const root = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-out-'));
+		const root = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-out-'));
 		try {
 			addRoot(root);
 			const result = validateFilePath('/etc/passwd');
@@ -142,7 +142,7 @@ describe('validateFilePath', () => {
 
 	it('rejects a `..` traversal attempt that escapes the root', async () => {
 		const { addRoot, validateFilePath } = await loadWorkspace();
-		const root = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-trav-'));
+		const root = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-trav-'));
 		try {
 			addRoot(root);
 			const result = validateFilePath(path.join(root, '..', '..', 'etc', 'passwd'));
@@ -154,8 +154,8 @@ describe('validateFilePath', () => {
 
 	it('rejects a symlink inside the root that points outside', async () => {
 		const { addRoot, validateFilePath } = await loadWorkspace();
-		const root = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-sym-'));
-		const outside = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-out-'));
+		const root = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-sym-'));
+		const outside = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-out-'));
 		const escapeTarget = path.join(outside, 'secret.txt');
 		writeFileSync(escapeTarget, 'hi');
 		const symlinkPath = path.join(root, 'leak');
@@ -172,7 +172,7 @@ describe('validateFilePath', () => {
 
 	it('handles a write to a not-yet-existing file inside an existing root subdir', async () => {
 		const { addRoot, validateFilePath } = await loadWorkspace();
-		const root = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-newfile-'));
+		const root = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-newfile-'));
 		try {
 			mkdirSync(path.join(root, 'src'));
 			addRoot(root);

@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Linked `@octavian-tocan/react-dropdown` resolves here — ensure Tailwind scans it so
+   menu primitives (e.g. `disabled:bg-muted/*`) are generated in dev + prod. */
+@source "../lib/react-dropdown/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
@@ -228,10 +232,12 @@
 	--step-content-gap: 1.5rem;
 	--step-actions-margin: 2rem;
 
-	/* Fonts */
+	/* Fonts — Google Sans Flex → Google Sans → Helvetica; @font-face from
+	   Google Fonts `<link>` in `app/layout.tsx` (not `next/font` — avoids
+	   capsize override warnings for these families). */
 	--font-sans-stack:
-		system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-		sans-serif;
+		var(--font-google-sans-flex-loaded, "Google Sans Flex"),
+		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
 	/* Editorial display family — Mistral-inspired near-serif voice for hero
 	 * displays and large headings. Newsreader (variable Google Font) is the
 	 * canonical face; falls back to a system serif chain so the editorial
@@ -361,7 +367,7 @@
 	 * popovers, sidebars, borders, and muted text to fixed oklch
 	 * literals. Switching presets in dark mode visibly only changed
 	 * `--background` + `--accent`, while every other surface stayed at
-	 * the AI Nexus default — making distinct presets look basically
+	 * the Pawrrtal default — making distinct presets look basically
 	 * the same in dark mode (E2E preset-comparison report on
 	 * 2026-05-05 confirmed 6/7 derived slots collapsed to identical
 	 * literal values across presets).
@@ -482,7 +488,8 @@ html[data-scenic] {
 /* Inter Font - Opt-in via data-font="inter" attribute */
 html[data-font="inter"] {
 	--font-sans-stack:
-		"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+		"Inter", var(--font-google-sans-flex-loaded, "Google Sans Flex"),
+		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
 	--font-sans: var(--font-sans-stack);
 	--font-default: var(--font-sans);
 	font-optical-sizing: auto;
@@ -606,7 +613,15 @@ html[data-font="inter"] {
 	--animate-onboarding-panel: onboarding-panel-enter 260ms cubic-bezier(0.25, 1, 0.5, 1) both;
 	--animate-composer-placeholder: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1)
 		both;
+	/* Dropdown open/close — expo ease-out curve; `both` fills before & after so
+	   there's no flash. Radix detects animationend on data-state="closed" and
+	   waits before removing the element, so the exit plays in full. */
+	--animate-dropdown-open: dropdown-open 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	--animate-dropdown-close: dropdown-close 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Keyframes consolidated near the end of this file under the
+   "Animations" section. */
 
 /* Global styles */
 @layer base {
@@ -748,6 +763,28 @@ html[data-font="inter"] {
 			rgba(var(--foreground-rgb), 0.06) 0px 0px 0px 1px;
 	}
 
+	/*
+	 * Sharp-edge utility — replaces the dull `border-1px-gray` look with a
+	 * stacked 1px white inset highlight + 1px black 4% outer shadow. Adds
+	 * dimension so cards, inputs, and toggles read as physical objects
+	 * rather than flat outlines. See DESIGN.md → Elevation & Depth → Edges.
+	 *
+	 * The inset highlight uses the surface color (`--background`) at 60%
+	 * opacity in light mode and the foreground at 6% in dark mode, so the
+	 * "highlight from above" reads correctly under either palette.
+	 */
+	.shadow-edge {
+		box-shadow:
+			inset 0 1px 0 0 rgb(255 255 255 / 0.6),
+			0 1px 0 0 rgb(0 0 0 / 0.04);
+	}
+
+	.dark .shadow-edge {
+		box-shadow:
+			inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+			0 1px 0 0 rgb(0 0 0 / 0.4);
+	}
+
 	.shadow-bottom-border {
 		box-shadow: inset 0 -1.5px 0 var(--color-border);
 	}
@@ -850,12 +887,24 @@ html[data-font="inter"] {
 		box-shadow: var(--shadow-panel-floating);
 	}
 
-	/* Unified popover styling */
+	/* Unified popover styling.
+	 *
+	 * Background uses a translucent mix (95% / 5% transparent) so the global
+	 * `backdrop-filter: blur(8px)` reads through softly without making the
+	 * panel itself feel see-through. Earlier 88% caused sidebar conversation
+	 * rows and chat content to bleed up through the menu when a row sat
+	 * directly underneath, hurting readability of the menu items themselves.
+	 * Scenic mode keeps its more-transparent base so background photography
+	 * is still visible — see the `html[data-scenic] .popover-styled`
+	 * override below.
+	 */
 	.popover-styled {
-		background: var(--background);
+		background: color-mix(in srgb, var(--background) 95%, transparent);
 		color: var(--foreground);
 		border-radius: 8px;
 		border: none;
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
 		box-shadow:
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px,
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px,
@@ -866,6 +915,66 @@ html[data-font="inter"] {
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 12px 12px 0px,
 			rgba(0, 0, 0, calc(var(--shadow-blur-opacity) * 0.33)) 0px 24px 24px 0px;
 	}
+
+	/* Full-bleed modal / sheet / alert scrims — DESIGN.md § Overlay & frosted surfaces.
+	 * Backdrop blur (same 8px as `.popover-styled`) plus a subtle vertical gradient
+	 * tint (~10–14% black), not a flat `bg-black/80` opacity wash.
+	 */
+	.modal-scrim {
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14));
+	}
+}
+
+/* Prompt-input textarea scroll fade.
+ *
+ * When content exceeds the textarea's max-height it scrolls vertically; the
+ * `useScrollEdges` hook in the component sets `data-scroll-up='true'` /
+ * `data-scroll-down='true'` while there's more content out of view.
+ * `mask-image` here drops alpha at the corresponding edge so the fade
+ * suggests "more content above/below" without rendering a hard scrollbar
+ * stripe. The fade height is 16 px, tuned to feel ambient rather than busy. */
+[data-prompt-textarea][data-scroll-up="true"]:not([data-scroll-down="true"]) {
+	mask-image: linear-gradient(to bottom, transparent 0, black 16px, black 100%);
+}
+[data-prompt-textarea][data-scroll-down="true"]:not([data-scroll-up="true"]) {
+	mask-image: linear-gradient(to bottom, black 0, black calc(100% - 16px), transparent 100%);
+}
+[data-prompt-textarea][data-scroll-up="true"][data-scroll-down="true"] {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		black 16px,
+		black calc(100% - 16px),
+		transparent 100%
+	);
+}
+
+/* Sidebar conversation-list scroll fade.
+ *
+ * Mirror of the prompt-textarea pattern above: `useScrollEdges` (wired in
+ * `NavChatsView`) writes `data-scroll-up='true'` / `data-scroll-down='true'`
+ * whenever there's more content out of view in each direction.
+ * `mask-image` softens the alpha at the corresponding edge so list rows
+ * fade as they approach the viewport top/bottom instead of being chopped
+ * at a hard line. The fade is taller (20 px) than the textarea's 16 px
+ * because conversation rows are taller than a single text line, so the
+ * eye needs more runway to read the fade as ambient rather than a clip. */
+[data-nav-chats-scroll][data-scroll-up="true"]:not([data-scroll-down="true"]) {
+	mask-image: linear-gradient(to bottom, transparent 0, black 20px, black 100%);
+}
+[data-nav-chats-scroll][data-scroll-down="true"]:not([data-scroll-up="true"]) {
+	mask-image: linear-gradient(to bottom, black 0, black calc(100% - 20px), transparent 100%);
+}
+[data-nav-chats-scroll][data-scroll-up="true"][data-scroll-down="true"] {
+	mask-image: linear-gradient(
+		to bottom,
+		transparent 0,
+		black 20px,
+		black calc(100% - 20px),
+		transparent 100%
+	);
 }
 
 /* Draggable title bar region */
@@ -920,6 +1029,12 @@ html[data-scenic] .shadow-strong > * {
 }
 
 html[data-scenic] .popover-styled {
+	/* Scenic keeps the original ~88% alpha so the user's chosen background
+	   image is still visible behind the menu. The opaque 95% used in
+	   default mode would defeat the "glass on photography" look that
+	   scenic exists to deliver. The stronger 24px blur compensates for
+	   the lower alpha so menu text stays readable over busy backgrounds. */
+	background: color-mix(in srgb, var(--background) 88%, transparent);
 	backdrop-filter: blur(24px);
 	-webkit-backdrop-filter: blur(24px);
 }
@@ -941,36 +1056,21 @@ html.dark[data-scenic] .fullscreen-overlay-background {
    DISABLE ANIMATIONS FOR RADIX OVERLAYS
 ============================================================================= */
 
-[data-radix-dialog-overlay] {
-	animation: none !important;
-}
-
+/* All Radix overlay surfaces (dialog, popover, select, tooltip, context menu,
+ * alert dialog) ship default animations that we override with our own
+ * Tailwind animate-* utilities driven by data-state. Disabling the built-in
+ * animations centrally avoids visual double-up.
+ *
+ * dropdown-menu intentionally NOT in this list: it's controlled per-component
+ * via the `data-[state=open/closed]:animate-*` variants in
+ * `components/ui/dropdown-menu.tsx`. */
+[data-radix-dialog-overlay],
 [role="dialog"][data-state],
-[data-radix-dialog-content] {
-	animation: none !important;
-}
-
-[data-radix-menu-content],
-[data-radix-dropdown-menu-content] {
-	animation: none !important;
-}
-
-[data-radix-popover-content] {
-	animation: none !important;
-}
-
-[data-radix-select-content] {
-	animation: none !important;
-}
-
-[data-radix-tooltip-content] {
-	animation: none !important;
-}
-
-[data-radix-context-menu-content] {
-	animation: none !important;
-}
-
+[data-radix-dialog-content],
+[data-radix-popover-content],
+[data-radix-select-content],
+[data-radix-tooltip-content],
+[data-radix-context-menu-content],
 [data-radix-alert-dialog-overlay],
 [data-radix-alert-dialog-content] {
 	animation: none !important;
@@ -1103,27 +1203,8 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation-delay: 0.2s;
 }
 
-@keyframes spinner-grid {
-	0%,
-	70%,
-	100% {
-		transform: scale3d(0.5, 0.5, 1);
-	}
-	35% {
-		transform: scale3d(0, 0, 1);
-	}
-}
-
-@keyframes toast-in {
-	from {
-		opacity: 0;
-		transform: scale(0.75);
-	}
-	to {
-		opacity: 1;
-		transform: scale(1);
-	}
-}
+/* spinner-grid + toast-in keyframes moved to the consolidated
+   Animations section near the end of this file. */
 
 /* =============================================================================
    WAVEFORM SCROLL — used by the dictation timeline in features/chat
@@ -1133,27 +1214,13 @@ html.dark[data-scenic] .fullscreen-overlay-background {
  * the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
  * the seam at -50% lands on identical content, hiding the wrap.
  */
-@keyframes waveform-scroll {
-	from {
-		transform: translateX(0);
-	}
-	to {
-		transform: translateX(-50%);
-	}
-}
+/* waveform-scroll keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SHIMMER ANIMATION FOR OPTIMISTIC UI
 ============================================================================= */
 
-@keyframes shimmer {
-	0% {
-		background-position: -200% 0;
-	}
-	100% {
-		background-position: 200% 0;
-	}
-}
+/* shimmer keyframes moved to the consolidated Animations section. */
 
 .animate-shimmer {
 	position: relative;
@@ -1183,14 +1250,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
    carry through automatically.
 ============================================================================= */
 
-@keyframes thinking-gradient-flow {
-	0% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
-}
+/* thinking-gradient-flow keyframes moved to the consolidated Animations section. */
 
 .thinking-gradient-text {
 	background: linear-gradient(
@@ -1217,14 +1277,7 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 }
 
-@keyframes shimmer-loading {
-	0% {
-		transform: translateX(-100%);
-	}
-	100% {
-		transform: translateX(100%);
-	}
-}
+/* shimmer-loading keyframes moved to the consolidated Animations section. */
 
 .animate-shimmer-loading {
 	animation: shimmer-loading 1.2s linear infinite;
@@ -1234,52 +1287,19 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: shimmer-text 1.2s ease-in-out infinite;
 }
 
-@keyframes shimmer-text {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.5;
-	}
-}
+/* shimmer-text keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SHAKE ANIMATION
 ============================================================================= */
 
-@keyframes shake {
-	0%,
-	100% {
-		transform: translateX(0);
-	}
-	10%,
-	30%,
-	50%,
-	70%,
-	90% {
-		transform: translateX(-2px);
-	}
-	20%,
-	40%,
-	60%,
-	80% {
-		transform: translateX(2px);
-	}
-}
+/* shake keyframes moved to the consolidated Animations section. */
 
 .animate-shake {
 	animation: shake 0.4s ease-in-out;
 }
 
-@keyframes editPopoverFadeIn {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
-}
+/* editPopoverFadeIn keyframes moved to the consolidated Animations section. */
 
 /* =============================================================================
    SONNER TOAST OVERRIDES
@@ -1371,60 +1391,45 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 		0 0 0 2px rgba(var(--foreground-rgb), 0.18) !important;
 }
 
-/* Tinted toast backgrounds */
+/* Tinted toast backgrounds.
+ *
+ * Each `data-type` sets a `--toast-tint` custom property pointing at the
+ * matching semantic-color RGB triple, then the shared rules below paint
+ * the gradient + title color from that variable. Dark mode just bumps
+ * the tint alpha. This replaces 6 nearly-identical background blocks. */
 [data-sonner-toast][data-type="error"] {
+	--toast-tint: var(--destructive-rgb);
+}
+[data-sonner-toast][data-type="warning"] {
+	--toast-tint: var(--info-rgb);
+}
+[data-sonner-toast][data-type="success"] {
+	--toast-tint: var(--success-rgb);
+}
+
+[data-sonner-toast][data-type="error"],
+[data-sonner-toast][data-type="warning"],
+[data-sonner-toast][data-type="success"] {
 	background:
-		linear-gradient(rgba(var(--destructive-rgb), 0.07), rgba(var(--destructive-rgb), 0.07)),
+		linear-gradient(rgba(var(--toast-tint), 0.07), rgba(var(--toast-tint), 0.07)),
 		oklch(from var(--popover) l c h / 0.8) !important;
 }
 
 [data-sonner-toast][data-type="error"] [data-title],
-[data-sonner-toast][data-type="error"] [data-description] {
-	color: color-mix(
-		in srgb,
-		rgb(var(--foreground-rgb)) 70%,
-		rgb(var(--destructive-rgb))
-	) !important;
-}
-
-[data-sonner-toast][data-type="warning"] {
-	background:
-		linear-gradient(rgba(var(--info-rgb), 0.07), rgba(var(--info-rgb), 0.07)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
+[data-sonner-toast][data-type="error"] [data-description],
 [data-sonner-toast][data-type="warning"] [data-title],
-[data-sonner-toast][data-type="warning"] [data-description] {
-	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--info-rgb))) !important;
-}
-
-[data-sonner-toast][data-type="success"] {
-	background:
-		linear-gradient(rgba(var(--success-rgb), 0.07), rgba(var(--success-rgb), 0.07)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
+[data-sonner-toast][data-type="warning"] [data-description],
 [data-sonner-toast][data-type="success"] [data-title],
 [data-sonner-toast][data-type="success"] [data-description] {
-	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--success-rgb))) !important;
+	color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--toast-tint))) !important;
 }
 
-/* Dark mode: stronger tints */
-.dark [data-sonner-toast][data-type="error"] {
-	background:
-		linear-gradient(rgba(var(--destructive-rgb), 0.15), rgba(var(--destructive-rgb), 0.15)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
-.dark [data-sonner-toast][data-type="warning"] {
-	background:
-		linear-gradient(rgba(var(--info-rgb), 0.15), rgba(var(--info-rgb), 0.15)),
-		oklch(from var(--popover) l c h / 0.8) !important;
-}
-
+/* Dark mode: stronger tints (alpha 0.15 vs 0.07). */
+.dark [data-sonner-toast][data-type="error"],
+.dark [data-sonner-toast][data-type="warning"],
 .dark [data-sonner-toast][data-type="success"] {
 	background:
-		linear-gradient(rgba(var(--success-rgb), 0.15), rgba(var(--success-rgb), 0.15)),
+		linear-gradient(rgba(var(--toast-tint), 0.15), rgba(var(--toast-tint), 0.15)),
 		oklch(from var(--popover) l c h / 0.8) !important;
 }
 
@@ -1444,27 +1449,8 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-@keyframes onboarding-panel-enter {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-@keyframes composer-placeholder-enter {
-	from {
-		opacity: 0;
-		transform: translateY(4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
+/* onboarding-panel-enter + composer-placeholder-enter keyframes moved to
+   the consolidated Animations section. */
 
 @media (prefers-reduced-motion: reduce) {
 	.onboarding-panel {
@@ -1533,4 +1519,158 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	border-radius: var(--radius-surface-lg);
 	border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
 	box-shadow: var(--shadow-minimal);
+}
+
+/* =============================================================================
+   ANIMATIONS — consolidated keyframes
+   -----------------------------------------------------------------------------
+   All `@keyframes` definitions live here in one section. The selectors that
+   *consume* these animations (e.g. `.animate-shimmer`, `.thinking-gradient-text`,
+   `[data-state=open]:animate-dropdown-open`) stay co-located with their
+   surrounding component CSS above; only the keyframe definitions are pooled
+   here so the file has a single discoverable home for motion vocabulary.
+
+   Order: overlay open/close → loading + indicators → entry effects.
+============================================================================= */
+
+/* --- Overlay open / close ------------------------------------------------- */
+
+@keyframes dropdown-open {
+	from {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+@keyframes dropdown-close {
+	to {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+}
+
+/* --- Loading + status indicators ----------------------------------------- */
+
+@keyframes spinner-grid {
+	0%,
+	70%,
+	100% {
+		transform: scale3d(0.5, 0.5, 1);
+	}
+	35% {
+		transform: scale3d(0, 0, 1);
+	}
+}
+
+@keyframes toast-in {
+	from {
+		opacity: 0;
+		transform: scale(0.75);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* Translates the doubled bar strip leftward by exactly half its width so
+   the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
+   the seam at -50% lands on identical content, hiding the wrap. */
+@keyframes waveform-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+@keyframes thinking-gradient-flow {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0% 50%;
+	}
+}
+
+@keyframes shimmer-loading {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+@keyframes shimmer-text {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+@keyframes shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	10%,
+	30%,
+	50%,
+	70%,
+	90% {
+		transform: translateX(-2px);
+	}
+	20%,
+	40%,
+	60%,
+	80% {
+		transform: translateX(2px);
+	}
+}
+
+/* --- Entry effects ------------------------------------------------------- */
+
+@keyframes editPopoverFadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes onboarding-panel-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes composer-placeholder-enter {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }

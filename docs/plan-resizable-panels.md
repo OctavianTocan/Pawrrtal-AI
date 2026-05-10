@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace `ai-nexus`’s current desktop two-pane sidebar/chat layout with a Craft-style three-panel shell: `LeftSidebar` (fixed px, resizable), `SessionList` (fixed px, resizable), and `MainContent` (fills remaining width), while preserving a compact/mobile experience.
+**Goal:** Replace `pawrrtal`’s current desktop two-pane sidebar/chat layout with a Craft-style three-panel shell: `LeftSidebar` (fixed px, resizable), `SessionList` (fixed px, resizable), and `MainContent` (fills remaining width), while preserving a compact/mobile experience.
 
-**Architecture:** Do **not** blindly port Craft’s entire multi-content panel stack. `ai-nexus` only needs the **left-rail portion** of Craft right now: two persisted pixel widths, two absolute drag sashes, a compact-mode width observer, and a main content panel that flexes into the remaining space. Introduce Jotai for layout state and persistence, extract the shell into focused layout components, and adapt current `NavChats`/`ChatContainer` pages so they fill the new shell cleanly.
+**Architecture:** Do **not** blindly port Craft’s entire multi-content panel stack. `pawrrtal` only needs the **left-rail portion** of Craft right now: two persisted pixel widths, two absolute drag sashes, a compact-mode width observer, and a main content panel that flexes into the remaining space. Introduce Jotai for layout state and persistence, extract the shell into focused layout components, and adapt current `NavChats`/`ChatContainer` pages so they fill the new shell cleanly.
 
 **Tech Stack:** Next.js 16 App Router, React 19, Tailwind v4, Jotai (new dependency), existing `motion` dependency only if animated width transitions are wanted, existing `SidebarFocusProvider` for keyboard zone navigation.
 
@@ -36,7 +36,7 @@
 
 ### What Craft does that matters here
 
-From `docs/craft-resizable-panels.md`, the useful parts for `ai-nexus` are:
+From `docs/craft-resizable-panels.md`, the useful parts for `pawrrtal` are:
 
 1. **Two left rails are pixel-sized and independently resizable**
    - `sidebarWidth`: clamped and persisted
@@ -44,18 +44,18 @@ From `docs/craft-resizable-panels.md`, the useful parts for `ai-nexus` are:
 2. **Desktop shell is `flex` + absolute sash geometry**, not `react-resizable-panels`
 3. **Compact mode is derived from container width** (`ResizeObserver`)
 4. **Only the main content strip uses proportional panel math** in Craft
-   - `ai-nexus` does **not** need Craft’s `panelStackAtom` / `PanelResizeSash` for multiple content panes yet
-   - For `ai-nexus` today, `MainContent` can just be `flex: 1 1 auto`
+   - `pawrrtal` does **not** need Craft’s `panelStackAtom` / `PanelResizeSash` for multiple content panes yet
+   - For `pawrrtal` today, `MainContent` can just be `flex: 1 1 auto`
 
-### Direct mapping from Craft to `ai-nexus`
+### Direct mapping from Craft to `pawrrtal`
 
-| Craft concept | `ai-nexus` equivalent | Port now? | Notes |
+| Craft concept | `pawrrtal` equivalent | Port now? | Notes |
 |---|---|---:|---|
 | `sidebarWidth` | `LeftSidebar` width | Yes | New desktop-only px width state |
 | `sessionListWidth` | `NavChats` container width | Yes | Move `NewSessionButton` + `NavChats` into dedicated session panel |
 | `useContainerWidth` | shell compact-mode observer | Yes | Needed to auto-collapse to mobile/compact |
 | absolute left rail sashes | `LeftSidebar` / `SessionList` drag handles | Yes | This is the real desktop resize behavior to copy |
-| `panelStackAtom` | multi-chat/content tabs | No (not yet) | Overkill until `ai-nexus` can open multiple main panels |
+| `panelStackAtom` | multi-chat/content tabs | No (not yet) | Overkill until `pawrrtal` can open multiple main panels |
 | `PanelResizeSash` between content panels | future main-content multi-panel split | No (not yet) | Mention as future extension only |
 | `flexGrow: proportion` content widths | `MainContent` | No (not yet) | Single main panel only |
 
@@ -345,7 +345,7 @@ const leftOffset = leftSidebarVisible ? leftSidebarWidth + PANEL_GAP : PANEL_EDG
 const newWidth = clampSessionListWidth(e.clientX - shellRect.left - leftOffset)
 ```
 
-This is the crucial mapping from Craft’s `e.clientX - offset` math into `ai-nexus`’s shell.
+This is the crucial mapping from Craft’s `e.clientX - offset` math into `pawrrtal`’s shell.
 
 - [ ] **Step 7: Position the absolute sashes exactly from state**
 
@@ -438,7 +438,7 @@ const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
 
 - [ ] **Step 2: Choose compact behavior**
 
-Recommended first implementation for `ai-nexus`:
+Recommended first implementation for `pawrrtal`:
 
 - compact/mobile: no persistent desktop three-panel shell
 - show `children` full-width
@@ -615,9 +615,9 @@ These are tempting rabbit holes. Leave them in the wall for later.
 
 ## Implementation Notes / Decision Log
 
-### Why Jotai goes into `ai-nexus` now
+### Why Jotai goes into `pawrrtal` now
 
-The Craft blueprint uses Jotai as the shell’s backing store. Even though `ai-nexus` only needs the left-rail subset today, adding Jotai now gives a clean home for layout state instead of stuffing more desktop shell state into `SidebarProvider` or `localStorage` helper functions.
+The Craft blueprint uses Jotai as the shell’s backing store. Even though `pawrrtal` only needs the left-rail subset today, adding Jotai now gives a clean home for layout state instead of stuffing more desktop shell state into `SidebarProvider` or `localStorage` helper functions.
 
 ### Why not use `react-resizable-panels` for this
 

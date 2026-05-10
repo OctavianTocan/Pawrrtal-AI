@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Match the ai-nexus sidebar to the Craft reference project across 4 areas: New Session button (tooltip + hover), menu styling + full item list, and sidebar width.
+**Goal:** Match the pawrrtal sidebar to the Craft reference project across 4 areas: New Session button (tooltip + hover), menu styling + full item list, and sidebar width.
 
 **Architecture:** Pure UI/CSS changes. Menu items are non-functional stubs (onClick handlers are no-ops or toast "Coming soon"). The menu-context provider is extended with submenu components to support Craft's Status/Labels submenus. The popover/menu styling is updated to match Craft's design language (8px radius, subtle hover, layered shadow).
 
@@ -523,9 +523,9 @@ git commit -m "feat(ui): update dropdown and context menu styling to match Craft
 
 ---
 
-## Reference: Craft vs ai-nexus Menu Styling Comparison
+## Reference: Craft vs pawrrtal Menu Styling Comparison
 
-| Property | Craft | ai-nexus (current) | ai-nexus (target) |
+| Property | Craft | pawrrtal (current) | pawrrtal (target) |
 |---|---|---|---|
 | Container radius | 8px | rounded-2xl (16px) | rounded-[8px] (8px) |
 | Container border | layered box-shadow | ring-1 ring-foreground/5 | popover-styled class |

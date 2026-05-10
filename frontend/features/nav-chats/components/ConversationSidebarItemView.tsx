@@ -1,5 +1,6 @@
 'use client';
 
+import { DropdownMenuShortcut } from '@octavian-tocan/react-dropdown';
 import {
 	AppWindow,
 	Archive,

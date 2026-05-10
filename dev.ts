@@ -18,7 +18,7 @@ console.log(
 );
 
 // Frontend: plain Next.js dev server. Workspace package, run via bun --filter.
-const frontendPromise = $`bun --filter app.nexus-ai dev`.quiet(false);
+const frontendPromise = $`bun --filter pawrrtal dev`.quiet(false);
 
 // Backend: explicit ASGI target via uvicorn. `main.app` is wrapped in CORS
 // middleware, so FastAPI CLI discovery cannot treat it as a raw FastAPI instance.

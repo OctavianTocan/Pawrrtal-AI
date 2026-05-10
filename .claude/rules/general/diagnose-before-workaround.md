@@ -34,7 +34,7 @@ If you can't explain why the original approach fails, you don't understand the p
 
 ## Origin
 
-TwinMind iOS CI — multiple attempts at raw xcodebuild workarounds before diagnosing that prebuilt pods were the actual issue.
+a prior iOS CI — multiple attempts at raw xcodebuild workarounds before diagnosing that prebuilt pods were the actual issue.
 
 ## Verify
 

@@ -1,5 +1,5 @@
 /**
- * Native application menu for the AI Nexus desktop shell.
+ * Native application menu for the Pawrrtal desktop shell.
  *
  * Cross-platform with a macOS-leaning template: on macOS, every app
  * gets a leading menu named after itself (About / Hide / Quit), so we
@@ -17,7 +17,7 @@ interface BuildOptions {
 	getWindow: () => BrowserWindow | undefined;
 }
 
-const DOCS_URL = 'https://github.com/OctavianTocan/ai-nexus#readme';
+const DOCS_URL = 'https://github.com/OctavianTocan/pawrrtal#readme';
 
 /**
  * Build + install the application menu.

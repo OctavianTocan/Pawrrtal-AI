@@ -1,8 +1,11 @@
 """HTTP endpoints for the home-page personalization wizard."""
 
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.workspace import ensure_default_workspace
 from app.crud.personalization import (
     get_personalization_service,
     upsert_personalization_service,
@@ -11,6 +14,8 @@ from app.db import User, get_async_session
 from app.models import UserPersonalization
 from app.schemas import PersonalizationProfile
 from app.users import current_active_user
+
+log = logging.getLogger(__name__)
 
 
 def _to_profile(row: UserPersonalization | None) -> PersonalizationProfile:
@@ -53,10 +58,29 @@ def get_personalization_router() -> APIRouter:
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> PersonalizationProfile:
-        """Create or replace the authenticated user's personalization profile."""
+        """Create or replace the authenticated user's personalization profile.
+
+        Also seeds the user's default workspace the first time this endpoint
+        is called (idempotent — subsequent calls are a no-op for the workspace).
+        """
         row = await upsert_personalization_service(
             user_id=user.id, payload=payload, session=session
         )
+
+        # Seed the default workspace on first personalization save.  This is
+        # the natural trigger for "onboarding complete" since the wizard writes
+        # the full profile before calling finish().
+        try:
+            await ensure_default_workspace(
+                user_id=user.id,
+                session=session,
+                personalization=row,
+            )
+            await session.commit()
+        except Exception:
+            log.exception("Failed to ensure default workspace for user %s", user.id)
+            # Non-fatal — workspace seeding must not break the personalization save.
+
         return _to_profile(row)
 
     return router

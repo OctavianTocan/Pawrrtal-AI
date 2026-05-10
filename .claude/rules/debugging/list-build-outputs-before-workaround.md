@@ -35,7 +35,7 @@ find build/intermediates -name "*.swiftmodule" -exec cp {} /tmp/modules/ \;
 ```bash
 # First, see what the tool actually produced
 ls -la ios/.brownfield/package/build/
-# Output: TwinMindDigestBrownfield.xcframework
+# Output: a prior projectDigestBrownfield.xcframework
 #         ReactBrownfield.xcframework      ← this was there all along
 #         hermesvm.xcframework
 ```

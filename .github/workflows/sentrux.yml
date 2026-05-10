@@ -17,11 +17,19 @@ concurrency:
 jobs:
   check:
     name: sentrux check
+    # OctavianTocan-only gate: skip for any other author and any fork PR.
+    # Push events have no pull_request payload, so the second clause is
+    # vacuously true and the workflow still runs on direct pushes.
+    if: >-
+      github.actor == 'OctavianTocan' &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
+          submodules: recursive
           fetch-depth: 0
 
       - name: Cache sentrux binary

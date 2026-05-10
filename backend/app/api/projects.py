@@ -12,11 +12,12 @@ from app.crud.project import (
     update_project_service,
 )
 from app.db import User, get_async_session
+from app.models import Project
 from app.schemas import ProjectCreate, ProjectResponse, ProjectUpdate
 from app.users import current_active_user
 
 
-def _serialize(project: object) -> ProjectResponse:
+def _serialize(project: Project) -> ProjectResponse:
     """Build a {@link ProjectResponse} from a Project ORM row."""
     return ProjectResponse(
         id=project.id,

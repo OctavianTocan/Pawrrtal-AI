@@ -1,17 +1,18 @@
-"""Auto-generate conventional commit messages from staged changes using Agno + Gemini.
+"""Auto-generate conventional commit messages from staged changes using Gemini directly.
 
 Usage:
     just commit
     uv run --project backend python -m app.cli.commit
 """
 
+import asyncio
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-from agno.agent.agent import Agent
-from agno.models.google.gemini import Gemini
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 # Load .env from project root (two levels up from backend/app/cli/)
@@ -23,8 +24,7 @@ if not os.environ.get("GOOGLE_API_KEY"):
     print("GOOGLE_API_KEY not found in environment or .env file.", file=sys.stderr)
     sys.exit(1)
 
-# The Gemini model to use for commit message generation.
-COMMIT_AGENT_MODEL = "gemini-3.1-flash-lite-preview"
+COMMIT_AGENT_MODEL = "gemini-2.5-flash-preview-05-20"
 
 COMMIT_PROMPT = """\
 You are a commit message generator. Given the staged git diff below, produce a single \
@@ -67,22 +67,20 @@ def get_staged_diff() -> tuple[str, str]:
     return stat.stdout.strip(), diff.stdout.strip()
 
 
-def create_commit_agent() -> Agent:
-    """Create a lightweight Agno agent for commit message generation."""
-    return Agent(model=Gemini(id=COMMIT_AGENT_MODEL))
-
-
-def generate_message(stat: str, diff: str) -> str:
-    """Send the diff to Gemini via Agno and return the commit message."""
-    agent = create_commit_agent()
+async def generate_message(stat: str, diff: str) -> str:
+    """Send the diff to Gemini and return the commit message."""
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     prompt = COMMIT_PROMPT.format(stat=stat, diff=diff)
-    result = agent.run(prompt)
-
-    # Gemini messed up.
-    if result.content is None:
-        msg = "Gemini returned an empty response."
-        raise RuntimeError(msg)
-    return result.content.strip()
+    response = await client.aio.models.generate_content(
+        model=COMMIT_AGENT_MODEL,
+        contents=[
+            types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+        ],
+    )
+    text = (response.text or "").strip()
+    if not text:
+        raise RuntimeError("Gemini returned an empty response.")
+    return text
 
 
 def commit(message: str) -> bool:
@@ -111,7 +109,7 @@ def main() -> None:
 
     print("Generating commit message...")
     try:
-        message = generate_message(stat, diff)
+        message = asyncio.run(generate_message(stat, diff))
     except Exception as e:
         print(f"Failed to generate message: {e}", file=sys.stderr)
         sys.exit(1)

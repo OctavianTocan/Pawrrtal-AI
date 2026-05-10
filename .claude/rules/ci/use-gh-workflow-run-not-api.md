@@ -51,4 +51,4 @@ gh run list -w publish.yml --limit 1 --json databaseId,event
 
 ## Origin
 
-TwinMind publish workflow — API dispatch syntax errors caused silent failures where no run was created.
+a prior project publish workflow — API dispatch syntax errors caused silent failures where no run was created.

@@ -72,4 +72,4 @@ xxd .env | grep -A1 DOMAIN
 
 ## References
 
-- TwinMind E2E: 3 debugging rounds wasted because both CI logs and local tools showed *** for correct values
+- a prior E2E project: 3 debugging rounds wasted because both CI logs and local tools showed *** for correct values

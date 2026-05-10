@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
-snapshot_dir="$(mktemp -d "${TMPDIR:-/tmp}/ai-nexus-sentrux.XXXXXX")"
+snapshot_dir="$(mktemp -d "${TMPDIR:-/tmp}/pawrrtal-sentrux.XXXXXX")"
 
 cleanup() {
 	rm -rf "$snapshot_dir"

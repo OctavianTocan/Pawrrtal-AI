@@ -2,13 +2,13 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import type * as React from 'react';
 import { useState } from 'react';
-import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
+import { useWhimsyTile } from '@/features/whimsy';
 import { cn } from '@/lib/utils';
 import { SETTINGS_SECTIONS, type SettingsSectionId } from './constants';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { ArchivedChatsSection } from './sections/ArchivedChatsSection';
+import { ChannelsSection } from './sections/ChannelsSection';
 import { GeneralSection } from './sections/GeneralSection';
 import { IntegrationsSection } from './sections/IntegrationsSection';
 import { PersonalizationSection } from './sections/PersonalizationSection';
@@ -27,10 +27,47 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 	if (activeId === 'appearance') return <AppearanceSection />;
 	if (activeId === 'personalization') return <PersonalizationSection />;
 	if (activeId === 'integrations') return <IntegrationsSection />;
+	if (activeId === 'channels') return <ChannelsSection />;
 	if (activeId === 'archived-chats') return <ArchivedChatsSection />;
 	if (activeId === 'usage') return <UsageSection />;
 	const section = SETTINGS_SECTIONS.find((entry) => entry.id === activeId);
 	return <PlaceholderSection title={section?.label ?? 'Settings'} />;
+}
+
+/**
+ * Renders the same texture overlay the chat panel uses, scoped to its
+ * positioned parent (here, the settings ``<main>``). Pulled out as a
+ * component so the hook subscribes once for the panel and so the parent
+ * stays JSX-clean. Returns ``null`` when the user has disabled whimsy.
+ */
+function SettingsWhimsyOverlay(): React.JSX.Element | null {
+	const whimsy = useWhimsyTile();
+	if (!whimsy.cssUrl) return null;
+	return (
+		<>
+			{whimsy.backgroundColor ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0"
+					style={{ backgroundColor: whimsy.backgroundColor }}
+				/>
+			) : null}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 text-foreground"
+				style={{
+					backgroundColor: whimsy.tintColor,
+					opacity: whimsy.opacity,
+					maskImage: whimsy.cssUrl,
+					WebkitMaskImage: whimsy.cssUrl,
+					maskSize: whimsy.maskSize,
+					WebkitMaskSize: whimsy.maskSize,
+					maskRepeat: 'repeat',
+					WebkitMaskRepeat: 'repeat',
+				}}
+			/>
+		</>
+	);
 }
 
 /**
@@ -44,7 +81,6 @@ function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
 export function SettingsLayout(): React.JSX.Element {
 	const router = useRouter();
 	const [activeId, setActiveId] = useState<SettingsSectionId>('general');
-	const isMacDesktop = useIsMacDesktop();
 
 	return (
 		<div className="grid h-svh w-full grid-cols-[260px_1fr] bg-sidebar">
@@ -52,17 +88,8 @@ export function SettingsLayout(): React.JSX.Element {
 			    sidebar (gap-4 vs gap-2) so the section list reads like a
 			    settings nav, not a project list. The rail divider uses
 			    `border-border/60` so it tints itself per active theme
-			    instead of stamping a hard `foreground/8` line.
-			    On macOS desktop the top padding is doubled so the
-			    "Back to app" button clears the system traffic-light
-			    buttons that `titleBarStyle: 'hiddenInset'` parks inside
-			    the BrowserWindow content area. */}
-			<aside
-				className={cn(
-					'flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4',
-					isMacDesktop ? 'pt-12' : 'pt-4'
-				)}
-			>
+			    instead of stamping a hard `foreground/8` line. */}
+			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4 pt-4">
 				<button
 					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground"
 					onClick={() => router.push('/')}
@@ -101,8 +128,29 @@ export function SettingsLayout(): React.JSX.Element {
 				</nav>
 			</aside>
 
-			<main className="h-full overflow-y-auto bg-background px-10 py-10">
-				<div className="mx-auto w-full max-w-3xl">{renderActiveSection(activeId)}</div>
+			{/*
+			 * Mirror the chat panel's whimsy texture overlay on the right
+			 * pane so editing the texture knobs in Settings → Appearance
+			 * gives immediate, visible feedback. Sidebar deliberately does
+			 * NOT receive the overlay — it stays a flat surface so
+			 * navigation chrome reads cleanly.
+			 *
+			 * The overlay is the viewport-sized sibling of a separately
+			 * scrolling inner box. If the overlay were ``inset-0`` inside
+			 * an ``overflow-y: auto`` parent, the absolute box would
+			 * resolve to the parent's padding box (one viewport tall) and
+			 * scroll away with the content — leaving the texture only at
+			 * the top of the page. Splitting the scroll into an inner
+			 * ``absolute inset-0 overflow-y-auto`` lets the overlay stay
+			 * pinned to the visible area while content scrolls underneath.
+			 */}
+			<main className="relative h-full bg-background">
+				<SettingsWhimsyOverlay />
+				<div className="absolute inset-0 overflow-y-auto px-10 py-10">
+					<div className="relative mx-auto w-full max-w-3xl">
+						{renderActiveSection(activeId)}
+					</div>
+				</div>
 			</main>
 		</div>
 	);

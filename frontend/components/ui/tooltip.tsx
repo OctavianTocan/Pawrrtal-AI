@@ -5,8 +5,20 @@ import type * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+/**
+ * Default hover delay before any tooltip becomes visible. Documented in
+ * DESIGN.md → Motion → Tooltip Reveal Delay so every surface uses the
+ * same value — this is the single global token. Override per-call only
+ * when a surface explicitly needs a different cadence (none currently do).
+ *
+ * 500 ms reads as "I noticed you paused here" without firing on cursor
+ * fly-throughs. A user can scan an entire control row at speed without
+ * triggering anything; lingering on a single icon resolves the tip.
+ */
+export const TOOLTIP_DEFAULT_DELAY_MS = 500;
+
 function TooltipProvider({
-	delayDuration = 300,
+	delayDuration = TOOLTIP_DEFAULT_DELAY_MS,
 	...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
 	return (

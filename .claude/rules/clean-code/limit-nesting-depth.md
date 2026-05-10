@@ -260,6 +260,26 @@ When you see nesting beyond 2-3 levels:
 - [ ] Can I combine conditions with logical operators?
 - [ ] Can I use a strategy pattern or lookup table?
 
+## Enforcement
+
+This rule is enforced for Python sources by `scripts/check-nesting.py`,
+which runs in the backend pytest CI workflow before tests start.
+
+Default budget: **depth 3** (override via `MAX_DEPTH` env or first CLI arg).
+
+```sh
+python3 scripts/check-nesting.py        # default
+MAX_DEPTH=2 python3 scripts/check-nesting.py   # tighter
+```
+
+Any new function exceeding the budget will fail CI.  A small
+`EXEMPT_FUNCTIONS` allowlist at the top of the script holds
+pre-existing offenders, each tagged with a TODO; do **not** add new
+entries there as a workaround — fix the function instead.
+
+TypeScript / TSX is covered by Biome's cognitive-complexity family
+and the file-length budget enforced by `scripts/check-file-lines.mjs`.
+
 ## References
 
 - Clean Code by Robert C. Martin, Chapter 3: Functions

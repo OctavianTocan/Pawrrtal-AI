@@ -11,9 +11,11 @@ import {
 	type ClipboardEventHandler,
 	type ComponentProps,
 	type KeyboardEventHandler,
+	useRef,
 	useState,
 } from 'react';
 import { InputGroupTextarea } from '@/components/ui/input-group';
+import { useScrollEdges } from '@/hooks/use-scroll-edges';
 import { cn } from '@/lib/utils';
 import {
 	useOptionalPromptInputController,
@@ -33,6 +35,11 @@ export const PromptInputTextarea = ({
 	const controller = useOptionalPromptInputController();
 	const attachments = usePromptInputAttachments();
 	const [isComposing, setIsComposing] = useState(false);
+	// Scroll-edge fade: when the textarea has more content above/below the
+	// visible area, render top/bottom mask gradients via data-attributes
+	// (CSS in globals.css → `[data-prompt-textarea]`).
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const { canScrollUp, canScrollDown } = useScrollEdges(textareaRef);
 
 	const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
 		if (e.key === 'Enter') {
@@ -102,7 +109,11 @@ export const PromptInputTextarea = ({
 
 	return (
 		<InputGroupTextarea
+			ref={textareaRef}
 			className={cn('field-sizing-content max-h-48 min-h-16', className)}
+			data-prompt-textarea=""
+			data-scroll-up={canScrollUp ? 'true' : undefined}
+			data-scroll-down={canScrollDown ? 'true' : undefined}
 			name="message"
 			onCompositionEnd={() => setIsComposing(false)}
 			onCompositionStart={() => setIsComposing(true)}

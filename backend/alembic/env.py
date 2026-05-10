@@ -1,4 +1,4 @@
-"""Alembic environment configuration for ai-nexus backend migrations."""
+"""Alembic environment configuration for pawrrtal backend migrations."""
 
 from logging.config import fileConfig
 

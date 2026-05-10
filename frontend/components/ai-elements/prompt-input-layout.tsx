@@ -6,9 +6,16 @@
 
 'use client';
 
+import { DropdownMenuItem, DropdownPanelMenu } from '@octavian-tocan/react-dropdown';
 import type { ChatStatus } from 'ai';
 import { CornerDownLeftIcon, Loader2Icon, PlusIcon, SquareIcon, XIcon } from 'lucide-react';
-import { Children, type ComponentProps, type HTMLAttributes } from 'react';
+import {
+	Children,
+	type ComponentProps,
+	type HTMLAttributes,
+	isValidElement,
+	type ReactNode,
+} from 'react';
 import {
 	Command,
 	CommandEmpty,
@@ -18,12 +25,6 @@ import {
 	CommandList,
 	CommandSeparator,
 } from '@/components/ui/command';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { InputGroupAddon, InputGroupButton } from '@/components/ui/input-group';
 import {
@@ -101,13 +102,75 @@ export const PromptInputButton = ({
 	);
 };
 
-/** Props for the prompt input action dropdown menu. */
-export type PromptInputActionMenuProps = ComponentProps<typeof DropdownMenu>;
+/**
+ * Internal slot sentinels used to identify which children of
+ * `PromptInputActionMenu` represent the trigger vs. the content. This keeps
+ * the existing compound API (`<PromptInputActionMenu><PromptInputActionMenuTrigger />
+ * <PromptInputActionMenuContent>...</PromptInputActionMenuContent></PromptInputActionMenu>`)
+ * intact while delegating to a single `DropdownPanelMenu` underneath.
+ */
+function PromptInputActionMenuTriggerSlot({
+	children,
+}: {
+	children: ReactNode;
+}): React.JSX.Element {
+	return <>{children}</>;
+}
+PromptInputActionMenuTriggerSlot.displayName = 'PromptInputActionMenuTriggerSlot';
 
-/** Dropdown menu root for prompt input actions. */
-export const PromptInputActionMenu = (props: PromptInputActionMenuProps) => (
-	<DropdownMenu {...props} />
-);
+function PromptInputActionMenuContentSlot({
+	children,
+}: {
+	children: ReactNode;
+}): React.JSX.Element {
+	return <>{children}</>;
+}
+PromptInputActionMenuContentSlot.displayName = 'PromptInputActionMenuContentSlot';
+
+/** Props for the prompt input action dropdown menu. */
+export type PromptInputActionMenuProps = {
+	children?: ReactNode;
+	className?: string;
+	onOpenChange?: (isOpen: boolean) => void;
+};
+
+/**
+ * Dropdown menu root for prompt input actions.
+ *
+ * Scans children for the trigger and content slots and routes them into a
+ * single `DropdownPanelMenu` so the compound API consumers expect keeps
+ * working unchanged.
+ */
+export const PromptInputActionMenu = ({
+	children,
+	className,
+	onOpenChange,
+}: PromptInputActionMenuProps) => {
+	let triggerNode: ReactNode = null;
+	let contentNode: ReactNode = null;
+	Children.forEach(children, (child) => {
+		if (!isValidElement(child)) return;
+		const type = child.type as { displayName?: string };
+		if (type.displayName === 'PromptInputActionMenuTriggerSlot') {
+			triggerNode = (child.props as { children?: ReactNode }).children ?? null;
+		} else if (type.displayName === 'PromptInputActionMenuContentSlot') {
+			contentNode = (child.props as { children?: ReactNode }).children ?? null;
+		}
+	});
+
+	return (
+		<DropdownPanelMenu
+			asChild
+			usePortal
+			align="start"
+			className={className}
+			onOpenChange={onOpenChange}
+			trigger={triggerNode ?? <PlusIcon className="size-4" />}
+		>
+			{contentNode}
+		</DropdownPanelMenu>
+	);
+};
 
 /** Props for the prompt input action menu trigger. */
 export type PromptInputActionMenuTriggerProps = PromptInputButtonProps;
@@ -118,22 +181,25 @@ export const PromptInputActionMenuTrigger = ({
 	children,
 	...props
 }: PromptInputActionMenuTriggerProps) => (
-	<DropdownMenuTrigger asChild>
+	<PromptInputActionMenuTriggerSlot>
 		<PromptInputButton className={className} {...props}>
 			{children ?? <PlusIcon className="size-4" />}
 		</PromptInputButton>
-	</DropdownMenuTrigger>
+	</PromptInputActionMenuTriggerSlot>
 );
 
 /** Props for the prompt input action menu content. */
-export type PromptInputActionMenuContentProps = ComponentProps<typeof DropdownMenuContent>;
+export type PromptInputActionMenuContentProps = {
+	children?: ReactNode;
+	className?: string;
+};
 
-/** Menu content for prompt input actions. */
-export const PromptInputActionMenuContent = ({
-	className,
-	...props
-}: PromptInputActionMenuContentProps) => (
-	<DropdownMenuContent align="start" className={cn(className)} {...props} />
+/**
+ * Menu content for prompt input actions. Children are forwarded into the
+ * underlying `DropdownPanelMenu` panel via the slot sentinel pattern.
+ */
+export const PromptInputActionMenuContent = ({ children }: PromptInputActionMenuContentProps) => (
+	<PromptInputActionMenuContentSlot>{children}</PromptInputActionMenuContentSlot>
 );
 
 /** Props for a prompt input action menu item. */

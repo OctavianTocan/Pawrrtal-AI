@@ -149,6 +149,18 @@ export const CodeBlockCopyButton = ({
 }: CodeBlockCopyButtonProps) => {
 	const [isCopied, setIsCopied] = useState(false);
 	const { code } = useContext(CodeBlockContext);
+	// Spam-resistant timer: ref-stored so the previous setTimeout can be
+	// cleared before scheduling a new one. Without this, rapid clicking
+	// schedules N concurrent revert-to-Copy calls; the earlier ones fire
+	// while the user is still in success state, briefly flickering the
+	// icon. See `.claude/rules/react/clear-timers-on-spam.md`.
+	const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(() => {
+		return () => {
+			if (revertTimerRef.current !== null) clearTimeout(revertTimerRef.current);
+		};
+	}, []);
 
 	const copyToClipboard = async () => {
 		if (typeof window === 'undefined' || !navigator?.clipboard?.writeText) {
@@ -160,7 +172,11 @@ export const CodeBlockCopyButton = ({
 			await navigator.clipboard.writeText(code);
 			setIsCopied(true);
 			onCopy?.();
-			setTimeout(() => setIsCopied(false), timeout);
+			if (revertTimerRef.current !== null) clearTimeout(revertTimerRef.current);
+			revertTimerRef.current = setTimeout(() => {
+				setIsCopied(false);
+				revertTimerRef.current = null;
+			}, timeout);
 		} catch (error) {
 			onError?.(error as Error);
 		}

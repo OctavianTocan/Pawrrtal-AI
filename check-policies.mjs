@@ -48,7 +48,7 @@ function isIncludedFile(relativePath) {
  * @returns {Promise<string[]>} Absolute file paths beneath the directory.
  *
  * @example
- * await collectSourceFiles('/repo/ai-nexus/frontend');
+ * await collectSourceFiles('/repo/pawrrtal/frontend');
  */
 async function collectSourceFiles(directoryPath) {
 	const entries = await fs.readdir(directoryPath, { withFileTypes: true });
@@ -233,7 +233,7 @@ function collectDocstringWarnings(sourceFile, relativePath) {
 /**
  * main
  *
- * Runs the AI Nexus policy checker and prints warning diagnostics.
+ * Runs the Pawrrtal policy checker and prints warning diagnostics.
  *
  * @returns {Promise<void>} Completion signal once warnings are printed.
  *

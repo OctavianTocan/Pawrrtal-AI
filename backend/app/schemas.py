@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -177,7 +177,7 @@ class PersonalizationProfile(BaseModel):
 
 
 class ThemeColors(BaseModel):
-    """Per-mode color overrides for the AI Nexus design system.
+    """Per-mode color overrides for the Pawrrtal design system.
 
     All fields optional — a missing key means "use the system default"
     (the Mistral-inspired tokens in ``frontend/app/globals.css``). Each
@@ -282,3 +282,82 @@ class ChatMessageRead(BaseModel):
     timeline: list[dict[str, Any]] | None = None
     thinking_duration_seconds: int | None = None
     assistant_status: Literal["streaming", "complete", "failed"] | None = None
+
+
+# --- Channel schemas ---------------------------------------------------------
+
+
+class ChannelBindingRead(BaseModel):
+    """Public view of a third-party messaging binding.
+
+    Returned by ``GET /api/v1/channels`` so the Settings UI can list which
+    services the user has connected. Sensitive provider IDs are exposed only
+    to their owner via the authenticated route.
+    """
+
+    provider: str
+    external_user_id: str
+    external_chat_id: str | None = None
+    display_handle: str | None = None
+    created_at: datetime
+
+
+class ChannelLinkCodeResponse(BaseModel):
+    """Response shape returned when the web app requests a fresh link code.
+
+    `code` is the plaintext the user types (or the bot reads from a
+    `t.me/<bot>?start=<code>` deep link); the server only persists its
+    HMAC. `expires_at` powers the countdown timer the frontend renders.
+    `bot_username` is included so the frontend can render the deep link
+    without hard-coding the bot identity.
+    """
+
+    code: str
+    expires_at: datetime
+    bot_username: str | None = None
+    deep_link: str | None = None
+
+
+# --- Workspace schemas --------------------------------------------------------
+
+
+class WorkspaceRead(BaseModel):
+    """Workspace summary returned by list / detail endpoints."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    path: str
+    is_default: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkspaceFileNode(BaseModel):
+    """A single node in a workspace file-tree response."""
+
+    name: str
+    path: str  # workspace-relative path, e.g. "memory/2026-05-06.md"
+    is_dir: bool
+    size: int | None = None  # None for directories
+
+
+class WorkspaceTreeResponse(BaseModel):
+    """Recursive file tree rooted at the workspace directory."""
+
+    workspace_id: uuid.UUID
+    nodes: list[WorkspaceFileNode]
+
+
+class WorkspaceFileContent(BaseModel):
+    """Contents of a single workspace file."""
+
+    path: str
+    content: str
+
+
+class WorkspaceFileWrite(BaseModel):
+    """Payload for writing a workspace file."""
+
+    content: str

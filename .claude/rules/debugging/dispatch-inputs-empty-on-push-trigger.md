@@ -48,4 +48,4 @@ Or separate workflows: one for auto-publish on push (auto-versioned), one for ma
 
 ## Origin
 
-TwinMind v0.3.1 publish — push to main triggered the publish workflow with empty version input, building `0.0.0-auto.{sha}` instead of `0.3.1`. Had to cancel and re-dispatch manually.
+a prior release workflow publish — push to main triggered the publish workflow with empty version input, building `0.0.0-auto.{sha}` instead of `0.3.1`. Had to cancel and re-dispatch manually.

@@ -36,7 +36,7 @@ An `id: "surface-list"` Maestro assertion works on iOS (accessibilityIdentifier 
 
 ## References
 
-- TwinMind E2E: `surface-list` worked on iOS but not Android, fixed to `surface_list`
+- a prior E2E project: `surface-list` worked on iOS but not Android, fixed to `surface_list`
 
 ## Verify
 

@@ -1,7 +1,7 @@
 """Claude Agent SDK provider.
 
 Wraps :func:`claude_agent_sdk.query` to expose a streaming chat interface
-that matches the rest of the :class:`AIProvider` protocol — every tick
+that matches the rest of the :class:`AILLM` protocol — every tick
 becomes a :class:`StreamEvent` dictionary.
 
 Notable design decisions:
@@ -40,12 +40,11 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
 
 from claude_agent_sdk import (
-    AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKError,
     CLIConnectionError,
@@ -53,35 +52,30 @@ from claude_agent_sdk import (
     CLINotFoundError,
     PermissionMode,
     ProcessError,
-    RateLimitEvent,
-    ResultMessage,
-    SystemMessage,
-    TextBlock,
-    ThinkingBlock,
-    ToolResultBlock,
-    ToolUseBlock,
-    UserMessage,
     get_session_info,
     query,
 )
 
-from app.core.tools.exa_search_claude import (
-    CLAUDE_TOOL_ID as EXA_CLAUDE_TOOL_ID,
-)
-from app.core.tools.exa_search_claude import (
-    MCP_SERVER_NAME as EXA_MCP_SERVER_NAME,
-)
-from app.core.tools.exa_search_claude import (
-    build_exa_mcp_server,
+from app.core.agent_loop.types import AgentTool
+from app.core.agent_system_prompt import (
+    DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
 
+from ._claude_tool_bridge import (
+    MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
+)
+from ._claude_tool_bridge import (
+    allowed_tool_ids,
+    auto_approve_bridge_tools,
+    build_mcp_server,
+)
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Defaults — tunable at construction time via :class:`ClaudeProviderConfig`.
+# Defaults — tunable at construction time via :class:`ClaudeLLMConfig`.
 # ---------------------------------------------------------------------------
 
 # Map our frontend model IDs to Claude SDK model strings. The frontend uses
@@ -123,17 +117,12 @@ _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
 # System prompt scoped to a chat product. We deliberately do NOT use
 # Claude Code's default preset, which steers the model toward software
 # engineering tasks and tools that don't exist in this surface.
-_DEFAULT_SYSTEM_PROMPT = (
-    "You are the Claude assistant inside the AI Nexus chat application. "
-    "You are speaking with the user via a text chat surface. Be concise, "
-    "helpful, and accurate. You do NOT have file system or shell access "
-    "in this surface — decline politely if the user asks you to perform "
-    "such actions.\n\n"
-    "Web search is available via the `exa_search` tool (powered by Exa). "
-    "Call it whenever the user asks for fresh information, current events, "
-    "citations, or anything beyond your training data. Always cite the "
-    "URLs returned by the tool when you use the results."
-)
+# Provider-default system prompt: when no caller supplied one we use
+# the *shared* ``app.core.agent_system_prompt.DEFAULT_AGENT_SYSTEM_PROMPT``
+# so the agent's identity doesn't silently change based on which
+# model the user picked.  The real prompt for chat traffic is
+# assembled from SOUL.md + AGENTS.md by the chat router (PR #113);
+# this constant only fires for unit tests and script-mode callers.
 
 
 # ---------------------------------------------------------------------------
@@ -142,10 +131,10 @@ _DEFAULT_SYSTEM_PROMPT = (
 
 
 @dataclass(frozen=True)
-class ClaudeProviderConfig:
-    """Tunable configuration for :class:`ClaudeProvider`.
+class ClaudeLLMConfig:
+    """Tunable configuration for :class:`ClaudeLLM`.
 
-    Each field has a safe default; pass an instance to ``ClaudeProvider``
+    Each field has a safe default; pass an instance to ``ClaudeLLM``
     when you need to override one (most often in tests).
     """
 
@@ -170,8 +159,7 @@ class ClaudeProviderConfig:
     extra_env: dict[str, str] = field(default_factory=dict)
     """Additional environment variables forwarded to the CLI subprocess."""
 
-    enable_exa_search: bool = False
-    """When ``True``, mount the in-process Exa MCP server and whitelist the ``exa_search`` tool. Toggled by the factory based on whether ``EXA_API_KEY`` is configured."""
+
 
 
 # ---------------------------------------------------------------------------
@@ -179,23 +167,27 @@ class ClaudeProviderConfig:
 # ---------------------------------------------------------------------------
 
 
-class ClaudeProvider:
+class ClaudeLLM:
     """Wraps the Claude Agent SDK for streaming chat."""
 
     def __init__(
         self,
         model_id: str,
         *,
-        config: ClaudeProviderConfig | None = None,
+        config: ClaudeLLMConfig | None = None,
     ) -> None:
         self._model_id = model_id
-        self._config = config or ClaudeProviderConfig()
+        self._config = config or ClaudeLLMConfig()
 
     async def stream(
         self,
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
+        history: list[dict[str, str]]
+        | None = None,  # ignored: Claude SDK handles session continuity via `resume`
+        tools: list[AgentTool] | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -213,9 +205,19 @@ class ClaudeProvider:
             events, an optional rate-limit warning, and any error events.
         """
         del user_id  # reserved for future per-user routing
-        options = self._build_options(conversation_id)
+        options = self._build_options(
+            conversation_id,
+            system_prompt=system_prompt,
+            agent_tools=tools,
+        )
         try:
-            async for message in query(prompt=question, options=options):
+            # The SDK requires streaming-mode input (an AsyncIterable
+            # of message dicts) whenever ``can_use_tool`` is set on the
+            # options.  We always emit a single user-message envelope
+            # so the path is uniform regardless of whether bridged
+            # tools are mounted; uniform path means one shape to test
+            # and reason about.
+            async for message in query(prompt=_aiter_user_prompt(question), options=options):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -249,7 +251,9 @@ class ClaudeProvider:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
+            yield _error_event(
+                "Failed to parse a JSON message from the Claude Code CLI."
+            )
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes
@@ -259,22 +263,46 @@ class ClaudeProvider:
 
     # -- internal --------------------------------------------------------
 
-    def _build_options(self, conversation_id: uuid.UUID) -> ClaudeAgentOptions:
-        """Build per-request options, picking ``session_id`` vs ``resume``."""
+    def _build_options(
+        self,
+        conversation_id: uuid.UUID,
+        *,
+        system_prompt: str | None = None,
+        agent_tools: list[AgentTool] | None = None,
+    ) -> ClaudeAgentOptions:
+        """Build per-request options, picking ``session_id`` vs ``resume``.
+
+        Args:
+            conversation_id: App-level conversation UUID; reused as the
+                Claude SDK session id.
+            system_prompt: Optional per-call override.  When provided,
+                takes precedence over ``self._config.system_prompt`` so
+                the chat router can inject app-assembled context (e.g.
+                workspace AGENTS.md per PR #113).
+            agent_tools: Cross-provider :class:`AgentTool` list assembled
+                by the chat router.  Translated into a single in-process
+                MCP server via
+                :mod:`app.core.providers._claude_tool_bridge` and mounted
+                under ``ClaudeAgentOptions.mcp_servers``; the matching
+                ``mcp__ai_nexus__<name>`` IDs are appended to the
+                allowed-tools whitelist so the SDK actually permits
+                execution.
+        """
         session_id = str(conversation_id)
 
-        # Tools start as the configured whitelist (built-in CLI tools).
-        # When Exa is enabled, append the canonical mcp__<server>__<tool>
-        # identifier so the SDK actually permits invocation; the MCP
-        # server itself is mounted via mcp_servers below.
-        tools = list(self._config.tools) if self._config.tools is not None else None
+        # Local tool whitelist for the Claude SDK's built-in CLI tools
+        # (read/write filesystem, etc.).  Distinct from ``agent_tools``
+        # — those are app-defined tools we bridge into an MCP server.
+        local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
-        if self._config.enable_exa_search:
-            if tools is None:
-                tools = [EXA_CLAUDE_TOOL_ID]
-            elif EXA_CLAUDE_TOOL_ID not in tools:
-                tools.append(EXA_CLAUDE_TOOL_ID)
-            mcp_servers[EXA_MCP_SERVER_NAME] = build_exa_mcp_server()
+
+        # Bridge the cross-provider AgentTool list into a single MCP
+        # server.  All app-defined tools (workspace files, web search,
+        # …) flow through here — the provider doesn't know which ones
+        # are in the list and shouldn't.
+        local_tools = _merge_agent_tools_into_whitelist(
+            local_tools, list(agent_tools or []), mcp_servers
+        )
 
         # If tool use is enabled but the caller didn't override
         # ``max_turns``, automatically widen the turn budget so the agent
@@ -283,21 +311,34 @@ class ClaudeProvider:
         # in chat as a "Claude SDK result reported an error" panel
         # immediately after the "Searched the web" indicator.
         effective_max_turns = self._config.max_turns
-        tool_use_enabled = bool(tools) or bool(mcp_servers)
+        tool_use_enabled = bool(local_tools) or bool(mcp_servers)
         if tool_use_enabled and effective_max_turns <= _DEFAULT_MAX_TURNS:
             effective_max_turns = _TOOL_ENABLED_MAX_TURNS
 
+        # System prompt resolution: per-call value (from the chat router /
+        # AGENTS.md loader) wins over ``self._config.system_prompt``.
+        effective_system_prompt = system_prompt or self._config.system_prompt
+
         kwargs: dict[str, Any] = {
             "model": _resolve_sdk_model(self._model_id),
-            "tools": tools,
+            "tools": local_tools,
             "max_turns": effective_max_turns,
             "permission_mode": self._config.permission_mode,
-            "system_prompt": self._config.system_prompt,
+            "system_prompt": effective_system_prompt,
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
+            # Auto-approve every tool we bridged in.  The whitelist on
+            # ``tools=`` tells the SDK the IDs are *known*; this hook
+            # tells it they're *pre-approved*.  Without it, the SDK
+            # blocks each tool call with "Claude requested permissions
+            # … but you haven't granted it yet" — caught by the new
+            # bridge integration test on PR #131.  The hook denies
+            # anything outside our namespace so a future misconfigured
+            # MCP server can't silently piggy-back on this approval.
+            kwargs["can_use_tool"] = auto_approve_bridge_tools
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 
@@ -326,6 +367,49 @@ class ClaudeProvider:
 # ---------------------------------------------------------------------------
 # Module-level helpers (also unit-tested directly).
 # ---------------------------------------------------------------------------
+
+
+def _merge_agent_tools_into_whitelist(
+    local_tools: list[str] | None,
+    agent_tool_list: list[AgentTool],
+    mcp_servers: dict[str, Any],
+) -> list[str] | None:
+    """Mount *agent_tool_list* as an MCP server and append its IDs to *local_tools*.
+
+    Mutates *mcp_servers* in place (adding the bridge server when there
+    is at least one tool) and returns the updated *local_tools* whitelist.
+    Extracted from :meth:`ClaudeLLM._build_options` so the body stays under
+    the project nesting budget.
+    """
+    if not agent_tool_list:
+        return local_tools
+    server = build_mcp_server(agent_tool_list)
+    if server is not None:
+        mcp_servers[AGENT_TOOL_MCP_SERVER_NAME] = server
+    allowed = allowed_tool_ids(agent_tool_list)
+    if local_tools is None:
+        return list(allowed)
+    deduped = list(local_tools)
+    for tid in allowed:
+        if tid not in deduped:
+            deduped.append(tid)
+    return deduped
+
+
+async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
+    """Wrap a single user message as the streaming-mode input the SDK expects.
+
+    The Claude SDK accepts either a plain string *or* an
+    ``AsyncIterable[dict]`` for the ``prompt`` arg, but enforces the
+    streaming-mode shape whenever a permission hook (``can_use_tool``)
+    is registered — which we now always do via the bridge.  Yielding
+    one envelope keeps every call site uniform regardless of whether
+    tools were mounted on this turn.
+    """
+    yield {
+        "type": "user",
+        "message": {"role": "user", "content": question},
+    }
 
 
 def _resolve_sdk_model(model_id: str) -> str:
@@ -357,101 +441,24 @@ def _session_exists(session_id: str, directory: str | None) -> bool:
         return False
 
 
-def _events_from_message(message: Any) -> Iterator[StreamEvent]:
-    """Translate a single Claude SDK ``Message`` into zero or more ``StreamEvent``s."""
-    if isinstance(message, AssistantMessage):
-        yield from _events_from_assistant(message)
-        return
-    if isinstance(message, UserMessage):
-        # ``UserMessage`` in the stream represents tool results being fed
-        # back to the model. Surface those so the frontend can render the
-        # tool roundtrip; ignore plain echoes.
-        if isinstance(message.content, list):
-            for block in message.content:
-                if isinstance(block, ToolResultBlock):
-                    yield _tool_result_event(block)
-        return
-    if isinstance(message, ResultMessage):
-        if message.is_error:
-            # Log alongside yielding so the failure shows up in
-            # `backend/app.log` too. Previously the only signal was the
-            # SSE error panel in the browser, which made tool failures
-            # like ``error_max_turns`` invisible to anyone reading
-            # backend logs to debug. Logged at WARNING because the
-            # connection is still alive — the chat surface recovers and
-            # the user can retry.
-            logger.warning(
-                "Claude SDK ResultMessage reported error: "
-                "stop_reason=%r subtype=%r duration_ms=%s num_turns=%s",
-                message.stop_reason,
-                message.subtype,
-                getattr(message, "duration_ms", None),
-                getattr(message, "num_turns", None),
-            )
-            yield _error_event(
-                "Claude SDK result reported an error. "
-                f"stop_reason={message.stop_reason!r} subtype={message.subtype!r}"
-            )
-        return
-    if isinstance(message, RateLimitEvent):
-        info = message.rate_limit_info
-        if info.status == "rejected":
-            yield _error_event("Claude API rate limit reached. Please wait and retry.")
-        return
-    if isinstance(message, SystemMessage):
-        # System messages carry CLI metadata (init details, mirror errors,
-        # task progress, etc.). Not user-visible by default.
-        return
+# Event-translation helpers live in ``_claude_events`` so this file
+# stays under the 500-line gate.  Re-exported here because the existing
+# tests + provider code import them from this module — keeping the
+# import surface stable means the split is internal-only.
+from ._claude_events import (
+    _error_event,
+    _events_from_assistant,
+    _events_from_message,
+    _tool_result_event,
+    _tool_result_to_text,
+)
 
-
-def _events_from_assistant(message: AssistantMessage) -> Iterator[StreamEvent]:
-    """Project an assistant message's content blocks into ``StreamEvent``s."""
-    for block in message.content:
-        if isinstance(block, TextBlock):
-            yield StreamEvent(type="delta", content=block.text)
-        elif isinstance(block, ThinkingBlock):
-            yield StreamEvent(type="thinking", content=block.thinking)
-        elif isinstance(block, ToolUseBlock):
-            yield StreamEvent(
-                type="tool_use",
-                name=block.name,
-                input=block.input,
-                tool_use_id=block.id,
-            )
-        elif isinstance(block, ToolResultBlock):
-            yield _tool_result_event(block)
-    if message.error:
-        yield _error_event(f"Assistant message reported an error: {message.error}")
-
-
-def _tool_result_event(block: ToolResultBlock) -> StreamEvent:
-    return StreamEvent(
-        type="tool_result",
-        tool_use_id=block.tool_use_id,
-        content=_tool_result_to_text(block.content),
-    )
-
-
-def _tool_result_to_text(content: object) -> str:
-    """Render ``ToolResultBlock.content`` as plain text for the SSE event."""
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: list[str] = []
-        for item in content:
-            if isinstance(item, dict):
-                # Anthropic's tool-result format uses ``{"type": "text", "text": "..."}``.
-                if item.get("type") == "text" and isinstance(item.get("text"), str):
-                    parts.append(item["text"])
-                else:
-                    parts.append(str(item))
-            else:
-                parts.append(str(item))
-        return "\n".join(parts)
-    return str(content)
-
-
-def _error_event(message: str) -> StreamEvent:
-    return StreamEvent(type="error", content=message)
+__all__ = [
+    "ClaudeLLM",
+    "ClaudeLLMConfig",
+    "_error_event",
+    "_events_from_assistant",
+    "_events_from_message",
+    "_tool_result_event",
+    "_tool_result_to_text",
+]

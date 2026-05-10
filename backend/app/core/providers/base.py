@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+
+if TYPE_CHECKING:
+    from app.core.agent_loop.types import AgentTool
 
 
 class StreamEvent(TypedDict, total=False):
@@ -22,11 +25,12 @@ class StreamEvent(TypedDict, total=False):
     tool_use_id: str  # for tool_result
 
 
-class AIProvider(Protocol):
+class AILLM(Protocol):
     """Unified streaming interface for all AI providers.
 
-    Both Gemini (via Agno) and Claude (via Claude Agent SDK) implement this.
-    The chat endpoint only depends on this protocol — never on a concrete class.
+    GeminiLLM uses ``history`` (read from our Message table) to build
+    multi-turn context.  ClaudeLLM manages its own session continuity
+    via ``resume`` and can ignore ``history``.
     """
 
     def stream(
@@ -34,6 +38,9 @@ class AIProvider(Protocol):
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
+        history: list[dict[str, str]] | None = None,
+        tools: list["AgentTool"] | None = None,
+        system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -43,5 +50,21 @@ class AIProvider(Protocol):
         iterator directly — declaring it ``async def`` would imply a
         coroutine that *returns* an iterator, requiring callers to
         ``await`` first, which is not what the runtime contract is.
+
+        Args:
+            question: Current user message.
+            conversation_id: Conversation UUID (used for session continuity).
+            user_id: Authenticated user UUID.
+            history: Optional list of prior messages oldest-first, each a
+                     dict with ``role`` (``"user"``/``"assistant"``) and
+                     ``content`` keys.  Providers that manage their own
+                     history (e.g. ClaudeLLM via ``resume``) may ignore
+                     this.
+            tools: Optional workspace-scoped AgentTools (read_file, write_file,
+                     list_dir) to make available this turn.  Providers that
+                     manage their own tool surface (e.g. ClaudeLLM) may ignore
+                     this parameter.
+            system_prompt: Optional override for the provider's default system
+                     prompt.  When ``None`` the provider uses its own default.
         """
         ...

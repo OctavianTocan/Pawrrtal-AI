@@ -1,7 +1,7 @@
 ---
 description: If multiple logical fields are packed into one string, all encoding and decoding must go through a shared reversible codec
-globs: ["src/**/*.ts", "src/**/*.tsx"]
-paths: ["src/**/*.ts", "src/**/*.tsx"]
+globs: ["frontend/**/*.ts", "frontend/**/*.tsx", "backend/**/*.py"]
+paths: ["frontend/**/*.ts", "frontend/**/*.tsx", "backend/**/*.py"]
 alwaysApply: false
 ---
 

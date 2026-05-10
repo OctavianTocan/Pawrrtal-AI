@@ -42,7 +42,7 @@ export function OnboardingLocalWorkspaceStep({
 		<section className="popover-styled onboarding-panel flex w-full max-w-[32rem] select-none flex-col gap-6 rounded-surface-lg border border-border bg-background/95 p-6 text-foreground shadow-modal-small sm:p-7">
 			<button
 				type="button"
-				className="-ml-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-lg px-2 text-sm text-muted-foreground transition-[background-color,color] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.045] hover:text-foreground active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45"
+				className="-ml-1 flex h-8 w-fit cursor-pointer items-center gap-2 rounded-lg px-2 text-sm text-muted-foreground transition-[background-color,color] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.045] hover:text-foreground active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45"
 				onClick={onBack}
 				aria-label="Back to workspace options"
 			>
@@ -63,7 +63,7 @@ export function OnboardingLocalWorkspaceStep({
 					Choose folder
 				</div>
 				<DialogDescription className="max-w-[26rem] text-[0.9375rem] leading-relaxed text-muted-foreground">
-					Pick the folder AI Nexus can use as this workspace.
+					Pick the folder Pawrrtal can use as this workspace.
 				</DialogDescription>
 			</DialogHeader>
 
@@ -97,7 +97,7 @@ export function OnboardingLocalWorkspaceStep({
 			>
 				<span
 					className={cn(
-						'flex size-11 shrink-0 items-center justify-center rounded-lg ring-1 transition-colors duration-200',
+						'flex size-11 shrink-0 items-center justify-center rounded-lg ring-1 transition-colors duration-150',
 						isFolderSelected
 							? 'bg-foreground/[0.09] text-foreground ring-border'
 							: 'bg-foreground/[0.04] text-muted-foreground ring-border'
@@ -131,7 +131,7 @@ export function OnboardingLocalWorkspaceStep({
 				</span>
 				<button
 					type="button"
-					className="inline-flex shrink-0 cursor-pointer rounded-lg bg-foreground/[0.045] px-3 py-2 text-sm font-medium text-foreground ring-1 ring-border transition-[background-color,color] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.07] focus-visible:ring-2 focus-visible:ring-ring/45"
+					className="inline-flex shrink-0 cursor-pointer rounded-lg bg-foreground/[0.045] px-3 py-2 text-sm font-medium text-foreground ring-1 ring-border transition-[background-color,color] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/[0.07] focus-visible:ring-2 focus-visible:ring-ring/45"
 					onClick={onSelectFolderClick}
 				>
 					Browse
@@ -140,7 +140,7 @@ export function OnboardingLocalWorkspaceStep({
 
 			<Button
 				type="button"
-				className="h-10 w-full cursor-pointer rounded-lg bg-foreground text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80 disabled:cursor-not-allowed disabled:bg-foreground/[0.09] disabled:text-muted-foreground"
+				className="h-10 w-full cursor-pointer rounded-lg bg-foreground text-sm font-semibold text-background shadow-none transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.25,1,0.5,1)] hover:bg-foreground/90 hover:shadow-minimal active:bg-foreground/80 disabled:cursor-not-allowed disabled:bg-foreground/[0.09] disabled:text-muted-foreground"
 				onClick={onFinish}
 				disabled={!isFolderSelected}
 			>

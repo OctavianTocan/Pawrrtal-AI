@@ -57,7 +57,7 @@ async function waitForPort(port: number, host = 'localhost'): Promise<void> {
 
 async function main(): Promise<void> {
 	console.log('[electron-dev-all] starting Next.js dev server on :3001…');
-	const frontend = spawnInherited('bun', ['--filter', 'app.nexus-ai', 'dev'], REPO_ROOT);
+	const frontend = spawnInherited('bun', ['--filter', 'pawrrtal', 'dev'], REPO_ROOT);
 
 	const cleanup = (signal: NodeJS.Signals | 'exit'): void => {
 		console.log(`\n[electron-dev-all] received ${signal}, shutting down…`);

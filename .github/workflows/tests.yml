@@ -1,0 +1,191 @@
+name: Tests
+
+# Runs the unit-test suites that previously only ran on developer machines.
+# Two parallel jobs:
+#   - frontend: Vitest (`bun run test`)
+#   - backend:  pytest (`uv run pytest`) against in-memory SQLite
+# Stagehand E2E lives in its own workflow (.github/workflows/stagehand-e2e.yml)
+# because it costs LLM tokens and runs on a different cadence.
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'scripts/check-nesting.py'
+      - 'scripts/check-no-tools-in-providers.py'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/tests.yml'
+  push:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'scripts/check-nesting.py'
+      - 'scripts/check-no-tools-in-providers.py'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/tests.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend Vitest
+    runs-on: [self-hosted, pawrrtal]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build local libs (frontend/lib/* submodules)
+        run: bash scripts/build-local-libs.sh
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Vitest
+        id: test
+        working-directory: frontend
+        run: |
+          set +e
+          bun run test 2>&1 | tee ../frontend-test-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat ../frontend-test-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          TEST_OUTPUT: ${{ steps.test.outputs.output }}
+        with:
+          script: |
+            const output = process.env.TEST_OUTPUT || '';
+            const body = [
+              '### Frontend Vitest failed',
+              '',
+              'One or more frontend unit tests failed. Reproduce locally with `cd frontend && bun run test`.',
+              '',
+              '<details><summary>output (last 6000 chars)</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+
+  backend:
+    name: Backend pytest
+    runs-on: [self-hosted, pawrrtal]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Check Python nesting depth
+        # Cheap pre-check before installing the test deps — fails fast on
+        # functions that exceed the nesting budget (default depth 3).
+        # Exemption list lives at the top of the script.
+        run: python3 scripts/check-nesting.py
+
+      - name: Check no-tools-in-providers
+        # Architectural gate: providers must not import from
+        # app.core.tools.*.  See
+        # .claude/rules/architecture/no-tools-in-providers.md.
+        run: python3 scripts/check-no-tools-in-providers.py
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run pytest
+        id: test
+        working-directory: backend
+        # Settings (pydantic-settings) requires these at import time, even
+        # for tests against in-memory SQLite that never call out to the
+        # real services.  Hardcoded test values are deliberate: any leak
+        # is obvious and the secrets aren't load-bearing during pytest.
+        env:
+          AUTH_SECRET: pytest-not-a-secret
+          GOOGLE_API_KEY: pytest-not-a-key
+          # Fernet expects a 32-byte url-safe base64 key.  Generated once
+          # via `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+          # and pinned here so test runs are deterministic.
+          FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          CORS_ORIGINS: '["http://localhost:3001"]'
+          DATABASE_URL: 'sqlite+aiosqlite:///:memory:'
+        run: |
+          set +e
+          uv run pytest 2>&1 | tee ../backend-test-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat ../backend-test-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          TEST_OUTPUT: ${{ steps.test.outputs.output }}
+        with:
+          script: |
+            const output = process.env.TEST_OUTPUT || '';
+            const body = [
+              '### Backend pytest failed',
+              '',
+              'One or more backend unit tests failed. Reproduce locally with `cd backend && uv run pytest`.',
+              '',
+              '<details><summary>output (last 6000 chars)</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

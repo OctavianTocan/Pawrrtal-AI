@@ -1,11 +1,11 @@
 ---
 description: Figma MCP design system rules for translating Figma designs to code
 globs:
-  - "src/**/*View.tsx"
-  - "src/**/*Container.tsx"
-  - "src/**/*.stories.tsx"
-  - "src/features/**/*.tsx"
-  - "src/components/**/*.tsx"
+  - "frontend/**/*View.tsx"
+  - "frontend/**/*Container.tsx"
+  - "frontend/**/*.stories.tsx"
+  - "frontend/features/**/*.tsx"
+  - "frontend/components/**/*.tsx"
 alwaysApply: false
 ---
 

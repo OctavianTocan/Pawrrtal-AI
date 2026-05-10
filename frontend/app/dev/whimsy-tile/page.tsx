@@ -1,4 +1,5 @@
 import type React from 'react';
+import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
 import {
 	generateWhimsyTile,
 	svgToDataUri,
@@ -11,6 +12,13 @@ import {
  * `mask-size`, and the single-tile preview image so all three line up.
  */
 const TILE_SIZE = 240;
+
+/**
+ * Preview tile size for preset patterns — matches the ``PRESET_RENDER_SIZE``
+ * constant in ``frontend/features/whimsy/index.tsx`` so this page renders the
+ * same way the chat panel will.
+ */
+const PRESET_TILE_SIZE = 600;
 
 /**
  * Theme presets to display, paired with the seed used in their preview tile.
@@ -45,6 +53,12 @@ interface SampleProps {
 	className: string;
 	/** Tailwind class controlling height. Defaults to `h-64`. */
 	heightClass?: string;
+	/**
+	 * CSS ``mask-size``. Defaults to a square based on {@link TILE_SIZE}; preset
+	 * previews override with ``"<size>px auto"`` so portrait viewBoxes preserve
+	 * their aspect when tiled.
+	 */
+	maskSize?: string;
 }
 
 /**
@@ -52,7 +66,13 @@ interface SampleProps {
  * comes from `currentColor` (set via `text-*` utilities), with the SVG acting
  * purely as an alpha mask.
  */
-function Sample({ uri, caption, className, heightClass = 'h-64' }: SampleProps): React.JSX.Element {
+function Sample({
+	uri,
+	caption,
+	className,
+	heightClass = 'h-64',
+	maskSize = `${TILE_SIZE}px ${TILE_SIZE}px`,
+}: SampleProps): React.JSX.Element {
 	const cssUri = `url("${uri}")`;
 	return (
 		<div
@@ -64,8 +84,8 @@ function Sample({ uri, caption, className, heightClass = 'h-64' }: SampleProps):
 					backgroundColor: 'currentColor',
 					maskImage: cssUri,
 					WebkitMaskImage: cssUri,
-					maskSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
-					WebkitMaskSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
+					maskSize,
+					WebkitMaskSize: maskSize,
 					maskRepeat: 'repeat',
 					WebkitMaskRepeat: 'repeat',
 				}}
@@ -176,6 +196,30 @@ export default function WhimsyTilePage(): React.JSX.Element {
 							</div>
 						);
 					})}
+				</section>
+
+				<section className="space-y-4">
+					<header className="space-y-1">
+						<h2 className="text-xl font-semibold">Preset patterns</h2>
+						<p className="text-sm text-muted-foreground">
+							Hand-laid SVG wallpapers under <code>/whimsy-patterns/</code>. They
+							ignore <code>seed</code>/<code>grid</code>/<code>theme</code>. Tile size
+							here is fixed at 600 px to match the runtime hook.
+						</p>
+					</header>
+
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{WHIMSY_PRESETS.map((preset) => (
+							<Sample
+								key={preset.id}
+								uri={whimsyPresetUrl(preset.id)}
+								caption={preset.label}
+								className="bg-background text-foreground/15"
+								heightClass="h-72"
+								maskSize={`${PRESET_TILE_SIZE}px auto`}
+							/>
+						))}
+					</div>
 				</section>
 
 				<section className="space-y-3 rounded-lg border border-border bg-muted/30 p-5 text-sm">

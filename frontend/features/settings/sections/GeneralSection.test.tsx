@@ -11,8 +11,11 @@ describe('GeneralSection', () => {
 		// h2/h3s, but they're still visible text.
 		expect(getByRole('heading', { name: 'General' })).toBeTruthy();
 		expect(getByText('Profile')).toBeTruthy();
-		expect(getByText('Preferences')).toBeTruthy();
 		expect(getByText('Notifications')).toBeTruthy();
+		// "Preferences" was previously a third card here. It was deleted
+		// when the Appearance rail item became the single source of truth
+		// for theme + chat font + voice; the duplicate was drifting out
+		// of sync with the live settings.
 	});
 
 	it('renders the profile inputs with default values', () => {
@@ -22,10 +25,8 @@ describe('GeneralSection', () => {
 		expect(getByDisplayValue('Engineering')).toBeTruthy();
 	});
 
-	it('renders the appearance segmented control buttons', () => {
-		const { getByText } = render(<GeneralSection />);
-		expect(getByText('System')).toBeTruthy();
-		expect(getByText('Light')).toBeTruthy();
-		expect(getByText('Dark')).toBeTruthy();
-	});
+	// The "appearance segmented control" assertion that previously lived
+	// here was removed alongside the Preferences card — that affordance
+	// now lives in `AppearanceSection`. The Appearance section's own
+	// tests cover the System / Light / Dark toggle.
 });

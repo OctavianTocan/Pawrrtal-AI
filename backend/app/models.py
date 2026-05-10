@@ -37,13 +37,21 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
-    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_archived: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    is_flagged: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
+    is_unread: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false"
+    )
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -76,7 +84,9 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -132,7 +142,7 @@ class UserAppearance(Base):
     means "use the system defaults everywhere."
 
     Light and dark mode are tracked separately because dark mode is
-    Codex/GitHub-adjacent in the AI Nexus design system, not just
+    Codex/GitHub-adjacent in the Pawrrtal design system, not just
     inverted from light.
     """
 
@@ -162,12 +172,71 @@ class APIKey(Base):
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     provider: Mapped[str] = mapped_column(String(50))
     encrypted_key: Mapped[str] = mapped_column(
         StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+
+
+class ChannelBinding(Base):
+    """Persistent map from a third-party messaging identity to a Nexus user.
+
+    One row per (provider, external_user_id) — enforced by a unique
+    constraint so a Telegram account can never silently move between
+    Nexus users. Created when a user successfully redeems a one-time
+    code via the bot's `/start <code>` (or manual paste) flow.
+
+    The `provider` column is open-ended on purpose: today only
+    `"telegram"` is wired up, but the same table will host Slack,
+    WhatsApp, iMessage, etc. as those adapters land.
+    """
+
+    __tablename__ = "channel_bindings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+    # Provider identities can be ints (Telegram user_id) or strings
+    # (Slack user IDs, WhatsApp phone numbers). Normalize to text so
+    # the column shape stays the same across providers.
+    external_user_id: Mapped[str] = mapped_column(String(128))
+    # Default chat to push to. For Telegram direct chats this matches
+    # external_user_id; for groups it's the chat where the bind happened.
+    external_chat_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Display handle captured at bind time. Stored for admin/debug only,
+    # never used for authentication.
+    display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class ChannelLinkCode(Base):
+    """Short-lived one-time-use code that brokers a channel bind.
+
+    The web app issues a code (server-side; user only sees the plaintext
+    once), the user sends it to the bot, and the bot consumes the row to
+    create the matching `ChannelBinding`. We persist an HMAC of the code
+    rather than the plaintext so a DB leak cannot be replayed against
+    the bot. Lookups are always by `code_hash`, which is therefore the
+    primary key.
+    """
+
+    __tablename__ = "channel_link_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    # NULL while the code is unredeemed; populated once the bot consumes it.
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ChatMessage(Base):
@@ -188,7 +257,9 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE")
+    )
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -198,8 +269,41 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class Workspace(Base):
+    """An agent workspace — a named directory on the host filesystem containing
+    the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
+    IDENTITY.md, memory/, skills/, artifacts/).
+
+    One user can own many workspaces.  The first workspace created for a user
+    is flagged ``is_default=True`` and seeded automatically at the end of the
+    onboarding flow using the user's ``UserPersonalization`` data.
+
+    The ``path`` column is the absolute path on the host.  Agents that need
+    filesystem access resolve the path from here rather than constructing it
+    ad-hoc from the user ID.
+    """
+
+    __tablename__ = "workspaces"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Human-readable label shown in the UI (e.g. "Main", "Work", "Personal").
+    name: Mapped[str] = mapped_column(String(255), nullable=False, default="Main")
+    # Filesystem-safe slug used only as a readable hint alongside the UUID path.
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, default="main")
+    # Absolute path to the workspace root directory on the host.
+    path: Mapped[str] = mapped_column(String(4096), nullable=False)
+    # Exactly one workspace per user should be the default at any given time.
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

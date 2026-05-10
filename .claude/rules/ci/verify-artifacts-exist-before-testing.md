@@ -47,7 +47,7 @@ Without verification, a misconfigured build produces an artifact that looks corr
 
 ## References
 
-- TwinMind E2E: iOS auth showed "config missing" for 5+ runs before verification step was added
+- a prior E2E project: iOS auth showed "config missing" for 5+ runs before verification step was added
 
 ## Verify
 

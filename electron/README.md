@@ -1,4 +1,4 @@
-# AI Nexus — Electron desktop shell
+# Pawrrtal — Electron desktop shell
 
 Desktop wrapper around the same Next.js frontend that runs on the
 web. Web behavior is **completely unchanged** — Electron is purely
@@ -17,7 +17,7 @@ additive.
 │  └──────────┬───────────┘  │
 │             ▼              │
 │  ┌──────────────────────┐  │  preload.ts → contextBridge
-│  │ BrowserWindow w/     │◄─┼──────  window.aiNexus.* (typed)
+│  │ BrowserWindow w/     │◄─┼──────  window.pawrrtal.* (typed)
 │  │ context isolation +  │  │
 │  │ sandbox + no Node    │  │
 │  └──────────────────────┘  │
@@ -34,6 +34,18 @@ The renderer is the same Next.js app you get on the web — it has
 **zero Electron-specific code**. Anywhere the FE wants a desktop-only
 feature it goes through `frontend/lib/desktop.ts`, which falls back to
 web equivalents (`window.open`, no-op handlers) when not in Electron.
+
+### macOS window chrome
+
+We use **`titleBarStyle: 'default'`** so close / minimize / zoom are drawn by
+the **standard AppKit title bar** at full system size. **`hidden`** and
+**`hiddenInset`** paint Chromium overlay controls in the web content region —
+they look visibly smaller than Finder / Safari (trade-off: one native title
+strip above the page instead of embedding controls in the custom header row).
+
+The value lives in **`electron/src/window-chrome.ts`** and is consumed only by
+**`main.ts`** (not preload). If you ever switch to overlay styles, pad the
+in-app header in the frontend yourself — there is no automatic inset bridge.
 
 ## Quick start
 
@@ -90,14 +102,14 @@ have. Architecture follows the *client-tool* pattern documented in
 - The agent loop stays in FastAPI.
 - Tool *definitions* are registered server-side; tool *execution* for
   desktop tools tunnels through the renderer to Electron main via the
-  `aiNexus.fs.*` / `aiNexus.shell.*` bridges.
+  `pawrrtal.fs.*` / `pawrrtal.shell.*` bridges.
 - Web users get the server-tool subset; desktop users get the full
   toolset. Same UI, no per-shell branches in the renderer.
 
 ### Workspace allowlist
 
 `electron/src/workspace.ts` keeps a persistent list of directories the
-agent is allowed to touch. The default is `~/AI-Nexus-Workspace/`,
+agent is allowed to touch. The default is `~/Pawrrtal-Workspace/`,
 auto-created on first launch. Add more from the FE via
 `addWorkspaceRoot()` (calls the native folder picker if no path given).
 
@@ -143,11 +155,11 @@ Per-decision scopes:
 Three files always change together:
 
 1. `electron/src/preload.ts` — add the method to the
-   `aiNexus` object exposed via `contextBridge`.
+   `pawrrtal` object exposed via `contextBridge`.
 2. `electron/src/ipc.ts` — add the matching `ipcMain.handle` channel
    on the main side.
 3. `frontend/lib/desktop.ts` — add a thin wrapper that calls
-   `window.aiNexus?.method(...)` with a web-safe fallback.
+   `window.pawrrtal?.method(...)` with a web-safe fallback.
 
 Then call `desktop.method(...)` from anywhere in the FE — the
 fallback ensures the same call site works on both shells.

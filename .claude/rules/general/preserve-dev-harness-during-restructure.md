@@ -38,7 +38,7 @@ git rm -rf brownfield-test/  # Delete redundant subset
 ## References
 
 - hermes-engine-compat-debugging skill: never delete the dev app shell
-- TwinMind restructure incident: dev harness vanished between PRs
+- a prior project restructure incident: dev harness vanished between PRs
 
 ## Verify
 

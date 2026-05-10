@@ -2,7 +2,7 @@
 
 Source: Craft upstream repository (internal). Consult the upstream repo for authoritative implementations.
 
-This doc summarizes the relevant rendering behavior and state / hook logic used by Craft for the 5 Session List features currently missing in `ai-nexus`, with upstream file paths noted for reference.
+This doc summarizes the relevant rendering behavior and state / hook logic used by Craft for the 5 Session List features currently missing in `pawrrtal`, with upstream file paths noted for reference.
 
 ---
 
@@ -99,7 +99,7 @@ const listContext = useMemo((): SessionListContextValue => ({
 - `hasPendingPrompt(item.id)` renders the `ShieldAlert` icon.
 - The indicator cluster is animated in/out by width/opacity/margin classes instead of conditionally mounting the wrapper.
 
-### Porting notes for `ai-nexus`
+### Porting notes for `pawrrtal`
 
 You need all four pieces, not just the SVGs:
 1. per-session booleans (`isProcessing`, unread meta, last role, pending prompt),
@@ -194,7 +194,7 @@ Craft does **not** blindly trust the ripgrep count for the open chat. It swaps i
 
 That avoids stale counts when in-chat highlighting and ripgrep disagree.
 
-### Porting notes for `ai-nexus`
+### Porting notes for `pawrrtal`
 
 You need:
 - a `Map<sessionId, { matchCount, snippet }>` from content search,
@@ -346,7 +346,7 @@ const listContext = useMemo((): SessionListContextValue => ({
 - Supports value-bearing labels (`label · value`) and icon fallback for typed labels.
 - Stops `mousedown` propagation so clicking a badge does **not** select the session row.
 
-### Porting notes for `ai-nexus`
+### Porting notes for `pawrrtal`
 
 If you only copy the badge component without the flattened label lookup, you’ll get dead pills or missing labels. The label tree flattening is part of the feature.
 
@@ -723,7 +723,7 @@ const getRowProps = useCallback((item: T, index: number) => {
 
 That split is why the highlight feels contiguous instead of acting like a single-checkbox list.
 
-### Porting notes for `ai-nexus`
+### Porting notes for `pawrrtal`
 
 If you only copy the row tint, you miss the anchor/range machinery. If you only copy the selection store, you miss the row-level visuals and context-menu behavior. This feature is a small machine made of:
 - Jotai selection atom,
@@ -982,7 +982,7 @@ const { zoneRef, isFocused } = useFocusZone({
 - `useFocusZone` stamps `data-focus-zone` on the container, which other parts of the keybinding system use to infer active zone.
 - The navigator zone can stay logically focused even when the search input holds DOM focus.
 
-### Porting notes for `ai-nexus`
+### Porting notes for `pawrrtal`
 
 This is not just a hook. It is a small focus architecture:
 - `FocusProvider` context,
@@ -992,7 +992,7 @@ This is not just a hook. It is a small focus architecture:
 - per-pane `useFocusZone(...)`,
 - row-level `onKeyDown` forwarding.
 
-If `ai-nexus` only copies `ArrowLeft` / `ArrowRight` handlers without the zone state machine, it will feel brittle and half-alive.
+If `pawrrtal` only copies `ArrowLeft` / `ArrowRight` handlers without the zone state machine, it will feel brittle and half-alive.
 
 ---
 
@@ -1029,7 +1029,7 @@ If `ai-nexus` only copies `ArrowLeft` / `ArrowRight` handlers without the zone s
 
 ---
 
-## Minimal implementation checklist for `ai-nexus`
+## Minimal implementation checklist for `pawrrtal`
 
 If you want feature parity instead of a cosmetic imitation, these are the minimum pieces to port:
 

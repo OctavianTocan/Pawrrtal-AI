@@ -5,7 +5,7 @@
  * {@link BottomSheet} on mobile. This is the project standard for any new
  * modal/sheet UI — see `.claude/rules/react/use-octavian-overlay-for-modals.md`.
  *
- * @fileoverview Responsive Modal/BottomSheet wrapper for ai-nexus.
+ * @fileoverview Responsive Modal/BottomSheet wrapper for pawrrtal.
  */
 
 'use client';

@@ -82,4 +82,4 @@ steps:
 
 ## References
 
-- TwinMind E2E workflow: ROPC fail-fast step added after wasting multiple 20-min build cycles
+- a prior E2E project workflow: ROPC fail-fast step added after wasting multiple 20-min build cycles
