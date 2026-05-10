@@ -8,8 +8,9 @@ import { AgentSpinner } from '@/components/ui/agent-spinner';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { ArtifactCard } from '../artifacts';
 import { extractToolChips, type ToolResultChips } from '../tool-result-parsers';
-import type { ChatTimelineEntry, ChatToolCall } from '../types';
+import type { ChatArtifactPayload, ChatTimelineEntry, ChatToolCall } from '../types';
 import { ChainOfThought } from './ChainOfThought';
 import { ReplyActionsRow } from './ReplyActionsRow';
 import { ThinkingHeader } from './ThinkingHeader';
@@ -40,6 +41,8 @@ interface AssistantMessageProps {
 	onRegenerate?: () => void;
 	/** Whether a regeneration request is currently in flight for this row. */
 	isRegenerating?: boolean;
+	/** Artifacts the agent rendered during this turn (preview cards). */
+	artifacts?: ChatArtifactPayload[];
 }
 
 /** Default state for messages without any chip data. */
@@ -178,6 +181,7 @@ export function AssistantMessage({
 	onCopy,
 	onRegenerate,
 	isRegenerating,
+	artifacts,
 }: AssistantMessageProps): ReactNode {
 	const hasContent = content.length > 0;
 	const hasThinking = Boolean(thinking && thinking.length > 0);
@@ -241,6 +245,14 @@ export function AssistantMessage({
 				) : null}
 
 				{hasContent && !isFailed ? <MessageResponse>{content}</MessageResponse> : null}
+
+				{artifacts && artifacts.length > 0 ? (
+					<div className="mt-3 flex flex-col gap-2">
+						{artifacts.map((a) => (
+							<ArtifactCard artifact={a} key={a.id} />
+						))}
+					</div>
+				) : null}
 
 				{showActions ? (
 					<ReplyActionsRow

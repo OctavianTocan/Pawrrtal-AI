@@ -10,8 +10,8 @@ testing":
 * You author a deterministic decision sequence (tool calls, text replies,
   errors) as a list of "turns".
 * ``ScriptedStreamFn`` replays the sequence one turn per agent-loop call.
-* The real harness (``agent_loop``, safety, tool execution) runs against
-  the scripted decisions.
+* The real harness (``agent_loop``, tool execution) runs against the
+  scripted decisions.
 * Assertions target what the harness *did*, not what the LLM *said*.
 
 References
@@ -238,7 +238,7 @@ class ScriptedStreamFn:
             tool_call_turn("search", {"query": "python async"}),
             text_turn("Here's what I found…"),
         ])
-        events = await run_scenario(script.turns, tools=[search_tool])
+        events = await run_scenario(script, tools=[search_tool])
         assert script.call_count == 2
     """
 
@@ -334,9 +334,6 @@ def failing_tool(name: str = "fail") -> AgentTool:
 def identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
     """Pass through user/assistant/toolResult messages unchanged.
 
-    Mirrors ``GeminiLLM._identity_convert`` so scenario tests use the
-    same filtering logic as production without importing the provider.
-
     Args:
         messages: Raw message list from the agent loop.
 
@@ -353,9 +350,9 @@ def identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
 
 async def run_scenario(
     turns: list[list[LLMEvent] | Exception] | ScriptedStreamFn,
-    safety: AgentSafetyConfig | None = None,
     tools: list[AgentTool] | None = None,
     question: str = "go",
+    safety: AgentSafetyConfig | None = None,
 ) -> list[AgentEvent]:
     """Run an agent-loop scenario end-to-end and return all emitted events.
 
@@ -366,9 +363,6 @@ async def run_scenario(
         turns: Either a pre-built ``ScriptedStreamFn`` (when you need to inspect
             ``call_count`` after the run) or a raw list of turn events/exceptions
             (when you only care about the emitted events).
-        safety: Safety configuration.  Defaults to ``AgentSafetyConfig.disabled()``
-            so scenario tests focus on the flow, not limits — set explicitly
-            when the test *is* about safety.
         tools: Tools available to the agent.  Defaults to an empty list.
         question: The user's question text.
 
@@ -377,9 +371,9 @@ async def run_scenario(
 
     Example — checking ``call_count`` after the run::
 
-        script = ScriptedStreamFn([tool_call_turn("ping", {})] * 10)
-        events = await run_scenario(script, safety=AgentSafetyConfig(max_iterations=3, ...))
-        assert script.call_count == 3  # safety fired at the limit
+        script = ScriptedStreamFn([tool_call_turn("ping", {})] * 5)
+        events = await run_scenario(script, tools=[ping_tool])
+        assert script.call_count == 5
     """
     stream_fn = turns if isinstance(turns, ScriptedStreamFn) else ScriptedStreamFn(turns)
     ctx = AgentContext(

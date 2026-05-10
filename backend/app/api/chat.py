@@ -19,6 +19,11 @@ from app.core.agent_tools import build_agent_tools
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
+from app.core.tools.artifact_agent import (
+    ARTIFACT_TOOL_NAME,
+    ArtifactValidationError,
+    build_artifact,
+)
 from app.crud.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
@@ -42,6 +47,39 @@ logger = logging.getLogger(__name__)
 _HISTORY_WINDOW = 20
 
 _DEFAULT_MODEL = "gemini-3-flash-preview"
+
+
+def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
+    """Build an ``artifact`` SSE event from a ``render_artifact`` tool_use.
+
+    Returns ``None`` for any other event so the caller can no-op cheaply.
+    Validation errors are swallowed silently here — the tool's own
+    ``execute`` callback will return a corrective error string to the LLM
+    so the agent can self-correct on the next turn, and emitting a half-
+    formed artifact event would leave the frontend rendering nothing.
+    """
+    if event.get("type") != "tool_use" or event.get("name") != ARTIFACT_TOOL_NAME:
+        return None
+    tool_input = event.get("input") or {}
+    title = tool_input.get("title")
+    spec = tool_input.get("spec")
+    if not isinstance(title, str) or not isinstance(spec, dict):
+        return None
+    try:
+        payload = build_artifact(title=title, spec=spec)
+    except ArtifactValidationError:
+        return None
+    return StreamEvent(
+        type="artifact",
+        artifact={
+            "id": payload["id"],
+            "title": payload["title"],
+            "spec": payload["spec"],
+            # Echo the originating tool_use_id so the frontend can attach
+            # this artifact to the matching tool-call slot if it wants to.
+            "tool_use_id": event.get("tool_use_id", ""),
+        },
+    )
 
 
 def get_chat_router() -> APIRouter:
@@ -227,6 +265,18 @@ def get_chat_router() -> APIRouter:
                         event_count += 1
                         aggregator.apply(event)
                         yield event
+                        # When the agent invokes ``render_artifact``, lift the
+                        # spec out of the tool's input and emit a sibling
+                        # ``artifact`` event for the frontend.  The tool's
+                        # own result string (returned to the LLM) stays a
+                        # short confirmation — the spec lives on this
+                        # parallel channel so the model doesn't see it
+                        # echoed back on the next turn.
+                        artifact_event = _maybe_artifact_event(event)
+                        if artifact_event is not None:
+                            event_count += 1
+                            aggregator.apply(artifact_event)
+                            yield artifact_event
                 except Exception as exc:
                     logger.exception(
                         "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",

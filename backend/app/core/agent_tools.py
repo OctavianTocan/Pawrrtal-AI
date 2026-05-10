@@ -32,6 +32,7 @@ import uuid
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
 from app.core.keys import resolve_api_key
+from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
@@ -85,5 +86,12 @@ def build_agent_tools(
         exa_key = settings.exa_api_key or None
     if exa_key:
         tools.append(make_exa_search_tool(user_id=user_id))
+
+    # Artifact rendering.  Always present — the wire shape is purely
+    # structural and the catalog of safe components is enforced on the
+    # client, so there's no key/quota to gate on.  The chat router
+    # picks up artifact tool-calls and lifts the spec into a sibling
+    # SSE event (see ``app.api.chat`` and ``app.core.tools.artifact``).
+    tools.append(make_artifact_tool())
 
     return tools

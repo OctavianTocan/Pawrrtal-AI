@@ -20,6 +20,7 @@ const CHAT_EVENT_TYPES = [
 	'thinking',
 	'tool_use',
 	'tool_result',
+	'artifact',
 	'error',
 	'agent_terminated',
 ] as const;

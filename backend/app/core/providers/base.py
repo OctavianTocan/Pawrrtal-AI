@@ -18,11 +18,12 @@ class StreamEvent(TypedDict, total=False):
     carries ``name`` + ``input``).
     """
 
-    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error"
+    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error" | "artifact"
     content: str  # for delta and thinking
     name: str  # for tool_use
     input: dict[str, Any]  # for tool_use
     tool_use_id: str  # for tool_result
+    artifact: dict[str, Any]  # for artifact (id, title, spec)
 
 
 class AILLM(Protocol):

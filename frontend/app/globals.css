@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "../features/chat/artifacts/artifact.css";
 
 /* Linked `@octavian-tocan/react-dropdown` resolves here — ensure Tailwind scans it so
    menu primitives (e.g. `disabled:bg-muted/*`) are generated in dev + prod. */

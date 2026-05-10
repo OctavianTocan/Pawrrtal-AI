@@ -213,6 +213,7 @@ function ChatView({
 									const isCurrentlyRegenerating = regeneratingIndex === index;
 									return (
 										<AssistantMessage
+											artifacts={chatMessage.artifacts}
 											content={chatMessage.content}
 											isCopied={copiedMessageId === messageId}
 											isFailed={chatMessage.assistant_status === 'failed'}
