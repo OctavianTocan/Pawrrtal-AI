@@ -52,7 +52,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
 
@@ -66,17 +66,17 @@ jobs:
       # fallback below.  The self-hosted `ainexus` runner ships bun
       # but not Node, so we provision it here.
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
       - name: Setup Python (for backend dev-login)
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Build local libs (frontend/lib/* submodules)
         run: bash scripts/build-local-libs.sh
@@ -158,7 +158,7 @@ jobs:
 
       - name: Upload dev-server log
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dev-console-server-log
           path: /tmp/dev-server.log
