@@ -237,9 +237,9 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 ## Learned User Preferences
 
 - When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
-- When adapting external UI references (screenshots, other products), use Pawrrtal naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
+- When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
-- When a UI fix establishes a reusable pattern (disabled controls, overlays, menus, etc.), capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
+- When a UI fix establishes a reusable pattern, or when a surface fetches data as soon as it appears (for example integration connection state), use a loader or skeleton until the result is known; capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
 - Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
 - Electron desktop distribution should plan for an in-app update prompt flow so everyday users are not manually reinstalling each new build.
 
@@ -253,8 +253,8 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 - The deployed FastAPI backend for remote usage is hosted on Railway; local development still targets plain `localhost` per the ports above unless you intentionally run against that remote URL.
 - Custom React hooks use consistent `use-*` naming for modules and exports (for example `use-login-mutations.ts`).
 - When adding or extending GitHub Actions workflows, follow the repository pattern of running jobs on the team’s custom GitHub runner rather than assuming default hosted runners only.
-
-
+- Git `pre-commit` runs via `backend/.venv/bin/python3 -m pre_commit`; keep `pre-commit` in the backend `pyproject.toml` dev dependency group and run `cd backend && uv sync --group dev` so hooks do not fail with `No module named pre_commit`.
+- From `frontend/`, run scoped Vitest with `bun run test -- <file-or-pattern>` so paths are passed after `--` (avoid `bun run test --run <path>`, which does not match how Vitest is wired here).
 
 <claude-mem-context>
 # Memory Context
