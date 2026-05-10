@@ -203,6 +203,37 @@ Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full
 
 ### Testing
 
+#### Frontend testing tier — pick the right layer
+
+Use this decision tree every time you write or review a frontend test:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  What are you testing?                                               │
+├───────────────────────────────────────┬──────────────────────────────┤
+│ Pure render / props / local state     │ RTL only (no network mock)   │
+│ Component + API calls (loading, error,│ RTL + MSW handlers           │
+│   success states, cache behaviour)    │                              │
+│ Multi-step flow needing real API      │ RTL + MSW realistic fixtures │
+│   shape validation across components  │                              │
+│ Critical user journey: real auth,     │ Stagehand E2E                │
+│   real AI output, real persistence    │                              │
+└───────────────────────────────────────┴──────────────────────────────┘
+```
+
+**React Testing Library (RTL)** — fast, component-scoped, controlled props. Use for rendering logic, interactions, and local state that does not cross the network.
+
+**RTL + MSW** — the standard for any test that involves a `fetch` call. MSW intercepts at the network layer so you test the real hook/component flow (retry logic, error states, cache updates) against a controlled API shape — without a real backend or AI spend.
+
+- Handlers live in **`frontend/test/handlers.ts`** as the single source of truth for API shapes. Never inline handler definitions per-test; import from `handlers.ts` and override per-scenario with `server.use(...)` inside the test.
+- Import `server` from `frontend/test/server.ts` for per-test overrides. The global lifecycle (start/reset/close) is wired in `test/setup.ts` — do not call `server.listen()` in test files.
+- The handler shape must mirror the real FastAPI route. **When the backend route changes, update the handler first** — failing tests are the signal that a breaking change occurred.
+- See `frontend/features/chat/hooks/use-create-conversation.msw.test.tsx` for the canonical reference pattern.
+
+**Do not use `vi.stubGlobal('fetch', vi.fn())`** for network testing. It matches by call order (brittle) and obscures the URL contract. Use MSW instead.
+
+**Stagehand** — reserved for flows that genuinely require real conditions: authenticated sessions, streamed AI responses, actual database persistence. Stagehand runs cost real AI credits; do not use it where RTL + MSW is sufficient.
+
 - `.claude/rules/testing/vi-hoisted-for-mock-variables.md`
 - `.claude/rules/testing/factory-over-shared-mutable.md`
 - `.claude/rules/testing/test-isolation-ephemeral.md`
