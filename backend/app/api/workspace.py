@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.workspace import list_workspaces
+from app.crud.workspace import list_workspaces
 from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
