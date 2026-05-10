@@ -119,9 +119,7 @@ export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): Ag
 			// the message complete so it doesn’t linger in a streaming state.
 			return {
 				...message,
-				content:
-					(message.content ? message.content + '\n\n' : '') +
-					`⚠️ ${event.content}`,
+				content: (message.content ? `${message.content}\n\n` : '') + `⚠️ ${event.content}`,
 				assistant_status: 'complete',
 			};
 		default:
