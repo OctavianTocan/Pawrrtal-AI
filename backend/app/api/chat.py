@@ -135,6 +135,55 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
     )
 
 
+def _collect_extra_events(
+    event: StreamEvent,
+    pending_image_tool_ids: set[str],
+    aggregator: ChatTurnAggregator,
+    workspace_root: Path,
+) -> list[StreamEvent]:
+    """Return extra SSE events to emit alongside *event*.
+
+    Handles two fan-out cases:
+
+    1. ``tool_use`` for ``generate_image`` — registers the ``tool_use_id``
+       so the matching result can be intercepted below.
+    2. ``tool_result`` for a pending image generation — reads the saved PNG
+       from disk and returns an ``image`` sibling event.
+    3. ``tool_use`` for ``render_artifact`` — returns an ``artifact`` event.
+
+    Mutates *pending_image_tool_ids* in-place; applies extra events to
+    *aggregator* before returning them so the aggregator's turn snapshot is
+    always complete.
+
+    Args:
+        event: The stream event just emitted by the provider.
+        pending_image_tool_ids: Set of in-flight ``generate_image`` tool_use_ids.
+        aggregator: Turn aggregator that must see every yielded event.
+        workspace_root: Root path of the user's workspace (for image reads).
+
+    Returns:
+        A (possibly-empty) list of extra ``StreamEvent`` dicts to yield.
+    """
+    if event.get("type") == "tool_use" and event.get("name") == _IMAGE_TOOL_NAME:
+        pending_image_tool_ids.add(str(event.get("tool_use_id", "")))
+
+    if event.get("type") == "tool_result":
+        tid = str(event.get("tool_use_id", ""))
+        if tid in pending_image_tool_ids:
+            pending_image_tool_ids.discard(tid)
+            image_event = _maybe_image_event(event, workspace_root)
+            if image_event is not None:
+                aggregator.apply(image_event)
+                return [image_event]
+
+    artifact_event = _maybe_artifact_event(event)
+    if artifact_event is not None:
+        aggregator.apply(artifact_event)
+        return [artifact_event]
+
+    return []
+
+
 def get_chat_router() -> APIRouter:
     """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
 
@@ -323,42 +372,14 @@ def get_chat_router() -> APIRouter:
                         aggregator.apply(event)
                         yield event
 
-                        # Track generate_image tool invocations by their id so
-                        # we can intercept the matching result below.
-                        if (
-                            event.get("type") == "tool_use"
-                            and event.get("name") == _IMAGE_TOOL_NAME
+                        # Fan-out: emit image/artifact sibling events when the
+                        # provider event triggers one.  Extra events are also
+                        # aggregated so the turn snapshot stays complete.
+                        for extra in _collect_extra_events(
+                            event, pending_image_tool_ids, aggregator, root
                         ):
-                            pending_image_tool_ids.add(
-                                str(event.get("tool_use_id", ""))
-                            )
-
-                        # When a generate_image result arrives, read the saved
-                        # PNG from disk and emit an ``image`` sibling event.
-                        # The base64 payload goes to the frontend only — the
-                        # LLM already received the short JSON result string.
-                        if event.get("type") == "tool_result":
-                            tid = str(event.get("tool_use_id", ""))
-                            if tid in pending_image_tool_ids:
-                                pending_image_tool_ids.discard(tid)
-                                image_event = _maybe_image_event(event, root)
-                                if image_event is not None:
-                                    event_count += 1
-                                    aggregator.apply(image_event)
-                                    yield image_event
-
-                        # When the agent invokes ``render_artifact``, lift the
-                        # spec out of the tool's input and emit a sibling
-                        # ``artifact`` event for the frontend.  The tool's
-                        # own result string (returned to the LLM) stays a
-                        # short confirmation — the spec lives on this
-                        # parallel channel so the model doesn't see it
-                        # echoed back on the next turn.
-                        artifact_event = _maybe_artifact_event(event)
-                        if artifact_event is not None:
                             event_count += 1
-                            aggregator.apply(artifact_event)
-                            yield artifact_event
+                            yield extra
                 except Exception as exc:
                     logger.exception(
                         "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",

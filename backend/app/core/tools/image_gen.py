@@ -80,6 +80,24 @@ def resolve_codex_oauth_token(override: str | None = None) -> str:
     )
 
 
+def _find_image_b64_in_output(output: list[dict]) -> str | None:
+    """Return the base64 image string from a Responses API output array, or None.
+
+    Scans for the first ``image_generation_call`` item and returns its
+    ``result`` field.
+
+    Args:
+        output: The ``output`` array from a ``response.completed`` SSE event.
+
+    Returns:
+        Base64-encoded image string, or ``None`` if no image item is found.
+    """
+    for item in output:
+        if item.get("type") == "image_generation_call":
+            return item.get("result")
+    return None
+
+
 async def generate_image_via_codex(
     prompt: str,
     *,
@@ -159,15 +177,11 @@ async def generate_image_via_codex(
             except json.JSONDecodeError:
                 continue
 
-            # The completed event carries the full output array.
+            # The completed event carries the full output array and is terminal.
             if event.get("type") == "response.completed":
                 output = event.get("response", {}).get("output", [])
-                for item in output:
-                    if item.get("type") == "image_generation_call":
-                        image_b64 = item.get("result")
-                        break
-                if image_b64:
-                    break
+                image_b64 = _find_image_b64_in_output(output)
+                break
 
     if not image_b64:
         raise ValueError(
