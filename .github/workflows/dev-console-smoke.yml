@@ -45,10 +45,10 @@ jobs:
   smoke:
     name: Dev console clean
     # Self-hosted: `agent-browser` and its Chrome-for-Testing payload
-    # are cached on the `ainexus` runner across runs; rebuilding the
+    # are cached on the `pawrrtal` runner across runs; rebuilding the
     # cache on every GitHub-hosted ubuntu-latest run would dominate
     # the smoke's wall time.
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
@@ -63,7 +63,7 @@ jobs:
 
       # Node + npm are needed by both the agent-browser CLI shebang
       # (`#!/usr/bin/env node`) and the global `npm install -g`
-      # fallback below.  The self-hosted `ainexus` runner ships bun
+      # fallback below.  The self-hosted `pawrrtal` runner ships bun
       # but not Node, so we provision it here.
       - name: Setup Node
         uses: actions/setup-node@v4

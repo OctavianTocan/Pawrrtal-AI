@@ -27,7 +27,7 @@ concurrency:
 jobs:
   lint:
     name: design.md lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, pawrrtal]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

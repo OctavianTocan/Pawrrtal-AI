@@ -88,14 +88,10 @@ export const fixtures = {
 
 export const handlers = [
 	// Health probe
-	http.get(`${API_BASE_URL}/api/v1/health`, () =>
-		HttpResponse.json({ status: 'ok' })
-	),
+	http.get(`${API_BASE_URL}/api/v1/health`, () => HttpResponse.json({ status: 'ok' })),
 
 	// Workspaces
-	http.get(`${API_BASE_URL}/api/v1/workspaces`, () =>
-		HttpResponse.json([fixtures.workspace])
-	),
+	http.get(`${API_BASE_URL}/api/v1/workspaces`, () => HttpResponse.json([fixtures.workspace])),
 
 	// Workspace env overrides
 	http.get(`${API_BASE_URL}/api/v1/workspace/env`, () =>
@@ -104,8 +100,9 @@ export const handlers = [
 	http.put(`${API_BASE_URL}/api/v1/workspace/env`, () =>
 		HttpResponse.json(fixtures.workspaceEnv)
 	),
-	http.delete(`${API_BASE_URL}/api/v1/workspace/env/:key`, () =>
-		new HttpResponse(null, { status: 204 })
+	http.delete(
+		`${API_BASE_URL}/api/v1/workspace/env/:key`,
+		() => new HttpResponse(null, { status: 204 })
 	),
 
 	// Conversations
@@ -118,8 +115,9 @@ export const handlers = [
 	http.patch(`${API_BASE_URL}/api/v1/conversations/:id`, () =>
 		HttpResponse.json(fixtures.conversation)
 	),
-	http.delete(`${API_BASE_URL}/api/v1/conversations/:id`, () =>
-		new HttpResponse(null, { status: 204 })
+	http.delete(
+		`${API_BASE_URL}/api/v1/conversations/:id`,
+		() => new HttpResponse(null, { status: 204 })
 	),
 
 	// Personalization
@@ -131,18 +129,15 @@ export const handlers = [
 	),
 
 	// Models
-	http.get(`${API_BASE_URL}/api/v1/models`, () =>
-		HttpResponse.json(fixtures.models)
-	),
+	http.get(`${API_BASE_URL}/api/v1/models`, () => HttpResponse.json(fixtures.models)),
 
 	// Channels (Telegram integration)
-	http.get(`${API_BASE_URL}/api/v1/channels`, () =>
-		HttpResponse.json([])
-	),
+	http.get(`${API_BASE_URL}/api/v1/channels`, () => HttpResponse.json([])),
 	http.post(`${API_BASE_URL}/api/v1/channels/telegram/link`, () =>
 		HttpResponse.json({ ok: true })
 	),
-	http.delete(`${API_BASE_URL}/api/v1/channels/telegram/link`, () =>
-		new HttpResponse(null, { status: 204 })
+	http.delete(
+		`${API_BASE_URL}/api/v1/channels/telegram/link`,
+		() => new HttpResponse(null, { status: 204 })
 	),
 ];

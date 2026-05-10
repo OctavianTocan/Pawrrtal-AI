@@ -19,16 +19,13 @@
 
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createQueryClientWrapper, createTestQueryClient } from '@/test/utils/render';
-import { server } from '@/test/server';
+// Mock next/navigation (useRouter is called inside useAuthedFetch).
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL } from '@/lib/api';
 import { fixtures } from '@/test/handlers';
-
+import { server } from '@/test/server';
+import { createQueryClientWrapper, createTestQueryClient } from '@/test/utils/render';
 import { useWorkspaceTree } from './use-workspace-tree';
-
-// Mock next/navigation (useRouter is called inside useAuthedFetch).
-import { vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
 	useRouter: () => ({ replace: vi.fn() }),
@@ -43,7 +40,12 @@ const WORKSPACE_ID = fixtures.workspace.id;
 const treeResponse = {
 	workspace_id: WORKSPACE_ID,
 	nodes: [
-		{ path: 'notes/hello.md', kind: 'file' as const, size: 128, updated_at: '2026-01-01T00:00:00Z' },
+		{
+			path: 'notes/hello.md',
+			kind: 'file' as const,
+			size: 128,
+			updated_at: '2026-01-01T00:00:00Z',
+		},
 		{ path: 'notes', kind: 'folder' as const, updated_at: '2026-01-01T00:00:00Z' },
 	],
 };
@@ -127,9 +129,7 @@ describe('useWorkspaceTree', () => {
 	});
 
 	it('returns null workspaceId and null fileTree when workspaces list is empty', async () => {
-		server.use(
-			http.get(`${API_BASE_URL}/api/v1/workspaces`, () => HttpResponse.json([]))
-		);
+		server.use(http.get(`${API_BASE_URL}/api/v1/workspaces`, () => HttpResponse.json([])));
 
 		const { result } = renderTree();
 

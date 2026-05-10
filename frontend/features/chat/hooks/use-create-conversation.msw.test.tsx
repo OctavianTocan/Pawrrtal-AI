@@ -22,11 +22,10 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
-import { createQueryClientWrapper, createTestQueryClient } from '@/test/utils/render';
-import { server } from '@/test/server';
 import { API_BASE_URL } from '@/lib/api';
 import { fixtures } from '@/test/handlers';
-
+import { server } from '@/test/server';
+import { createQueryClientWrapper, createTestQueryClient } from '@/test/utils/render';
 import { useCreateConversation } from './use-create-conversation';
 
 // ---------------------------------------------------------------------------
@@ -80,10 +79,13 @@ describe('useCreateConversation (MSW)', () => {
 	it('passes the title in the request body', async () => {
 		let capturedBody: unknown;
 		server.use(
-			http.post(`${API_BASE_URL}/api/v1/conversations/${CONVERSATION_ID}`, async ({ request }) => {
-				capturedBody = await request.json();
-				return HttpResponse.json({ ...fixtures.conversation, id: CONVERSATION_ID });
-			})
+			http.post(
+				`${API_BASE_URL}/api/v1/conversations/${CONVERSATION_ID}`,
+				async ({ request }) => {
+					capturedBody = await request.json();
+					return HttpResponse.json({ ...fixtures.conversation, id: CONVERSATION_ID });
+				}
+			)
 		);
 
 		const { result } = renderMutation();
@@ -127,8 +129,9 @@ describe('useCreateConversation (MSW)', () => {
 
 	it('redirects to /login and throws when the server returns 401', async () => {
 		server.use(
-			http.post(`${API_BASE_URL}/api/v1/conversations/${CONVERSATION_ID}`, () =>
-				new HttpResponse(null, { status: 401 })
+			http.post(
+				`${API_BASE_URL}/api/v1/conversations/${CONVERSATION_ID}`,
+				() => new HttpResponse(null, { status: 401 })
 			)
 		);
 

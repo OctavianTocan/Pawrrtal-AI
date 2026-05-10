@@ -176,53 +176,6 @@ wheels = [
 ]
 
 [[package]]
-name = "api-app-nexus-ai"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "aiogram" },
-    { name = "aiosqlite" },
-    { name = "alembic" },
-    { name = "anyio" },
-    { name = "claude-agent-sdk" },
-    { name = "fastapi", extra = ["standard"] },
-    { name = "fastapi-users", extra = ["sqlalchemy"] },
-    { name = "google-genai" },
-    { name = "mcp" },
-    { name = "psycopg" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "sqlalchemy-utils" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiogram", specifier = ">=3.13.0" },
-    { name = "aiosqlite", specifier = ">=0.22.1" },
-    { name = "alembic", specifier = ">=1.13.0" },
-    { name = "anyio", specifier = ">=4.0.0" },
-    { name = "claude-agent-sdk" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.127.0" },
-    { name = "fastapi-users", extras = ["sqlalchemy"], specifier = ">=15.0.3" },
-    { name = "google-genai", specifier = ">=1.56.0" },
-    { name = "mcp", specifier = ">=1.25.0" },
-    { name = "psycopg", specifier = ">=3.3.3" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "python-dotenv", specifier = ">=1.2.1" },
-    { name = "sqlalchemy-utils", specifier = ">=0.42.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.2" }]
-
-[[package]]
 name = "argon2-cffi"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1202,6 +1155,53 @@ sdist = { url = "https://files.pythonhosted.org/packages/65/ee/299d360cdc32edc7d
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/b9/c538f279a4e237a006a2c98387d081e9eb060d203d8ed34467cc0f0b9b53/packaging-26.0-py3-none-any.whl", hash = "sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529", size = 74366, upload-time = "2026-01-21T20:50:37.788Z" },
 ]
+
+[[package]]
+name = "pawrrtal-api"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "aiogram" },
+    { name = "aiosqlite" },
+    { name = "alembic" },
+    { name = "anyio" },
+    { name = "claude-agent-sdk" },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "fastapi-users", extra = ["sqlalchemy"] },
+    { name = "google-genai" },
+    { name = "mcp" },
+    { name = "psycopg" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "sqlalchemy-utils" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiogram", specifier = ">=3.13.0" },
+    { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "alembic", specifier = ">=1.13.0" },
+    { name = "anyio", specifier = ">=4.0.0" },
+    { name = "claude-agent-sdk" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.127.0" },
+    { name = "fastapi-users", extras = ["sqlalchemy"], specifier = ">=15.0.3" },
+    { name = "google-genai", specifier = ">=1.56.0" },
+    { name = "mcp", specifier = ">=1.25.0" },
+    { name = "psycopg", specifier = ">=3.3.3" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pydantic-settings", specifier = ">=2.12.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "sqlalchemy-utils", specifier = ">=0.42.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
 name = "pluggy"

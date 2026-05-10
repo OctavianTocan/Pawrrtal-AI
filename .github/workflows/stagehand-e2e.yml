@@ -37,7 +37,7 @@ env:
 jobs:
   stagehand:
     name: Stagehand suite
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 25
     steps:
       - name: Checkout repository

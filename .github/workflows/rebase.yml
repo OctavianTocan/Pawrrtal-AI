@@ -26,7 +26,7 @@ concurrency:
 jobs:
   get-prs:
     name: Find Open PRs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, pawrrtal]
     outputs:
       prs: ${{ steps.set-prs.outputs.prs }}
     # Guard: Only run if the base branch is exactly 'development' (for PR events), and check the specific trigger conditions.
@@ -69,7 +69,7 @@ jobs:
     name: Rebase PR #${{ matrix.pr }}
     needs: get-prs
     if: ${{ needs.get-prs.outputs.prs != '[]' && needs.get-prs.outputs.prs != '' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, pawrrtal]
     strategy:
       fail-fast: false
       matrix:
