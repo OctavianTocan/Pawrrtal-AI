@@ -6,7 +6,7 @@
 
 ## Goal
 
-Adopt the stricter Biome linting rules, formatting conventions, custom policies, and TSConfig settings from `.private/web-ce-shared-packages` into the AI Nexus project. This PR lands the configuration only — the codebase reformat happens in a separate PR.
+Adopt the stricter Biome linting rules, formatting conventions, custom policies, and TSConfig settings from `.private/web-ce-shared-packages` into the Pawrrtal project. This PR lands the configuration only — the codebase reformat happens in a separate PR.
 
 ## Reference
 
@@ -20,7 +20,7 @@ Update root `biome.json` (bump from 2.4.4 to 2.4.8). Update `$schema` URL to mat
 
 ### Files
 
-Remove the `files.includes` filter entirely. The reference project scopes to `packages/**` because it's a monorepo — AI Nexus should rely on Biome's default file discovery (respects `.gitignore` via VCS integration). Keep `"ignoreUnknown": false`.
+Remove the `files.includes` filter entirely. The reference project scopes to `packages/**` because it's a monorepo — Pawrrtal should rely on Biome's default file discovery (respects `.gitignore` via VCS integration). Keep `"ignoreUnknown": false`.
 
 ### Formatter
 
@@ -110,7 +110,7 @@ No changes. Already has `strict: true`, `noUncheckedIndexedAccess: true`, Next.j
 
 ## 3. Custom Policy Checker
 
-Copy `.private/web-ce-shared-packages/check-docstrings.mjs` to AI Nexus root as `check-policies.mjs`. Then make ONLY these changes:
+Copy `.private/web-ce-shared-packages/check-docstrings.mjs` to Pawrrtal root as `check-policies.mjs`. Then make ONLY these changes:
 
 1. **Scan directory:** Change `collectPackageFiles` to scan `frontend/` instead of `packages/`. The function walks the directory tree — change the root path argument from `path.join(rootPath, 'packages')` to `path.join(rootPath, 'frontend')`.
 2. **File filter:** Update `isIncludedFile` to also exclude `frontend/components/ui/**` (matching the Biome override).

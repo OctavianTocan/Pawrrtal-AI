@@ -8,16 +8,20 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
 from app.api.auth import get_auth_router
+from app.api.channels import get_channels_router
 from app.api.chat import get_chat_router
+from app.integrations.telegram import telegram_lifespan
 from app.api.conversations import get_conversations_router
 from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
+from app.api.workspace import get_workspace_router
 from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
@@ -45,7 +49,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
-    yield
+    # Bring the Telegram channel up alongside the HTTP server when a bot
+    # token is configured. The context manager yields None and is a no-op
+    # when the channel is disabled, so this stays safe for stripped-down
+    # deployments (CI, ephemeral previews, ...). Stash the service on
+    # `app.state` so the webhook route can hand updates to aiogram.
+    async with telegram_lifespan() as telegram_service:
+        app.state.telegram_service = telegram_service
+        yield
 
 
 # --- App & Middleware --------------------------------------------------------
@@ -55,7 +66,7 @@ def create_app() -> FastAPI:
     """Create a FastAPI app instance with middleware and routes."""
     fastapi_app = FastAPI(
         lifespan=lifespan,
-        title="Nexus-AI",
+        title="Pawrrtal",
         description="An AI assistant platform",
         version="0.1.0",
     )
@@ -105,6 +116,17 @@ def create_app() -> FastAPI:
     fastapi_app.include_router(
         get_oauth_router(),
     )
+    fastapi_app.include_router(
+        get_channels_router(),
+    )
+    fastapi_app.include_router(
+        get_workspace_router(),
+    )
+
+    @fastapi_app.get("/api/v1/health", tags=["health"], include_in_schema=False)
+    async def health_check() -> JSONResponse:
+        """Lightweight liveness probe used by the onboarding step-server verify button."""
+        return JSONResponse({"status": "ok"})
 
     return fastapi_app
 

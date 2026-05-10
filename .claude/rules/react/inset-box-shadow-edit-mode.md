@@ -9,7 +9,7 @@ Use `box-shadow: inset` for edit-mode outlines and selection indicators, not `bo
 
 **Why:** When elements snap 1-2px on edit mode toggle, it looks broken. The shift is especially visible in grids and aligned layouts. Inset box-shadow avoids this entirely.
 
-**Learned from:** thirdear-webapp (thirdear-ai/thirdear-webapp) — UI polish convention.
+**Learned from:** the vendored app — UI polish convention.
 
 ## Verify
 

@@ -5,22 +5,22 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.core.providers.agno_provider import AgnoProvider
-from app.core.providers.claude_provider import ClaudeProvider
-from app.core.providers.factory import resolve_provider
+from app.core.providers.gemini_provider import GeminiLLM
+from app.core.providers.claude_provider import ClaudeLLM
+from app.core.providers.factory import resolve_llm
 from app.schemas import ConversationCreate, ConversationUpdate, UserCreate
 
 
-def test_resolve_provider_routes_claude_models_to_claude_provider() -> None:
+def test_resolve_llm_routes_claude_models_to_claude_provider() -> None:
     """Claude model IDs are routed to the Claude provider."""
-    assert isinstance(resolve_provider("claude-sonnet-4-6"), ClaudeProvider)
+    assert isinstance(resolve_llm("claude-sonnet-4-6"), ClaudeLLM)
 
 
-def test_resolve_provider_routes_default_and_gemini_to_agno_provider() -> None:
+def test_resolve_llm_routes_default_and_gemini_to_agno_provider() -> None:
     """Gemini and blank model IDs are routed to Agno."""
-    assert isinstance(resolve_provider("gemini-3-flash-preview"), AgnoProvider)
-    assert isinstance(resolve_provider(None), AgnoProvider)
-    assert isinstance(resolve_provider("  "), AgnoProvider)
+    assert isinstance(resolve_llm("gemini-3-flash-preview"), GeminiLLM)
+    assert isinstance(resolve_llm(None), GeminiLLM)
+    assert isinstance(resolve_llm("  "), GeminiLLM)
 
 
 def test_conversation_create_accepts_optional_client_uuid() -> None:

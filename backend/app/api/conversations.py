@@ -7,7 +7,7 @@ from typing import Any, Literal, cast
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.agents import create_utility_agent
+from app.core.gemini_utils import generate_text_once
 from app.crud.chat_message import get_messages_for_conversation
 from app.crud.conversation import (
     create_conversation_service,
@@ -141,13 +141,23 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         session: AsyncSession = Depends(get_async_session),
     ) -> str:
         """Generate and persist a short conversation title from the first message."""
-        response = create_utility_agent(
-            "Generate a title for the conversation based on the first message: "
-            + first_message
-            + ". Return only the title, no other text or explanation.",
-        )
+        try:
+            raw_title = await generate_text_once(
+                "Generate a short title (max 8 words) for the conversation based on "
+                "this first message: "
+                + first_message
+                + ". Return only the title, nothing else."
+            )
+        except Exception:
+            # Gemini API errors (invalid key, model unavailable, rate limit) must
+            # not 500 the whole request — the title is best-effort UI polish.
+            logger.exception(
+                "Title generation failed for conversation %s — returning empty title",
+                conversation_id,
+            )
+            return ""
 
-        generated_title = _normalize_generated_title(response.content)
+        generated_title = _normalize_generated_title(raw_title)
         if generated_title is None:
             logger.warning(
                 "Skipping unusable generated title for conversation %s",
@@ -176,7 +186,9 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         and status. Only fields present in the payload are updated.
         """
         if payload.title is not None and not payload.title.strip():
-            raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
+            raise HTTPException(
+                status_code=422, detail="Conversation title cannot be empty"
+            )
 
         conversation = await update_conversation_service(
             payload=payload,

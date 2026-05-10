@@ -23,7 +23,7 @@ vi.mock('electron', () => ({
 			if (key === 'userData') return tempUserData;
 			return tempUserData;
 		},
-		getName: (): string => 'ai-nexus-ipc-test',
+		getName: (): string => 'pawrrtal-ipc-test',
 		getVersion: (): string => '0.0.0-test',
 	},
 	BrowserWindow: vi.fn(() => ({ isDestroyed: () => false })),
@@ -59,9 +59,9 @@ async function invoke<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 beforeEach(() => {
-	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-ipc-userdata-'));
-	tempHome = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-ipc-home-'));
-	tempDir = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-ipc-target-'));
+	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-ipc-userdata-'));
+	tempHome = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-ipc-home-'));
+	tempDir = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-ipc-target-'));
 });
 
 afterEach(() => {

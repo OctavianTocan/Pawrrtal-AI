@@ -29,7 +29,9 @@ async def test_get_returns_none_when_no_row_exists(
 
 
 @pytest.mark.anyio
-async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: User) -> None:
+async def test_upsert_inserts_a_new_row(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """First upsert creates the 1:1 row with the supplied fields."""
     payload = AppearanceSettings(
         light=ThemeColors(accent="#FF0000", background="#FAF3DF"),
@@ -57,7 +59,9 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
 
 
 @pytest.mark.anyio
-async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user: User) -> None:
+async def test_upsert_replaces_existing_row(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """Second upsert is a full replacement: omitted sub-fields revert to None."""
     await upsert_appearance_service(
         test_user.id,
@@ -81,7 +85,9 @@ async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user:
 
 
 @pytest.mark.anyio
-async def test_reset_deletes_persisted_row(db_session: AsyncSession, test_user: User) -> None:
+async def test_reset_deletes_persisted_row(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """Reset removes the row so subsequent gets fall back to defaults."""
     await upsert_appearance_service(
         test_user.id,

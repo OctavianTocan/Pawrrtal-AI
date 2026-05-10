@@ -63,8 +63,8 @@ export interface MockAppearanceOptions {
 }
 
 /** Preset shape consumed by the per-mode preset picker. Font values are
-    non-nullable so the preview can pass `fonts.display` directly to a
-    `style.fontFamily` prop without coercion. */
+	non-nullable so the preview can pass `fonts.display` directly to a
+	`style.fontFamily` prop without coercion. */
 export interface MockThemePreset {
 	id: string;
 	name: string;
@@ -98,7 +98,7 @@ export const DEFAULT_DARK_COLORS: Record<ColorSlot, string> = {
 export const DEFAULT_FONTS: Record<FontSlot, string> = {
 	display:
 		'var(--font-display-loaded, "Newsreader"), "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif',
-	sans: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+	sans: 'var(--font-google-sans-flex-loaded, "Google Sans Flex"), var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif',
 	mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
 };
 
@@ -114,8 +114,8 @@ export const DEFAULT_OPTIONS: Required<MockAppearanceOptions> = {
 /** Mock preset list — same three the original system shipped, all data only. */
 export const THEME_PRESETS: ReadonlyArray<MockThemePreset> = [
 	{
-		id: 'ai-nexus',
-		name: 'AI Nexus',
+		id: 'pawrrtal',
+		name: 'Pawrrtal',
 		description: 'Project default — Mistral-inspired tokens with Newsreader display serif.',
 		light: DEFAULT_LIGHT_COLORS,
 		dark: DEFAULT_DARK_COLORS,

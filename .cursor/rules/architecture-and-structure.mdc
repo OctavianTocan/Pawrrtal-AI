@@ -25,7 +25,7 @@ alwaysApply: false
 
 ### 3. Folder Structure
 - **Feature Folders:** Colocate everything needed for a feature (`components`, `hooks`, `utils`, `types`).
-- **Shared Utils:** `src/utils/domain/index.ts` + `README.md` if complex.
+- **Shared Utils:** `frontend/lib/domain/index.ts` + `README.md` if complex.
 
 ## Modularity & Layering
 

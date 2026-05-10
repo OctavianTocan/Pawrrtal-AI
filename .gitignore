@@ -16,6 +16,7 @@ node_modules/
 .env.test.local
 .env.production.local
 !.env.example
+!.env.docker
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
@@ -24,6 +25,13 @@ node_modules/
 # Private
 /private
 .private
+
+# Generated user workspaces (created by seed_workspace at runtime).
+# Default ``WORKSPACE_BASE_DIR=/data/workspaces`` is overridden in
+# local .env to ``./workspaces``, which lands at the repo root or
+# under backend/ depending on cwd. Both are runtime artefacts.
+workspaces/
+backend/workspaces/
 
 # testing & coverage
 /coverage
@@ -90,6 +98,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.docker
 
 # repomix output files
 repomix-output.*
@@ -119,3 +128,20 @@ agno.db-wal
 
 # sentrux local baseline (per-developer, not shared)
 .sentrux/baseline.json
+package-lock.json
+
+# react-dropdown is now a git submodule under frontend/lib/react-dropdown
+# (managed by .gitmodules).  The previous "nested git repo" pattern broke
+# CI because the directory wasn't present on fresh checkouts; submodule
+# tracking fixes that without forcing the package source into the parent
+# repo's history.
+# (No ignore needed — submodules are tracked normally by git.)
+
+# Cursor IDE runtime state (generated every session, not config)
+.cursor/hooks/state/
+
+# Cursor Composer AI-generated plan files (ephemeral, not source-of-truth)
+.cursor/plans/
+
+# OpenCode internal generated artifacts
+.opencode/package-lock.json

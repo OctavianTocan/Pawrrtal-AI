@@ -127,20 +127,37 @@ function ChatView({
 			 * skipped entirely.
 			 */}
 			{whimsy.cssUrl ? (
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 text-foreground"
-					style={{
-						backgroundColor: 'currentColor',
-						opacity: whimsy.opacity,
-						maskImage: whimsy.cssUrl,
-						WebkitMaskImage: whimsy.cssUrl,
-						maskSize: `${whimsy.size}px ${whimsy.size}px`,
-						WebkitMaskSize: `${whimsy.size}px ${whimsy.size}px`,
-						maskRepeat: 'repeat',
-						WebkitMaskRepeat: 'repeat',
-					}}
-				/>
+				<>
+					{/*
+					 * Optional solid-colour layer painted under the masked
+					 * tile. ``null`` means the user kept the theme default,
+					 * in which case the chat panel's own ``bg-background``
+					 * shows through. Skip the wrapper entirely in that case
+					 * to avoid layering an opaque box over interactive
+					 * content for no reason.
+					 */}
+					{whimsy.backgroundColor ? (
+						<div
+							aria-hidden="true"
+							className="pointer-events-none absolute inset-0"
+							style={{ backgroundColor: whimsy.backgroundColor }}
+						/>
+					) : null}
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute inset-0 text-foreground"
+						style={{
+							backgroundColor: whimsy.tintColor,
+							opacity: whimsy.opacity,
+							maskImage: whimsy.cssUrl,
+							WebkitMaskImage: whimsy.cssUrl,
+							maskSize: whimsy.maskSize,
+							WebkitMaskSize: whimsy.maskSize,
+							maskRepeat: 'repeat',
+							WebkitMaskRepeat: 'repeat',
+						}}
+					/>
+				</>
 			) : null}
 			{isEmptyConversation ? (
 				<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
@@ -149,7 +166,7 @@ function ChatView({
 						    the composer; `mb-6` parked them too tight against each
 						    other for a landing surface. */}
 						<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
-							What should we build in AI Nexus?
+							What should we build in Pawrrtal?
 						</h1>
 						<ChatComposer
 							message={message}

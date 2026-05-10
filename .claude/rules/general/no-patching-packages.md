@@ -16,7 +16,7 @@ Use CI logs to prove or disprove debugging theories before assuming a dependency
 
 **Why:** Patches rot. They break on version bumps. They hide real bugs from upstream. They make CI non-reproducible when the patch doesn't apply cleanly. Every patch is technical debt with interest.
 
-**Learned from:** TwinMind mobile development — hard-won lesson from multiple patch-package incidents.
+**Learned from:** a prior mobile project development — hard-won lesson from multiple patch-package incidents.
 
 ## Verify
 

@@ -43,7 +43,7 @@ List {
 
 ## References
 
-- TwinMind E2E: Maestro found surface_list but couldn't tap buttons until .accessibilityElement was removed
+- a prior E2E project: Maestro found surface_list but couldn't tap buttons until .accessibilityElement was removed
 
 ## Verify
 

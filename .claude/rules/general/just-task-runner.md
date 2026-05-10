@@ -9,7 +9,7 @@ When a project has a `justfile`, use `just` for all project operations instead o
 
 **Why:** Justfiles encode the canonical way to run project tasks. They abstract away package manager differences, environment setup, and flag variations. If a task isn't in the justfile, add it there first.
 
-**Learned from:** ai-nexus (OctavianTocan/ai-nexus) — project convention.
+**Learned from:** pawrrtal (OctavianTocan/pawrrtal) — project convention.
 
 ## Verify
 

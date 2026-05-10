@@ -44,9 +44,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    op.create_index(
-        "ix_conversations_project_id", "conversations", ["project_id"]
-    )
+    op.create_index("ix_conversations_project_id", "conversations", ["project_id"])
 
 
 def downgrade() -> None:

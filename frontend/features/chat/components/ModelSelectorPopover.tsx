@@ -1,20 +1,17 @@
 'use client';
 
-import { CheckIcon, ChevronDownIcon } from 'lucide-react';
-import type * as React from 'react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+	DropdownSubmenu,
+	DropdownSubmenuContent,
+	DropdownSubmenuTrigger,
+	useDropdownContext,
+} from '@octavian-tocan/react-dropdown';
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import type * as React from 'react';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 
 /**
@@ -132,6 +129,26 @@ const REASONING_OPTIONS: ReasoningOption[] = [
 	{ id: 'extra-high', label: 'Extra High' },
 ];
 
+/** Discriminated union of root-menu rows. */
+type RootRow = { kind: 'provider'; provider: ProviderId } | { kind: 'thinking' };
+
+const ROOT_ROWS: readonly RootRow[] = [
+	{ kind: 'provider', provider: 'anthropic' },
+	{ kind: 'provider', provider: 'openai' },
+	{ kind: 'provider', provider: 'google' },
+	{ kind: 'thinking' },
+];
+
+/** Stable React key for each root row. */
+function rootRowKey(row: RootRow): string {
+	return row.kind === 'provider' ? `provider:${row.provider}` : 'thinking';
+}
+
+/** Display string used by the keyboard type-ahead. */
+function rootRowDisplay(row: RootRow): string {
+	return row.kind === 'provider' ? PROVIDER_LABELS[row.provider] : 'Thinking';
+}
+
 /**
  * Props for the compact model and reasoning selector used in the chat composer.
  */
@@ -184,11 +201,85 @@ function ProviderLogo({
 }
 
 /**
+ * Submenu row that selects a model and closes the root dropdown.
+ *
+ * Lives inside the root `DropdownMenu`'s React tree, so `useDropdownContext`
+ * resolves to the root's context — closing it on selection collapses the
+ * entire submenu chain along with the root panel.
+ */
+function ModelRow({
+	model,
+	isSelected,
+	onSelect,
+}: {
+	model: ChatModelOption;
+	isSelected: boolean;
+	onSelect: (modelId: ChatModelId) => void;
+}): React.JSX.Element {
+	const { closeDropdown } = useDropdownContext();
+	return (
+		<button
+			type="button"
+			className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			onClick={() => {
+				onSelect(model.id);
+				closeDropdown();
+			}}
+		>
+			<div className="flex min-w-0 flex-1 flex-col text-left">
+				<span className="truncate text-foreground">{model.shortName}</span>
+				<span className="truncate text-[11px] text-muted-foreground">
+					{model.description}
+				</span>
+			</div>
+			{isSelected ? (
+				<CheckIcon aria-hidden="true" className="size-3.5 shrink-0 text-foreground" />
+			) : null}
+		</button>
+	);
+}
+
+/**
+ * Submenu row that selects a reasoning level and closes the root dropdown.
+ */
+function ReasoningRow({
+	option,
+	isSelected,
+	onSelect,
+}: {
+	option: ReasoningOption;
+	isSelected: boolean;
+	onSelect: (reasoning: ChatReasoningLevel) => void;
+}): React.JSX.Element {
+	const { closeDropdown } = useDropdownContext();
+	return (
+		<button
+			type="button"
+			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			onClick={() => {
+				onSelect(option.id);
+				closeDropdown();
+			}}
+		>
+			<span>{option.label}</span>
+			{isSelected ? (
+				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+			) : null}
+		</button>
+	);
+}
+
+/**
  * Renders the chat composer's model selector. Top-level rows group models by
- * provider — each provider opens a sub-menu with its full model lineup. The
- * `Thinking` row at the bottom is a peer sub-menu with the four reasoning
+ * provider — each provider opens a flyout submenu with its full model lineup.
+ * The `Thinking` row at the bottom is a peer submenu with the four reasoning
  * levels and a descriptive secondary line, mirroring the layout used by the
  * Craft Agents reference design.
+ *
+ * Built on `@octavian-tocan/react-dropdown` (the vendored package) to stay
+ * consistent with `AutoReviewSelector` and `NavUser`. The package's
+ * `DropdownSubmenu` family provides Radix-equivalent flyout submenus with
+ * hover-open + ArrowRight-open keyboard semantics.
  */
 export function ModelSelectorPopover({
 	selectedModelId,
@@ -198,139 +289,123 @@ export function ModelSelectorPopover({
 }: ModelSelectorPopoverProps): React.JSX.Element {
 	const selectedModel = getModelOption(selectedModelId);
 	const reasoningLabel = getReasoningLabel(selectedReasoning);
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [tooltipOpen, setTooltipOpen] = useState(false);
+	const { menuOpen, tooltipOpen, handleMenuOpenChange, handleTooltipOpenChange } =
+		useTooltipDropdown();
 
 	return (
-		<DropdownMenu
-			onOpenChange={(open) => {
-				setMenuOpen(open);
-				if (!open) {
-					setTooltipOpen(false);
-				}
-			}}
-		>
-			<TooltipProvider disableHoverableContent>
-				<Tooltip
-					delayDuration={300}
-					onOpenChange={(open) => {
-						if (menuOpen) {
-							return;
-						}
-						setTooltipOpen(open);
-					}}
-					open={menuOpen ? false : tooltipOpen}
-				>
-					<TooltipTrigger asChild>
-						<DropdownMenuTrigger asChild>
-							<Button
-								aria-label="Select model and reasoning"
-								className="h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground aria-expanded:bg-foreground/[0.08] data-[state=open]:bg-foreground/[0.08]"
-								size="xs"
-								type="button"
-								variant="ghost"
-							>
-								<span className="text-foreground">{selectedModel.shortName}</span>
-								<span>{reasoningLabel}</span>
-								<ChevronDownIcon aria-hidden="true" className="size-3" />
-							</Button>
-						</DropdownMenuTrigger>
-					</TooltipTrigger>
-					<TooltipContent side="top">Choose model and reasoning level</TooltipContent>
-				</Tooltip>
-			</TooltipProvider>
-			<DropdownMenuContent
-				align="end"
-				className="chat-composer-dropdown-menu min-w-56"
-				side="top"
-				sideOffset={8}
-			>
-				{PROVIDER_IDS.map((providerId) => {
-					const models = getModelsByProvider(providerId);
-					if (models.length === 0) return null;
-
-					const isActiveProvider = selectedModel.provider === providerId;
-
-					return (
-						<DropdownMenuSub key={providerId}>
-							<DropdownMenuSubTrigger className="gap-2">
-								<ProviderLogo provider={providerId} />
-								<span className="min-w-0 flex-1 truncate">
-									{PROVIDER_LABELS[providerId]}
-								</span>
-								{isActiveProvider ? (
-									<CheckIcon
-										aria-hidden="true"
-										className="size-3.5 text-foreground"
-									/>
-								) : null}
-							</DropdownMenuSubTrigger>
-							<DropdownMenuSubContent
-								className="chat-composer-dropdown-menu min-w-64"
-								sideOffset={8}
-							>
-								{models.map((model) => (
-									<DropdownMenuItem
-										className="gap-2"
-										key={model.id}
-										onSelect={() => onSelectModel(model.id)}
-									>
-										<div className="flex min-w-0 flex-1 flex-col">
-											<span className="truncate text-foreground">
-												{model.shortName}
-											</span>
-											<span className="truncate text-[11px] text-muted-foreground">
-												{model.description}
-											</span>
-										</div>
-										{selectedModelId === model.id ? (
-											<CheckIcon
-												aria-hidden="true"
-												className="size-3.5 shrink-0 text-foreground"
-											/>
-										) : null}
-									</DropdownMenuItem>
-								))}
-							</DropdownMenuSubContent>
-						</DropdownMenuSub>
-					);
-				})}
-
-				<DropdownMenuSeparator />
-
-				<DropdownMenuSub>
-					<DropdownMenuSubTrigger className="gap-2">
-						<div className="flex min-w-0 flex-1 flex-col">
-							<span className="truncate text-foreground">
-								Thinking: {reasoningLabel}
-							</span>
-							<span className="truncate text-[11px] text-muted-foreground">
-								Extended reasoning depth
-							</span>
-						</div>
-					</DropdownMenuSubTrigger>
-					<DropdownMenuSubContent
-						className="chat-composer-dropdown-menu min-w-32"
-						sideOffset={8}
-					>
-						{REASONING_OPTIONS.map((option) => (
-							<DropdownMenuItem
-								className="justify-between"
-								key={option.id}
-								onSelect={() => onSelectReasoning(option.id)}
-							>
-								<span>{option.label}</span>
-								{selectedReasoning === option.id ? (
-									<CheckIcon
-										aria-hidden="true"
-										className="size-3.5 text-foreground"
-									/>
-								) : null}
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuSubContent>
-				</DropdownMenuSub>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<TooltipProvider disableHoverableContent>
+			<Tooltip onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
+				<TooltipTrigger asChild>
+					<span className="inline-flex">
+						<DropdownMenu<RootRow>
+							asChild
+							usePortal
+							placement="top"
+							align="start"
+							// Submenu rows handle their own selection + closeDropdown,
+							// so the root menu's onSelect is unused but required.
+							closeOnSelect={false}
+							contentClassName="chat-composer-dropdown-menu popover-styled p-1 min-w-56"
+							getItemDisplay={rootRowDisplay}
+							getItemKey={rootRowKey}
+							// Render a separator above the Thinking row to break the
+							// providers section from the reasoning section.
+							getItemSeparator={(row) => row.kind === 'thinking'}
+							items={ROOT_ROWS}
+							onOpenChange={handleMenuOpenChange}
+							onSelect={() => {
+								// no-op — submenu rows handle their own selection
+							}}
+							trigger={
+								<Button
+									aria-label="Select model and reasoning"
+									className={cn(
+										'h-7 gap-1 rounded-[7px] border-0 bg-transparent px-2 text-[12px] font-normal text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground',
+										menuOpen && 'bg-foreground/[0.08]'
+									)}
+									size="xs"
+									type="button"
+									variant="ghost"
+								>
+									<span className="text-foreground">
+										{selectedModel.shortName}
+									</span>
+									<span>{reasoningLabel}</span>
+									<ChevronDownIcon aria-hidden="true" className="size-3" />
+								</Button>
+							}
+							renderItem={(row) => {
+								if (row.kind === 'provider') {
+									const models = getModelsByProvider(row.provider);
+									if (models.length === 0) return null;
+									const isActiveProvider =
+										selectedModel.provider === row.provider;
+									return (
+										<DropdownSubmenu>
+											{/* `showChevron={false}` was a temporary prop on the
+											    upstream lib that's since been removed.  Hide via CSS
+											    if needed; chevron is baked into the trigger now. */}
+											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
+												<ProviderLogo provider={row.provider} />
+												<span className="min-w-0 flex-1 truncate text-left">
+													{PROVIDER_LABELS[row.provider]}
+												</span>
+												{isActiveProvider ? (
+													<CheckIcon
+														aria-hidden="true"
+														className="size-3.5 shrink-0 text-foreground"
+													/>
+												) : (
+													<ChevronRightIcon
+														aria-hidden="true"
+														className="size-3.5 shrink-0 text-muted-foreground"
+													/>
+												)}
+											</DropdownSubmenuTrigger>
+											<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-64">
+												{models.map((model) => (
+													<ModelRow
+														key={model.id}
+														model={model}
+														isSelected={selectedModelId === model.id}
+														onSelect={onSelectModel}
+													/>
+												))}
+											</DropdownSubmenuContent>
+										</DropdownSubmenu>
+									);
+								}
+								// 'thinking' row
+								return (
+									<DropdownSubmenu>
+										<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
+											<div className="flex min-w-0 flex-1 flex-col text-left">
+												<span className="truncate text-foreground">
+													Thinking: {reasoningLabel}
+												</span>
+												<span className="truncate text-[11px] text-muted-foreground">
+													Extended reasoning depth
+												</span>
+											</div>
+										</DropdownSubmenuTrigger>
+										<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-32">
+											{REASONING_OPTIONS.map((option) => (
+												<ReasoningRow
+													key={option.id}
+													option={option}
+													isSelected={selectedReasoning === option.id}
+													onSelect={onSelectReasoning}
+												/>
+											))}
+										</DropdownSubmenuContent>
+									</DropdownSubmenu>
+								);
+							}}
+						/>
+					</span>
+				</TooltipTrigger>
+				<TooltipContent side="top">Choose model and reasoning level</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
 	);
 }

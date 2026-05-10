@@ -204,10 +204,11 @@ export type SettingsCardProps = {
 /**
  * Card surface used to group related rows in a settings section.
  *
- * Uses theme-aware tokens (`bg-card`, `border-border/60`) so the card
- * tints itself correctly under either light or dark mode without a
- * hard-coded `foreground/[0.0X]` overlay. Matches the elevated-panel
- * shape in the Codex Appearance and Personalization screens.
+ * Uses theme-aware tokens (`bg-card`) plus the project's `shadow-edge`
+ * utility (1 px white inset highlight + 1 px black 4 % outer shadow) so
+ * the card reads as a sharp, dimensional surface rather than a flat
+ * gray-bordered panel. See DESIGN.md → Elevation & Depth → Edges for
+ * why we stopped using bare 1 px borders here.
  */
 export function SettingsCard({
 	title,
@@ -216,12 +217,7 @@ export function SettingsCard({
 	className,
 }: SettingsCardProps): React.JSX.Element {
 	return (
-		<section
-			className={cn(
-				'rounded-[14px] border border-border/60 bg-card px-6 pt-3 pb-3 shadow-[0_1px_0_0_var(--border-subtle,transparent)]',
-				className
-			)}
-		>
+		<section className={cn('rounded-[14px] bg-card px-6 pt-3 pb-3 shadow-edge', className)}>
 			{title || description ? (
 				<header className="mb-1 flex flex-col gap-1 pt-2">
 					{title ? (

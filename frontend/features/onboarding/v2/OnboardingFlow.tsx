@@ -17,9 +17,17 @@ import { StepContext } from './step-context';
 import { StepIdentity } from './step-identity';
 import { StepMessaging } from './step-messaging';
 import { StepPersonality } from './step-personality';
+import { StepServer } from './step-server';
 
 /** Browser event used by app chrome to open the onboarding flow. */
-export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
+export const OPEN_ONBOARDING_FLOW_EVENT = 'pawrrtal:open-onboarding-flow';
+
+/**
+ * Browser event that opens the onboarding flow directly at the server
+ * configuration step. Dispatched by the workspace-creation modal when the
+ * user clicks "Connect to remote server".
+ */
+export const OPEN_ONBOARDING_SERVER_STEP_EVENT = 'ai-nexus:open-onboarding-server-step';
 
 /**
  * Localstorage flag + query-string param that suppress the auto-open
@@ -31,7 +39,7 @@ export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
  * tool E2Es fast and deterministic.
  *
  * Triggered by either:
- *   - `localStorage.setItem('ai-nexus:e2e-skip-onboarding', '1')` (set
+ *   - `localStorage.setItem('pawrrtal:e2e-skip-onboarding', '1')` (set
  *     by `fixtures.ts` via an `addInitScript` before navigation), OR
  *   - visiting any URL with `?e2e_skip_onboarding=1` (manual debugging).
  *
@@ -39,11 +47,11 @@ export const OPEN_ONBOARDING_FLOW_EVENT = 'ai-nexus:open-onboarding-flow';
  * those signals is present, and the workspace selector's "Add Workspace"
  * dropdown still opens the (separate) `OnboardingModal` either way.
  */
-export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'ai-nexus:e2e-skip-onboarding';
+export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'pawrrtal:e2e-skip-onboarding';
 export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
 
 /** Wizard step IDs in render order. */
-const STEP_IDS = ['identity', 'context', 'personality', 'messaging'] as const;
+const STEP_IDS = ['identity', 'server', 'context', 'personality', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 /**
@@ -156,6 +164,8 @@ export function OnboardingFlow({
 		setStep('identity');
 	}, []);
 
+	// Listen for the generic "open the flow" event — gated by listenForOpenEvent
+	// so embedders that manage their own open state can opt out.
 	useEffect(() => {
 		if (!listenForOpenEvent) return;
 		// Honor the same E2E skip flag for the event-driven open path so
@@ -172,6 +182,20 @@ export function OnboardingFlow({
 		return () => window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
 	}, [listenForOpenEvent]);
 
+	// Always listen for the server-step deep-link event — this is an explicit
+	// user action ("Connect to remote server" button) and must work regardless
+	// of the listenForOpenEvent flag.  E2E skip still applies.
+	useEffect(() => {
+		if (shouldSkipOnboardingForE2E()) return;
+		const serverHandler = (): void => {
+			setProfile(loadPersonalizationProfile());
+			setStep('server');
+			setOpen(true);
+		};
+		window.addEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
+		return () => window.removeEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
+	}, []);
+
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>
 			<DialogContent className="top-0 left-0 h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none border-0 bg-background p-0 text-foreground shadow-none ring-0 sm:max-w-none sm:p-0 [&>button]:top-6 [&>button]:right-6 [&>button]:z-30 [&>button]:rounded-control [&>button]:bg-foreground/[0.035] [&>button]:text-muted-foreground [&>button]:ring-1 [&>button]:ring-border [&>button]:hover:bg-foreground/[0.07] [&>button]:hover:text-foreground">
@@ -182,6 +206,14 @@ export function OnboardingFlow({
 						<StepIdentity
 							onContinue={goNext}
 							onPatch={patchProfile}
+							profile={profile}
+						/>
+					) : null}
+					{step === 'server' ? (
+						<StepServer
+							onContinue={goNext}
+							onPatch={patchProfile}
+							onSkip={goNext}
 							profile={profile}
 						/>
 					) : null}

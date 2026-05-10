@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-05
-- **Related work:** branch `feat/electron-privileged-ops`, beans `#ai-nexus-5rwv`, `#ai-nexus-e7mp`
+- **Related work:** branch `feat/electron-privileged-ops`, beans `#pawrrtal-5rwv`, `#pawrrtal-e7mp`
 
 ## Context
 
@@ -59,7 +59,7 @@ Concretely, strategy 1 wins on:
   and is what Craft, VS Code, and most other agent-shells use. We don't
   invent.
 
-PyInstaller bundling is preserved as a fallback bean (`#ai-nexus-om7i`)
+PyInstaller bundling is preserved as a fallback bean (`#pawrrtal-om7i`)
 should the two-implementation tax ever become load-bearing. As of v1,
 we expect zero duplication because of the client-tool pattern (next
 section).
@@ -85,8 +85,8 @@ client patterns):
    FastAPI) or a *client tool* (executed by the calling frontend).
 2. When the agent picks a client tool, the SSE stream emits a
    `tool_call_request{id, name, args}` event instead of running it.
-3. The FE forwards to Electron main via the existing `aiNexus`
-   contextBridge (`aiNexus.fs.writeFile(...)`, etc.).
+3. The FE forwards to Electron main via the existing `pawrrtal`
+   contextBridge (`pawrrtal.fs.writeFile(...)`, etc.).
 4. The FE POSTs the result back to a backend `/api/v1/chat/tool_result`
    endpoint with the matching `tool_call_id`.
 5. Backend resumes the agent loop with the tool result.
@@ -122,7 +122,7 @@ streaming wire format — just a richer toolset.
 
 ### Operational answers we resolved at the same time
 
-- **Workspace root:** auto-create `~/AI-Nexus-Workspace/` on first
+- **Workspace root:** auto-create `~/Pawrrtal-Workspace/` on first
   launch; the user can add more via the workspace settings surface.
 - **Permission model:** Claude-Code-style — *Allow once / Allow for
   this session / Always allow / Deny*, plus a global mode (`default`,
@@ -139,7 +139,7 @@ streaming wire format — just a richer toolset.
 
 - The actual *registration* of client tools server-side — that's a
   follow-up bean once this branch lands and the IPC surface is real.
-- PyInstaller bundling — `#ai-nexus-om7i` if/when needed.
+- PyInstaller bundling — `#pawrrtal-om7i` if/when needed.
 
 ## References
 

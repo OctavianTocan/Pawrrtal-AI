@@ -11,6 +11,15 @@
 
 'use client';
 
+import {
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownPanelMenu,
+	DropdownSubmenu,
+	DropdownSubmenuContent,
+	DropdownSubmenuTrigger,
+} from '@octavian-tocan/react-dropdown';
 import { useQueryClient } from '@tanstack/react-query';
 import {
 	ChevronsUpDownIcon,
@@ -25,19 +34,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
+import { useCallback, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuShortcut,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -75,6 +73,11 @@ const LEARN_MORE_LINKS = [
 	{ id: 'status', label: 'Status' },
 ] as const satisfies ReadonlyArray<{ id: string; label: string }>;
 
+/** Stub for menu items whose actions are not yet implemented. */
+function noop(): void {
+	// Intentionally empty — placeholder for unimplemented menu actions.
+}
+
 /** First letter of each space-separated word, capped at two — for AvatarFallback. */
 function getInitials(name: string): string {
 	const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -83,6 +86,10 @@ function getInitials(name: string): string {
 	const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
 	return `${first}${second}`.toUpperCase();
 }
+
+/** Shared className for the Language / Learn-more submenu trigger rows. */
+const SUBMENU_TRIGGER_CLASSNAME =
+	'flex w-full cursor-pointer items-center gap-2 rounded-[4px] px-2 py-1.5 text-sm hover:bg-foreground/[0.04]';
 
 /**
  * Sidebar profile button + account dropdown.
@@ -93,12 +100,22 @@ function getInitials(name: string): string {
  * chip to vanish the instant the user clicked the toggle, before the
  * 200ms slide had even started — visually jarring.
  *
+ * Uses `DropdownPanelMenu` with JSX `DropdownSubmenu` children for the
+ * Language / Learn-more entries so those open as side flyouts. The
+ * earlier `DropdownMenuDef`/`MenuItemDef` data-driven variant rendered
+ * submenus as inline accordions, which caused a noticeable
+ * "parent collapses → reopen with the sub auto-expanded" stutter
+ * every time the user clicked a submenu trigger.
+ *
  * @param user - Identity rendered in the trigger and dropdown header.
  */
 export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element {
 	const router = useRouter();
 	const fetcher = useAuthedFetch();
 	const queryClient = useQueryClient();
+	// Tracks dropdown open state so we can apply the active background on the
+	// trigger button — replaces Radix's automatic `aria-expanded` Tailwind variant.
+	const [isOpen, setIsOpen] = useState(false);
 
 	/**
 	 * Calls the FastAPI-Users logout route, clears every cached query so
@@ -106,7 +123,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 	 * /login. The logout endpoint clears the JWT cookie server-side; the
 	 * cache wipe is the client-side complement.
 	 */
-	const handleLogout = async (): Promise<void> => {
+	const handleLogout = useCallback(async (): Promise<void> => {
 		try {
 			await fetcher('/auth/jwt/logout', { method: 'POST' });
 		} catch (error) {
@@ -119,13 +136,37 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 			queryClient.clear();
 			router.replace('/login');
 		}
-	};
+	}, [fetcher, queryClient, router]);
+
+	const trigger = (
+		<div
+			className={cn(
+				'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
+				'transition-[background-color,color] duration-150',
+				'hover:bg-foreground/[0.07]',
+				isOpen && 'bg-foreground/[0.09]',
+				'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
+			)}
+		>
+			<Avatar className="size-7 shrink-0">
+				{user.avatar ? <AvatarImage alt={user.name} src={user.avatar} /> : null}
+				<AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+			</Avatar>
+			<div className="flex min-w-0 flex-1 flex-col leading-tight">
+				<span className="truncate text-sm font-medium text-foreground">{user.name}</span>
+				<span className="truncate text-sm text-muted-foreground">{user.plan}</span>
+			</div>
+			<ChevronsUpDownIcon
+				aria-hidden="true"
+				className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+			/>
+		</div>
+	);
 
 	// Desktop relies on the parent `<ResizablePanel>`'s `overflow:hidden`
 	// to clip the chip out as the panel slides to zero width — keeping
 	// the component mounted lets it participate in the slide animation
 	// instead of disappearing instantly.
-
 	return (
 		// Top border = the requested separator above the profile row.
 		// Using `border-foreground/8` (faint) so it reads as a divider, not a
@@ -133,111 +174,105 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 		// trigger button to swallow it — this lets the trigger's hover paint
 		// a clean fully-rounded pill that actually fills the visible row.
 		<div className="shrink-0 border-t border-foreground/8 p-2">
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<button
-						aria-label="Open account menu"
-						className={cn(
-							'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
-							'transition-[background-color,color] duration-150',
-							'hover:bg-foreground/[0.07] aria-expanded:bg-foreground/[0.09]',
-							'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40'
-						)}
-						type="button"
-					>
-						<Avatar className="size-7 shrink-0">
-							{user.avatar ? <AvatarImage alt={user.name} src={user.avatar} /> : null}
-							<AvatarFallback className="text-xs">
-								{getInitials(user.name)}
-							</AvatarFallback>
-						</Avatar>
-						<div className="flex min-w-0 flex-1 flex-col leading-tight">
-							<span className="truncate text-sm font-medium text-foreground">
-								{user.name}
-							</span>
-							<span className="truncate text-sm text-muted-foreground">
-								{user.plan}
-							</span>
-						</div>
-						<ChevronsUpDownIcon
-							aria-hidden="true"
-							className="size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-						/>
-					</button>
-				</DropdownMenuTrigger>
-
-				<DropdownMenuContent
-					align="start"
-					className="w-64 min-w-[var(--radix-dropdown-menu-trigger-width)]"
-					side="top"
-					sideOffset={8}
+			<DropdownPanelMenu
+				asChild
+				usePortal
+				placement="top"
+				// Anchor the panel's LEFT edge to the trigger's LEFT edge so it
+				// grows up-and-to-the-right. The default `align="end"` (right-edge
+				// anchored) overflows off-screen left because the trigger sits at
+				// the very bottom-left of the viewport (sidebar footer) — the
+				// menu's right edge would land mid-trigger, pushing its left
+				// edge into negative X. See image #36 for the prior bug.
+				align="start"
+				// `popover-styled` provides the project's themed background,
+				// border, layered shadow, and global backdrop-filter blur.
+				// Without it the consumer's className REPLACES the package's
+				// `bg-white` default and the dropdown renders transparent —
+				// letting the sidebar bleed through.
+				contentClassName="popover-styled p-1 w-64"
+				onOpenChange={setIsOpen}
+				trigger={trigger}
+			>
+				<DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+					{user.email}
+				</DropdownMenuLabel>
+				<DropdownMenuItem
+					className="justify-between"
+					onSelect={() => router.push('/settings')}
 				>
-					<DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
-
-					<DropdownMenuItem onSelect={() => router.push('/settings')}>
-						<SettingsIcon aria-hidden="true" />
+					<span className="flex items-center gap-2">
+						<SettingsIcon aria-hidden="true" className="size-4" />
 						Settings
-						<DropdownMenuShortcut>⇧⌘,</DropdownMenuShortcut>
-					</DropdownMenuItem>
-
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<GlobeIcon aria-hidden="true" />
-							Language
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="min-w-40">
-							{LANGUAGE_OPTIONS.map((option) => (
-								<DropdownMenuItem key={option.id}>{option.label}</DropdownMenuItem>
-							))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-
-					<DropdownMenuItem>
-						<HelpCircleIcon aria-hidden="true" />
-						Get help
-					</DropdownMenuItem>
-
-					<DropdownMenuSeparator />
-
-					<DropdownMenuItem>
-						<LayoutGridIcon aria-hidden="true" />
-						View all plans
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<DownloadIcon aria-hidden="true" />
-						Get apps and extensions
-					</DropdownMenuItem>
-					<DropdownMenuItem>
-						<GiftIcon aria-hidden="true" />
-						Gift AI Nexus
-					</DropdownMenuItem>
-
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger>
-							<InfoIcon aria-hidden="true" />
-							Learn more
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent className="min-w-40">
-							{LEARN_MORE_LINKS.map((link) => (
-								<DropdownMenuItem key={link.id}>{link.label}</DropdownMenuItem>
-							))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
-
-					<DropdownMenuSeparator />
-
-					<DropdownMenuItem
-						className="cursor-pointer"
-						onSelect={(event) => {
-							event.preventDefault();
-							void handleLogout();
-						}}
+					</span>
+					<span className="text-xs tracking-widest text-muted-foreground">⇧⌘,</span>
+				</DropdownMenuItem>
+				{/*
+				 * Side-flyout submenu — replaces the inline-accordion variant the
+				 * data-driven menu used. The earlier accordion collapsed the parent
+				 * on click and reopened it with `language` auto-expanded, which read
+				 * as a UI stutter every time.
+				 */}
+				<DropdownSubmenu>
+					<DropdownSubmenuTrigger className={SUBMENU_TRIGGER_CLASSNAME}>
+						<GlobeIcon aria-hidden="true" className="size-4" />
+						<span className="flex-1 text-left">Language</span>
+					</DropdownSubmenuTrigger>
+					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
+						{LANGUAGE_OPTIONS.map((opt) => (
+							<DropdownMenuItem key={opt.id} onSelect={noop}>
+								{opt.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownSubmenuContent>
+				</DropdownSubmenu>
+				<DropdownMenuItem onSelect={noop}>
+					<HelpCircleIcon aria-hidden="true" className="size-4" />
+					Get help
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onSelect={noop}>
+					<LayoutGridIcon aria-hidden="true" className="size-4" />
+					View all plans
+				</DropdownMenuItem>
+				<DropdownMenuItem disabled onSelect={noop}>
+					<DownloadIcon aria-hidden="true" className="size-4" />
+					Get apps and extensions
+				</DropdownMenuItem>
+				<DropdownMenuItem disabled onSelect={noop}>
+					<GiftIcon aria-hidden="true" className="size-4" />
+					Gift Pawrrtal
+				</DropdownMenuItem>
+				<DropdownSubmenu>
+					{/* `disabled` was previously a `DropdownSubmenuTrigger` prop;
+					    the lib dropped it.  Visual disabled state via class until
+					    the lib re-adds support — click still opens but the
+					    aria + opacity tell the user it's a placeholder. */}
+					<DropdownSubmenuTrigger
+						aria-disabled
+						className={cn(SUBMENU_TRIGGER_CLASSNAME, 'pointer-events-none opacity-50')}
 					>
-						<LogOutIcon aria-hidden="true" />
-						Log out
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+						<InfoIcon aria-hidden="true" className="size-4" />
+						<span className="flex-1 text-left">Learn more</span>
+					</DropdownSubmenuTrigger>
+					<DropdownSubmenuContent className="popover-styled p-1 min-w-44">
+						{LEARN_MORE_LINKS.map((link) => (
+							<DropdownMenuItem key={link.id} disabled onSelect={noop}>
+								{link.label}
+							</DropdownMenuItem>
+						))}
+					</DropdownSubmenuContent>
+				</DropdownSubmenu>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					onSelect={() => {
+						void handleLogout();
+					}}
+				>
+					<LogOutIcon aria-hidden="true" className="size-4" />
+					Log out
+				</DropdownMenuItem>
+			</DropdownPanelMenu>
 		</div>
 	);
 }

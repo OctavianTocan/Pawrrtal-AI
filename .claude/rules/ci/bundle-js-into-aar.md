@@ -79,4 +79,4 @@ Good — explicit JS bundling before Gradle:
 
 ## References
 
-- TwinMind E2E: Android surfaces mounted (logcat confirmed), but 3/3 Maestro flows failed because RN JS never loaded
+- a prior E2E project: Android surfaces mounted (logcat confirmed), but 3/3 Maestro flows failed because RN JS never loaded

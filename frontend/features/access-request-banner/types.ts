@@ -179,6 +179,18 @@ export const EXPAND_SPRING = {
 };
 
 /**
+ * Spring for the header text swap (title ↔ summary crossfade).
+ *
+ * Matches the stiffness/damping used by the chevron rotation so all
+ * header-level transitions feel like a single cohesive gesture.
+ */
+export const TEXT_SWAP_SPRING = {
+	type: 'spring' as const,
+	stiffness: 400,
+	damping: 30,
+};
+
+/**
  * Extracts up to 2 initials from a full name for avatar fallbacks.
  *
  * "Octavian Tocan" -> "OT", "Jane" -> "J"

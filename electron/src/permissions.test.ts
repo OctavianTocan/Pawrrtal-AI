@@ -17,7 +17,7 @@ let tempUserData: string;
 vi.mock('electron', () => ({
 	app: {
 		getPath: () => tempUserData,
-		getName: (): string => 'ai-nexus-perms-test',
+		getName: (): string => 'pawrrtal-perms-test',
 		getVersion: (): string => '0.0.0-test',
 	},
 	ipcMain: {
@@ -38,7 +38,7 @@ async function loadPermissions() {
 }
 
 beforeEach(() => {
-	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'ai-nexus-perms-'));
+	tempUserData = mkdtempSync(path.join(os.tmpdir(), 'pawrrtal-perms-'));
 });
 
 afterEach(() => {

@@ -38,7 +38,7 @@ Result: Didn't help — actual problem was PlistBuddy needed post-build
 
 ## References
 
-- TwinMind E2E: 3 theory-driven fixes applied before reading the actual built plist contents
+- a prior E2E project: 3 theory-driven fixes applied before reading the actual built plist contents
 
 ## Verify
 

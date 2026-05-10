@@ -70,8 +70,14 @@ const EXEMPT_SUFFIXES = ['.test.ts', '.test.tsx', '.spec.ts', '.spec.tsx', '.d.t
  */
 const EXEMPT_PATH_FRAGMENTS = [
 	'frontend/components/ui/',
-	// TODO(ai-nexus-1vti follow-up): split these and remove the exemption.
+	// TODO(pawrrtal-1vti follow-up): split these and remove the exemption.
 	'frontend/components/app-layout.tsx',
+	// `frontend/lib/react-dropdown/` is a vendored copy of the
+	// `@octavian-tocan/react-dropdown` package that lives in its own git
+	// repo (gitignored from this one). Its file-length conventions belong
+	// to the package, not the host app — this budget would force splits
+	// that don't match upstream's structure.
+	'frontend/lib/react-dropdown/',
 ];
 
 /** Recursively yield every source file under `dir` that we should check. */

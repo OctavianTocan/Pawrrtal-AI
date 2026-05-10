@@ -20,7 +20,7 @@ export const CHAT_PROMPT_SUGGESTIONS = [
 	},
 	{
 		id: 'connect-apps',
-		label: 'Connect my favorite apps to AI Nexus',
+		label: 'Connect my favorite apps to Pawrrtal',
 		icon: WorkflowIcon,
 	},
 ] as const;

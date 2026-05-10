@@ -62,7 +62,9 @@ def get_appearance_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> AppearanceSettings:
         """Create or replace the authenticated user's appearance settings."""
-        row = await upsert_appearance_service(user_id=user.id, payload=payload, session=session)
+        row = await upsert_appearance_service(
+            user_id=user.id, payload=payload, session=session
+        )
         return _to_settings(row)
 
     @router.delete("", status_code=status.HTTP_204_NO_CONTENT)

@@ -29,7 +29,7 @@ If you already deleted the branch:
 
 ## Origin
 
-ai-nexus stacked PRs #78-#83 — merging #78 with --delete-branch auto-closed #79 and #80. Required branch recreation via git push and API reopening.
+pawrrtal stacked PRs #78-#83 — merging #78 with --delete-branch auto-closed #79 and #80. Required branch recreation via git push and API reopening.
 
 ## Verify
 

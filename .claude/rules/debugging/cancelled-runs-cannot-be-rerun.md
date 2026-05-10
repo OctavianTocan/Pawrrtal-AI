@@ -48,4 +48,4 @@ gh run cancel <run-id-1>
 
 ## Origin
 
-TwinMind v0.3.1 — two runs started simultaneously (push + dispatch). Wrong one was cancelled (the dispatch with version=0.3.1), requiring a third dispatch.
+a prior release workflow — two runs started simultaneously (push + dispatch). Wrong one was cancelled (the dispatch with version=0.3.1), requiring a third dispatch.

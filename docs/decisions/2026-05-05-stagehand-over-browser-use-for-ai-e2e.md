@@ -7,7 +7,7 @@
 
 ## Context
 
-We wanted an AI-driven E2E suite that could exercise the AI Nexus
+We wanted an AI-driven E2E suite that could exercise the Pawrrtal
 frontend against natural-language descriptions ("click the Appearance
 nav item, read the heading") rather than brittle CSS selectors. The
 goal was a complement to the deterministic Playwright suite, not a
@@ -124,7 +124,7 @@ frontend/
 ## Reverse-engineering aid
 
 If a future contributor sees browser-use working in a tutorial and
-wants to retry it for ai-nexus, the diagnostic checklist is:
+wants to retry it for pawrrtal, the diagnostic checklist is:
 
 1. Run the suite with `BROWSER_USE_LOGGING_LEVEL=debug`.
 2. After "Starting a browser-use agent" log line, wait 30s.

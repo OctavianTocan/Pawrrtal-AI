@@ -23,7 +23,7 @@ Trial-and-error fixes compound. Each failed attempt adds noise. After two failur
 
 ## Origin
 
-Recurring pattern across TwinMind debugging sessions — structured diagnosis after halt consistently found the root cause within minutes.
+Recurring pattern across a prior project debugging sessions — structured diagnosis after halt consistently found the root cause within minutes.
 
 ## Verify
 

@@ -55,11 +55,15 @@ def upgrade() -> None:
         "chat_messages",
         ["conversation_id", "ordinal"],
     )
-    op.create_index("ix_chat_messages_conversation_id", "chat_messages", ["conversation_id"])
+    op.create_index(
+        "ix_chat_messages_conversation_id", "chat_messages", ["conversation_id"]
+    )
 
 
 def downgrade() -> None:
     """Drop the chat_messages table and both indexes."""
     op.drop_index("ix_chat_messages_conversation_id", table_name="chat_messages")
-    op.drop_index("ix_chat_messages_conversation_id_ordinal", table_name="chat_messages")
+    op.drop_index(
+        "ix_chat_messages_conversation_id_ordinal", table_name="chat_messages"
+    )
     op.drop_table("chat_messages")

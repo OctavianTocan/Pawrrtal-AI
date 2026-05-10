@@ -1,15 +1,15 @@
 'use client';
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type * as React from 'react';
 import { Toaster } from 'sonner';
 import { getQueryClient } from './get-query-client';
+import { QueryDevtools } from './query-devtools';
 
 /**
  * App-root provider tree.
  *
- * Mounts TanStack Query (with devtools) and the global Sonner toaster.
+ * Mounts TanStack Query and the global Sonner toaster.
  *
  * The `<AppearanceProvider>` that used to sit here was removed as part of
  * the 2026-05-06 theming-system rip
@@ -25,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<ReactQueryDevtools initialIsOpen={false} />
+			<QueryDevtools />
 			{children}
 			<Toaster
 				closeButton

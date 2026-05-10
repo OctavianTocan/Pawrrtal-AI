@@ -36,9 +36,9 @@ All notable changes to the claude-rules repo.
 
 ### Added
 - Initial public release with 213 rules across 20 categories
-- Rules sourced from TwinMind, tap, ai-nexus, and CI debugging sessions
+- Rules sourced from tap, pawrrtal, and CI debugging sessions
 
 ## [0.1.0] - 2026-04-05
 
 ### Added
-- Initial repo setup with rules from TwinMind React Native project
+- Initial repo setup with rules from prior React Native project

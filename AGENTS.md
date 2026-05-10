@@ -2,9 +2,10 @@
 
 # Repository Guidelines
 
-- Repo: https://github.com/OctavianTocan/ai-nexus
+- Repo: https://github.com/OctavianTocan/pawrrtal
 - In chat replies, file references must be repo-root relative only (example: `frontend/components/ui/sidebar.tsx:80`); never absolute paths or `~/...`.
 - Do not edit files covered by security-focused `CODEOWNERS` rules unless a listed owner explicitly asked for the change or is already reviewing it with you. Treat those paths as restricted surfaces, not drive-by cleanup.
+- **Never describe a failure mode as "pre-existing" to justify leaving it broken.** If you encounter a lint warning, type error, runtime warning, console error, broken test, or regression — fix it. The user does not care who introduced it; they care whether the app works. Warnings need fixing too: they are latent errors that haven't been promoted to blocking yet (Biome rolls levels, React 19 hardened previously informational warnings into fatal hydration faults, etc.). If a fix would explode the PR scope, open a sibling PR and reference it; do not punt with genealogy. See `.claude/rules/general/no-pre-existing-excuse.md`.
 
 ## Project Structure & Architecture Boundaries
 
@@ -37,6 +38,26 @@ We rely on `just` as our primary task runner for the repository.
     - "gate" means a verification command or command set that must be green for the decision you are making.
     - A local dev gate is the fast default loop, usually `bun run typecheck` and `just check` plus any scoped test you actually need.
 
+## CI & GitHub Actions
+
+This is a public repo wired to a self-hosted runner pool on Octavian's VPS. CI is **scoped to OctavianTocan** for safety, not by accident — every workflow you create or modify must obey the rules in `.claude/rules/github-actions/octaviantocan-only-and-self-hosted-runner.md`. The short version:
+
+- **Actor gate is mandatory on every job.** Even on `ubuntu-latest`, never let a fork PR or another author trigger a workflow:
+
+  ```yaml
+  if: >-
+    github.actor == 'OctavianTocan' &&
+    (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+  ```
+
+- **Default runner is self-hosted:** `runs-on: [self-hosted, openclaw-mini, pawrrtal]`. The runner pool is `openclaw-vps-NN` registered out of `/srv/github-runners/<repo>/actions-runner/` as the `gha` system user. Use `ubuntu-latest` only when there's a real reason (macOS/Windows/GPU/untrusted external code already gated separately).
+- **Documented exception:** `rebase.yml` uses `pull_request_target` and never runs PR code; it relies on `author_association` instead of the actor gate. See `.claude/rules/github-actions/safe-pull-request-target.md`.
+- **Repo-level Actions settings** (must be set in the GitHub UI; the standard CI tokens don't have Actions admin scope): require approval for first-time contributor workflows, default workflow permissions = read.
+- **Layout / install / removal:** `docs/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
+
+New CI surfaces (backend pytest, frontend vitest, Maestro E2E, etc.) belong on the self-hosted runner with the actor gate. If you find yourself thinking "just this once on `ubuntu-latest` without the gate," don't.
+
 ## Architectural Quality (sentrux)
 
 Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0.5.7+.
@@ -58,6 +79,11 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **Preserve Documentation**: NEVER remove existing docstrings, JSDoc comments, or explanatory comments when modifying code. Only remove documentation if the code it documents is being deleted, or update it if your changes make it inaccurate. See `.claude/rules/clean-code/preserve-documentation.md` for detailed rules.
 - **Icons + SVGs live in their own files**: Never inline SVG markup or icon definitions inside a component file. Every glyph, logo, status icon, or decorative SVG must live in a dedicated file (e.g. `frontend/features/nav-chats/components/ConversationIndicators.tsx` for the row-status glyphs, `frontend/features/onboarding/OnboardingBackdrop.tsx` for the backdrop). Components import + render the icon, never define it. This keeps feature files focused, lets tree-shaking work, and stops icon swaps from re-flowing unrelated code. Lucide / Tabler imports already follow the rule because they're external packages.
 - **File-line budget**: 500 lines hard ceiling for any `.ts`/`.tsx`/`.py` source file. `node scripts/check-file-lines.mjs` enforces it; CI fails on overflow. Split into smaller modules rather than asking for an exemption.
+- **Nesting-depth budget (Python)**: max 3 levels of compound-statement nesting per Python function (`if`/`for`/`while`/`try`/`with`/`match`). `python3 scripts/check-nesting.py` enforces it on every backend pytest CI run. Pre-existing offenders are tracked in the script's `EXEMPT_FUNCTIONS`; do not add new entries.
+- **Provider-agnostic tools**: tool factories live in `backend/app/core/tools/`, providers in `backend/app/core/providers/`. Providers translate `AgentTool[]` → SDK format and never import tool modules themselves. Tool composition (which tools the agent gets this turn) lives in the chat router (`backend/app/api/chat.py`). Enforced by `scripts/check-no-tools-in-providers.py`. See `.claude/rules/architecture/no-tools-in-providers.md`.
+- **Nesting-depth budget (frontend)**: max 3 levels of compound-statement nesting per TS/TSX function (`if`/`for`/`while`/`do`/`try`/`switch`). `node scripts/check-nesting.mjs` runs as part of `bun run check` and the Frontend Check CI workflow.
+- **Dev-mode console must stay clean**: `node scripts/dev-console-smoke.mjs` boots the app under `next dev` (Turbopack + React 19 strict) via the `agent-browser` CLI and fails CI if `pageerror` or `console.error` fires on the cold-boot routes. The Stagehand suite hits the *production* build, which silences hydration warnings; this smoke is the gate that catches dev-only fatal warnings (e.g. React 19's `<script>` rule). Allowlist policy: narrow regex per CI-environment artefact only, with a TODO + reason; never widen the matcher.
+- See `.claude/rules/clean-code/limit-nesting-depth.md` for guidance on flattening with guard clauses and helper functions.
 
 ## Commit & Pull Request Guidelines
 
@@ -66,6 +92,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - Group related changes; avoid bundling unrelated refactors.
 - PRs should be small, review-friendly slices (e.g., "Sidebar Craft Parity Round 2"). Do not bundle massive rewrites with unrelated visual tweaks.
 - When landing or merging any PR, ensure the working tree is clean and CI gates pass.
+- **Fix lint warnings on every PR you touch a file in, not just errors.** A Biome warning, a CI non-blocking notice, a `console.warn` — these are latent failures and they need fixing. Do not write "pre-existing" or "not from this PR" in a description to justify leaving them; the user reads that as "I noticed but chose not to fix." If the fix is structurally unrelated, open a sibling PR and reference it; do not leave a TODO hanging. See `.claude/rules/general/no-pre-existing-excuse.md`.
 
 ## Git Notes
 
@@ -88,6 +115,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **Multi-agent safety:** focus reports on your edits; avoid guard-rail disclaimers unless truly blocked; when multiple agents touch the same file, continue if safe; end with a brief “other files present” note only if relevant.
 - Bug investigations: read source code of relevant dependencies and all related local code before concluding; aim for high-confidence root cause.
 - Code style: add brief comments for tricky logic.
+- **Look up official docs / CLI / agent skills BEFORE inventing or hacking.** When integrating a library or framework, check its official docs, CLI, and any shipped `SKILL.md` files first — not after writing 80 lines of custom code that the library already solves in one call. For TanStack libraries: `npx @tanstack/intent@latest list` and `npx @tanstack/intent@latest load <pkg>#<skill>`. For ad-hoc TanStack queries: `npx @tanstack/cli search-docs "<query>" --library router --framework react --json`. For other libraries: Context7 + DeepWiki MCPs are wired in `.mcp.json`. The full rule, including the migration mistakes that prompted it, is in `.claude/rules/general/check-official-docs-and-skills-first.md`.
 - **GitHub Actions Rules (`.claude/rules/github-actions/`)**: Strict context and design patterns to follow when creating or modifying CI/CD workflows and actions.
 - **Clean Code Rules (`.claude/rules/clean-code/`)**: Universal rules for function design, naming conventions, named constants, Python logging/exception narrowing, and code structure. Your generated code must adhere to these principles (KISS, DRY, single-responsibility, meaningful naming).
 - **React Rules (`.claude/rules/react/`)**: Component patterns including callback prop naming (`on*` for props, `handle*` for implementations), aria-hidden consistency on decorative icons, focus management, state guards, StrictMode-safe render patterns (no mutable closures in JSX), and stable content-derived React keys.
@@ -102,7 +130,7 @@ architecture; the rules at a glance:
 
 - The frontend stays Electron-agnostic. Anywhere it needs a desktop
   capability it goes through `frontend/lib/desktop.ts`, which detects
-  `window.aiNexus` and falls back to web equivalents on the browser.
+  `window.pawrrtal` and falls back to web equivalents on the browser.
 - Desktop-only IPC is namespaced `desktop:*` and validated on the
   main side (see `electron/src/ipc.ts`). Renderer security is locked:
   `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true`.
@@ -114,10 +142,10 @@ architecture; the rules at a glance:
 - Backend is not bundled; set `BACKEND_URL` to point the desktop app
   at a remote FastAPI deployment (defaults to `http://localhost:8000`).
 
-## How We Work On AI Nexus
+## How We Work On Pawrrtal
 
 The session-derived working agreement lives in
-`.claude/rules/general/how-we-work-on-ai-nexus.md`. It encodes nine rules
+`.claude/rules/general/how-we-work-on-pawrrtal.md`. It encodes nine rules
 the team keeps re-discovering: read implementations before changing them,
 trace cause before fixing, update `DESIGN.md` when tokens change in code,
 reuse established patterns instead of inventing parallel ones, declare
@@ -126,7 +154,7 @@ every file write, ship tests in the same commit as new features, commit
 one concern at a time, and ask before destructive or scope-bending work.
 Apply on every session.
 
-## Curated Claude rules (AI Nexus)
+## Curated Claude rules (Pawrrtal)
 
 Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full `.claude/rules/` tree has additional coverage.
 
@@ -200,17 +228,20 @@ Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full
 
 **Ignore** `.claude/rules/general/pnpm-only-package-manager.md` for installs — this repo uses Bun (`just install`).
 
-### TwinMind / thirdear-webapp Cursor rules (vendored)
+### Vendored Cursor rules (`.cursor/rules/`)
 
-TwinMind `thirdear-webapp` Cursor rules are vendored under `.cursor/rules/` (repo-root relative). Each file is `.mdc` with YAML frontmatter: `description`, `globs` (and sometimes duplicate `paths`), and `alwaysApply` (when `true`, the rule applies broadly instead of only to glob matches).
+External Cursor rules are vendored under `.cursor/rules/` (repo-root relative). Each file is `.mdc` with YAML frontmatter: `description`, `globs` (and sometimes duplicate `paths`), and `alwaysApply` (when `true`, the rule applies broadly instead of only to glob matches).
 
-A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` for reference and diffing alongside the main claude-rules vendored tree. Those `.mdc` copies are not converted to Claude's usual `name` + `paths` `.md` format; use the standard `.claude/rules/**` files above for Claude path-scoped enforcement.
+A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and diffing alongside the main claude-rules vendored tree. Those `.mdc` copies are not converted to Claude's usual `name` + `paths` `.md` format; use the standard `.claude/rules/**` files above for Claude path-scoped enforcement.
 
 ## Learned User Preferences
 
 - When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
-- When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
+- When adapting external UI references (screenshots, other products), use Pawrrtal naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
+- When a UI fix establishes a reusable pattern (disabled controls, overlays, menus, etc.), capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
+- Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
+- Electron desktop distribution should plan for an in-app update prompt flow so everyday users are not manually reinstalling each new build.
 
 ## Learned Workspace Facts
 
@@ -218,13 +249,17 @@ A parallel snapshot of the same files lives at `.claude/rules/thirdear-cursor/` 
 - Frontend → backend cookie auth works because both run on the same host (`localhost`); cookies ignore ports, so `Set-Cookie` from `:8000` is visible to fetches from `:3001` with `credentials: 'include'`. Use `COOKIE_SAMESITE=lax` and `COOKIE_SECURE=false` in dev.
 - Post-login navigation in `LoginForm` must use `window.location.replace('/')` (full-page navigation), not `router.push`. Client-side navigation keeps React in the same turn so authed queries (`NavChats`, etc.) can fire before the browser commits the `Set-Cookie` response, causing a 401 → redirect-to-login race. This is especially visible on Safari and when onboarding UI adds heavier post-login hydration.
 - In staging/production the backend API lives on an `api.*` subdomain; the Next.js dev-login proxy (`/api/dev-login`) must call `cookies.set` with an explicit `domain` sourced from the `AUTH_COOKIE_DOMAIN` env var (or inferred by stripping `api.` from `NEXT_PUBLIC_API_URL`). Forwarding the upstream `Set-Cookie` verbatim omits `Domain`, making the cookie host-only for the proxy origin and invisible to API requests on the subdomain — Safari enforces this strictly where Chrome may appear to work.
+- Canonical application font stack (with fallbacks): `Google Sans Flex`, `Google Sans`, `Helvetica Neue`, `sans-serif`; keep `DESIGN.md` and `frontend/app/globals.css` aligned when this changes.
+- The deployed FastAPI backend for remote usage is hosted on Railway; local development still targets plain `localhost` per the ports above unless you intentionally run against that remote URL.
+- Custom React hooks use consistent `use-*` naming for modules and exports (for example `use-login-mutations.ts`).
+- When adding or extending GitHub Actions workflows, follow the repository pattern of running jobs on the team’s custom GitHub runner rather than assuming default hosted runners only.
 
 
 
 <claude-mem-context>
 # Memory Context
 
-# [ai-nexus] recent context, 2026-05-04 9:18am GMT+2
+# [pawrrtal] recent context, 2026-05-04 9:18am GMT+2
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
@@ -239,9 +274,9 @@ S1 Check Notion todos for project status and verify CLAUDE.md symlink setup (Feb
 20 4:34p 🟣 Implemented React Query with authenticated API fetching
 21 " 🔄 Refactored conversation fetching to use React Query caching
 ### Feb 16, 2026
-120 5:13p 🔵 Notion Integration Tools Available in ai-nexus Project
-121 " 🔵 AppSidebar Component Structure in ai-nexus Frontend
-122 5:14p 🔵 AI Nexus Project Architecture and Task Management System
+120 5:13p 🔵 Notion Integration Tools Available in pawrrtal Project
+121 " 🔵 AppSidebar Component Structure in pawrrtal Frontend
+122 5:14p 🔵 Pawrrtal Project Architecture and Task Management System
 123 " 🔵 App Layout Structure Uses Sidebar Wrapper Component
 124 " 🔵 Sidebar Component Architecture Using SidebarProvider Pattern
 125 5:27p 🟣 Conversations Successfully Rendering in UI
@@ -303,7 +338,7 @@ Added comprehensive implementation context to the Notion task page for "Fix POST
 
 S15 Clarification on task scope after documenting implementation details for 5 Notion tasks (Feb 22 at 9:16 PM)
 **1545** 9:17p 🔵 **Task Backlog Contains 93 Tasks Across 6 Sprints**
-The Notion database query revealed the complete project scope after user questioned why only "5 pages" were mentioned. The ai-nexus project has 93 tracked tasks spanning 6 sprints. Sprint 1 (22 tasks) and Sprint 2 (16 tasks) show substantial completion with most tasks marked "Done". Sprint 3 begins with critical UUID handling fixes (tasks 71-72), sidebar features (73-75), and conversation management features. Later sprints (4-6) contain 50+ additional tasks covering technical debt, polish, testing, deployment, and accessibility improvements. The recent documentation effort targeted only 5 specific Sprint 3 tasks, representing a small fraction of the total backlog. This explains the user's confusion - the phrase "all 5 pages updated" implied completeness when it was actually a focused subset.
+The Notion database query revealed the complete project scope after user questioned why only "5 pages" were mentioned. The pawrrtal project has 93 tracked tasks spanning 6 sprints. Sprint 1 (22 tasks) and Sprint 2 (16 tasks) show substantial completion with most tasks marked "Done". Sprint 3 begins with critical UUID handling fixes (tasks 71-72), sidebar features (73-75), and conversation management features. Later sprints (4-6) contain 50+ additional tasks covering technical debt, polish, testing, deployment, and accessibility improvements. The recent documentation effort targeted only 5 specific Sprint 3 tasks, representing a small fraction of the total backlog. This explains the user's confusion - the phrase "all 5 pages updated" implied completeness when it was actually a focused subset.
 ~397t 🔍 10,114
 
 

@@ -44,13 +44,17 @@ async def test_create_project_falls_back_to_default_name(
     db_session: AsyncSession, test_user: User
 ) -> None:
     """An empty name falls back to "Untitled Project" so the row is never blank."""
-    project = await create_project_service(test_user.id, db_session, ProjectCreate(name="   "))
+    project = await create_project_service(
+        test_user.id, db_session, ProjectCreate(name="   ")
+    )
 
     assert project.name == "Untitled Project"
 
 
 @pytest.mark.anyio
-async def test_list_projects_returns_only_owned(db_session: AsyncSession, test_user: User) -> None:
+async def test_list_projects_returns_only_owned(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """list_projects only returns projects owned by the supplied user."""
     await create_project_service(test_user.id, db_session, ProjectCreate(name="mine"))
 
@@ -60,9 +64,13 @@ async def test_list_projects_returns_only_owned(db_session: AsyncSession, test_u
 
 
 @pytest.mark.anyio
-async def test_get_project_scoped_to_owner(db_session: AsyncSession, test_user: User) -> None:
+async def test_get_project_scoped_to_owner(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """get_project returns the row when owned, else None for foreign IDs."""
-    project = await create_project_service(test_user.id, db_session, ProjectCreate(name="mine"))
+    project = await create_project_service(
+        test_user.id, db_session, ProjectCreate(name="mine")
+    )
 
     found = await get_project_service(test_user.id, db_session, project.id)
     assert found is not None
@@ -73,9 +81,13 @@ async def test_get_project_scoped_to_owner(db_session: AsyncSession, test_user: 
 
 
 @pytest.mark.anyio
-async def test_update_project_renames_in_place(db_session: AsyncSession, test_user: User) -> None:
+async def test_update_project_renames_in_place(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """update_project rewrites the name and bumps updated_at."""
-    project = await create_project_service(test_user.id, db_session, ProjectCreate(name="Old"))
+    project = await create_project_service(
+        test_user.id, db_session, ProjectCreate(name="Old")
+    )
     original_updated_at = project.updated_at
 
     renamed = await update_project_service(
@@ -87,9 +99,13 @@ async def test_update_project_renames_in_place(db_session: AsyncSession, test_us
 
 
 @pytest.mark.anyio
-async def test_update_project_ignores_blank_name(db_session: AsyncSession, test_user: User) -> None:
+async def test_update_project_ignores_blank_name(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """A whitespace-only rename leaves the existing name untouched."""
-    project = await create_project_service(test_user.id, db_session, ProjectCreate(name="Original"))
+    project = await create_project_service(
+        test_user.id, db_session, ProjectCreate(name="Original")
+    )
 
     renamed = await update_project_service(
         ProjectUpdate(name="   "), test_user.id, project.id, db_session

@@ -5,11 +5,11 @@ import { useState } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
-	DropdownMenu,
-	DropdownMenuTrigger,
-	DropdownMenuContent,
-} from '@/components/ui/dropdown-menu';
-import { ContextMenu, ContextMenuTrigger, ContextMenuContent } from '@/components/ui/context-menu';
+	DropdownPanelMenu,
+	DropdownContextMenu,
+	DropdownContextMenuTrigger,
+	DropdownContextMenuContent,
+} from '@octavian-tocan/react-dropdown';
 import { DropdownMenuProvider, ContextMenuProvider } from '@/components/ui/menu-context';
 import { cn } from '@/lib/utils';
 
@@ -85,12 +85,12 @@ export function EntityRow({
 	const resolvedContextMenu = contextMenuContent ?? menuContent;
 
 	const InnerContent = (
-		<div className="relative group select-none pl-2 mr-2">
+		<div className="relative group/row select-none pl-2 mr-2">
 			{(isSelected || isInMultiSelect) && (
 				<div className="absolute left-0 inset-y-0 w-[2px] bg-accent" />
 			)}
 			{/* Uses div+role instead of <button> to avoid nested-button HTML violation
-			    when DropdownMenuTrigger renders its own <button> inside. */}
+			    when the dropdown trigger renders its own <button> inside. */}
 			<div
 				role="button"
 				tabIndex={0}
@@ -132,7 +132,7 @@ export function EntityRow({
 									className={cn(
 										menuOpen || contextMenuOpen
 											? 'invisible'
-											: 'group-hover:invisible'
+											: 'group-hover/row:invisible'
 									)}
 								>
 									{titleTrailing}
@@ -143,11 +143,15 @@ export function EntityRow({
 											'absolute inset-0 flex items-center justify-end overflow-visible',
 											menuOpen || contextMenuOpen
 												? 'opacity-100'
-												: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+												: 'opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto'
 										)}
 									>
-										<DropdownMenu modal={true} onOpenChange={setMenuOpen}>
-											<DropdownMenuTrigger asChild>
+										<DropdownPanelMenu
+											asChild
+											usePortal
+											contentClassName="popover-styled p-1 min-w-44"
+											onOpenChange={setMenuOpen}
+											trigger={
 												<button
 													type="button"
 													className="p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
@@ -157,13 +161,12 @@ export function EntityRow({
 												>
 													<MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
 												</button>
-											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
-												<DropdownMenuProvider>
-													{menuContent}
-												</DropdownMenuProvider>
-											</DropdownMenuContent>
-										</DropdownMenu>
+											}
+										>
+											<DropdownMenuProvider>
+												{menuContent}
+											</DropdownMenuProvider>
+										</DropdownPanelMenu>
 									</div>
 								)}
 							</div>
@@ -229,12 +232,16 @@ export function EntityRow({
 						'absolute right-2 top-2 transition-opacity z-10',
 						menuOpen || contextMenuOpen
 							? 'opacity-100'
-							: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
+							: 'opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto'
 					)}
 				>
 					<div className="flex items-center rounded-[8px] overflow-hidden border border-transparent hover:border-border/50">
-						<DropdownMenu modal={true} onOpenChange={setMenuOpen}>
-							<DropdownMenuTrigger asChild>
+						<DropdownPanelMenu
+							asChild
+							usePortal
+							contentClassName="popover-styled p-1 min-w-44"
+							onOpenChange={setMenuOpen}
+							trigger={
 								<button
 									type="button"
 									className="p-1.5 hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
@@ -244,11 +251,10 @@ export function EntityRow({
 								>
 									<MoreHorizontal className="h-4 w-4 text-muted-foreground" />
 								</button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuProvider>{menuContent}</DropdownMenuProvider>
-							</DropdownMenuContent>
-						</DropdownMenu>
+							}
+						>
+							<DropdownMenuProvider>{menuContent}</DropdownMenuProvider>
+						</DropdownPanelMenu>
 					</div>
 				</div>
 			)}
@@ -263,12 +269,12 @@ export function EntityRow({
 				</div>
 			)}
 			{resolvedContextMenu ? (
-				<ContextMenu modal={true} onOpenChange={setContextMenuOpen}>
-					<ContextMenuTrigger asChild>{InnerContent}</ContextMenuTrigger>
-					<ContextMenuContent>
+				<DropdownContextMenu onOpenChange={setContextMenuOpen}>
+					<DropdownContextMenuTrigger asChild>{InnerContent}</DropdownContextMenuTrigger>
+					<DropdownContextMenuContent>
 						<ContextMenuProvider>{resolvedContextMenu}</ContextMenuProvider>
-					</ContextMenuContent>
-				</ContextMenu>
+					</DropdownContextMenuContent>
+				</DropdownContextMenu>
 			) : (
 				InnerContent
 			)}

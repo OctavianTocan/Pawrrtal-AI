@@ -1,4 +1,4 @@
-# AI Nexus — Claude Code Guide
+# Pawrrtal — Claude Code Guide
 
 ## Stack
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Biome (linting + formatting), Bun

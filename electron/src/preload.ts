@@ -83,9 +83,8 @@ const desktopApi = {
 	// --- existing surface ---------------------------------------------------
 	/**
 	 * Host platform exposed synchronously so the renderer can make layout
-	 * decisions (e.g. reserve space for the macOS traffic-light buttons
-	 * under `titleBarStyle: 'hiddenInset'`) on first paint, without having
-	 * to round-trip through `desktop:get-platform` and re-render.
+	 * decisions on first paint for the macOS Electron shell (e.g. drag regions),
+	 * without having to round-trip through `desktop:get-platform` and re-render.
 	 *
 	 * Sandboxed preloads still get access to `process.platform`, so this
 	 * is safe to read at preload-load time.
@@ -170,7 +169,7 @@ const desktopApi = {
 	},
 };
 
-contextBridge.exposeInMainWorld('aiNexus', desktopApi);
+contextBridge.exposeInMainWorld('pawrrtal', desktopApi);
 
 /** Type augmentation consumed by `frontend/lib/desktop.ts`. */
 export type DesktopApi = typeof desktopApi;

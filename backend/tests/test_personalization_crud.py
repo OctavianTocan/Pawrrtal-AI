@@ -23,7 +23,9 @@ async def test_get_returns_none_when_no_row_exists(
 
 
 @pytest.mark.anyio
-async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: User) -> None:
+async def test_upsert_inserts_a_new_row(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """First upsert creates the 1:1 row with the supplied fields."""
     payload = PersonalizationProfile(
         name="Octavian",
@@ -43,7 +45,9 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
 
 
 @pytest.mark.anyio
-async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user: User) -> None:
+async def test_upsert_replaces_existing_row(
+    db_session: AsyncSession, test_user: User
+) -> None:
     """Second upsert is a full replacement: omitted fields go back to None."""
     await upsert_personalization_service(
         test_user.id, PersonalizationProfile(name="A", role="X"), db_session

@@ -1,9 +1,9 @@
 /**
  * Header row for the assistant's chain-of-thought panel.
  *
- * Matches the thirdear `/c/[uuid]` design: animated gradient text running
- * accent → info while the model streams, three-dot animated tail, and a
- * chevron that rotates 90° when the panel expands.
+ * Animated gradient text running accent → info while the model streams,
+ * three-dot animated tail, and a chevron that rotates 90° when the panel
+ * expands.
  *
  * Visual decisions intentionally driven by design tokens (see
  * `globals.css`): `--thinking-gradient-from`, `--thinking-gradient-to`,
@@ -20,8 +20,7 @@ import { cn } from '@/lib/utils';
 import { formatThinkingDuration } from '../thinking-parser';
 
 /**
- * Tick interval for the trailing dot animation. Matches thirdear
- * (`DOTS_ANIMATION_INTERVAL_MS`) so the cadence feels identical.
+ * Tick interval for the trailing dot animation.
  */
 const DOTS_INTERVAL_MS = 500;
 
@@ -112,7 +111,7 @@ export function ThinkingHeader({
 			<ChevronRightIcon
 				aria-hidden="true"
 				className={cn(
-					'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-out',
+					'size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 ease-out',
 					isOpen ? 'rotate-90' : 'rotate-0'
 				)}
 			/>

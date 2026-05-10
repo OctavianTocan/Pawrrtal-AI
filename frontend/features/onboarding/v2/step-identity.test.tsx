@@ -10,7 +10,7 @@ describe('StepIdentity', () => {
 				onPatch={vi.fn()}
 				profile={{
 					name: 'Tavi',
-					companyWebsite: 'https://ai-nexus.dev',
+					companyWebsite: 'https://pawrrtal.dev',
 					linkedin: '',
 					role: 'Engineering',
 					goals: [],
@@ -19,7 +19,7 @@ describe('StepIdentity', () => {
 		);
 		expect(getByDisplayValue('Tavi')).toBeTruthy();
 		expect(getByDisplayValue('Engineering')).toBeTruthy();
-		expect(getByDisplayValue('https://ai-nexus.dev')).toBeTruthy();
+		expect(getByDisplayValue('https://pawrrtal.dev')).toBeTruthy();
 	});
 
 	it('patches the profile when typing into the name field', () => {

@@ -1,7 +1,7 @@
 ---
 description: Every visible interactive control must have a real state owner, complete wiring, and a submit/reset contract
-globs: ["src/features/**/*.tsx", "src/components/**/*.tsx"]
-paths: ["src/features/**/*.tsx", "src/components/**/*.tsx"]
+globs: ["frontend/features/**/*.tsx", "frontend/components/**/*.tsx"]
+paths: ["frontend/features/**/*.tsx", "frontend/components/**/*.tsx"]
 alwaysApply: false
 ---
 

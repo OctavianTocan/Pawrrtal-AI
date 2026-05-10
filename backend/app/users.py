@@ -49,10 +49,14 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         expected = settings.registration_secret
         invite_code = getattr(user_create, "invite_code", "")
         if expected and invite_code != expected:
-            raise HTTPException(status_code=403, detail="Invalid or missing invite code.")
+            raise HTTPException(
+                status_code=403, detail="Invalid or missing invite code."
+            )
         return await super().create(user_create, safe=safe, request=request)
 
-    async def on_after_register(self, user: User, request: Request | None = None) -> None:
+    async def on_after_register(
+        self, user: User, request: Request | None = None
+    ) -> None:
         """Hook called after a new user registers."""
 
     async def on_after_login(
@@ -74,7 +78,9 @@ async def get_user_manager(
 # --- Transport & Strategy ---------------------------------------------------
 
 should_secure_cookie = (
-    settings.cookie_secure if settings.cookie_secure is not None else settings.is_production
+    settings.cookie_secure
+    if settings.cookie_secure is not None
+    else settings.is_production
 )  # Use secure cookies if requested, otherwise fallback to is_production
 
 cookie_transport = CookieTransport(

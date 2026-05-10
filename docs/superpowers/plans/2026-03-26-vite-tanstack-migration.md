@@ -178,7 +178,7 @@ This replaces `app/layout.tsx` as the entry point.
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Nexus</title>
+  <title>Pawrrtal</title>
   <meta name="description" content="An AI chat application" />
   <script>
     // System theme detection — before paint to prevent FOUC

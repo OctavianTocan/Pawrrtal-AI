@@ -11,6 +11,11 @@
 'use client';
 
 import {
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownPanelMenu,
+} from '@octavian-tocan/react-dropdown';
+import {
 	ArrowLeftIcon,
 	ArrowRightIcon,
 	BookOpenIcon,
@@ -21,7 +26,6 @@ import {
 	ExternalLinkIcon,
 	FolderPlusIcon,
 	MessageSquareIcon,
-	PlusIcon,
 	SettingsIcon,
 	ShieldCheckIcon,
 	WorkflowIcon,
@@ -38,18 +42,8 @@ import { cn } from '@/lib/utils';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup, usePanelRef } from './ui/resizable';
 import { Separator } from './ui/separator';
 import {
-	SIDEBAR_MAX_WIDTH,
-	SIDEBAR_MIN_WIDTH,
 	Sidebar,
 	SidebarContent,
 	SidebarHeader,
@@ -58,9 +52,6 @@ import {
 	SidebarTrigger,
 	useSidebar,
 } from './ui/sidebar';
-
-/** Duration of the sidebar collapse/expand CSS transition in ms. */
-const COLLAPSE_ANIMATION_DURATION_MS = 250;
 
 /**
  * Placeholder identity rendered in the sidebar footer.
@@ -145,8 +136,12 @@ function AppHistoryControls(): React.JSX.Element {
 
 function WorkspaceSelector(): React.JSX.Element {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
+		<DropdownPanelMenu
+			asChild
+			usePortal
+			align="start"
+			contentClassName="popover-styled p-1 min-w-56"
+			trigger={
 				<Button
 					aria-label="Select workspace"
 					className="h-7 gap-2 rounded-[7px] border border-foreground/10 bg-foreground/[0.03] px-2.5 text-[13px] font-normal text-foreground hover:bg-foreground/[0.06] aria-expanded:bg-foreground/[0.06]"
@@ -156,37 +151,40 @@ function WorkspaceSelector(): React.JSX.Element {
 					<span className="flex size-4.5 items-center justify-center rounded-full bg-foreground/10 text-[10px] font-medium">
 						A
 					</span>
-					<span>AI Nexus</span>
+					<span>Pawrrtal</span>
 					<ChevronDownIcon
 						aria-hidden="true"
 						className="size-3.5 text-muted-foreground"
 					/>
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="min-w-56" sideOffset={6}>
-				<DropdownMenuItem className="justify-between">
-					<span className="flex items-center gap-2">
-						<span className="flex size-5 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-medium">
-							A
-						</span>
-						AI Nexus
+			}
+		>
+			<DropdownMenuItem className="justify-between">
+				<span className="flex items-center gap-2">
+					<span className="flex size-5 items-center justify-center rounded-full bg-foreground/10 text-[11px] font-medium">
+						A
 					</span>
-					<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem onSelect={handleOpenOnboarding}>
-					<FolderPlusIcon aria-hidden="true" className="size-3.5" />
-					Add Workspace...
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+					Pawrrtal
+				</span>
+				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
+			</DropdownMenuItem>
+			<DropdownMenuSeparator />
+			<DropdownMenuItem onSelect={handleOpenOnboarding}>
+				<FolderPlusIcon aria-hidden="true" className="size-3.5" />
+				Add Workspace...
+			</DropdownMenuItem>
+		</DropdownPanelMenu>
 	);
 }
 
 function HelpMenu(): React.JSX.Element {
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
+		<DropdownPanelMenu
+			asChild
+			usePortal
+			align="end"
+			contentClassName="popover-styled p-1 min-w-56"
+			trigger={
 				<Button
 					aria-label="Open documentation menu"
 					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground aria-expanded:bg-foreground/[0.05]"
@@ -196,54 +194,47 @@ function HelpMenu(): React.JSX.Element {
 				>
 					<CircleHelpIcon aria-hidden="true" className="size-4" />
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="min-w-56" sideOffset={8}>
-				{HELP_LINKS.map((link) => {
-					const Icon = link.icon;
+			}
+		>
+			{HELP_LINKS.map((link) => {
+				const Icon = link.icon;
 
-					return (
-						<DropdownMenuItem className="justify-between" key={link.label}>
-							<span className="flex items-center gap-2">
-								<Icon aria-hidden="true" className="size-3.5" />
-								{link.label}
-							</span>
-							<ExternalLinkIcon
-								aria-hidden="true"
-								className="size-3.5 text-muted-foreground"
-							/>
-						</DropdownMenuItem>
-					);
-				})}
-				<DropdownMenuSeparator />
-				<DropdownMenuItem>
-					<BookOpenIcon aria-hidden="true" className="size-3.5" />
-					All Documentation
-				</DropdownMenuItem>
-				<DropdownMenuItem>
-					<SettingsIcon aria-hidden="true" className="size-3.5" />
-					Keyboard Shortcuts
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
+				return (
+					<DropdownMenuItem className="justify-between" key={link.label}>
+						<span className="flex items-center gap-2">
+							<Icon aria-hidden="true" className="size-3.5" />
+							{link.label}
+						</span>
+						<ExternalLinkIcon
+							aria-hidden="true"
+							className="size-3.5 text-muted-foreground"
+						/>
+					</DropdownMenuItem>
+				);
+			})}
+			<DropdownMenuSeparator />
+			<DropdownMenuItem>
+				<BookOpenIcon aria-hidden="true" className="size-3.5" />
+				All Documentation
+			</DropdownMenuItem>
+			<DropdownMenuItem>
+				<SettingsIcon aria-hidden="true" className="size-3.5" />
+				Keyboard Shortcuts
+			</DropdownMenuItem>
+		</DropdownPanelMenu>
 	);
 }
-
-/**
- * Width reserved for the macOS traffic-light buttons (close / minimize /
- * maximize) when running in the Electron desktop shell with
- * `titleBarStyle: 'hiddenInset'`. The buttons live inside the
- * BrowserWindow content area, so the header's leftmost controls have to
- * start past them or they get drawn underneath. Apple's HIG places the
- * buttons in the first ~70px; we round up to 80px to give the
- * SidebarTrigger a comfortable gap.
- */
-const MAC_TRAFFIC_LIGHT_RESERVE_PX = 80;
 
 /**
  * Top-bar chrome rendered as a full-width overlay above the sidebar and content.
  * Lives outside the sidebar so its controls (sidebar trigger, history, workspace
  * selector) stay in their original screen positions even when the sidebar is
  * hidden — the sidebar visually extends underneath this header.
+ *
+ * macOS Electron uses the **native title bar** (`titleBarStyle: 'default'` in
+ * `electron/src/window-chrome.ts`): full-size traffic lights live in the system
+ * strip above the web view, so this row does not need extra left inset. If you
+ * switch to `hidden` / `hiddenInset`, pad this header in the layout yourself.
  */
 function AppHeader(): React.JSX.Element {
 	const isMacDesktop = useIsMacDesktop();
@@ -251,20 +242,11 @@ function AppHeader(): React.JSX.Element {
 	return (
 		<header
 			className={cn(
-				// `items-center` keeps the 32px-tall control row vertically
-				// centered in the 40px header. Combined with the pinned
-				// `trafficLightPosition: { x: 16, y: 14 }` set in the Electron
-				// shell, that puts both row centers at y=20 from the window
-				// top — the system buttons and our controls share a baseline.
-				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 pr-3 outline-none focus:outline-none focus-visible:outline-none',
-				// On macOS the entire header acts as a window-drag surface
-				// (matches the muscle memory built up by every native Mac
-				// app — title bar = drag handle). Control clusters opt back
-				// out below so clicks still land on buttons; the gap between
-				// clusters is the user-facing drag handle.
-				isMacDesktop ? '[-webkit-app-region:drag]' : 'pl-3'
+				'absolute inset-x-0 top-0 z-20 flex h-10 shrink-0 items-center border-0 py-0 pr-3 pl-3 outline-none focus:outline-none focus-visible:outline-none',
+				// On macOS Electron the custom header remains a drag surface for
+				// window moves (native bar is also draggable).
+				isMacDesktop && '[-webkit-app-region:drag]'
 			)}
-			style={isMacDesktop ? { paddingLeft: MAC_TRAFFIC_LIGHT_RESERVE_PX } : undefined}
 		>
 			{/* Left control cluster — `no-drag` so clicks land on the
 			    individual buttons instead of being intercepted as window
@@ -276,7 +258,7 @@ function AppHeader(): React.JSX.Element {
 					isMacDesktop && '[-webkit-app-region:no-drag]'
 				)}
 			>
-				<SidebarTrigger className="cursor-pointer" />
+				<SidebarTrigger className="size-7 cursor-pointer" />
 				<AppHistoryControls />
 				<Separator
 					orientation="vertical"
@@ -298,19 +280,6 @@ function AppHeader(): React.JSX.Element {
 					isMacDesktop && '[-webkit-app-region:no-drag]'
 				)}
 			>
-				<Button
-					aria-label="Create new item"
-					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground"
-					size="icon-xs"
-					type="button"
-					variant="ghost"
-				>
-					<PlusIcon aria-hidden="true" className="size-4" />
-				</Button>
-				<Separator
-					orientation="vertical"
-					className="mx-1 data-vertical:h-4 data-vertical:self-auto"
-				/>
 				<HelpMenu />
 			</div>
 		</header>
@@ -385,72 +354,40 @@ function ChatFocusShell({ children }: { children: React.ReactNode }): React.JSX.
 
 /**
  * Sidebar content wrapper with conditional resizable layout.
- * Renders resizable panels on desktop, plain content on mobile.
+ * Renders the DESIGN.md-mandated translate-X slide on desktop and a Sheet
+ * overlay on mobile.
+ *
+ * Desktop architecture (DESIGN.md L525-545):
+ *
+ * - Outer wrapper has `width: <desktopWidth>` always (when expanded), shrinks
+ *   to `0` when collapsed; the chat panel occupies the freed layout space.
+ * - Inner panel (absolutely positioned inside the wrapper) translates
+ *   `translate-x-0` (open) ↔ `-translate-x-full` (closed) with
+ *   `transition-transform duration-200 ease-out`.
+ * - Chat panel shifts via the same width transition on the wrapper —
+ *   `flex-1` consumes the freed space — so panel + sidebar move together.
+ * - Resize handle is hidden / disabled while the panel is closed.
+ * - The `--sidebar-width` CSS variable is the single source of truth: the
+ *   drag handler writes to it, the wrapper reads from it for layout width.
  */
 function ResizableSidebarContent({ children }: { children: React.ReactNode }): React.JSX.Element {
-	const { isMobile, state, setState, desktopWidth, isDesktopWidthReady, setDesktopWidth } =
-		useSidebar();
-	const panelGroupId = React.useId();
-	const sidebarPanelRef = usePanelRef();
-	const [isSidebarTransitioning, setIsSidebarTransitioning] = React.useState(false);
-	const [initialPanelSize, setInitialPanelSize] = React.useState(desktopWidth);
+	const { isMobile, state, desktopWidth, isDesktopWidthReady, setDesktopWidth } = useSidebar();
 
-	// Guards onResize from syncing state while a programmatic collapse/expand
-	// animation is in-flight — without this, ResizeObserver fires intermediate
-	// sizes during the CSS flex-grow transition, causing a feedback loop that
-	// fights the collapse/expand.
-	const isAnimatingRef = React.useRef(false);
-	const didSyncInitialPanelSizeRef = React.useRef(false);
-	const transitionTimeoutRef = React.useRef<number | null>(null);
-
-	const beginProgrammaticResize = React.useCallback((resizePanel: () => void): void => {
-		if (transitionTimeoutRef.current !== null) {
-			window.clearTimeout(transitionTimeoutRef.current);
-		}
-
-		isAnimatingRef.current = true;
-		setIsSidebarTransitioning(true);
-
-		window.requestAnimationFrame(() => {
-			resizePanel();
-			transitionTimeoutRef.current = window.setTimeout(() => {
-				isAnimatingRef.current = false;
-				setIsSidebarTransitioning(false);
-				transitionTimeoutRef.current = null;
-			}, COLLAPSE_ANIMATION_DURATION_MS);
-		});
-	}, []);
-
-	React.useEffect(() => {
-		return () => {
-			if (transitionTimeoutRef.current !== null) {
-				window.clearTimeout(transitionTimeoutRef.current);
-			}
-		};
-	}, []);
-
+	// Live layout width: when expanded → CSS variable; when collapsed → 0.
+	// Setting `--sidebar-width` once on the documentElement lets descendants
+	// (chat margin, etc.) read it without prop drilling, and lets the drag
+	// handler animate it directly without re-rendering React on every frame.
 	React.useLayoutEffect(() => {
-		if (!isDesktopWidthReady || didSyncInitialPanelSizeRef.current) {
-			return;
-		}
-
-		didSyncInitialPanelSizeRef.current = true;
-		setInitialPanelSize(desktopWidth);
+		if (!isDesktopWidthReady) return;
+		document.documentElement.style.setProperty('--sidebar-width', `${desktopWidth}px`);
 	}, [desktopWidth, isDesktopWidthReady]);
 
-	// Drive the panel's collapse/expand from the sidebar context state
-	// so that the toggle button, keyboard shortcut, etc. all work through
-	// the library's layout engine (smooth flex transitions) instead of CSS display:none.
-	React.useEffect(() => {
-		const panel = sidebarPanelRef.current;
-		if (!panel) return;
-
-		if (state === 'collapsed' && !panel.isCollapsed()) {
-			beginProgrammaticResize(() => panel.collapse());
-		} else if (state === 'expanded' && panel.isCollapsed()) {
-			beginProgrammaticResize(() => panel.expand());
-		}
-	}, [beginProgrammaticResize, state, sidebarPanelRef]);
+	const isExpanded = state === 'expanded';
+	// Drag-handle resize was removed in 2026-05; the previous implementation
+	// caused jank under fast cursor moves. Will be reintroduced as part of
+	// a dedicated rewrite. `setDesktopWidth` from `useSidebar` stays available
+	// for any future re-introduction (e.g. via keyboard or settings).
+	void setDesktopWidth;
 
 	// Mobile: Sidebar renders as a Sheet overlay alongside main content.
 	// The Sheet portals above the absolute AppHeader, so its content does not
@@ -460,7 +397,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 			<>
 				<Sidebar>
 					<SidebarFocusShell className="group flex h-full flex-col">
-						<SidebarHeader className="px-2 pb-1 shrink-0">
+						<SidebarHeader className="px-2 pt-0 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
@@ -476,79 +413,52 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 		);
 	}
 
+	const transformTransition =
+		'transition-transform duration-200 ease-out motion-reduce:transition-none';
+	const widthTransition =
+		'transition-[width] duration-200 ease-out motion-reduce:transition-none';
+
+	// Outer wrapper occupies the open width when expanded; collapses to 0 when
+	// closed so the chat panel can slide left into the freed space.
+	const outerWidth = isExpanded ? `${desktopWidth}px` : '0px';
+
 	return (
-		<ResizablePanelGroup
-			direction="horizontal"
-			id={panelGroupId}
-			className={`min-h-0 min-w-0 flex-1 ${
-				isSidebarTransitioning
-					? '[&>[data-panel]:first-child]:transition-[flex-grow] [&>[data-panel]:first-child]:duration-200 [&>[data-panel]:first-child]:ease-out'
-					: ''
-			}`}
-		>
-			<ResizablePanel
-				panelRef={sidebarPanelRef}
-				defaultSize={initialPanelSize}
-				style={{ overflow: 'hidden' }}
-				minSize={SIDEBAR_MIN_WIDTH}
-				maxSize={SIDEBAR_MAX_WIDTH}
-				collapsible={true}
-				collapsedSize={0}
-				onResize={(size) => {
-					// Skip state sync during programmatic collapse/expand animation
-					// to prevent ResizeObserver intermediate values from fighting the transition
-					if (!isAnimatingRef.current) {
-						if (size.inPixels === 0 && state !== 'collapsed') {
-							setState('collapsed');
-						} else if (size.inPixels > 0 && state !== 'expanded') {
-							setState('expanded');
-						}
-					}
-					// Always persist non-zero widths
-					if (size.inPixels > 0) {
-						setDesktopWidth(size.inPixels);
-					}
-				}}
+		<div className="relative flex min-h-0 min-w-0 flex-1">
+			{/*
+			 * Outer wrapper: always laid out at the sidebar's open width while
+			 * expanded; shrinks to 0 when collapsed. Width transitions in
+			 * lockstep with the inner panel's translate, so the chat panel
+			 * (flex-1, occupies whatever's left) glides in sync.
+			 */}
+			<div
+				className={cn('relative h-full overflow-hidden', widthTransition)}
+				style={{ width: outerWidth }}
 			>
-				{/* Content keeps min-width so layout never reflows during collapse —
-          the panel clips via overflow:hidden and the content slides out
-          of view (no fade) as the chat panel pushes leftward to fill the
-          space. Pointer events are disabled while collapsed so the
-          clipped content can't capture clicks bleeding past the
-          panel boundary.
-          The pt-10 offsets sidebar contents so they sit below the absolute
-          AppHeader; the panel itself still extends to the top of the viewport
-          so the sidebar background reads as full-height behind the header. */}
-				{/* `group` so descendants can opt into the
-				    `.group:hover .scrollbar-hover::-webkit-scrollbar-thumb`
-				    rule in `globals.css` — that's how the sidebar's listbox
-				    fades its scrollbar in only while the cursor is anywhere
-				    over the sidebar. */}
-				<SidebarFocusShell className="group bg-sidebar text-sidebar-foreground flex h-full min-w-[240px] flex-col overflow-hidden pt-10">
+				{/*
+				 * Inner panel: full open width, translates X axis from 0 → -100%
+				 * on close. Anchored absolutely so the translate doesn't fight
+				 * the outer wrapper's flex sizing. `group` for descendants that
+				 * opt into the hover-only scrollbar rule in `globals.css`. The
+				 * `pt-10` offsets sidebar contents below the absolute AppHeader.
+				 */}
+				<SidebarFocusShell
+					className={cn(
+						'group bg-sidebar text-sidebar-foreground absolute inset-y-0 left-0 flex flex-col overflow-hidden pt-10',
+						transformTransition,
+						isExpanded ? 'translate-x-0' : '-translate-x-full'
+					)}
+				>
 					{/*
-					 * Inner panel content keeps its full min-w-[240px] width
-					 * and stays anchored to the LEFT edge of the parent
-					 * react-resizable-panel. As the parent shrinks during a
-					 * collapse, content clips from the RIGHT (the side closest
-					 * to the chat panel). This matches the "the whole panel
-					 * with its full size moves left and disappears off-screen"
-					 * behavior described in DESIGN.md → Motion → "Sidebar Open
-					 * / Close": titles stay put for the duration of the slide
-					 * and only the right-side metadata gets clipped first.
-					 *
-					 * Pointer events are disabled while collapsed so the
-					 * (clipped to 0px) panel can't capture stray clicks. We
-					 * intentionally do NOT translate-x on this inner div —
-					 * a translate makes the LEFT-aligned content slide off-
-					 * screen first, leaving right-aligned metadata visible
-					 * during the slide. That created the "chat panel
-					 * approaches the row titles" creeping effect.
+					 * data-state on the inner div drives pointer-events so a
+					 * (translated-out) sidebar can't capture clicks bleeding
+					 * past it.
 					 */}
 					<div
 						data-state={state}
-						className="flex h-full min-w-[240px] flex-col overflow-hidden data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
+						style={{ width: `${desktopWidth}px` }}
+						className="flex h-full flex-col data-[state=collapsed]:pointer-events-none data-[state=expanded]:pointer-events-auto"
 					>
-						<SidebarHeader className="px-2 pb-1 shrink-0">
+						<SidebarHeader className="px-2 pt-0 pb-1 shrink-0">
 							<NewSessionButton />
 						</SidebarHeader>
 						<SidebarContent>
@@ -557,44 +467,35 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<NavUser user={SIDEBAR_USER} />
 					</div>
 				</SidebarFocusShell>
-			</ResizablePanel>
 
-			{/*
-			 * Constrain the handle height to match the chat panel's visible
-			 * area: mt-10 aligns the top with the chat panel below the
-			 * AppHeader (pt-10), mb-2 aligns the bottom with the chat
-			 * panel's pb-2 gap. The flex-row Group's align:stretch default
-			 * subtracts these cross-axis margins from the handle's height,
-			 * so the drag affordance + ::after hit area only cover the
-			 * panel boundary — not the header strip or the bottom margin.
-			 */}
-			<ResizableHandle className="mt-10 mb-2" />
-
-			{/*
-			 * Chat panel stacks above the sidebar via z-index so its left-edge
-			 * shadow visibly casts onto the sidebar — this is what makes the
-			 * panel feel like it "closes over" the sidebar when collapsing.
-			 * overflow:visible lets the shadow escape the panel container
-			 * (react-resizable-panels otherwise clips children to the panel
-			 * box, swallowing the shadow).
-			 */}
-			<ResizablePanel
-				className="relative z-10 h-full min-w-0"
-				style={{ overflow: 'visible' }}
-			>
 				{/*
-				 * pr-2 + pb-2 leave breathing room so the floating chat
-				 * panel's right and bottom shadow layers actually paint —
-				 * without this, the panel hugs the viewport edges and the
-				 * shadow gets clipped against them. The left edge still
-				 * butts up against the sidebar so the leftward shadow
+				 * Resize handle removed (2026-05). The previous implementation
+				 * felt rubbery under fast cursor moves and the visual divider
+				 * confused users into trying to drag a panel that didn't yet
+				 * have a usable handle. Width is fixed at the persisted value;
+				 * a proper handle will return in a future rewrite.
+				 */}
+			</div>
+
+			{/*
+			 * Chat panel: flex-1 occupies whatever the outer sidebar wrapper
+			 * doesn't, so as the wrapper transitions from W → 0 the chat panel
+			 * widens in lockstep. Stacks above the sidebar via z-index so its
+			 * left-edge shadow can paint over the sidebar surface.
+			 * overflow:visible so the shadow escapes the panel container.
+			 */}
+			<div className="relative z-10 h-full min-w-0 flex-1" style={{ overflow: 'visible' }}>
+				{/*
+				 * pr-2 + pb-2 leave breathing room so the floating chat panel's
+				 * right and bottom shadow layers actually paint. The left edge
+				 * still butts up against the sidebar so the leftward shadow
 				 * casts onto it.
 				 */}
-				<div className="h-full min-w-0 pt-10 pr-2 pb-2">
+				<div className="h-full min-w-0 pt-10 pr-2 pb-2 pl-2">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
-			</ResizablePanel>
-		</ResizablePanelGroup>
+			</div>
+		</div>
 	);
 }
 

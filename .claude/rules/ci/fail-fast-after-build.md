@@ -36,7 +36,7 @@ CI pipelines have long feedback loops. Without fail-fast checks, a broken interm
   run: pnpm run brownfield:package:ios
 - name: Verify install names
   run: |
-    for bin in "$APP/"*.dylib "$APP/TwinMindTestHost"; do
+    for bin in "$APP/"*.dylib "$APP/AppTestHost"; do
       if otool -L "$bin" | grep '/Library/Frameworks/' | grep -qv '/System/Library/'; then
         echo "::error::Absolute framework paths remain!"
         exit 1
@@ -76,7 +76,7 @@ Good — verify build output before expensive steps:
 
 - name: Verify install names
   run: |
-    for bin in "$APP/"*.dylib "$APP/TwinMindTestHost"; do
+    for bin in "$APP/"*.dylib "$APP/AppTestHost"; do
       if otool -L "$bin" | grep '/Library/Frameworks/' | grep -qv '/System/Library/'; then
         echo "::error::Absolute framework paths remain!"
         exit 1

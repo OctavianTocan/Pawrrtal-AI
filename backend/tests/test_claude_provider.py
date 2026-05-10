@@ -5,7 +5,7 @@ that subprocess in unit tests — instead, we mock :func:`claude_agent_sdk.query
 (re-exported into ``app.core.providers.claude_provider`` as ``query``) and
 assert that:
 
-- :class:`ClaudeProvider` builds correct :class:`ClaudeAgentOptions`
+- :class:`ClaudeLLM` builds correct :class:`ClaudeAgentOptions`
 - it translates every Claude SDK message/block type into a ``StreamEvent``
 - it converts every documented SDK error into a stream-level error event
 - it reuses the ``conversation_id`` as the SDK session ID and switches
@@ -14,7 +14,7 @@ assert that:
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -39,8 +39,8 @@ from claude_agent_sdk import (
 )
 
 from app.core.providers import (
-    ClaudeProvider,
-    ClaudeProviderConfig,
+    ClaudeLLM,
+    ClaudeLLMConfig,
     StreamEvent,
 )
 from app.core.providers import claude_provider as cp_module
@@ -71,7 +71,7 @@ def user_id() -> UUID:
 def force_new_session(monkeypatch: pytest.MonkeyPatch) -> None:
     """Make :func:`get_session_info` claim the session does not exist.
 
-    ``ClaudeProvider`` uses this probe to choose between ``session_id``
+    ``ClaudeLLM`` uses this probe to choose between ``session_id``
     (first turn) and ``resume`` (subsequent turns). Forcing the answer
     keeps tests deterministic without touching the local Claude
     transcript directory.
@@ -87,13 +87,13 @@ def force_resume_session(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _patch_query(
     monkeypatch: pytest.MonkeyPatch,
-    fake: Callable[..., AsyncIterator[Any]] | Callable[..., Awaitable[None]],
+    fake: Callable[..., AsyncIterator[Any]],
 ) -> list[ClaudeAgentOptions]:
     """Replace ``claude_provider.query`` with ``fake`` and capture the options used.
 
     Returns:
         A list that the recorder appends to. Use it to assert on the
-        :class:`ClaudeAgentOptions` that ``ClaudeProvider`` built.
+        :class:`ClaudeAgentOptions` that ``ClaudeLLM`` built.
     """
     captured: list[ClaudeAgentOptions] = []
 
@@ -131,12 +131,14 @@ def _async_raises(error: BaseException) -> Callable[..., AsyncIterator[Any]]:
 
 
 async def _collect(
-    provider: ClaudeProvider,
+    provider: ClaudeLLM,
     question: str,
     conversation_id: UUID,
     user_id: UUID,
 ) -> list[StreamEvent]:
-    return [event async for event in provider.stream(question, conversation_id, user_id)]
+    return [
+        event async for event in provider.stream(question, conversation_id, user_id)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +258,9 @@ class TestEventsFromMessage:
             model="claude",
         )
         events = list(_events_from_message(message))
-        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}]
+        assert events == [
+            {"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}
+        ]
 
     def test_assistant_mixed_blocks_preserve_order(self) -> None:
         """Multiple blocks in one message should yield events in order."""
@@ -290,7 +294,9 @@ class TestEventsFromMessage:
             content=[ToolResultBlock(tool_use_id="tu_1", content="ok")],
         )
         events = list(_events_from_message(message))
-        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}]
+        assert events == [
+            {"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}
+        ]
 
     def test_user_message_with_string_content_emits_nothing(self) -> None:
         """Plain string user messages are echoes — no events should be emitted."""
@@ -367,7 +373,7 @@ class TestEventsFromMessage:
 
 @pytest.mark.usefixtures("force_new_session")
 class TestProviderOptions:
-    """:class:`ClaudeProvider` should build safe, predictable options."""
+    """:class:`ClaudeLLM` should build safe, predictable options."""
 
     @pytest.mark.anyio
     async def test_default_options_lock_down_tools_and_settings(
@@ -378,7 +384,7 @@ class TestProviderOptions:
     ) -> None:
         """The default config should disable tools and isolate from filesystem settings."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider("claude-sonnet-4-6")
+        provider = ClaudeLLM("claude-sonnet-4-6")
 
         await _collect(provider, "hello", conversation_id, user_id)
 
@@ -388,7 +394,13 @@ class TestProviderOptions:
         assert options.setting_sources == []
         assert options.permission_mode == "default"
         assert options.max_turns == 1
-        assert options.system_prompt is not None and "AI Nexus" in options.system_prompt
+        # Default falls back to the shared `DEFAULT_AGENT_SYSTEM_PROMPT`
+        # (provider-agnostic since PR #131 review).  Real chat traffic
+        # gets the workspace's SOUL.md + AGENTS.md instead.
+        assert (
+            options.system_prompt is not None
+            and "chat application" in options.system_prompt
+        )
 
     @pytest.mark.anyio
     async def test_first_turn_uses_session_id_not_resume(
@@ -399,7 +411,7 @@ class TestProviderOptions:
     ) -> None:
         """When the SDK session does not exist, options should set ``session_id``, not ``resume``."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider("claude-sonnet-4-6")
+        provider = ClaudeLLM("claude-sonnet-4-6")
 
         await _collect(provider, "hello", conversation_id, user_id)
 
@@ -417,7 +429,7 @@ class TestProviderOptions:
     ) -> None:
         """When an SDK session exists, options should set ``resume``, not ``session_id``."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider("claude-sonnet-4-6")
+        provider = ClaudeLLM("claude-sonnet-4-6")
 
         await _collect(provider, "follow up", conversation_id, user_id)
 
@@ -434,9 +446,9 @@ class TestProviderOptions:
     ) -> None:
         """A configured OAuth token should land in :attr:`ClaudeAgentOptions.env`."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider(
+        provider = ClaudeLLM(
             "claude-sonnet-4-6",
-            config=ClaudeProviderConfig(oauth_token="oat-secret"),
+            config=ClaudeLLMConfig(oauth_token="oat-secret"),
         )
 
         await _collect(provider, "hello", conversation_id, user_id)
@@ -453,7 +465,7 @@ class TestProviderOptions:
     ) -> None:
         """Without a configured token, ``options.env`` should be the SDK default (empty dict)."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider("claude-sonnet-4-6")
+        provider = ClaudeLLM("claude-sonnet-4-6")
 
         await _collect(provider, "hello", conversation_id, user_id)
 
@@ -468,9 +480,9 @@ class TestProviderOptions:
     ) -> None:
         """Custom env vars should merge with the OAuth token."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider(
+        provider = ClaudeLLM(
             "claude-sonnet-4-6",
-            config=ClaudeProviderConfig(
+            config=ClaudeLLMConfig(
                 oauth_token="oat-secret",
                 extra_env={"FOO": "bar"},
             ),
@@ -491,7 +503,7 @@ class TestProviderOptions:
     ) -> None:
         """The frontend model ID must round-trip through :func:`_resolve_sdk_model`."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider("claude-opus-4-7")
+        provider = ClaudeLLM("claude-opus-4-7")
 
         await _collect(provider, "hello", conversation_id, user_id)
 
@@ -504,11 +516,11 @@ class TestProviderOptions:
         conversation_id: UUID,
         user_id: UUID,
     ) -> None:
-        """A custom :class:`ClaudeProviderConfig` should propagate to the SDK options."""
+        """A custom :class:`ClaudeLLMConfig` should propagate to the SDK options."""
         captured = _patch_query(monkeypatch, _async_iter([]))
-        provider = ClaudeProvider(
+        provider = ClaudeLLM(
             "claude-sonnet-4-6",
-            config=ClaudeProviderConfig(
+            config=ClaudeLLMConfig(
                 tools=["Read"],
                 max_turns=3,
                 permission_mode="plan",
@@ -556,7 +568,7 @@ class TestProviderStreaming:
             ),
         )
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -606,7 +618,7 @@ class TestProviderStreaming:
         )
 
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -636,7 +648,7 @@ class TestProviderStreaming:
         _patch_query(monkeypatch, _async_iter([]))
         assert (
             await _collect(
-                ClaudeProvider("claude-sonnet-4-6"),
+                ClaudeLLM("claude-sonnet-4-6"),
                 "hi",
                 conversation_id,
                 user_id,
@@ -668,7 +680,7 @@ class TestProviderErrors:
         )
 
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -688,7 +700,7 @@ class TestProviderErrors:
         """Connection errors should round-trip with a stream-level error event."""
         _patch_query(monkeypatch, _async_raises(CLIConnectionError("subprocess died")))
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -711,7 +723,7 @@ class TestProviderErrors:
         )
 
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -736,7 +748,7 @@ class TestProviderErrors:
         )
 
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -756,7 +768,7 @@ class TestProviderErrors:
         _patch_query(monkeypatch, _async_raises(ClaudeSDKError("weird")))
 
         events = await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -778,7 +790,7 @@ class TestProviderErrors:
 
         with pytest.raises(RuntimeError, match="unexpected"):
             await _collect(
-                ClaudeProvider("claude-sonnet-4-6"),
+                ClaudeLLM("claude-sonnet-4-6"),
                 "hi",
                 conversation_id,
                 user_id,
@@ -809,7 +821,7 @@ class TestSessionProbeFallback:
         captured = _patch_query(monkeypatch, _async_iter([]))
 
         await _collect(
-            ClaudeProvider("claude-sonnet-4-6"),
+            ClaudeLLM("claude-sonnet-4-6"),
             "hi",
             conversation_id,
             user_id,
@@ -827,24 +839,26 @@ class TestSessionProbeFallback:
 class TestFactory:
     """The factory should pull the OAuth token from settings into the provider."""
 
-    def test_resolve_provider_pulls_oauth_token_from_settings(
+    def test_resolve_llm_pulls_oauth_token_from_settings(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A token configured in settings must reach :class:`ClaudeProviderConfig`."""
+        """A token configured in settings must reach :class:`ClaudeLLMConfig`."""
         from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "from-config")
 
-        provider = factory.resolve_provider("claude-sonnet-4-6")
-        assert isinstance(provider, ClaudeProvider)
+        provider = factory.resolve_llm("claude-sonnet-4-6")
+        assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token == "from-config"
 
-    def test_resolve_provider_omits_token_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resolve_llm_omits_token_when_blank(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """A blank token in settings must coerce to ``None`` so we don't forward an empty value."""
         from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "")
 
-        provider = factory.resolve_provider("claude-sonnet-4-6")
-        assert isinstance(provider, ClaudeProvider)
+        provider = factory.resolve_llm("claude-sonnet-4-6")
+        assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token is None

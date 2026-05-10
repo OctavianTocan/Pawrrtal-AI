@@ -1,8 +1,8 @@
-# AI Nexus
+# Pawrrtal
 
 <p align="center">
   <a href="docs/assets/header.mp4" title="Click for the full-resolution MP4">
-    <img src="docs/assets/header.gif" alt="AI Nexus demo" width="100%" />
+    <img src="docs/assets/header.gif" alt="Pawrrtal demo" width="100%" />
   </a>
 </p>
 
@@ -48,8 +48,8 @@ Full-stack AI chatbot with real-time streaming responses, built with **Next.js 1
 
 ```bash
 # Clone the repository
-git clone https://github.com/OctavianTocan/ai-nexus.git
-cd ai-nexus
+git clone https://github.com/OctavianTocan/pawrrtal.git
+cd pawrrtal
 
 # Install all dependencies
 just install
@@ -95,7 +95,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Project Structure
 
 ```
-ai-nexus/
+pawrrtal/
 ├── backend/             # FastAPI Python backend
 │   ├── main.py          # App entry point
 │   └── app/

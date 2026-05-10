@@ -51,4 +51,4 @@ sed -i '/api("com.facebook.react:react-android/a\    embed("com.facebook.react:r
 
 ## Origin
 
-TwinMind brownfield publish workflow — sed replaced api→embed, broke POM, caused ClassNotFoundException for 9 Facebook deps in consumer apps.
+a prior project brownfield publish workflow — sed replaced api→embed, broke POM, caused ClassNotFoundException for 9 Facebook deps in consumer apps.

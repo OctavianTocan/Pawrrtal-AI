@@ -2,21 +2,32 @@
  * Action to open referenced content in the chat surface.
  *
  * @fileoverview AI Elements — `open-in-chat`.
+ *
+ * Compound component built on top of `DropdownPanelMenu`. The classic Radix
+ * compound API (Root + Trigger + Content) is preserved by collecting the
+ * trigger and content children at the OpenIn level, then routing them into a
+ * single `DropdownPanelMenu` (which exposes a `trigger` prop + JSX children
+ * for the content).
  */
 
 'use client';
 
-import { ChevronDownIcon, ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
-import { type ComponentProps, createContext, useContext } from 'react';
-import { Button } from '@/components/ui/button';
 import {
-	DropdownMenu,
-	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+	DropdownPanelMenu,
+} from '@octavian-tocan/react-dropdown';
+import { ChevronDownIcon, ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
+import {
+	Children,
+	type ComponentProps,
+	createContext,
+	isValidElement,
+	type ReactNode,
+	useContext,
+} from 'react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const providers = {
@@ -187,20 +198,88 @@ const useOpenInContext = () => {
 	return context;
 };
 
-export type OpenInProps = ComponentProps<typeof DropdownMenu> & {
+/**
+ * Internal sentinel components used to identify which children represent the
+ * trigger versus the content. The OpenIn root scans its children, finds the
+ * first OpenInTrigger and OpenInContent, and routes them into the underlying
+ * `DropdownPanelMenu` `trigger` prop and content children respectively.
+ *
+ * This keeps the public compound API (`<OpenIn><OpenInTrigger /><OpenInContent>...</OpenInContent></OpenIn>`)
+ * unchanged while delegating to a `DropdownPanelMenu` internally.
+ */
+function OpenInTriggerSlot({ children }: { children: ReactNode }): React.JSX.Element {
+	return <>{children}</>;
+}
+OpenInTriggerSlot.displayName = 'OpenInTriggerSlot';
+
+function OpenInContentSlot({ children }: { children: ReactNode }): React.JSX.Element {
+	return <>{children}</>;
+}
+OpenInContentSlot.displayName = 'OpenInContentSlot';
+
+/**
+ * Compound component props.
+ *
+ * Accepts arbitrary children, but the children are expected to be one
+ * `OpenInTrigger` and one `OpenInContent` (in any order).
+ */
+export type OpenInProps = {
 	query: string;
+	children?: ReactNode;
+	className?: string;
 };
 
-export const OpenIn = ({ query, ...props }: OpenInProps) => (
-	<OpenInContext.Provider value={{ query }}>
-		<DropdownMenu {...props} />
-	</OpenInContext.Provider>
-);
+/**
+ * Root of the OpenIn compound component. Provides the query context and
+ * routes children into a `DropdownPanelMenu`.
+ */
+export const OpenIn = ({ query, children, className }: OpenInProps) => {
+	let triggerNode: ReactNode = null;
+	let contentNode: ReactNode = null;
+	Children.forEach(children, (child) => {
+		if (!isValidElement(child)) return;
+		const type = child.type as { displayName?: string };
+		if (type.displayName === 'OpenInTriggerSlot') {
+			triggerNode = (child.props as { children?: ReactNode }).children ?? null;
+		} else if (type.displayName === 'OpenInContentSlot') {
+			contentNode = (child.props as { children?: ReactNode }).children ?? null;
+		}
+	});
 
-export type OpenInContentProps = ComponentProps<typeof DropdownMenuContent>;
+	const defaultTrigger = (
+		<Button type="button" variant="outline">
+			Open in chat
+			<ChevronDownIcon className="size-4" />
+		</Button>
+	);
 
-export const OpenInContent = ({ className, ...props }: OpenInContentProps) => (
-	<DropdownMenuContent align="start" className={cn('w-[240px]', className)} {...props} />
+	return (
+		<OpenInContext.Provider value={{ query }}>
+			<DropdownPanelMenu
+				asChild
+				usePortal
+				align="start"
+				className={className}
+				contentClassName={cn('popover-styled p-1 w-[240px]')}
+				trigger={triggerNode ?? defaultTrigger}
+			>
+				{contentNode}
+			</DropdownPanelMenu>
+		</OpenInContext.Provider>
+	);
+};
+
+/**
+ * Slot for the trigger element. Renders nothing on its own — the parent
+ * `OpenIn` extracts its child and routes it into `DropdownPanelMenu.trigger`.
+ */
+export type OpenInContentProps = {
+	className?: string;
+	children?: ReactNode;
+};
+
+export const OpenInContent = ({ className: _className, children }: OpenInContentProps) => (
+	<OpenInContentSlot>{children}</OpenInContentSlot>
 );
 
 export type OpenInItemProps = ComponentProps<typeof DropdownMenuItem>;
@@ -217,17 +296,12 @@ export const OpenInSeparator = (props: OpenInSeparatorProps) => (
 	<DropdownMenuSeparator {...props} />
 );
 
-export type OpenInTriggerProps = ComponentProps<typeof DropdownMenuTrigger>;
+export type OpenInTriggerProps = {
+	children?: ReactNode;
+};
 
-export const OpenInTrigger = ({ children, ...props }: OpenInTriggerProps) => (
-	<DropdownMenuTrigger {...props} asChild>
-		{children ?? (
-			<Button type="button" variant="outline">
-				Open in chat
-				<ChevronDownIcon className="size-4" />
-			</Button>
-		)}
-	</DropdownMenuTrigger>
+export const OpenInTrigger = ({ children }: OpenInTriggerProps) => (
+	<OpenInTriggerSlot>{children}</OpenInTriggerSlot>
 );
 
 export type OpenInChatGPTProps = ComponentProps<typeof DropdownMenuItem>;

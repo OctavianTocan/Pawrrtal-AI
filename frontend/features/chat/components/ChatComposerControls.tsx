@@ -1,5 +1,6 @@
 'use client';
 
+import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import {
 	ArrowUpIcon,
 	CheckIcon,
@@ -14,18 +15,11 @@ import {
 	SquareIcon,
 } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
 import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
 import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 import {
 	CHAT_STORAGE_KEYS,
@@ -194,7 +188,7 @@ export function AttachButton(): React.JSX.Element {
 /** Renders the compact plan-mode trigger used in the composer toolbar. */
 export function PlanButton(): React.JSX.Element {
 	return (
-		<Tooltip delayDuration={300}>
+		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
 					className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
@@ -272,81 +266,70 @@ function isSafetyMode(value: unknown): value is SafetyMode {
 
 /** Renders the auto-review/safety permissions selector in the composer toolbar. */
 export function AutoReviewSelector(): React.JSX.Element {
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [tooltipOpen, setTooltipOpen] = useState(false);
 	const [safetyMode, setSafetyMode] = usePersistedState<SafetyMode>({
 		storageKey: CHAT_STORAGE_KEYS.safetyMode,
 		defaultValue: DEFAULT_SAFETY_MODE,
 		validate: isSafetyMode,
 	});
+	// Same hook ModelSelectorPopover uses — keeps the tooltip suppressed during
+	// the dropdown's closing window so a focus-return on the trigger doesn't
+	// fire `Tooltip.onOpenChange(true)` with `data-state="instant-open"` while
+	// the dropdown is still mid-fade.
+	const { menuOpen, tooltipOpen, handleMenuOpenChange, handleTooltipOpenChange } =
+		useTooltipDropdown();
 
 	const activeMeta = SAFETY_MODE_META[safetyMode];
 	const ActiveIcon = activeMeta.Icon;
 
-	const primaryModes = SAFETY_MODE_ORDER.filter((mode) => !SAFETY_MODE_ADVANCED.has(mode));
-	const advancedModes = SAFETY_MODE_ORDER.filter((mode) => SAFETY_MODE_ADVANCED.has(mode));
-
 	return (
 		<TooltipProvider disableHoverableContent>
-			<Tooltip
-				delayDuration={300}
-				onOpenChange={(open) => {
-					if (menuOpen) {
-						return;
-					}
-					setTooltipOpen(open);
-				}}
-				open={menuOpen ? false : tooltipOpen}
-			>
-				<DropdownMenu
-					onOpenChange={(open) => {
-						setMenuOpen(open);
-						if (!open) {
-							setTooltipOpen(false);
-						}
-					}}
-				>
-					<TooltipTrigger asChild>
-						<DropdownMenuTrigger asChild>
-							<Button
-								className={cn(
-									'h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal hover:bg-foreground/[0.04] aria-expanded:bg-foreground/[0.04] data-[state=open]:bg-foreground/[0.04]',
-									activeMeta.colorClass
-								)}
-								type="button"
-								variant="ghost"
-							>
-								<ActiveIcon aria-hidden="true" className="size-3.5" />
-								{activeMeta.label}
-								<ChevronDownIcon aria-hidden="true" className="size-3" />
-							</Button>
-						</DropdownMenuTrigger>
-					</TooltipTrigger>
-					<DropdownMenuContent
-						align="start"
-						className="min-w-52"
-						side="top"
-						sideOffset={8}
-					>
-						{primaryModes.map((mode) => (
-							<SafetyModeMenuItem
-								isSelected={mode === safetyMode}
-								key={mode}
-								mode={mode}
-								onSelect={setSafetyMode}
-							/>
-						))}
-						{advancedModes.length > 0 ? <DropdownMenuSeparator /> : null}
-						{advancedModes.map((mode) => (
-							<SafetyModeMenuItem
-								isSelected={mode === safetyMode}
-								key={mode}
-								mode={mode}
-								onSelect={setSafetyMode}
-							/>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
+			<Tooltip onOpenChange={handleTooltipOpenChange} open={tooltipOpen}>
+				<TooltipTrigger asChild>
+					<span className="inline-flex">
+						<DropdownMenu
+							align="start"
+							closeOnSelect
+							usePortal
+							// Match ModelSelectorPopover's surface — `popover-styled` provides
+							// the project's elevated background, layered shadow, and themed
+							// border; `chat-composer-dropdown-menu` overrides the surface to
+							// `--background-elevated` and the radius to `--radius-surface-lg`
+							// so the dropdown reads as part of the chat shell.
+							contentClassName="chat-composer-dropdown-menu popover-styled p-1 min-w-[208px]"
+							getItemDisplay={(mode) => SAFETY_MODE_META[mode].label}
+							getItemKey={(mode) => mode}
+							// Marks advanced modes so a divider is rendered ABOVE the first
+							// one (the package emits the separator before the marked item).
+							getItemSeparator={(mode) => SAFETY_MODE_ADVANCED.has(mode)}
+							items={SAFETY_MODE_ORDER}
+							onOpenChange={handleMenuOpenChange}
+							onSelect={setSafetyMode}
+							placement="top"
+							renderItem={(mode, _isSelected, onSelect) => (
+								<SafetyModeMenuItem
+									isSelected={mode === safetyMode}
+									mode={mode}
+									onSelect={onSelect}
+								/>
+							)}
+							trigger={
+								<Button
+									className={cn(
+										'h-7 gap-1 rounded-[7px] bg-transparent px-1.5 text-[12px] font-normal hover:bg-foreground/[0.04]',
+										menuOpen && 'bg-foreground/[0.04]',
+										activeMeta.colorClass
+									)}
+									type="button"
+									variant="ghost"
+								>
+									<ActiveIcon aria-hidden="true" className="size-3.5" />
+									{activeMeta.label}
+									<ChevronDownIcon aria-hidden="true" className="size-3" />
+								</Button>
+							}
+						/>
+					</span>
+				</TooltipTrigger>
 				<TooltipContent side="top">Review code changes automatically</TooltipContent>
 			</Tooltip>
 		</TooltipProvider>
@@ -368,7 +351,11 @@ function SafetyModeMenuItem({
 	const { label, Icon, colorClass, bgClass } = SAFETY_MODE_META[mode];
 
 	return (
-		<DropdownMenuItem className="justify-between" onSelect={() => onSelect(mode)}>
+		<button
+			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			onClick={() => onSelect(mode)}
+			type="button"
+		>
 			<span className="flex items-center gap-2">
 				<span
 					aria-hidden="true"
@@ -385,7 +372,7 @@ function SafetyModeMenuItem({
 			{isSelected ? (
 				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
 			) : null}
-		</DropdownMenuItem>
+		</button>
 	);
 }
 

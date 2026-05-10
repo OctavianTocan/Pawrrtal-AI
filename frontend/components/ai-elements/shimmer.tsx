@@ -7,8 +7,17 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { type CSSProperties, type ElementType, type JSX, memo, useMemo } from 'react';
+import { type CSSProperties, type ElementType, memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+
+// `motion.create()` accepts both intrinsic-tag strings (`'p'`, `'span'`)
+// and React component types, but the public typing uses
+// `keyof IntrinsicElements`. We cast at the seam (in `resolveMotionComponent`
+// below) and treat the result as a permissive component because the
+// shape we render is `<MotionComponent>` with the standard `className` /
+// `style` / framer props — Framer's typings can't represent that union.
+// biome-ignore lint/suspicious/noExplicitAny: Framer Motion 11 typings can't model the ElementType-or-component union
+type MotionWrappedComponent = React.ComponentType<any>;
 
 export type TextShimmerProps = {
 	children: string;
@@ -18,6 +27,43 @@ export type TextShimmerProps = {
 	spread?: number;
 };
 
+// Hoist the motion-wrapped element factory cache to module scope.
+//
+// Why: calling `motion.create(Component)` inside the render body builds
+// a brand-new motion-wrapped component on every render.  React sees a
+// different component identity each time, unmounts the previous Framer
+// Motion tree, and remounts a fresh one — which means animation state
+// resets and Framer's heavy mount work runs on every parent re-render.
+//
+// `<Shimmer>` is rendered while a chat reply is streaming.  The chat
+// container re-renders on every SSE delta (one per streamed byte/token),
+// so the previous version triggered a Framer remount cascade per byte
+// and pegged the renderer at multi-core CPU.  Caching by component
+// identity collapses that to one motion-wrap per element type.
+// String tags (`'p'`, `'span'`) keyed in a regular Map; React component
+// types (functions/classes) keyed in a WeakMap so re-rendered ad-hoc
+// components don't pin themselves alive in the cache forever.
+const motionTagCache = new Map<string, MotionWrappedComponent>();
+const motionComponentCache = new WeakMap<React.ComponentType<unknown>, MotionWrappedComponent>();
+
+function resolveMotionComponent(Component: ElementType): MotionWrappedComponent {
+	if (typeof Component === 'string') {
+		const cached = motionTagCache.get(Component);
+		if (cached) return cached;
+		// biome-ignore lint/suspicious/noExplicitAny: see top-of-file
+		const created = motion.create(Component as any) as MotionWrappedComponent;
+		motionTagCache.set(Component, created);
+		return created;
+	}
+	const componentKey = Component as React.ComponentType<unknown>;
+	const cached = motionComponentCache.get(componentKey);
+	if (cached) return cached;
+	// biome-ignore lint/suspicious/noExplicitAny: see top-of-file
+	const created = motion.create(Component as any) as MotionWrappedComponent;
+	motionComponentCache.set(componentKey, created);
+	return created;
+}
+
 const ShimmerComponent = ({
 	children,
 	as: Component = 'p',
@@ -25,7 +71,7 @@ const ShimmerComponent = ({
 	duration = 2,
 	spread = 2,
 }: TextShimmerProps) => {
-	const MotionComponent = motion.create(Component as keyof JSX.IntrinsicElements);
+	const MotionComponent = useMemo(() => resolveMotionComponent(Component), [Component]);
 
 	const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
 

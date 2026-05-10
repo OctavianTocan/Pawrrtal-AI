@@ -4,7 +4,7 @@ Date: 2026-05-03
 
 Status: Accepted
 
-Related bean: `ai-nexus-ups6`
+Related bean: `pawrrtal-ups6`
 
 ## Context
 

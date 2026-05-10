@@ -1,8 +1,8 @@
-# AI Nexus Electron Desktop App — Implementation Plan
+# Pawrrtal Electron Desktop App — Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship AI Nexus as an Electron desktop app that shares renderer code with the existing web app, following Craft's proven dual-platform architecture (`apps/electron/` + `apps/webui/`).
+**Goal:** Ship Pawrrtal as an Electron desktop app that shares renderer code with the existing web app, following Craft's proven dual-platform architecture (`apps/electron/` + `apps/webui/`).
 
 **Architecture:** Shared Vite-bundled renderer with platform adapters. The web app connects to FastAPI via HTTP+SSE (current behavior). The Electron app spawns FastAPI as a sidecar and loads the same renderer via `file://` (prod) or `localhost:5173` (dev). Both platforms set `window.electronAPI` through different mechanisms — Electron via contextBridge preload, web via an HTTP adapter. Components never import Electron directly.
 
@@ -41,7 +41,7 @@ Key files:
 - `apps/webui/src/shims/` — stubs Node.js builtins so bundler accepts Electron renderer imports
 - `apps/webui/src/App.tsx` — bootstraps adapter, then lazy-loads Electron's App component
 
-### AI Nexus adaptation
+### Pawrrtal adaptation
 
 We follow the same pattern but adapted for our stack:
 - Our "Electron renderer" equivalent is `frontend/components/` + `frontend/features/`
@@ -384,7 +384,7 @@ Model after Craft's `apps/electron/package.json` but minimal:
 
 ```json
 {
-  "name": "ai-nexus-electron",
+  "name": "pawrrtal-electron",
   "version": "0.1.0",
   "private": true,
   "main": "dist/main.cjs",
@@ -495,7 +495,7 @@ export default defineConfig({
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Nexus</title>
+  <title>Pawrrtal</title>
 </head>
 <body>
   <div id="root"></div>
@@ -589,7 +589,7 @@ Reference: `/Volumes/Crucial X10/Projects/craft-agents-oss/apps/webui/src/shims/
 
 Read Craft's file and copy it. It stubs: fs, path, child_process, os, crypto, http, https, net, tls, util, buffer, stream, process, EventEmitter.
 
-For AI Nexus, we likely need fewer shims since our components don't import Node modules directly. Create a minimal version and expand as Vite build errors surface.
+For Pawrrtal, we likely need fewer shims since our components don't import Node modules directly. Create a minimal version and expand as Vite build errors surface.
 
 - [ ] **Step 2: Create electron-log.ts**
 
@@ -735,7 +735,7 @@ async function createWindow() {
 }
 
 app.on("ready", async () => {
-  log.info("AI Nexus starting...");
+  log.info("Pawrrtal starting...");
 
   try {
     await startBackend(BACKEND_PORT);
@@ -849,8 +849,8 @@ git commit -m "feat: add Electron preload with electronAPI bridge"
 Adapted from Craft's config (simplified):
 
 ```yaml
-appId: com.ainexus.app
-productName: AI Nexus
+appId: com.pawrrtal.app
+productName: Pawrrtal
 main: dist/main.cjs
 asar: false
 
@@ -952,7 +952,7 @@ git commit -m "feat: add electron-builder config and dev workflow"
 
 In `backend/.env`, change:
 ```
-COOKIE_DOMAIN=nexus-ai.localhost
+COOKIE_DOMAIN=pawrrtal.localhost
 ```
 To:
 ```
@@ -961,7 +961,7 @@ COOKIE_DOMAIN=localhost
 
 And add `http://localhost:5173` to `CORS_ORIGINS`:
 ```
-CORS_ORIGINS=["http://localhost:3001","http://localhost:4100","http://app.nexus-ai.localhost:1355","http://localhost:5173"]
+CORS_ORIGINS=["http://localhost:3001","http://localhost:4100","http://pawrrtal.localhost:1355","http://localhost:5173"]
 ```
 
 - [ ] **Step 2: Verify** — start FastAPI, confirm login works from both Next.js and Vite dev server

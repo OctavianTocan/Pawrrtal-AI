@@ -71,7 +71,7 @@ export function parseThinkingSections(text: string): ThinkingSection[] {
 
 /**
  * Format a duration in seconds as the label shown on the reasoning panel
- * trigger. Mirrors thirdear's wording so the UX feels familiar.
+ * trigger. Uses established wording so the UX feels familiar.
  */
 export function formatThinkingDuration(seconds: number): string {
 	if (seconds < 1) return 'Thought for <1s';

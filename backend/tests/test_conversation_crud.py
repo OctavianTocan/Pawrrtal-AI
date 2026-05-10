@@ -212,7 +212,12 @@ async def test_delete_conversation_removes_owned_row(
         ConversationCreate(title="Delete"),
     )
 
-    deleted = await delete_conversation_service(test_user.id, db_session, conversation.id)
+    deleted = await delete_conversation_service(
+        test_user.id, db_session, conversation.id
+    )
 
     assert deleted is True
-    assert await get_conversation_service(test_user.id, db_session, conversation.id) is None
+    assert (
+        await get_conversation_service(test_user.id, db_session, conversation.id)
+        is None
+    )

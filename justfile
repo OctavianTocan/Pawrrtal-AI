@@ -6,13 +6,21 @@ default:
 dev:
     bun run dev.ts
 
+# Same as `just dev`, but force the Telegram bot to run in polling mode.
+# Use this when iterating on the Telegram channel locally so getUpdates
+# stays active even if a stale prod webhook is registered against the
+# bot token. Requires TELEGRAM_BOT_TOKEN + TELEGRAM_BOT_USERNAME in
+# backend/.env.
+dev-telegram:
+    TELEGRAM_MODE=polling bun run dev.ts
+
 # Auto-generate conventional commit via Gemini
 commit:
     cd backend && uv run python -m app.cli.commit
 
-# Push with GitHub auth switching
+# Push to remote
 push:
-    bash scripts/push.sh
+    git push
 
 # Lint check (read-only) — Biome (JS/TS) + custom policies + ruff (Python)
 lint: lint-py
@@ -84,6 +92,11 @@ pre-commit-all:
 # Check application architecture with sentrux
 sentrux:
     bash scripts/sentrux-check.sh
+
+# TSDoc coverage audit — report exported declarations missing JSDoc comments
+# Usage: just check-docs [path-prefix]  e.g. just check-docs frontend/lib
+check-docs *ARGS:
+    bun run scripts/check-docs.ts {{ARGS}}
 
 # Run backend tests
 test:

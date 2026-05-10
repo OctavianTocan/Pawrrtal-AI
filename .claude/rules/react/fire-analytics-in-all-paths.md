@@ -9,7 +9,7 @@ Analytics events must be fired in ALL code paths: success, error, and loading/lo
 
 **Why:** Success-only analytics creates blind spots. You can't measure failure rates, error patterns, or user drop-off from error states if those events are never emitted.
 
-**Learned from:** thirdear-webapp (thirdear-ai/thirdear-webapp) — AGENTS.md convention.
+**Learned from:** the vendored app — AGENTS.md convention.
 
 ## Verify
 
