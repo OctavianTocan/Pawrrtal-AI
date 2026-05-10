@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	addWorkspaceRoot,
+	getDesktopPlatformSync,
 	getDesktopVersion,
 	getPermissionMode,
 	getPlatform,
@@ -336,5 +338,109 @@ describe('lib/desktop NOT-SUPPORTED stubs (streaming / push-event ops)', () => {
 		expect(() =>
 			respondToPermissionPrompt({ id: 'x', decision: 'allow', scope: 'once' })
 		).not.toThrow();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Suite 5: addWorkspaceRoot — web and desktop paths
+// ---------------------------------------------------------------------------
+
+describe('lib/desktop addWorkspaceRoot', () => {
+	let invoke: ReturnType<typeof vi.fn>;
+
+	afterEach(() => {
+		(window as unknown as { zero?: unknown }).zero = undefined;
+		vi.restoreAllMocks();
+	});
+
+	it('returns [] on web (no zero bridge)', async () => {
+		(window as unknown as { zero?: unknown }).zero = undefined;
+		await expect(addWorkspaceRoot('/tmp/workspace')).resolves.toEqual([]);
+	});
+
+	it('calls workspace.addRoot with provided rootPath on desktop', async () => {
+		invoke = vi.fn().mockResolvedValue({ roots: ['/Users/me/Code', '/tmp/workspace'] });
+		(window as unknown as { zero: unknown }).zero = { invoke };
+
+		const result = await addWorkspaceRoot('/tmp/workspace');
+
+		expect(invoke).toHaveBeenCalledWith('workspace.addRoot', { path: '/tmp/workspace' });
+		expect(result).toEqual(['/Users/me/Code', '/tmp/workspace']);
+	});
+
+	it('opens folder dialog when no rootPath is provided on desktop', async () => {
+		// showOpenFolderDialog uses 'zero-native.dialog.openFile' and returns { paths: [...] }.
+		invoke = vi
+			.fn()
+			.mockImplementation((cmd: string) => {
+				if (cmd === 'zero-native.dialog.openFile')
+					return Promise.resolve({ paths: ['/picked/path'] });
+				if (cmd === 'workspace.addRoot') return Promise.resolve({ roots: ['/picked/path'] });
+				return Promise.resolve({});
+			});
+		(window as unknown as { zero: unknown }).zero = { invoke };
+
+		const result = await addWorkspaceRoot();
+
+		expect(invoke).toHaveBeenCalledWith(
+			'zero-native.dialog.openFile',
+			expect.objectContaining({ title: expect.any(String), allowMultiple: false }),
+		);
+		expect(invoke).toHaveBeenCalledWith('workspace.addRoot', { path: '/picked/path' });
+		expect(result).toEqual(['/picked/path']);
+	});
+
+	it('returns current roots when folder dialog is cancelled (no path selected)', async () => {
+		// Dialog returns { paths: [] } (no selection); addRoot must not be called.
+		invoke = vi
+			.fn()
+			.mockImplementation((cmd: string) => {
+				if (cmd === 'zero-native.dialog.openFile')
+					return Promise.resolve({ paths: [] }); // cancelled
+				if (cmd === 'workspace.listRoots') return Promise.resolve({ roots: ['/existing'] });
+				return Promise.resolve({});
+			});
+		(window as unknown as { zero: unknown }).zero = { invoke };
+
+		const result = await addWorkspaceRoot();
+
+		// Must NOT call addRoot — no path was picked.
+		expect(invoke).not.toHaveBeenCalledWith('workspace.addRoot', expect.anything());
+		// Falls back to listWorkspaceRoots().
+		expect(result).toEqual(['/existing']);
+	});
+
+	it('returns [] when addRoot response has no roots field', async () => {
+		invoke = vi.fn().mockResolvedValue({} /* no "roots" key */);
+		(window as unknown as { zero: unknown }).zero = { invoke };
+
+		const result = await addWorkspaceRoot('/tmp/workspace');
+
+		// Nullish coalescing on roots ?? [] means [] is returned.
+		expect(result).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Suite 6: getDesktopPlatformSync — always returns null
+// ---------------------------------------------------------------------------
+
+describe('lib/desktop getDesktopPlatformSync', () => {
+	it('returns null regardless of bridge presence (not yet implemented)', () => {
+		// Web.
+		(window as unknown as { zero?: unknown }).zero = undefined;
+		expect(getDesktopPlatformSync()).toBeNull();
+
+		// Desktop.
+		(window as unknown as { zero: unknown }).zero = { invoke: vi.fn() };
+		expect(getDesktopPlatformSync()).toBeNull();
+
+		(window as unknown as { zero?: unknown }).zero = undefined;
+	});
+
+	it('is safe to call multiple times', () => {
+		for (let i = 0; i < 10; i++) {
+			expect(getDesktopPlatformSync()).toBeNull();
+		}
 	});
 });
