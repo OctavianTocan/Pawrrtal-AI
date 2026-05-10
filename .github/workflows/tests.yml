@@ -41,7 +41,7 @@ jobs:
   frontend:
     name: Frontend Vitest
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
@@ -113,7 +113,7 @@ jobs:
   backend:
     name: Backend pytest
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
