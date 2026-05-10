@@ -19,6 +19,7 @@ import { schema } from '@json-render/react/schema';
 import { z } from 'zod';
 
 export const artifactCatalog = defineCatalog(schema, {
+	actions: {},
 	components: {
 		// ─── Layout ────────────────────────────────────────────────────────
 		Page: {

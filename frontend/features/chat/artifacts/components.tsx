@@ -7,7 +7,7 @@
  * artifact stylesheet, not inline.
  */
 
-import type { ComponentRenderProps } from '@json-render/react';
+import type { BaseComponentProps } from '@json-render/react';
 import type { ReactNode } from 'react';
 
 const cls = (...names: (string | false | undefined | null)[]) => names.filter(Boolean).join(' ');
@@ -19,10 +19,13 @@ type RendererMap = {
 		// renderer ever runs. Using `any` lets us write tight per-component
 		// destructuring without juggling generic type parameters.
 		// biome-ignore lint/suspicious/noExplicitAny: see comment above
-		props: ComponentRenderProps<any>
+		props: BaseComponentProps<any>
 	) => ReactNode;
 };
 
+// Explicit type: each renderer accepts BaseComponentProps<any> so `props` and
+// `children` are available. The cast in ArtifactRenderer.tsx bridges this to
+// Components<typeof artifactCatalog> at the defineRegistry call-site.
 export const artifactComponents: RendererMap = {
 	Page: ({ props, children }) => (
 		<div className={cls('artifact-page', `theme-${props.accent ?? 'cat'}`)}>{children}</div>
