@@ -14,6 +14,11 @@ should_exclude_from_sentrux() {
 		.agents/* | .claude/* | .cursor/* | .factory/* | .goose/* | .pi/*)
 			return 0
 			;;
+		# Vendored third-party source trees (zero-native, etc.) are excluded so
+		# their internal cycles and coupling don't count against project limits.
+		third_party/*)
+			return 0
+			;;
 		*)
 			return 1
 			;;
