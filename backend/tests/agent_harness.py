@@ -30,6 +30,8 @@ Usage
         error_turn,
         failing_tool,
         identity_convert,
+        make_recording_stream_fn,
+        parallel_tool_calls_turn,
         run_scenario,
         text_turn,
         tool_call_turn,
@@ -131,6 +133,85 @@ def error_turn() -> Exception:
     return RuntimeError("provider unavailable")
 
 
+def parallel_tool_calls_turn(
+    calls: list[tuple[str, dict, str]],
+) -> list[LLMEvent]:
+    """LLM requests multiple tool calls in a single turn (parallel tool use).
+
+    Args:
+        calls: A list of ``(name, args, turn_id)`` triples, one per tool call.
+
+    Returns:
+        One ``tool_call`` event per call followed by a single ``done`` event
+        with ``stop_reason='tool_use'``, mirroring what real providers emit
+        when the model fans out to several tools in one turn.
+
+    Example::
+
+        turns = [
+            parallel_tool_calls_turn([
+                ("search", {"query": "x"}, "tc-0"),
+                ("search", {"query": "y"}, "tc-1"),
+            ]),
+            text_turn("Done."),
+        ]
+    """
+    events: list[LLMEvent] = [
+        LLMToolCallEvent(
+            type="tool_call",
+            tool_call_id=turn_id,
+            name=name,
+            arguments=args,
+        )
+        for name, args, turn_id in calls
+    ]
+    events.append(
+        LLMDoneEvent(
+            type="done",
+            stop_reason="tool_use",
+            content=[
+                ToolCallContent(
+                    type="toolCall",
+                    tool_call_id=turn_id,
+                    name=name,
+                    arguments=args,
+                )
+                for name, args, turn_id in calls
+            ],
+        )
+    )
+    return events
+
+
+def make_recording_stream_fn(
+    turns: "list[list[LLMEvent] | Exception]",
+) -> "ScriptedStreamFn":
+    """Return a ``ScriptedStreamFn`` that also records messages passed per call.
+
+    The returned script's ``messages_seen[N]`` contains the ``messages`` list
+    that was passed to the Nth LLM call, allowing tests to assert on context
+    accumulation without hand-rolling a recording generator.
+
+    Args:
+        turns: The scripted decision sequence (same as ``ScriptedStreamFn.turns``).
+
+    Returns:
+        A ``ScriptedStreamFn`` with ``messages_seen`` populated after each call.
+
+    Example::
+
+        script = make_recording_stream_fn([
+            tool_call_turn("search", {"query": "x"}),
+            text_turn("answer"),
+        ])
+        events = await run_scenario(script)
+        # Verify the second LLM call sees the tool result in context.
+        assert any(m["role"] == "toolResult" for m in script.messages_seen[1])
+        assert script.call_count == 2
+    """
+    return ScriptedStreamFn(turns)
+
+
 # ---------------------------------------------------------------------------
 # ScriptedStreamFn
 # ---------------------------------------------------------------------------
@@ -163,12 +244,16 @@ class ScriptedStreamFn:
 
     turns: list[list[LLMEvent] | Exception]
     call_count: int = dataclasses.field(default=0, init=False)
+    messages_seen: list[list["AgentMessage"]] = dataclasses.field(
+        default_factory=list, init=False
+    )
 
     async def __call__(
         self,
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
+        self._record_messages(messages)
         idx = self.call_count
         self.call_count += 1
         if idx >= len(self.turns):
@@ -184,6 +269,10 @@ class ScriptedStreamFn:
             raise turn
         for event in turn:
             yield event
+
+    def _record_messages(self, messages: list[AgentMessage]) -> None:
+        """Internal: append a snapshot of messages to messages_seen."""
+        self.messages_seen.append(list(messages))
 
 
 # ---------------------------------------------------------------------------

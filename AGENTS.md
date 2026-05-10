@@ -238,8 +238,12 @@ script = ScriptedStreamFn([
     text_turn("Here is what I found."),
 ])
 
-events = await run_scenario(script.turns, tools=[search_tool])
+events = await run_scenario(script, tools=[search_tool])  # pass script, not script.turns
 assert script.call_count == 2              # two LLM calls were made
+
+# ⚠️  Footgun: passing script.turns (a list) instead of script creates a new
+# ScriptedStreamFn internally, so script.call_count always stays 0.
+# Always pass the ScriptedStreamFn object itself to run_scenario.
 assert any(e["type"] == "tool_result" for e in events)
 ```
 
@@ -271,6 +275,10 @@ The shared primitives live in `backend/tests/agent_harness.py`.
    test using `ScriptedStreamFn`.  If the safety layer fires at iteration N,
    `call_count` must equal N.  A test that only checks for an `agent_terminated`
    event in the output without checking `call_count` is weak.
+   **Footgun**: always pass the `ScriptedStreamFn` object to `run_scenario`, not
+   `script.turns` — passing `.turns` (a list) causes `run_scenario` to create a
+   new `ScriptedStreamFn` internally, leaving the original `script.call_count`
+   permanently at 0.
 
 5. **Tests that verify safety config must use a realistic cap** (e.g.
    `max_iterations=3` with a 10-turn runaway script), not `max_iterations=0`
