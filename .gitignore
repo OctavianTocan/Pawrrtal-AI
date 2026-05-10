@@ -145,3 +145,4 @@ package-lock.json
 
 # OpenCode internal generated artifacts
 .opencode/package-lock.json
+test
