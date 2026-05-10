@@ -35,6 +35,7 @@ from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
     handle_model_command,
+    handle_new_command,
     handle_plain_message,
     handle_start_command,
     handle_stop_command,
@@ -123,6 +124,13 @@ def build_telegram_service() -> "TelegramService":
             task.cancel()  # type: ignore[union-attr]
         # handle_stop_command is a plain sync function — no await.
         reply = handle_stop_command(was_running=was_running)
+        await message.answer(reply)
+
+    @dispatcher.message(Command("new"))
+    async def _on_new(message: "Message") -> None:
+        sender = _sender_from_message(message)
+        async with async_session_maker() as session:
+            reply = await handle_new_command(sender=sender, session=session)
         await message.answer(reply)
 
     @dispatcher.message(Command("model"))
