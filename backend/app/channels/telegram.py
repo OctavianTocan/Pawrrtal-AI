@@ -186,6 +186,52 @@ async def _safe_edit(
 # ---------------------------------------------------------------------------
 
 
+async def _dispatch_media(
+    bot: "Bot",
+    chat_id: int | str,
+    file_path: Path,
+    mime: str | None,
+    caption: str | None,
+    thread_kwargs: "dict[str, Any]",
+) -> None:
+    """Route a file to the correct aiogram send method based on MIME type.
+
+    Extracted from :func:`make_telegram_sender` so the closure stays at
+    nesting depth ≤ 3 (project limit enforced by ``scripts/check-nesting.py``).
+
+    Args:
+        bot: Live aiogram ``Bot`` instance.
+        chat_id: Target Telegram chat ID.
+        file_path: Absolute path to the file to send.
+        mime: Detected MIME type string, or ``None`` for unknown.
+        caption: Optional text caption shown below the media.
+        thread_kwargs: Dict containing ``message_thread_id`` when topics are
+            enabled, empty otherwise.
+    """
+    from aiogram.types import FSInputFile  # noqa: PLC0415 — lazy; aiogram is optional
+
+    file = FSInputFile(file_path)
+    m = (mime or "").lower()
+
+    # Early-return pattern keeps each branch flat (avoids elif-chain AST
+    # nesting which trips the check-nesting.py depth-3 budget).
+    if m.startswith("image/"):
+        await bot.send_photo(chat_id=chat_id, photo=file, caption=caption, **thread_kwargs)
+        return
+    if m in ("audio/ogg", "audio/opus"):
+        # Telegram renders ogg/opus as an in-chat voice note.
+        await bot.send_voice(chat_id=chat_id, voice=file, caption=caption, **thread_kwargs)
+        return
+    if m.startswith("audio/"):
+        await bot.send_audio(chat_id=chat_id, audio=file, caption=caption, **thread_kwargs)
+        return
+    if m.startswith("video/"):
+        await bot.send_video(chat_id=chat_id, video=file, caption=caption, **thread_kwargs)
+        return
+    # Fallback — send as a downloadable document.
+    await bot.send_document(chat_id=chat_id, document=file, caption=caption, **thread_kwargs)
+
+
 def make_telegram_sender(
     bot: "Bot",
     chat_id: int | str,
@@ -229,59 +275,16 @@ def make_telegram_sender(
             thread_kwargs["message_thread_id"] = message_thread_id
 
         if file_path is None:
-            # Text-only delivery.
-            await bot.send_message(
-                chat_id=chat_id,
-                text=text or "",
-                **thread_kwargs,
-            )
+            await bot.send_message(chat_id=chat_id, text=text or "", **thread_kwargs)
             return
 
-        from aiogram.types import FSInputFile  # noqa: PLC0415 — lazy import; aiogram optional
-
-        file = FSInputFile(file_path)
-        caption = text or None
-        m = (mime or "").lower()
-
-        if m.startswith("image/"):
-            await bot.send_photo(
-                chat_id=chat_id,
-                photo=file,
-                caption=caption,
-                **thread_kwargs,
-            )
-            return
-        if m in ("audio/ogg", "audio/opus"):
-            # Telegram renders ogg/opus as an in-chat voice note.
-            await bot.send_voice(
-                chat_id=chat_id,
-                voice=file,
-                caption=caption,
-                **thread_kwargs,
-            )
-            return
-        if m.startswith("audio/"):
-            await bot.send_audio(
-                chat_id=chat_id,
-                audio=file,
-                caption=caption,
-                **thread_kwargs,
-            )
-            return
-        if m.startswith("video/"):
-            await bot.send_video(
-                chat_id=chat_id,
-                video=file,
-                caption=caption,
-                **thread_kwargs,
-            )
-            return
-        # Fallback — send as a downloadable document.
-        await bot.send_document(
+        await _dispatch_media(
+            bot=bot,
             chat_id=chat_id,
-            document=file,
-            caption=caption,
-            **thread_kwargs,
+            file_path=file_path,
+            mime=mime,
+            caption=text or None,
+            thread_kwargs=thread_kwargs,
         )
 
     return _send
