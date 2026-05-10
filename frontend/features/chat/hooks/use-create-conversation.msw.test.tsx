@@ -20,7 +20,7 @@
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { HttpResponse, http } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL } from '@/lib/api';
 import { fixtures } from '@/test/handlers';
@@ -60,7 +60,11 @@ function renderMutation() {
 
 describe('useCreateConversation (MSW)', () => {
 	it('resolves with the server-returned conversation on success', async () => {
-		const serverConversation = { ...fixtures.conversation, id: CONVERSATION_ID, title: 'Hello' };
+		const serverConversation = {
+			...fixtures.conversation,
+			id: CONVERSATION_ID,
+			title: 'Hello',
+		};
 		server.use(
 			http.post(`${API_BASE_URL}/api/v1/conversations/${CONVERSATION_ID}`, () =>
 				HttpResponse.json(serverConversation)

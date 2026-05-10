@@ -18,7 +18,7 @@
  */
 
 import { renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { HttpResponse, http } from 'msw';
 // Mock next/navigation (useRouter is called inside useAuthedFetch).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL } from '@/lib/api';
