@@ -195,7 +195,7 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     monkeypatch.setattr(provider, "_stream_fn", script)
 
     # Inject both the provider and the echo tool into the chat path.
-    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
     monkeypatch.setattr(
         "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo]
     )
@@ -267,7 +267,7 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
         ),
     )
 
-    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
     monkeypatch.setattr(
         "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")]
     )
