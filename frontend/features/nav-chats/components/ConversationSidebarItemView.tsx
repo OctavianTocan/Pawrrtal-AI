@@ -18,7 +18,6 @@ import {
 	Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { DropdownMenuShortcut } from '@/components/ui/dropdown-menu';
 import { EntityRow } from '@/components/ui/entity-row';
 import { useMenuComponents } from '@/components/ui/menu-context';
 import { SidebarMenuItem } from '@/components/ui/sidebar';
