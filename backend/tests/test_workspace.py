@@ -401,7 +401,7 @@ class TestWorkspaceService:
         with (
             patch("app.core.workspace.settings") as mock_settings,
             patch(
-                "app.core.workspace.create_workspace",
+                "app.crud.workspace.create_workspace",
                 side_effect=SAIntegrityError("mock", {}, Exception()),
             ),
         ):
