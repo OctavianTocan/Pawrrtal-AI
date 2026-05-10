@@ -19,11 +19,11 @@ from app.core.agent_tools import build_agent_tools
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.tools.artifact import (
+from app.core.tools.artifact_agent import (
+    ARTIFACT_TOOL_NAME,
     ArtifactValidationError,
     build_artifact,
 )
-from app.core.tools.artifact_agent import ARTIFACT_TOOL_NAME
 from app.crud.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (

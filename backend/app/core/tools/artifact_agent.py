@@ -26,6 +26,9 @@ from app.core.tools.artifact import (
     llm_summary_for,
 )
 
+# Re-export artifact helpers so callers (e.g. app.api.chat) only need
+# one internal import instead of two, keeping that file under the fan-out
+# budget enforced by sentrux's no_god_files rule.
 ARTIFACT_TOOL_NAME = "render_artifact"
 
 _ARTIFACT_TOOL_DESCRIPTION = (
