@@ -138,3 +138,37 @@ describe('updateLastAssistantMessage', () => {
 		expect(next[1]?.content).toBe('done');
 	});
 });
+
+it('accumulates inline images from image events', () => {
+	let msg = blankAssistant();
+	const img = {
+		id: 'img_tc-0',
+		b64: 'AAAA',
+		mime_type: 'image/png' as const,
+		path: 'generated_images/foo.png',
+		tool_use_id: 'tc-0',
+	};
+	const event: ChatStreamEvent = { type: 'image', image: img };
+	msg = applyChatEvent(msg, event);
+
+	expect(msg.generatedImages).toHaveLength(1);
+	expect(msg.generatedImages?.[0]?.id).toBe('img_tc-0');
+	expect(msg.generatedImages?.[0]?.b64).toBe('AAAA');
+});
+
+it('accumulates multiple images in arrival order', () => {
+	let msg = blankAssistant();
+	const makeImg = (n: number) => ({
+		id: `img_tc-${n}`,
+		b64: `B${n}`,
+		mime_type: 'image/png' as const,
+		path: `generated_images/img${n}.png`,
+		tool_use_id: `tc-${n}`,
+	});
+	msg = applyChatEvent(msg, { type: 'image', image: makeImg(0) });
+	msg = applyChatEvent(msg, { type: 'image', image: makeImg(1) });
+
+	expect(msg.generatedImages).toHaveLength(2);
+	expect(msg.generatedImages?.[0]?.id).toBe('img_tc-0');
+	expect(msg.generatedImages?.[1]?.id).toBe('img_tc-1');
+});

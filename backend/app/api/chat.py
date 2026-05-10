@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import time
 from collections.abc import AsyncGenerator
@@ -47,6 +49,57 @@ logger = logging.getLogger(__name__)
 _HISTORY_WINDOW = 20
 
 _DEFAULT_MODEL = "gemini-3-flash-preview"
+
+# Tool name for the image-generation tool.  Used to correlate tool_use events
+# with their tool_result so we can emit a sibling ``image`` SSE event carrying
+# the generated PNG as base64 — matching the pattern used for ``artifact``
+# events but applied to the tool *result* (the bytes aren't known until after
+# execution) rather than the tool *input*.
+_IMAGE_TOOL_NAME = "generate_image"
+
+
+def _maybe_image_event(event: StreamEvent, workspace_root: Path) -> StreamEvent | None:
+    """Build an ``image`` SSE event from a completed ``generate_image`` tool result.
+
+    Reads the PNG from disk using the path embedded in the tool result JSON,
+    base64-encodes it, and returns an ``image`` event for the frontend to
+    render inline.  Returns ``None`` when:
+
+    * The result JSON is malformed or missing the ``status``/``path`` fields.
+    * The file cannot be read from disk (already deleted, race condition, etc.).
+
+    Failures are silent — the tool result string was already yielded to the
+    LLM, so the agent can self-correct or report the error on its next turn.
+    """
+    content = str(event.get("content") or "")
+    if not content:
+        return None
+    try:
+        result = json.loads(content)
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if result.get("status") != "success":
+        return None
+    relative_path = result.get("path")
+    if not relative_path:
+        return None
+    image_path = workspace_root / relative_path
+    try:
+        image_bytes = image_path.read_bytes()
+    except OSError:
+        return None
+    tool_use_id = str(event.get("tool_use_id", ""))
+    b64 = base64.b64encode(image_bytes).decode()
+    return StreamEvent(
+        type="image",
+        image={
+            "id": f"img_{tool_use_id}",
+            "b64": b64,
+            "mime_type": "image/png",
+            "path": relative_path,
+            "tool_use_id": tool_use_id,
+        },
+    )
 
 
 def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
@@ -253,6 +306,10 @@ def get_chat_router() -> APIRouter:
             async def _guarded_stream():
                 """Wrap the provider stream with error capture + aggregation."""
                 nonlocal event_count
+                # Maps tool_use_id → None for in-flight generate_image calls.
+                # Populated when we see the tool_use event; consumed when the
+                # matching tool_result arrives so we can emit the image event.
+                pending_image_tool_ids: set[str] = set()
                 try:
                     async for event in provider.stream(
                         request.question,
@@ -265,6 +322,31 @@ def get_chat_router() -> APIRouter:
                         event_count += 1
                         aggregator.apply(event)
                         yield event
+
+                        # Track generate_image tool invocations by their id so
+                        # we can intercept the matching result below.
+                        if (
+                            event.get("type") == "tool_use"
+                            and event.get("name") == _IMAGE_TOOL_NAME
+                        ):
+                            pending_image_tool_ids.add(
+                                str(event.get("tool_use_id", ""))
+                            )
+
+                        # When a generate_image result arrives, read the saved
+                        # PNG from disk and emit an ``image`` sibling event.
+                        # The base64 payload goes to the frontend only — the
+                        # LLM already received the short JSON result string.
+                        if event.get("type") == "tool_result":
+                            tid = str(event.get("tool_use_id", ""))
+                            if tid in pending_image_tool_ids:
+                                pending_image_tool_ids.discard(tid)
+                                image_event = _maybe_image_event(event, root)
+                                if image_event is not None:
+                                    event_count += 1
+                                    aggregator.apply(image_event)
+                                    yield image_event
+
                         # When the agent invokes ``render_artifact``, lift the
                         # spec out of the tool's input and emit a sibling
                         # ``artifact`` event for the frontend.  The tool's

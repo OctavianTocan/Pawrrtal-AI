@@ -387,3 +387,92 @@ async def test_message_context_grows_across_turns() -> None:
 
     # Loop completed without safety termination.
     assert not any(e["type"] == "agent_terminated" for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Scenario: generate_image tool call flows through the harness
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_generate_image_tool_result_flows_to_llm_context(
+    tmp_path: Path,
+) -> None:
+    """Agent calls generate_image, tool executes, result appears in next LLM turn.
+
+    The harness test verifies that:
+    1. The tool_call_start event carries the correct tool name.
+    2. The tool result JSON is well-formed and contains the saved path.
+    3. The PNG file was actually written to the workspace.
+    4. The second LLM turn receives the tool result in its message context.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+
+    from app.core.agent_loop.types import AgentTool as _AgentTool
+
+    fake_png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+
+    async def _execute(tool_call_id: str, **kwargs: object) -> str:
+        out_dir = tmp_path / "generated_images"
+        out_dir.mkdir(exist_ok=True)
+        fname = "20260510T000000_test_cat.png"
+        (out_dir / fname).write_bytes(fake_png)
+        return _json.dumps(
+            {
+                "status": "success",
+                "path": f"generated_images/{fname}",
+                "size_bytes": len(fake_png),
+                "dimensions": "1024x1024",
+                "quality": "medium",
+                "message": f"Image saved to generated_images/{fname}",
+            }
+        )
+
+    image_tool = _AgentTool(
+        name="generate_image",
+        description="Generate an image from a prompt.",
+        parameters={
+            "type": "object",
+            "properties": {"prompt": {"type": "string"}},
+            "required": ["prompt"],
+        },
+        execute=_execute,
+    )
+
+    script = ScriptedStreamFn(
+        [
+            _tool("generate_image", {"prompt": "a cat on a hill"}, turn_id="tc-img"),
+            _text("Here is your image of a cat on a hill."),
+        ]
+    )
+
+    events = await run_scenario(script, tools=[image_tool])
+
+    # Both LLM turns were invoked.
+    assert script.call_count == 2
+
+    # Tool call was started with the right name.
+    starts = [e for e in events if e["type"] == "tool_call_start"]
+    assert len(starts) == 1
+    assert starts[0]["name"] == "generate_image"
+
+    # Tool result arrived and is valid JSON.
+    results = [e for e in events if e["type"] == "tool_result"]
+    assert len(results) == 1
+    data = _json.loads(results[0]["content"])
+    assert data["status"] == "success"
+    assert data["path"].startswith("generated_images/")
+
+    # PNG was actually written to disk.
+    saved = tmp_path / data["path"]
+    assert saved.exists()
+    assert saved.read_bytes() == fake_png
+
+    # Second LLM turn received the tool result as context.
+    turn2_messages = script.messages_seen[1]
+    assert any(m["role"] == "toolResult" for m in turn2_messages)
+
+    # Loop ended cleanly.
+    assert any(e["type"] == "agent_end" for e in events)
+    assert not any(e["type"] == "agent_terminated" for e in events)

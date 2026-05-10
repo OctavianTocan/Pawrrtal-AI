@@ -53,6 +53,10 @@ class ChatTurnAggregator:
     error_text: str | None = None
     tool_calls: list[_ToolCall] = field(default_factory=list)
     timeline: list[dict[str, Any]] = field(default_factory=list)
+    # Inline images emitted by the generate_image tool.  Not persisted to the
+    # database yet (no column) — they survive for the duration of the stream
+    # so the aggregator stays consistent with the frontend reducer state.
+    generated_images: list[dict[str, Any]] = field(default_factory=list)
 
     def _mark_started(self) -> None:
         if self.started_at_monotonic is None:
@@ -97,6 +101,11 @@ class ChatTurnAggregator:
                     call.result = event.get("content")
                     call.status = "completed"
                     break
+            return
+        if event_type == "image":
+            image = event.get("image")
+            if isinstance(image, dict):
+                self.generated_images.append(dict(image))
             return
         if event_type == "error":
             self.error_text = event.get("content") or "Chat stream failed."

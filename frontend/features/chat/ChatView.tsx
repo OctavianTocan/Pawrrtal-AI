@@ -214,6 +214,7 @@ function ChatView({
 									return (
 										<AssistantMessage
 											artifacts={chatMessage.artifacts}
+											generatedImages={chatMessage.generatedImages}
 											content={chatMessage.content}
 											isCopied={copiedMessageId === messageId}
 											isFailed={chatMessage.assistant_status === 'failed'}

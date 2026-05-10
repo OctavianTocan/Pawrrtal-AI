@@ -207,3 +207,140 @@ def test_build_agent_tools_includes_generate_image(tmp_path: Path) -> None:
 
     tools = build_agent_tools(workspace_root=tmp_path)
     assert "generate_image" in [t.name for t in tools]
+
+
+# ---------------------------------------------------------------------------
+# _maybe_image_event (chat.py helper) — unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_maybe_image_event_emits_image_event_on_success(tmp_path: Path) -> None:
+    """Happy path: valid tool result JSON + file on disk → image SSE event."""
+    import base64
+    import json
+
+    from app.api.chat import _maybe_image_event
+    from app.core.providers.base import StreamEvent
+
+    png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+    (tmp_path / "generated_images").mkdir()
+    (tmp_path / "generated_images" / "test.png").write_bytes(png_bytes)
+
+    event = StreamEvent(
+        type="tool_result",
+        tool_use_id="tc-img-1",
+        content=json.dumps(
+            {
+                "status": "success",
+                "path": "generated_images/test.png",
+                "size_bytes": len(png_bytes),
+            }
+        ),
+    )
+
+    result = _maybe_image_event(event, tmp_path)
+
+    assert result is not None
+    assert result["type"] == "image"
+    img = result["image"]
+    assert img["id"] == "img_tc-img-1"
+    assert img["mime_type"] == "image/png"
+    assert img["path"] == "generated_images/test.png"
+    assert img["tool_use_id"] == "tc-img-1"
+    # Verify the base64 round-trips back to the original bytes.
+    assert base64.b64decode(img["b64"]) == png_bytes
+
+
+def test_maybe_image_event_returns_none_on_missing_file(tmp_path: Path) -> None:
+    """File not on disk → None (no image event, no crash)."""
+    import json
+
+    from app.api.chat import _maybe_image_event
+    from app.core.providers.base import StreamEvent
+
+    event = StreamEvent(
+        type="tool_result",
+        tool_use_id="tc-img-2",
+        content=json.dumps({"status": "success", "path": "generated_images/ghost.png"}),
+    )
+
+    assert _maybe_image_event(event, tmp_path) is None
+
+
+def test_maybe_image_event_returns_none_on_failed_result(tmp_path: Path) -> None:
+    """Tool result with status != success → None."""
+    import json
+
+    from app.api.chat import _maybe_image_event
+    from app.core.providers.base import StreamEvent
+
+    event = StreamEvent(
+        type="tool_result",
+        tool_use_id="tc-img-3",
+        content=json.dumps({"status": "error", "error": "No Codex OAuth token"}),
+    )
+
+    assert _maybe_image_event(event, tmp_path) is None
+
+
+def test_maybe_image_event_returns_none_on_malformed_json(tmp_path: Path) -> None:
+    """Malformed JSON content → None, no exception."""
+    from app.api.chat import _maybe_image_event
+    from app.core.providers.base import StreamEvent
+
+    event = StreamEvent(
+        type="tool_result",
+        tool_use_id="tc-img-4",
+        content="not json at all",
+    )
+
+    assert _maybe_image_event(event, tmp_path) is None
+
+
+# ---------------------------------------------------------------------------
+# ChatTurnAggregator — image event handling
+# ---------------------------------------------------------------------------
+
+
+def test_aggregator_accumulates_image_events() -> None:
+    """ChatTurnAggregator correctly stores image events in generated_images."""
+    from app.core.chat_aggregator import ChatTurnAggregator
+    from app.core.providers.base import StreamEvent
+
+    agg = ChatTurnAggregator()
+    img_event = StreamEvent(
+        type="image",
+        image={
+            "id": "img_tc-1",
+            "b64": "AAAA",
+            "mime_type": "image/png",
+            "path": "generated_images/foo.png",
+            "tool_use_id": "tc-1",
+        },
+    )
+
+    agg.apply(img_event)
+
+    assert len(agg.generated_images) == 1
+    stored = agg.generated_images[0]
+    assert stored["id"] == "img_tc-1"
+    assert stored["b64"] == "AAAA"
+
+
+def test_aggregator_does_not_persist_images_in_snapshot() -> None:
+    """generated_images are transient — to_persisted_shape() doesn't include them."""
+    from app.core.chat_aggregator import ChatTurnAggregator
+    from app.core.providers.base import StreamEvent
+
+    agg = ChatTurnAggregator()
+    agg.apply(StreamEvent(type="delta", content="hello"))
+    agg.apply(
+        StreamEvent(
+            type="image",
+            image={"id": "img_x", "b64": "YQ==", "mime_type": "image/png",
+                   "path": "x.png", "tool_use_id": "tc-x"},
+        )
+    )
+
+    snapshot = agg.to_persisted_shape(status="complete")
+    assert "generated_images" not in snapshot
