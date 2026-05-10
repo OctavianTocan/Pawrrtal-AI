@@ -250,7 +250,8 @@ def make_telegram_sender(
                 caption=caption,
                 **thread_kwargs,
             )
-        elif m in ("audio/ogg", "audio/opus"):
+            return
+        if m in ("audio/ogg", "audio/opus"):
             # Telegram renders ogg/opus as an in-chat voice note.
             await bot.send_voice(
                 chat_id=chat_id,
@@ -258,27 +259,29 @@ def make_telegram_sender(
                 caption=caption,
                 **thread_kwargs,
             )
-        elif m.startswith("audio/"):
+            return
+        if m.startswith("audio/"):
             await bot.send_audio(
                 chat_id=chat_id,
                 audio=file,
                 caption=caption,
                 **thread_kwargs,
             )
-        elif m.startswith("video/"):
+            return
+        if m.startswith("video/"):
             await bot.send_video(
                 chat_id=chat_id,
                 video=file,
                 caption=caption,
                 **thread_kwargs,
             )
-        else:
-            # Fallback — send as a downloadable document.
-            await bot.send_document(
-                chat_id=chat_id,
-                document=file,
-                caption=caption,
-                **thread_kwargs,
-            )
+            return
+        # Fallback — send as a downloadable document.
+        await bot.send_document(
+            chat_id=chat_id,
+            document=file,
+            caption=caption,
+            **thread_kwargs,
+        )
 
     return _send
