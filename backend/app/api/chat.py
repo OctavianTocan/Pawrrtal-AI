@@ -19,7 +19,7 @@ from app.core.agent_tools import build_agent_tools
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.workspace import get_default_workspace
+from app.crud.workspace import get_default_workspace
 from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
     append_assistant_placeholder,

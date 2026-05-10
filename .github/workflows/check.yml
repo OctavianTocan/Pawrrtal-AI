@@ -55,6 +55,11 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Build local libs (frontend/lib/* submodules)
         run: bash scripts/build-local-libs.sh
 
