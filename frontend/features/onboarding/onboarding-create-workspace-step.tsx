@@ -1,7 +1,9 @@
 import { CloudServerIcon, FolderAddIcon, FolderOpenIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from 'react';
+import { useCallback } from 'react';
 import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { OPEN_ONBOARDING_SERVER_STEP_EVENT } from '@/features/onboarding/v2/OnboardingFlow';
 import { cn } from '@/lib/utils';
 
 const WORKSPACE_OPTIONS = [
@@ -9,19 +11,19 @@ const WORKSPACE_OPTIONS = [
 		icon: FolderAddIcon,
 		title: 'Create new',
 		description: 'Start fresh with an empty workspace.',
-		status: 'upcoming',
+		status: 'upcoming' as const,
 	},
 	{
 		icon: FolderOpenIcon,
 		title: 'Open folder',
 		description: 'Choose an existing folder as workspace.',
-		status: 'enabled',
+		status: 'enabled' as const,
 	},
 	{
 		icon: CloudServerIcon,
 		title: 'Connect to remote server',
 		description: 'Use a remote Pawrrtal worker.',
-		status: 'upcoming',
+		status: 'enabled' as const,
 	},
 ] as const;
 
@@ -29,12 +31,22 @@ const WORKSPACE_OPTIONS = [
 export interface OnboardingCreateWorkspaceStepProps {
 	/** Opens the local folder selection step. */
 	onPickLocal: () => void;
+	/** Close the workspace modal (called before re-opening the onboarding flow). */
+	onClose?: () => void;
 }
 
-/** Workspace type selection; only folder opening is interactive until backend support exists. */
+/** Workspace type selection; "Open folder" and "Connect to remote server" are interactive. */
 export function OnboardingCreateWorkspaceStep({
 	onPickLocal,
+	onClose,
 }: OnboardingCreateWorkspaceStepProps): React.JSX.Element {
+	const handleRemoteServer = useCallback(() => {
+		// Close the workspace modal first so the two overlays don't stack.
+		onClose?.();
+		// Open the v2 onboarding flow at the server-configuration step.
+		window.dispatchEvent(new Event(OPEN_ONBOARDING_SERVER_STEP_EVENT));
+	}, [onClose]);
+
 	return (
 		<section className="popover-styled onboarding-panel flex w-full max-w-[34rem] select-none flex-col gap-6 rounded-surface-lg border border-border bg-background/95 px-7 py-8 text-foreground shadow-modal-small sm:px-8 sm:py-9">
 			<DialogHeader className="items-center gap-2 text-center">
@@ -53,6 +65,13 @@ export function OnboardingCreateWorkspaceStep({
 				{WORKSPACE_OPTIONS.map((option): React.JSX.Element => {
 					const Icon = option.icon;
 					const isEnabled = option.status === 'enabled';
+					const isRemote = option.title === 'Connect to remote server';
+
+					const handleClick = isEnabled
+						? isRemote
+							? handleRemoteServer
+							: onPickLocal
+						: undefined;
 
 					return (
 						<li key={option.title}>
@@ -65,7 +84,7 @@ export function OnboardingCreateWorkspaceStep({
 										? 'cursor-pointer hover:bg-foreground/[0.045] hover:shadow-minimal active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45'
 										: 'cursor-not-allowed bg-foreground/[0.012] text-muted-foreground/55'
 								)}
-								onClick={isEnabled ? onPickLocal : undefined}
+								onClick={handleClick}
 								aria-disabled={!isEnabled}
 								disabled={!isEnabled}
 								tabIndex={isEnabled ? 0 : -1}

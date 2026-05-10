@@ -17,7 +17,7 @@
 	},
 	"devDependencies": {
 		"@google/design.md": "^0.1.1",
-		"@tanstack/react-query-devtools": "^5.100.8",
+		"@tanstack/react-query-devtools": "^5.100.9",
 		"@types/bun": "latest",
 		"mcporter": "^0.9.0"
 	},
@@ -30,11 +30,11 @@
 		"frontend/lib/react-dropdown"
 	],
 	"overrides": {
-		"react": "19.2.5",
-		"react-dom": "19.2.5"
+		"react": "19.2.6",
+		"react-dom": "19.2.6"
 	},
 	"resolutions": {
-		"react": "19.2.5",
-		"react-dom": "19.2.5"
+		"react": "19.2.6",
+		"react-dom": "19.2.6"
 	}
 }

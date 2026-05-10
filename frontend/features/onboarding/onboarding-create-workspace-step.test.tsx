@@ -19,13 +19,17 @@ describe('OnboardingCreateWorkspaceStep', () => {
 		expect(container.textContent).toContain('Connect to remote server');
 	});
 
-	it('disables the upcoming options', () => {
-		const { container } = render(
+	it('disables only the upcoming (Create new) option, leaving Open folder and Connect to remote server enabled', () => {
+		const { container, getByText } = render(
 			wrap(<OnboardingCreateWorkspaceStep onPickLocal={() => undefined} />)
 		);
 		const buttons = Array.from(container.querySelectorAll('button'));
 		const enabled = buttons.filter((b) => !(b as HTMLButtonElement).disabled);
-		expect(enabled.length).toBe(1);
+		// "Open folder" + "Connect to remote server" are both enabled;
+		// "Create new" is still upcoming/disabled.
+		expect(enabled.length).toBe(2);
+		const createNew = getByText('Create new').closest('button');
+		expect((createNew as HTMLButtonElement).disabled).toBe(true);
 	});
 
 	it('fires onPickLocal when the enabled "Open folder" button is clicked', () => {
