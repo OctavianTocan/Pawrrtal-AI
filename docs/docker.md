@@ -12,9 +12,11 @@ you run it with the normal dev server so hot-reload keeps working.
 ## Quick start
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/OctavianTocan/ai-nexus.git
+# 1. Clone the repo (use --recurse-submodules for vendored frontend packages)
+git clone --recurse-submodules https://github.com/OctavianTocan/ai-nexus.git
 cd ai-nexus
+
+# Plain clone? Run: git submodule update --init --recursive
 
 # 2. Copy the Docker environment template and fill in your API keys
 cp backend/.env.docker backend/.env

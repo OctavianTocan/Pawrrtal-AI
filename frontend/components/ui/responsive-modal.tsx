@@ -12,7 +12,7 @@
 
 import { BottomSheet, Modal, type ModalSize } from '@octavian-tocan/react-overlay';
 import type * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -75,8 +75,11 @@ export function ResponsiveModal({
 	const isMobile = useIsMobile();
 	// Mounting flag so we don't try to portal during SSR — `document` is
 	// undefined on the server and the first render has to match.
+	// `useLayoutEffect` (not `useEffect`) so the first client paint already
+	// uses `createPortal` — otherwise the desktop `Modal` renders one frame
+	// inside the sidebar and is clipped by `overflow` / stacking context.
 	const [isMounted, setIsMounted] = useState(false);
-	useEffect(() => {
+	useLayoutEffect(() => {
 		setIsMounted(true);
 	}, []);
 

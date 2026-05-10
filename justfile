@@ -167,9 +167,10 @@ stagehand-e2e:
 
 # Install all dependencies (frontend + backend) and git hooks
 install:
-    bun install
-    uv sync --project backend
-    just install-hooks
+	bash -c 'if git rev-parse --git-dir >/dev/null 2>&1; then git submodule update --init --recursive; fi'
+	bun install
+	uv sync --project backend
+	just install-hooks
 
 # Show active tasks from Notion
 tasks:

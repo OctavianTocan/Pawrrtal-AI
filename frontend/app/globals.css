@@ -5,6 +5,7 @@
 /* Linked `@octavian-tocan/react-dropdown` resolves here — ensure Tailwind scans it so
    menu primitives (e.g. `disabled:bg-muted/*`) are generated in dev + prod. */
 @source "../lib/react-dropdown/src";
+@source "../lib/react-overlay/src";
 
 @custom-variant dark (&:is(.dark *));
 

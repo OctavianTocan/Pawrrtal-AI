@@ -63,7 +63,7 @@ export function CreateProjectModal({
 		<ResponsiveModal
 			ariaLabelledBy={headingId}
 			onDismiss={handleClose}
-			open
+			open={open}
 			showDismissButton
 			size="md"
 		>

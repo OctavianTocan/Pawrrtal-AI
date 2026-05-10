@@ -47,9 +47,12 @@ Full-stack AI chatbot with real-time streaming responses, built with **Next.js 1
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/OctavianTocan/pawrrtal.git
+# Clone the repository (include vendored frontend libs: react-dropdown, react-overlay)
+git clone --recurse-submodules https://github.com/OctavianTocan/pawrrtal.git
 cd pawrrtal
+
+# If you cloned without submodules, fetch them once:
+# git submodule update --init --recursive
 
 # Install all dependencies
 just install

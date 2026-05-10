@@ -31,6 +31,10 @@ export default defineConfig({
 				// biome-ignore lint/style/useNodejsImportProtocol: CJS require in IIFE
 				return require('fs').existsSync(vendored) ? vendored : stub;
 			})(),
+			'@octavian-tocan/react-overlay': path.resolve(
+				__dirname,
+				'lib/react-overlay/src/index.ts'
+			),
 			// streamdown is ESM-only; inline it so vite can transform it, or
 			// use the plain-text stub in environments where ESM interop is tricky.
 			streamdown: path.resolve(__dirname, '__mocks__/streamdown.tsx'),
@@ -53,6 +57,7 @@ export default defineConfig({
 			// references fail to resolve. Run package tests via:
 			//   `cd lib/react-dropdown && bunx vitest run`
 			'lib/react-dropdown/**',
+			'lib/react-overlay/**',
 		],
 		globals: false,
 		setupFiles: ['./test/setup.ts'],
@@ -76,6 +81,7 @@ export default defineConfig({
 				// Coverage for the vendored react-dropdown package is owned by
 				// its own vitest config in lib/react-dropdown/.
 				'lib/react-dropdown/**',
+				'lib/react-overlay/**',
 			],
 		},
 	},

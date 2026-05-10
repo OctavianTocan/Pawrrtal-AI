@@ -653,7 +653,7 @@ fall back to the prose below for behavioral notes.
 Panel-style dropdowns (sidebar profile menu, composer attachment menus, etc.)
 use **`DropdownMenuItem`** from **`@octavian-tocan/react-dropdown`**. The
 implementation is vendored at **`frontend/lib/react-dropdown`** (`package.json`
-`link:` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
+`workspace:*` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
 
 **Tailwind v4 scanning:** Default row chrome lives in
 **`frontend/lib/react-dropdown/src/DropdownPanelItems.tsx`**
@@ -687,6 +687,26 @@ disabled`** as usual (they remain unreachable when the trigger is disabled).
 
 The write-up in **`docs/solutions/ui-bugs/dropdown-disabled-menu-items-not-visually-distinct.md`**
 captures the full diagnosis (scan gap + contrast strategy) for future debugging.
+
+### Modal / sheet overlays (`@octavian-tocan/react-overlay`)
+
+Centered **`Modal`** and draggable **`BottomSheet`** patterns live in this package.
+The implementation is vendored at **`frontend/lib/react-overlay`** (git submodule),
+wired like **`react-dropdown`**: root **`package.json`** **`workspace:*`** +
+**`frontend/tsconfig.json`** path alias → **`./lib/react-overlay/src/index.ts`**.
+
+Feature code composes through **`frontend/components/ui/responsive-modal.tsx`**
+(`ResponsiveModal`), which picks **`Modal`** on desktop and **`BottomSheet`** on
+narrow viewports.
+
+**Tailwind v4 scanning:** register the package in **`frontend/app/globals.css`**:
+
+```css
+@source "../lib/react-overlay/src";
+```
+
+(Path is relative to `app/globals.css`.) Without this, overlay-specific utilities
+may not appear in the compiled CSS.
 
 - **`dropdown-menu-item-disabled`** — Unavailable **`DropdownMenuItem`** rows
   (`disabled` prop). **Surface:** `bg-muted/50` row tray, **`text-muted-foreground`**
@@ -810,7 +830,8 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
   equivalent)—not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
 - **Register linked UI packages with Tailwind.** Packages resolved under
   `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
-  `frontend/lib/react-dropdown`) often define Tailwind class strings. Add an
+  `frontend/lib/react-dropdown`, `@octavian-tocan/react-overlay` →
+  `frontend/lib/react-overlay`) often define Tailwind class strings. Add an
   `@source` path in `frontend/app/globals.css` for each such package so those
   utilities are emitted—see **Menu primitives (`@octavian-tocan/react-dropdown`)**
   under **Components**.
