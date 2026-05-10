@@ -18,8 +18,8 @@
 		"dist:dir": "bun run build && electron-builder --dir"
 	},
 	"dependencies": {
-		"chokidar": "^4.0.3",
-		"electron-store": "^8.2.0",
+		"chokidar": "^5.0.0",
+		"electron-store": "^11.0.2",
 		"wait-on": "^9.0.1"
 	},
 	"devDependencies": {
