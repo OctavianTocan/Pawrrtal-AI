@@ -23,6 +23,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.channels import ChannelMessage, resolve_channel
@@ -156,6 +157,31 @@ def build_telegram_service() -> "TelegramService":
         context: TelegramTurnContext = result
         thinking_msg = await message.answer("⏳")
 
+        # Resolve the user's default workspace so the agent has filesystem
+        # access.  If onboarding hasn't completed (no workspace), we fall
+        # back to an empty tool list so the turn still works.
+        from app.core.agent_tools import build_agent_tools  # noqa: PLC0415
+        from app.channels.telegram import make_telegram_sender  # noqa: PLC0415
+        from app.crud.workspace import get_default_workspace  # noqa: PLC0415
+
+        async with async_session_maker() as ws_session:
+            workspace = await get_default_workspace(context.nexus_user_id, ws_session)
+
+        tg_sender = make_telegram_sender(
+            message.bot,
+            message.chat.id,
+            message_thread_id=context.thread_id,
+        )
+        agent_tools = (
+            build_agent_tools(
+                workspace_root=Path(workspace.path),
+                user_id=context.nexus_user_id,
+                send_fn=tg_sender,
+            )
+            if workspace is not None
+            else []
+        )
+
         channel_message: ChannelMessage = {
             "user_id": context.nexus_user_id,
             "conversation_id": context.conversation_id,
@@ -178,6 +204,7 @@ def build_telegram_service() -> "TelegramService":
                 context.conversation_id,
                 context.nexus_user_id,
                 history=[],
+                tools=agent_tools or None,
             )
             async for _ in channel.deliver(raw_stream, channel_message):
                 pass  # delivery is a side-effect; nothing yielded by TelegramChannel
