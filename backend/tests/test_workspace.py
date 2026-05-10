@@ -26,11 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.workspace import (
     _build_soul_md,
     _build_user_md,
+    seed_workspace,
+)
+from app.crud.workspace import (
     create_workspace,
     ensure_default_workspace,
     get_default_workspace,
     list_workspaces,
-    seed_workspace,
 )
 from app.db import User
 from app.models import UserPersonalization
