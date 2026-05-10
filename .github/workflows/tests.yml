@@ -40,6 +40,10 @@ concurrency:
 jobs:
   frontend:
     name: Frontend Vitest
+    if: >-
+      github.actor == 'OctavianTocan' &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
@@ -103,6 +107,10 @@ jobs:
 
   backend:
     name: Backend pytest
+    if: >-
+      github.actor == 'OctavianTocan' &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
