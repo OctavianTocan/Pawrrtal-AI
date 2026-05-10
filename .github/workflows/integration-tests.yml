@@ -40,13 +40,17 @@ concurrency:
 jobs:
   integration:
     name: Integration suite
+    if: >-
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
     # Self-hosted to keep token spend bounded: the runner already has
     # the Claude CLI + uv installed locally (no per-run install of
     # 「@anthropic-ai/claude-code」) and the network egress to Anthropic
     # is on Tavi's box, not GitHub's.  Reserving 「ubuntu-latest」 for
     # the GitHub-hosted-only workloads (「playwright install --with-deps」
     # in the dev-console smoke).
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -66,7 +70,7 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
-      # Self-hosted ainexus runner doesn't carry node/npm by default,
+      # Self-hosted pawrrtal runners don't carry node/npm by default,
       # and the comment in this workflow that claimed the CLI was
       # "already installed locally" was stale — every run of this job
       # was failing on `npm: command not found`.  setup-node provides
