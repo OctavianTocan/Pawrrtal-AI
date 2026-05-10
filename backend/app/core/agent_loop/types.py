@@ -150,6 +150,27 @@ class AgentEndEvent(TypedDict):
     messages: list[AgentMessage]
 
 
+class AgentTerminatedEvent(TypedDict):
+    """Emitted when the safety layer trips and the loop bails early.
+
+    ``reason`` is a stable machine-readable string — callers (the chat
+    router, tests, the frontend) match against it to render the
+    appropriate user-facing notice.  ``details`` carries human-readable
+    context (e.g. ``{"limit": 25, "observed": 25}``) for logs and the
+    error message surfaced to the user.
+    """
+
+    type: Literal["agent_terminated"]
+    reason: Literal[
+        "max_iterations",
+        "max_wall_clock",
+        "consecutive_llm_errors",
+        "consecutive_tool_errors",
+    ]
+    details: dict[str, Any]
+    message: str
+
+
 AgentEvent = (
     AgentStartEvent
     | TurnStartEvent
@@ -161,6 +182,7 @@ AgentEvent = (
     | ToolResultEvent
     | TurnEndEvent
     | AgentEndEvent
+    | AgentTerminatedEvent
 )
 
 
@@ -214,6 +236,72 @@ TransformContextFn = Callable[
 ShouldStopFn = Callable[[AgentContext], bool]
 
 
+@dataclass(frozen=True)
+class AgentSafetyConfig:
+    """Hard limits that prevent runaway agent loops.
+
+    Every field accepts ``None`` to opt out of that specific guard.
+    Defaults are conservative — they catch real runaways (model stuck in
+    a tool loop, transient API errors retried forever, mis-configured
+    workflow eating wall-clock) while leaving generous room for normal
+    long agent turns (research, multi-step refactors).
+
+    Tavi can disable any of these in `Settings` when running an agent
+    that legitimately needs longer.  Set ``None`` to disable a specific
+    guard; set the whole field to ``AgentSafetyConfig.disabled()`` to
+    opt out entirely (escape hatch for trusted automations).
+
+    Inspired by openclaw/openclaw#9912 (maxTurns/maxToolCalls),
+    PR #38812 (tool-only safety valve), and issue #52147 (separating
+    LLM-pending vs tool-executing timeout semantics).
+    """
+
+    #: Hard cap on assistant turns (LLM→tool→LLM round-trips) per
+    #: ``agent_loop`` invocation.  ``None`` disables.  Default 25 covers
+    #: deep research / refactor turns; runaway tool-call loops trip well
+    #: before this.
+    max_iterations: int | None = 25
+
+    #: Wall-clock budget for the whole loop, in seconds.  Counted from
+    #: the moment ``agent_loop`` is entered.  ``None`` disables.
+    #: Default 300s (5 min) is generous for chat turns and matches the
+    #: 600s cap minus headroom for streaming / network jitter.
+    max_wall_clock_seconds: float | None = 300.0
+
+    #: How many back-to-back stream errors (provider exception, network
+    #: drop) we tolerate before bailing.  Resets on a successful stream.
+    #: ``None`` disables retry-bail — a single error then immediately
+    #: aborts.  Default 3.
+    max_consecutive_llm_errors: int | None = 3
+
+    #: How many back-to-back tool failures (``is_error=True`` results)
+    #: we tolerate before bailing.  Resets on any successful tool call.
+    #: Distinct from LLM errors so a flaky tool doesn't compound with a
+    #: flaky model.  ``None`` disables.  Default 5.
+    max_consecutive_tool_errors: int | None = 5
+
+    #: Base backoff (seconds) between LLM retries; doubled each retry.
+    #: First retry waits ``backoff``, second ``2*backoff``, etc.
+    #: 0 disables backoff (retries fire immediately).
+    llm_retry_backoff_seconds: float = 1.0
+
+    @classmethod
+    def disabled(cls) -> AgentSafetyConfig:
+        """Return a config with every guard turned off.
+
+        Use sparingly — only for trusted automation that genuinely needs
+        unbounded loop time.  The chat path should always use the default
+        config or a mildly relaxed variant.
+        """
+        return cls(
+            max_iterations=None,
+            max_wall_clock_seconds=None,
+            max_consecutive_llm_errors=None,
+            max_consecutive_tool_errors=None,
+            llm_retry_backoff_seconds=0.0,
+        )
+
+
 @dataclass
 class AgentLoopConfig:
     """Configuration for a single agent_loop invocation.
@@ -224,8 +312,12 @@ class AgentLoopConfig:
         the message list before every LLM call (e.g. sliding window).
     should_stop_after_turn: optional — sync predicate; return True to stop
         the loop after the current turn even if more tool calls are pending.
+    safety: hard limits on iterations, wall-clock, retries, etc.  See
+        :class:`AgentSafetyConfig`.  Defaults are conservative and
+        appropriate for the chat path.
     """
 
     convert_to_llm: Callable[[list[AgentMessage]], list[AgentMessage]]
     transform_context: TransformContextFn | None = None
     should_stop_after_turn: ShouldStopFn | None = None
+    safety: AgentSafetyConfig = field(default_factory=AgentSafetyConfig)

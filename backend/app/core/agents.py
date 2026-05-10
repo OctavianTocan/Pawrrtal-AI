@@ -12,7 +12,7 @@ from agno.tools.mcp.mcp import MCPTools
 
 from app.core.config import settings
 from app.core.tools.exa_search_agno import ExaTools
-from app.core.workspace import get_user_workspace
+from app.core.workspace import _workspace_path
 
 # Initialize the Agno database.
 if settings.is_sqlite:
@@ -28,7 +28,11 @@ def create_agent(
 ) -> Agent:
     """This function allows us to create an Agno agent."""
     # Grab the user's workspace path. This is where the agent will be able to read/write files, so it's important to set this up correctly.
-    user_workspace = get_user_workspace(user_id)
+    # NOTE: agents.py is a legacy Agno harness; workspace_id should come
+    # from the DB via app.crud.workspace.get_default_workspace.  For now,
+    # derive the path directly from user_id treated as workspace_id so this
+    # file compiles (no production traffic flows through Agno any more).
+    user_workspace = str(_workspace_path(user_id))
 
     # Build the toolset. ExaTools is appended only when an EXA_API_KEY
     # is configured — registering it without a key would surface a

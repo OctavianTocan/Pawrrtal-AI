@@ -6,7 +6,9 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
+from app.core.agent_loop.types import AgentSafetyConfig
 from app.models import Workspace  # noqa: F401  # used via fixture type hint
+from tests.agent_harness import ScriptedStreamFn, echo_tool, text_turn, tool_call_turn
 
 
 class FakeProvider:
@@ -155,3 +157,133 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
     assert '"type": "error"' in response.text
     assert "provider failed" in response.text
     assert "data: [DONE]" in response.text
+
+
+@pytest.mark.anyio
+async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: Workspace,
+) -> None:
+    """A realistic two-turn conversation (tool call then text) flows over HTTP.
+
+    This test wires a real ``GeminiLLM`` with a ``ScriptedStreamFn`` through
+    the full HTTP path:
+
+        POST /api/v1/chat/
+          → chat.py → GeminiLLM.stream() → agent_loop (real)
+          → ScriptedStreamFn yields tool_call → echo_tool executes (real)
+          → ScriptedStreamFn yields text reply
+          → SSE frames: tool_use + tool_result + delta + [DONE]
+
+    Only the LLM is replaced.  Every other component (HTTP routing,
+    agent_loop, tool execution, SSE serialization) runs as in production.
+    """
+    from app.core.providers.gemini_provider import GeminiLLM
+
+    echo = echo_tool()
+    script = ScriptedStreamFn([
+        tool_call_turn("echo", {"value": "test"}, turn_id="tc-http"),
+        text_turn("I echoed test for you."),
+    ])
+
+    provider = GeminiLLM("gemini-test")
+    monkeypatch.setattr(provider, "_stream_fn", script)
+
+    # Inject both the provider and the echo tool into the chat path.
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr(
+        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo]
+    )
+
+    conversation_id = uuid4()
+    await client.post(
+        f"/api/v1/conversations/{conversation_id}", json={"title": "Tool HTTP Test"}
+    )
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={"question": "echo test", "conversation_id": str(conversation_id)},
+    )
+
+    assert response.status_code == 200
+    # All three event types must appear in the SSE body.
+    assert '"type": "tool_use"' in response.text
+    assert '"type": "tool_result"' in response.text
+    assert '"type": "delta"' in response.text
+    assert "data: [DONE]" in response.text
+
+    # Both LLM turns were invoked (tool call + text reply).
+    assert script.call_count == 2
+
+
+@pytest.mark.anyio
+async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: Workspace,
+) -> None:
+    """The agent safety layer is wired into the real HTTP path end-to-end.
+
+    This test exercises the full chain with a realistic runaway scenario:
+
+        POST /api/v1/chat/
+          → chat.py → GeminiLLM.stream()
+          → safety_from_settings() builds AgentSafetyConfig(max_iterations=3)
+          → ScriptedStreamFn serves 10 tool-call turns (runaway loop)
+          → agent_loop terminates after exactly 3 iterations
+          → AgentTerminatedEvent → StreamEvent(type="agent_terminated")
+          → SSE frame with reason="max_iterations"
+
+    ``safety_from_settings`` is patched to return ``max_iterations=3``.  The
+    scripted stream has 10 turns, so the harness would keep looping forever
+    without the safety cap.  The assertion that ``script.call_count == 3``
+    confirms the safety fired, not just that an event appeared in the output.
+
+    If the safety layer were disconnected, the loop would consume all 10
+    turns and no ``agent_terminated`` frame would appear.
+    """
+    from app.core.providers.gemini_provider import GeminiLLM
+
+    # 10 tool-call turns — runaway loop the safety must stop.
+    turns = [tool_call_turn("ping", {}, turn_id=f"tc-{i}") for i in range(10)]
+    script = ScriptedStreamFn(turns)
+
+    provider = GeminiLLM("gemini-test")
+    monkeypatch.setattr(provider, "_stream_fn", script)
+
+    # Limit to 3 iterations via the safety factory.
+    monkeypatch.setattr(
+        "app.core.providers.gemini_provider.safety_from_settings",
+        lambda _settings: AgentSafetyConfig(
+            max_iterations=3,
+            max_wall_clock_seconds=None,
+            max_consecutive_llm_errors=None,
+            max_consecutive_tool_errors=None,
+        ),
+    )
+
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id: provider)
+    monkeypatch.setattr(
+        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")]
+    )
+
+    conversation_id = uuid4()
+    await client.post(
+        f"/api/v1/conversations/{conversation_id}", json={"title": "Safety Test"}
+    )
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={"question": "go", "conversation_id": str(conversation_id)},
+    )
+
+    assert response.status_code == 200
+    # The SSE stream must contain an agent_terminated frame.
+    assert '"type": "agent_terminated"' in response.text
+    # The reason must be the iteration cap, not some other guard.
+    assert "max_iterations" in response.text
+    # The stream must still close cleanly.
+    assert "data: [DONE]" in response.text
+    # Safety fired at exactly 3 — not earlier, not later.
+    assert script.call_count == 3

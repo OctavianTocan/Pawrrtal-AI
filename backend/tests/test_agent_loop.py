@@ -5,6 +5,18 @@ Test structure mirrors pi-mono/packages/agent/test/agent-loop.test.ts
 (https://github.com/badlogic/pi-mono/blob/main/packages/agent/test/agent-loop.test.ts)
 
 RED phase: all tests fail until loop.py and types.py are implemented.
+
+.. note::
+
+    **Legacy suite — prefer ``agent_harness`` for new tests.**
+
+    These tests were written before ``ScriptedStreamFn`` existed and use the
+    bespoke ``make_mock_stream`` helper, which operates on ``AssistantMessage``
+    objects rather than ``LLMEvent`` sequences.  They are kept as-is for
+    regression coverage.  Any *new* test of agent-loop behaviour, safety,
+    tool dispatch, or context accumulation must use the shared primitives in
+    ``backend/tests/agent_harness.py`` (see AGENTS.md §Agent-Loop Testing
+    Philosophy).
 """
 
 from __future__ import annotations

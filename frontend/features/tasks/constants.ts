@@ -7,8 +7,6 @@
  * preserves literal types for derived unions in `./types.ts`.
  */
 
-import type { TaskPriority, TaskProjectTone } from './types';
-
 /**
  * All sub-views of the Tasks surface.
  *
@@ -53,7 +51,7 @@ export const TASK_PROJECT_TONES = ['neutral', 'info', 'success', 'accent', 'dest
  * without expanding the cell — preserving optical alignment with the
  * task title's cap-height.
  */
-export const PRIORITY_RING: Record<TaskPriority, string> = {
+export const PRIORITY_RING: Record<(typeof TASK_PRIORITIES)[number], string> = {
 	urgent: 'ring-2 ring-inset ring-destructive/60',
 	high: 'ring-2 ring-inset ring-info/60',
 	normal: 'ring-[1.5px] ring-inset ring-foreground/25',
@@ -64,7 +62,7 @@ export const PRIORITY_RING: Record<TaskPriority, string> = {
  * Tailwind class strings for project chip backgrounds and text colors.
  * Keyed by tone so the chip component never inlines a switch.
  */
-export const PROJECT_TONE_CLASSES: Record<TaskProjectTone, string> = {
+export const PROJECT_TONE_CLASSES: Record<(typeof TASK_PROJECT_TONES)[number], string> = {
 	neutral: 'bg-foreground/[0.05] text-muted-foreground',
 	info: 'bg-info/10 text-info-text',
 	success: 'bg-success/10 text-success-text',

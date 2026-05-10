@@ -50,6 +50,12 @@ from app.core.providers.claude_provider import (
     _tool_result_to_text,
 )
 
+# Note: ClaudeLLM runs its own agent loop via the Claude Code SDK subprocess
+# (max_turns controls iteration depth).  It does NOT use the Python agent_loop
+# or ScriptedStreamFn — those apply to GeminiLLM and the generic loop seam.
+# Scenario-level tests here exercise the full provider.stream() path using a
+# mock SDK ``query`` that returns realistic SDK message sequences.
+
 # ---------------------------------------------------------------------------
 # Test plumbing
 # ---------------------------------------------------------------------------
@@ -862,3 +868,182 @@ class TestFactory:
         provider = factory.resolve_llm("claude-sonnet-4-6")
         assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token is None
+
+
+# ---------------------------------------------------------------------------
+# Scenario-level tests — realistic multi-message sequences via mock query
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("force_new_session")
+class TestProviderScenarios:
+    """End-to-end scenarios through ``ClaudeLLM.stream()`` using mock SDK output.
+
+    These tests exercise the full ``provider.stream()`` path with realistic
+    multi-message SDK sequences, verifying that event ordering, ID consistency,
+    and content are correct across a complete tool-call round-trip.
+
+    Unlike ``ScriptedStreamFn`` tests (which inject at the Python agent-loop
+    seam), these tests inject at the ``claude_agent_sdk.query`` boundary
+    because ``ClaudeLLM`` manages its own agent loop via the SDK subprocess.
+    """
+
+    @pytest.mark.anyio
+    async def test_tool_call_round_trip_streams_events_in_order(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        conversation_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """A realistic tool-call sequence emits thinking → tool_use → tool_result → delta.
+
+        Verifies:
+        - All four event types are present in source order.
+        - ``tool_use_id`` is consistent between tool_use and tool_result events.
+        - Final text content is faithfully forwarded.
+        """
+        _patch_query(
+            monkeypatch,
+            _async_iter([
+                AssistantMessage(
+                    content=[
+                        ThinkingBlock(thinking="let me check the files", signature="sig"),
+                        ToolUseBlock(id="tu_ls", name="Bash", input={"cmd": "ls"}),
+                    ],
+                    model="claude",
+                ),
+                UserMessage(
+                    content=[
+                        ToolResultBlock(
+                            tool_use_id="tu_ls",
+                            content="file.txt\nother.txt",
+                        )
+                    ],
+                ),
+                AssistantMessage(
+                    content=[TextBlock(text="Found 2 files.")],
+                    model="claude",
+                ),
+                ResultMessage(
+                    subtype="success",
+                    duration_ms=100,
+                    duration_api_ms=80,
+                    is_error=False,
+                    num_turns=2,
+                    session_id="s",
+                ),
+            ]),
+        )
+
+        events = await _collect(
+            ClaudeLLM(
+                "claude-sonnet-4-6",
+                config=ClaudeLLMConfig(tools=["Bash"], max_turns=2),
+            ),
+            "list files",
+            conversation_id,
+            user_id,
+        )
+
+        types = [e["type"] for e in events]
+        assert types == ["thinking", "tool_use", "tool_result", "delta"]
+        # tool_use_id must be consistent across both events.
+        tool_use = next(e for e in events if e["type"] == "tool_use")
+        tool_result = next(e for e in events if e["type"] == "tool_result")
+        assert tool_use["tool_use_id"] == tool_result["tool_use_id"] == "tu_ls"
+        assert tool_use["name"] == "Bash"
+        assert "file.txt" in tool_result["content"]
+        assert events[-1]["content"] == "Found 2 files."
+
+    @pytest.mark.anyio
+    async def test_parallel_tool_calls_preserve_both_ids(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        conversation_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """Two concurrent tool calls in one assistant message must both surface.
+
+        Verifies that ``_events_from_message`` emits one ``tool_use`` event
+        per ``ToolUseBlock``, not just the first one.
+        """
+        _patch_query(
+            monkeypatch,
+            _async_iter([
+                AssistantMessage(
+                    content=[
+                        ToolUseBlock(id="tu_a", name="Read", input={"path": "a.txt"}),
+                        ToolUseBlock(id="tu_b", name="Read", input={"path": "b.txt"}),
+                    ],
+                    model="claude",
+                ),
+                UserMessage(
+                    content=[
+                        ToolResultBlock(tool_use_id="tu_a", content="content-a"),
+                        ToolResultBlock(tool_use_id="tu_b", content="content-b"),
+                    ],
+                ),
+                AssistantMessage(
+                    content=[TextBlock(text="done")],
+                    model="claude",
+                ),
+            ]),
+        )
+
+        events = await _collect(
+            ClaudeLLM(
+                "claude-sonnet-4-6",
+                config=ClaudeLLMConfig(tools=["Read"], max_turns=2),
+            ),
+            "read both files",
+            conversation_id,
+            user_id,
+        )
+
+        tool_use_ids = [e["tool_use_id"] for e in events if e["type"] == "tool_use"]
+        tool_result_ids = [e["tool_use_id"] for e in events if e["type"] == "tool_result"]
+        assert sorted(tool_use_ids) == ["tu_a", "tu_b"]
+        assert sorted(tool_result_ids) == ["tu_a", "tu_b"]
+
+    @pytest.mark.anyio
+    async def test_max_turns_exhausted_surfaces_error_event(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        conversation_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """When the SDK exhausts ``max_turns``, an error event must surface in the stream.
+
+        This is the Claude equivalent of ``agent_terminated`` from the Python
+        agent loop.  The ``ResultMessage(is_error=True, stop_reason='max_turns')``
+        must produce exactly one error event.
+        """
+        _patch_query(
+            monkeypatch,
+            _async_iter([
+                AssistantMessage(
+                    content=[TextBlock(text="partial answer")],
+                    model="claude",
+                ),
+                ResultMessage(
+                    subtype="error_max_turns",
+                    duration_ms=500,
+                    duration_api_ms=450,
+                    is_error=True,
+                    num_turns=1,
+                    session_id="s",
+                    stop_reason="max_turns",
+                ),
+            ]),
+        )
+
+        events = await _collect(
+            ClaudeLLM("claude-sonnet-4-6", config=ClaudeLLMConfig(max_turns=1)),
+            "long task",
+            conversation_id,
+            user_id,
+        )
+
+        error_events = [e for e in events if e["type"] == "error"]
+        assert len(error_events) == 1
+        assert "max_turns" in error_events[0]["content"]
