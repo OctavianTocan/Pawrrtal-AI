@@ -48,6 +48,7 @@ from app.core.agent_loop import (
     AgentEvent,
     AgentLoopConfig,
     AgentMessage,
+    AgentSafetyConfig,
     AgentTool,
     UserMessage,
     agent_loop,
@@ -351,6 +352,7 @@ async def run_scenario(
     turns: list[list[LLMEvent] | Exception] | ScriptedStreamFn,
     tools: list[AgentTool] | None = None,
     question: str = "go",
+    safety: AgentSafetyConfig | None = None,
 ) -> list[AgentEvent]:
     """Run an agent-loop scenario end-to-end and return all emitted events.
 
@@ -381,6 +383,7 @@ async def run_scenario(
     )
     cfg = AgentLoopConfig(
         convert_to_llm=identity_convert,
+        safety=safety or AgentSafetyConfig.disabled(),
     )
     prompt = UserMessage(role="user", content=question)
     return [ev async for ev in agent_loop([prompt], ctx, cfg, stream_fn)]
