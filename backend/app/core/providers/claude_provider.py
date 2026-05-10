@@ -53,14 +53,19 @@ from claude_agent_sdk import (
     PermissionMode,
     ProcessError,
     get_session_info,
-    query,
 )
 
 from app.core.agent_loop.types import AgentTool
-from app.core.keys import resolve_api_key
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
+from app.core.keys import resolve_api_key
+from app.core.telemetry.sigil_claude import (
+    ClaudeSigilAccum,
+    finalize_claude_streaming_generation,
+    make_claude_generation_start,
+)
+from app.core.telemetry.sigil_runtime import get_sigil_client
 
 from ._claude_tool_bridge import (
     MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
@@ -71,6 +76,7 @@ from ._claude_tool_bridge import (
     build_mcp_server,
 )
 from .base import StreamEvent
+from .claude_query_stream import iter_claude_query_stream
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +186,7 @@ class ClaudeLLM:
         self._config = config or ClaudeLLMConfig()
         self._user_id = user_id
 
-    async def stream(
+    async def stream(  # noqa: C901, PLR0912 — Claude SDK error surface + Sigil lifecycle
         self,
         question: str,
         conversation_id: uuid.UUID,
@@ -200,6 +206,10 @@ class ClaudeLLM:
             user_id: App-level user UUID. Currently unused by this
                 provider but kept in the protocol so future per-user
                 cwd / quota logic can wire in without a signature change.
+            history: Ignored here; the Claude SDK resumes transcript state via
+                ``resume`` / ``session_id``.
+            tools: Cross-provider tools bridged into an MCP server when non-empty.
+            system_prompt: Overrides the configured default system prompt when set.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -210,58 +220,90 @@ class ClaudeLLM:
             system_prompt=system_prompt,
             agent_tools=tools,
         )
+        resolved_model = _resolve_sdk_model(self._model_id)
+        sigil_client = get_sigil_client()
+        sigil_rec: Any | None = None
+        first_mark = [False]
+        accum = ClaudeSigilAccum()
+        if sigil_client is not None:
+            sigil_rec = sigil_client.start_streaming_generation(
+                make_claude_generation_start(resolved_model, str(conversation_id)),
+            )
+            sigil_rec.__enter__()
+
+        completed_ok = False
         try:
-            # The SDK requires streaming-mode input (an AsyncIterable
-            # of message dicts) whenever ``can_use_tool`` is set on the
-            # options.  We always emit a single user-message envelope
-            # so the path is uniform regardless of whether bridged
-            # tools are mounted; uniform path means one shape to test
-            # and reason about.
-            async for message in query(
-                prompt=_aiter_user_prompt(question), options=options
-            ):
-                for event in _events_from_message(message):
+            try:
+                # Streaming-mode input is required whenever ``can_use_tool`` is set;
+                # see :mod:`app.core.providers.claude_sdk_input`.
+                async for event in iter_claude_query_stream(
+                    question,
+                    options,
+                    conversation_id,
+                    sigil_rec,
+                    first_mark,
+                    accum,
+                ):
                     yield event
-        except CLINotFoundError as error:
-            # `exception` (not `error`) gives us the stacktrace in the
-            # log — required by ruff TRY400 and useful for diagnosing
-            # PATH issues that vary across machines.
-            logger.exception("Claude CLI binary not found")
-            yield _error_event(
-                "Claude Code CLI binary is not installed in this environment. "
-                "Install it with `npm i -g @anthropic-ai/claude-code` and ensure "
-                "the executable is on PATH, or set ClaudeAgentOptions.cli_path. "
-                f"Underlying error: {error}",
-            )
-        except CLIConnectionError as error:
-            logger.warning("Claude CLI subprocess connection lost: %s", error)
-            yield _error_event(
-                f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
-            )
-        except ProcessError as error:
-            exit_code = getattr(error, "exit_code", "n/a")
-            stderr = getattr(error, "stderr", "")
-            logger.exception(
-                "Claude CLI subprocess exited: exit_code=%s stderr=%r",
-                exit_code,
-                stderr,
-            )
-            yield _error_event(
-                "Claude Code CLI exited with an error. Verify CLAUDE_CODE_OAUTH_TOKEN "
-                "is configured and your account has access to the requested model. "
-                f"Exit code: {exit_code}. stderr: {stderr!r}",
-            )
-        except CLIJSONDecodeError:
-            logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI."
-            )
-        except ClaudeSDKError as error:
-            # `exception` (not `error`) so the traceback lands in the log
-            # — broad SDK errors are the bucket where new failure modes
-            # show up, and a stacktrace is the only way to attribute them.
-            logger.exception("Claude SDK error during stream")
-            yield _error_event(f"Claude SDK error: {error}")
+                completed_ok = True
+            except CLINotFoundError as error:
+                # `exception` (not `error`) gives us the stacktrace in the
+                # log — required by ruff TRY400 and useful for diagnosing
+                # PATH issues that vary across machines.
+                logger.exception("Claude CLI binary not found")
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(error)
+                yield _error_event(
+                    "Claude Code CLI binary is not installed in this environment. "
+                    "Install it with `npm i -g @anthropic-ai/claude-code` and ensure "
+                    "the executable is on PATH, or set ClaudeAgentOptions.cli_path. "
+                    f"Underlying error: {error}",
+                )
+            except CLIConnectionError as error:
+                logger.warning("Claude CLI subprocess connection lost: %s", error)
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(error)
+                yield _error_event(
+                    f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
+                )
+            except ProcessError as error:
+                exit_code = getattr(error, "exit_code", "n/a")
+                stderr = getattr(error, "stderr", "")
+                logger.exception(
+                    "Claude CLI subprocess exited: exit_code=%s stderr=%r",
+                    exit_code,
+                    stderr,
+                )
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(error)
+                yield _error_event(
+                    "Claude Code CLI exited with an error. Verify CLAUDE_CODE_OAUTH_TOKEN "
+                    "is configured and your account has access to the requested model. "
+                    f"Exit code: {exit_code}. stderr: {stderr!r}",
+                )
+            except CLIJSONDecodeError as error:
+                logger.exception("Claude CLI returned non-JSON message")
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(error)
+                yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
+            except ClaudeSDKError as error:
+                # `exception` (not `error`) so the traceback lands in the log
+                # — broad SDK errors are the bucket where new failure modes
+                # show up, and a stacktrace is the only way to attribute them.
+                logger.exception("Claude SDK error during stream")
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(error)
+                yield _error_event(f"Claude SDK error: {error}")
+        finally:
+            if sigil_rec is not None:
+                if completed_ok:
+                    finalize_claude_streaming_generation(
+                        sigil_rec,
+                        question=question,
+                        response_model=resolved_model,
+                        accum=accum,
+                    )
+                sigil_rec.__exit__(None, None, None)
 
     # -- internal --------------------------------------------------------
 
@@ -295,9 +337,7 @@ class ClaudeLLM:
         # Local tool whitelist for the Claude SDK's built-in CLI tools
         # (read/write filesystem, etc.).  Distinct from ``agent_tools``
         # — those are app-defined tools we bridge into an MCP server.
-        local_tools = (
-            list(self._config.tools) if self._config.tools is not None else None
-        )
+        local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
 
         # Bridge the cross-provider AgentTool list into a single MCP
@@ -401,22 +441,6 @@ def _merge_agent_tools_into_whitelist(
         if tid not in deduped:
             deduped.append(tid)
     return deduped
-
-
-async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
-    """Wrap a single user message as the streaming-mode input the SDK expects.
-
-    The Claude SDK accepts either a plain string *or* an
-    ``AsyncIterable[dict]`` for the ``prompt`` arg, but enforces the
-    streaming-mode shape whenever a permission hook (``can_use_tool``)
-    is registered — which we now always do via the bridge.  Yielding
-    one envelope keeps every call site uniform regardless of whether
-    tools were mounted on this turn.
-    """
-    yield {
-        "type": "user",
-        "message": {"role": "user", "content": question},
-    }
 
 
 def _resolve_sdk_model(model_id: str) -> str:
