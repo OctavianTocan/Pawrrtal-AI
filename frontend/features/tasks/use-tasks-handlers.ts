@@ -99,7 +99,7 @@ export function useTasksHandlers(args: UseTasksHandlersArgs): TasksHandlers {
 	}, []);
 
 	const handleNew = useCallback(() => {
-		// Mock — opens nothing today. Wire to a `ResponsiveModal` when the
+		// Mock — opens nothing today. Wire to an `AppDialog` when the
 		// real "new task" flow lands.
 	}, []);
 

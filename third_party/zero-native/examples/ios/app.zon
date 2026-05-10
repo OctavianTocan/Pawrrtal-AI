@@ -1,0 +1,10 @@
+.{
+    .id = "dev.zero_native.ios-example",
+    .name = "ios-example",
+    .display_name = "iOS Example",
+    .version = "0.1.0",
+    .platforms = .{ "ios" },
+    .permissions = .{},
+    .capabilities = .{ "webview" },
+    .web_engine = "system",
+}

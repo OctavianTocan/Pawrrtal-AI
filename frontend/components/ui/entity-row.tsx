@@ -11,6 +11,7 @@ import {
 	DropdownContextMenuContent,
 } from '@octavian-tocan/react-dropdown';
 import { DropdownMenuProvider, ContextMenuProvider } from '@/components/ui/menu-context';
+import { sidebarNavRowSurfaceClassName } from '@/components/ui/sidebar-nav-row';
 import { cn } from '@/lib/utils';
 
 export interface EntityRowProps {
@@ -108,9 +109,12 @@ export function EntityRow({
 					}
 				}}
 				className={cn(
-					'flex w-full items-start gap-2 pl-2 pr-4 py-2 text-left text-sm outline-none rounded-[8px]',
-					'transition-[background-color] duration-75 cursor-pointer',
-					isSelected || isInMultiSelect ? 'bg-foreground/3' : 'hover:bg-foreground/2',
+					sidebarNavRowSurfaceClassName({
+						selected: isSelected || isInMultiSelect,
+						density: 'comfortable',
+						align: 'start',
+					}),
+					'cursor-pointer',
 					buttonProps?.className
 				)}
 			>

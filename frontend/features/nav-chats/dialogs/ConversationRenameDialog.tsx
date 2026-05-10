@@ -3,10 +3,11 @@
 import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
 import { Pencil } from 'lucide-react';
 import { useId } from 'react';
+import { AppDialog } from '@/components/ui/app-dialog';
+import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
+import { AppFormRow } from '@/components/ui/app-form-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
 interface ConversationRenameDialogProps {
 	/** Whether the dialog is open. */
@@ -27,7 +28,7 @@ interface ConversationRenameDialogProps {
  * Dialog for renaming a conversation.
  *
  * Renders as a centered Modal on desktop and a draggable BottomSheet on mobile
- * via {@link ResponsiveModal}. Disables the Save button while the rename
+ * via {@link AppDialog}. Disables the Save button while the rename
  * mutation is pending or if the title is empty.
  *
  * @returns The rename dialog rendered through the project overlay primitive.
@@ -51,7 +52,7 @@ export function ConversationRenameDialog({
 	);
 
 	const footer = (
-		<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+		<AppDialogFooter>
 			<Button
 				disabled={isPending}
 				onClick={() => onOpenChange(false)}
@@ -63,11 +64,11 @@ export function ConversationRenameDialog({
 			<Button disabled={!draftTitle.trim() || isPending} form={formId} type="submit">
 				{isPending ? 'Saving...' : 'Save'}
 			</Button>
-		</div>
+		</AppDialogFooter>
 	);
 
 	return (
-		<ResponsiveModal
+		<AppDialog
 			open={isOpen}
 			onDismiss={() => onOpenChange(false)}
 			ariaLabel="Rename Conversation"
@@ -89,18 +90,21 @@ export function ConversationRenameDialog({
 				<ModalDescription className="text-muted-foreground">
 					Update the sidebar title for this conversation.
 				</ModalDescription>
-				<Label htmlFor={titleInputId} className="sr-only">
-					Conversation title
-				</Label>
-				<Input
-					id={titleInputId}
-					value={draftTitle}
-					onChange={(event) => onDraftTitleChange(event.target.value)}
-					placeholder="Conversation title"
-					maxLength={255}
-					autoFocus
-				/>
+				<AppFormRow
+					htmlFor={titleInputId}
+					label="Conversation title"
+					labelVisibility="sr-only"
+				>
+					<Input
+						autoFocus
+						id={titleInputId}
+						maxLength={255}
+						onChange={(event) => onDraftTitleChange(event.target.value)}
+						placeholder="Conversation title"
+						value={draftTitle}
+					/>
+				</AppFormRow>
 			</form>
-		</ResponsiveModal>
+		</AppDialog>
 	);
 }

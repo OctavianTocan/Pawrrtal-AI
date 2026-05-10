@@ -2,8 +2,9 @@
 
 import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
 import { AlertTriangle } from 'lucide-react';
+import { AppDialog } from '@/components/ui/app-dialog';
+import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
 import { Button } from '@/components/ui/button';
-import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
 interface ConversationDeleteDialogProps {
 	/** Whether the dialog is open. */
@@ -20,7 +21,7 @@ interface ConversationDeleteDialogProps {
  * Destructive confirmation dialog for deleting a conversation.
  *
  * Renders as a centered Modal on desktop and a draggable BottomSheet on mobile
- * via {@link ResponsiveModal}. Both actions are disabled while the delete
+ * via {@link AppDialog}. Both actions are disabled while the delete
  * mutation is in flight so the user can't double-fire.
  *
  * @returns The delete confirmation rendered through the project overlay primitive.
@@ -39,7 +40,7 @@ export function ConversationDeleteDialog({
 	);
 
 	const footer = (
-		<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+		<AppDialogFooter>
 			<Button
 				disabled={isPending}
 				onClick={() => onOpenChange(false)}
@@ -59,11 +60,11 @@ export function ConversationDeleteDialog({
 			>
 				{isPending ? 'Deleting...' : 'Delete'}
 			</Button>
-		</div>
+		</AppDialogFooter>
 	);
 
 	return (
-		<ResponsiveModal
+		<AppDialog
 			open={isOpen}
 			onDismiss={() => {
 				if (!isPending) {
@@ -83,6 +84,6 @@ export function ConversationDeleteDialog({
 			<ModalDescription className="text-muted-foreground">
 				This removes the conversation from your sidebar. This action cannot be undone.
 			</ModalDescription>
-		</ResponsiveModal>
+		</AppDialog>
 	);
 }

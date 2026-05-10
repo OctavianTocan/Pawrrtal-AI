@@ -10,7 +10,10 @@
  * titles/actions out of the scrollable body — compose with {@link ModalHeader},
  * {@link ModalDescription}, etc. from the package.
  *
- * @fileoverview Responsive Modal/BottomSheet wrapper for pawrrtal.
+ * Feature code should prefer **`AppDialog`** (`app-dialog.tsx`), which wraps this
+ * component with the AI Nexus application shell contract — see DESIGN.md.
+ *
+ * @fileoverview Responsive Modal/BottomSheet implementation layer (use AppDialog in features).
  */
 
 'use client';

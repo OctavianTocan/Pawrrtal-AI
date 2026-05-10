@@ -21,7 +21,7 @@ import hashlib
 import hmac
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -48,7 +48,7 @@ LINK_CODE_TTL = timedelta(minutes=10)
 
 def _utcnow() -> datetime:
     """Return a naive UTC ``datetime`` matching the column type used elsewhere."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _hash_code(code: str) -> str:
@@ -246,7 +246,7 @@ async def get_or_create_telegram_conversation_full(
     *,
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> "Conversation":
+) -> Conversation:
     """Like :func:`get_or_create_telegram_conversation` but returns the full row.
 
     The extra fields (particularly ``model_id``) let the bot honour per-session
@@ -298,7 +298,7 @@ async def _get_or_create_telegram_conv_row(
     *,
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> "Conversation":
+) -> Conversation:
     """Internal helper: find or create the Telegram conversation row."""
     from sqlalchemy import select  # already imported at module level; re-import safe
 

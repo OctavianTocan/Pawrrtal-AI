@@ -31,7 +31,6 @@ from app.schemas import (
 )
 from app.users import current_active_user
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -51,9 +50,7 @@ async def _get_owned_workspace(
     )
     ws = result.scalar_one_or_none()
     if ws is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
     return ws
 
 
@@ -73,9 +70,7 @@ def _safe_child(root: Path, relative: str) -> Path:
     return resolved
 
 
-def _build_tree(
-    root: Path, relative_root: Path | None = None
-) -> list[WorkspaceFileNode]:
+def _build_tree(root: Path, relative_root: Path | None = None) -> list[WorkspaceFileNode]:
     """Recursively build a flat list of file-tree nodes.
 
     ``relative_root`` is the workspace root used to compute workspace-relative
@@ -156,9 +151,7 @@ def get_workspace_router() -> APIRouter:
     # Read file
     # ------------------------------------------------------------------
 
-    @router.get(
-        "/{workspace_id}/files/{file_path:path}", response_model=WorkspaceFileContent
-    )
+    @router.get("/{workspace_id}/files/{file_path:path}", response_model=WorkspaceFileContent)
     async def read_workspace_file(
         workspace_id: uuid.UUID,
         file_path: str,
@@ -170,9 +163,7 @@ def get_workspace_router() -> APIRouter:
         target = _safe_child(Path(ws.path), file_path)
 
         if not target.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
         if target.is_dir():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -239,9 +230,7 @@ def get_workspace_router() -> APIRouter:
         target = _safe_child(Path(ws.path), file_path)
 
         if not target.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
         if target.is_dir():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

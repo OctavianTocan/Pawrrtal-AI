@@ -1,0 +1,120 @@
+# Quick Start
+
+zero-native is a Zig desktop app shell with selectable web engines. Use the system WebView (WKWebView, WebKitGTK) for lightweight apps, or bundle Chromium via CEF on macOS for predictable Chromium rendering. Create a native desktop app with a web UI in under a minute.
+
+## Beta scope
+
+The current beta target is macOS desktop apps. System WebView builds are available on macOS and Linux, Chromium/CEF builds and packages are macOS-only, and Windows plus Linux Chromium support are on the roadmap.
+
+## Prerequisites
+
+- [Zig 0.16.0+](https://ziglang.org/download/)
+- Node.js with npm for the generated frontend
+- macOS or Linux (Windows support is in progress)
+
+## Create a project
+
+```bash
+zero-native init my_app --frontend next
+cd my_app
+```
+
+Frontend options: `next`, `vite`, `react`, `svelte`, `vue`.
+
+This scaffolds a complete zero-native project:
+
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>build.zig</code></td>
+      <td>Zig build graph with platform, trace, debug-overlay, automation, js-bridge, and web-engine options</td>
+    </tr>
+    <tr>
+      <td><code>build.zig.zon</code></td>
+      <td>Zig package manifest, declares zero-native dependency</td>
+    </tr>
+    <tr>
+      <td><code>app.zon</code></td>
+      <td>App metadata: name, icons, permissions, bridge commands, security policy, window definitions</td>
+    </tr>
+    <tr>
+      <td><code>src/main.zig</code></td>
+      <td>App struct with <code>app()</code> and optional <code>bridge()</code> methods</td>
+    </tr>
+    <tr>
+      <td><code>src/runner.zig</code></td>
+      <td>Platform wiring: trace sinks, file logging, panic capture, state store, runtime init</td>
+    </tr>
+    <tr>
+      <td><code>assets/icon.icns</code></td>
+      <td>App icon for macOS packages</td>
+    </tr>
+    <tr>
+      <td><code>frontend/</code></td>
+      <td>Frontend starter for the framework selected with <code>--frontend</code></td>
+    </tr>
+  </tbody>
+</table>
+
+## Run it
+
+```bash
+zig build run
+```
+
+The first frontend build installs dependencies automatically. Your app opens a native window with a WebView rendering your HTML.
+
+## macOS beta path
+
+Use this path when validating an app for the macOS beta:
+
+```bash
+zero-native init my_app --frontend next
+cd my_app
+zig build run
+zero-native cef install
+zig build run
+zero-native package --target macos --signing identity --identity "Developer ID Application: Your Name"
+zero-native doctor --manifest app.zon --strict
+```
+
+Set `.web_engine = "chromium"` and `.cef = .{ .dir = "third_party/cef/macos", .auto_install = false }` in `app.zon` before the Chromium run. `-Dweb-engine` and `--web-engine` are still available for one-off overrides, but the normal app workflow reads the manifest.
+
+For frontend frameworks, run the frontend dev server through [Dev Server](/cli/dev) during development, then package the built assets for distribution.
+
+## Hello world
+
+The simplest zero-native app provides a name and inline HTML:
+
+```zig
+const HelloApp = struct {
+    fn app(self: *@This()) zero_native.App {
+        return .{
+            .context = self,
+            .name = "hello",
+            .source = zero_native.WebViewSource.html(
+                \\<!doctype html>
+                \\<html>
+                \\<body style="font-family: system-ui; padding: 2rem;">
+                \\  <h1>Hello from zero-native</h1>
+                \\</body>
+                \\</html>
+            ),
+        };
+    }
+};
+```
+
+## Next steps
+
+- [Web Engines](/web-engines) -- Choose between system WebView and Chromium (CEF)
+- [App Model](/app-model) -- How apps, sources, and lifecycle callbacks work
+- [Frontend Projects](/frontend) -- Use React, Vue, or Svelte with zero-native
+- [Bridge](/bridge) -- Call native Zig code from JavaScript
+- [Security](/security) -- Permissions, policies, and navigation rules

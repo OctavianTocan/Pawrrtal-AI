@@ -18,7 +18,6 @@ from __future__ import annotations
 import pytest
 
 from app.core.agent_loop import AgentSafetyConfig
-
 from tests.agent_harness import (
     ScriptedStreamFn,
     echo_tool,
@@ -28,7 +27,6 @@ from tests.agent_harness import (
     text_turn,
     tool_call_turn,
 )
-
 
 # Convenience aliases so individual tests don't repeat the import path.
 _text = text_turn
@@ -68,13 +66,15 @@ async def test_tool_call_then_text_reply_full_lifecycle() -> None:
     turn 1: LLM decides to call echo("hi") → tool executes → result in context
     turn 2: LLM sees the result and replies with text → loop ends
     """
-    script = ScriptedStreamFn([
-        _tool("echo", {"value": "hi"}, turn_id="tc-1"),
-        _text("I echoed hi for you."),
-    ])
+    script = ScriptedStreamFn(
+        [
+            _tool("echo", {"value": "hi"}, turn_id="tc-1"),
+            _text("I echoed hi for you."),
+        ]
+    )
 
     events = await run_scenario(
-        script,          # pass ScriptedStreamFn directly to track call_count
+        script,  # pass ScriptedStreamFn directly to track call_count
         tools=[echo_tool()],
     )
 
@@ -109,11 +109,13 @@ async def test_chained_tool_calls_before_text_reply() -> None:
     search = echo_tool("search")
     summarize = echo_tool("summarize")
 
-    script = ScriptedStreamFn([
-        _tool("search", {"value": "python async"}, turn_id="tc-1"),
-        _tool("summarize", {"value": "results"}, turn_id="tc-2"),
-        _text("Here is the summary."),
-    ])
+    script = ScriptedStreamFn(
+        [
+            _tool("search", {"value": "python async"}, turn_id="tc-1"),
+            _tool("summarize", {"value": "results"}, turn_id="tc-2"),
+            _text("Here is the summary."),
+        ]
+    )
 
     events = await run_scenario(
         script,
@@ -130,10 +132,7 @@ async def test_chained_tool_calls_before_text_reply() -> None:
     assert len(tool_results) == 2
 
     # Final text reply arrived after both tool rounds.
-    assert any(
-        "summary" in e.get("text", "")
-        for e in events if e["type"] == "text_delta"
-    )
+    assert any("summary" in e.get("text", "") for e in events if e["type"] == "text_delta")
     assert any(e["type"] == "agent_end" for e in events)
 
 
@@ -160,10 +159,7 @@ async def test_transient_llm_error_recovers_to_text_reply() -> None:
     )
 
     assert not any(e["type"] == "agent_terminated" for e in events)
-    assert any(
-        "Recovered" in e.get("text", "")
-        for e in events if e["type"] == "text_delta"
-    )
+    assert any("Recovered" in e.get("text", "") for e in events if e["type"] == "text_delta")
     assert any(e["type"] == "agent_end" for e in events)
 
 
@@ -179,10 +175,12 @@ async def test_tool_failure_result_surfaces_in_context() -> None:
     The loop should NOT terminate — the LLM receives the failure as context
     and is free to try another approach or reply with an apology.
     """
-    script = ScriptedStreamFn([
-        _tool("fail", {}, turn_id="tc-1"),
-        _text("I'm sorry, the operation failed."),
-    ])
+    script = ScriptedStreamFn(
+        [
+            _tool("fail", {}, turn_id="tc-1"),
+            _text("I'm sorry, the operation failed."),
+        ]
+    )
 
     events = await run_scenario(
         script,
@@ -203,10 +201,7 @@ async def test_tool_failure_result_surfaces_in_context() -> None:
     assert "fail" in tool_results[0]["content"].lower()
 
     # The LLM's apology text arrives after seeing the error.
-    assert any(
-        "sorry" in e.get("text", "").lower()
-        for e in events if e["type"] == "text_delta"
-    )
+    assert any("sorry" in e.get("text", "").lower() for e in events if e["type"] == "text_delta")
     assert any(e["type"] == "agent_end" for e in events)
 
 
@@ -370,9 +365,7 @@ async def test_message_context_grows_across_turns() -> None:
     )
     events = [
         ev
-        async for ev in agent_loop(
-            [UserMessage(role="user", content="go")], ctx, cfg, recording_fn
-        )
+        async for ev in agent_loop([UserMessage(role="user", content="go")], ctx, cfg, recording_fn)
     ]
 
     # Two LLM calls happened.

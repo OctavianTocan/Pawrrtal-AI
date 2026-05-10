@@ -1,0 +1,283 @@
+# CLI Reference
+
+The `zero-native` CLI provides project scaffolding, validation, packaging, and debugging tools.
+
+## Commands
+
+<table>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>zero-native init [path] --frontend &lt;next|vite|react|svelte|vue&gt;</code></td>
+      <td>Scaffold a new zero-native project with the specified frontend. Omit <code>path</code> to scaffold into the current directory.</td>
+    </tr>
+    <tr>
+      <td><code>zero-native dev --binary &lt;path&gt;</code></td>
+      <td>Start the app with a managed frontend dev server (<code>--binary</code> is required)</td>
+    </tr>
+    <tr>
+      <td><code>zero-native doctor</code></td>
+      <td>Check host environment, WebView, manifest, and CEF</td>
+    </tr>
+    <tr>
+      <td><code>zero-native cef install</code></td>
+      <td>Download, prepare, and verify the macOS CEF runtime</td>
+    </tr>
+    <tr>
+      <td><code>zero-native cef path</code></td>
+      <td>Print the default or configured CEF directory</td>
+    </tr>
+    <tr>
+      <td><code>zero-native cef doctor</code></td>
+      <td>Check only the CEF layout</td>
+    </tr>
+    <tr>
+      <td><code>zero-native validate [app.zon]</code></td>
+      <td>Validate <code>app.zon</code> against the manifest schema</td>
+    </tr>
+    <tr>
+      <td><code>zero-native package</code></td>
+      <td>Package the app for distribution</td>
+    </tr>
+    <tr>
+      <td><code>zero-native bundle-assets [app.zon] [assets] [output]</code></td>
+      <td>Copy frontend assets into the build output</td>
+    </tr>
+    <tr>
+      <td><code>zero-native package-windows</code></td>
+      <td>Package shortcut for Windows</td>
+    </tr>
+    <tr>
+      <td><code>zero-native package-linux</code></td>
+      <td>Package shortcut for Linux</td>
+    </tr>
+    <tr>
+      <td><code>zero-native package-ios</code></td>
+      <td>Package shortcut for iOS</td>
+    </tr>
+    <tr>
+      <td><code>zero-native package-android</code></td>
+      <td>Package shortcut for Android</td>
+    </tr>
+    <tr>
+      <td><code>zero-native automate &lt;command&gt;</code></td>
+      <td>Interact with the automation server</td>
+    </tr>
+    <tr>
+      <td><code>zero-native version</code></td>
+      <td>Print the zero-native version</td>
+    </tr>
+  </tbody>
+</table>
+
+## `zero-native cef` flags
+
+<table>
+  <thead>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>--dir</code></td>
+      <td>CEF install directory. Defaults to the host platform directory under <code>third_party/cef</code>.</td>
+    </tr>
+    <tr>
+      <td><code>--version</code></td>
+      <td>CEF binary version to download. The default is zero-native's pinned tested version.</td>
+    </tr>
+    <tr>
+      <td><code>--source</code></td>
+      <td><code>prepared</code> or <code>official</code>. Defaults to <code>prepared</code>, which downloads zero-native's no-CMake runtime from GitHub Releases.</td>
+    </tr>
+    <tr>
+      <td><code>--download-url</code></td>
+      <td>Override the prepared runtime release base URL, or the official CEF host when using <code>--source official</code>.</td>
+    </tr>
+    <tr>
+      <td><code>--allow-build-tools</code></td>
+      <td>Allow the advanced official CEF path to invoke local build tools for <code>libcef_dll_wrapper</code>.</td>
+    </tr>
+    <tr>
+      <td><code>--force</code></td>
+      <td>Redownload and replace the target directory.</td>
+    </tr>
+  </tbody>
+</table>
+
+Core maintainers who need to build CEF before a zero-native runtime release exists should use `tools/cef/build-from-source.sh`. The CLI's default `zero-native cef install` path remains the no-CMake app-developer path.
+
+## `zero-native package` flags
+
+<table>
+  <thead>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>--target</code></td>
+      <td>Target platform (<code>macos</code>, <code>linux</code>, <code>windows</code>, <code>ios</code>, <code>android</code>)</td>
+    </tr>
+    <tr>
+      <td><code>--manifest</code></td>
+      <td>Path to <code>app.zon</code></td>
+    </tr>
+    <tr>
+      <td><code>--output</code></td>
+      <td>Output path for the package</td>
+    </tr>
+    <tr>
+      <td><code>--binary</code></td>
+      <td>Path to the built binary</td>
+    </tr>
+    <tr>
+      <td><code>--assets</code></td>
+      <td>Path to frontend assets directory</td>
+    </tr>
+    <tr>
+      <td><code>--optimize</code></td>
+      <td>Optimization level</td>
+    </tr>
+    <tr>
+      <td><code>--web-engine</code></td>
+      <td>Temporarily override <code>app.zon</code> with <code>system</code> or <code>chromium</code></td>
+    </tr>
+    <tr>
+      <td><code>--cef-dir</code></td>
+      <td>Temporarily override the CEF distribution path from <code>app.zon</code></td>
+    </tr>
+    <tr>
+      <td><code>--cef-auto-install</code></td>
+      <td>Temporarily allow prepared CEF installation during Chromium packaging</td>
+    </tr>
+    <tr>
+      <td><code>--signing</code></td>
+      <td>Signing mode: <code>none</code>, <code>adhoc</code>, or <code>identity</code></td>
+    </tr>
+    <tr>
+      <td><code>--identity</code></td>
+      <td>Code signing identity name</td>
+    </tr>
+    <tr>
+      <td><code>--entitlements</code></td>
+      <td>Path to entitlements file</td>
+    </tr>
+    <tr>
+      <td><code>--team-id</code></td>
+      <td>Apple Developer Team ID</td>
+    </tr>
+    <tr>
+      <td><code>--archive</code></td>
+      <td>Create a distributable archive</td>
+    </tr>
+  </tbody>
+</table>
+
+## `zero-native dev` flags
+
+<table>
+  <thead>
+    <tr>
+      <th>Flag</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>--binary</code> (required)</td>
+      <td>Path to the compiled app binary</td>
+    </tr>
+    <tr>
+      <td><code>--manifest</code></td>
+      <td>Path to <code>app.zon</code> (default: <code>app.zon</code>)</td>
+    </tr>
+    <tr>
+      <td><code>--url</code></td>
+      <td>Override the dev server URL from <code>app.zon</code></td>
+    </tr>
+    <tr>
+      <td><code>--command</code></td>
+      <td>Override the dev server command (space-separated)</td>
+    </tr>
+    <tr>
+      <td><code>--timeout-ms</code></td>
+      <td>Milliseconds to wait for the dev server (default from <code>app.zon</code> or 30000)</td>
+    </tr>
+  </tbody>
+</table>
+
+## `zero-native automate` subcommands
+
+<table>
+  <thead>
+    <tr>
+      <th>Subcommand</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>automate list</code></td>
+      <td>List running automation-enabled apps</td>
+    </tr>
+    <tr>
+      <td><code>automate snapshot</code></td>
+      <td>Dump current app state</td>
+    </tr>
+    <tr>
+      <td><code>automate screenshot</code></td>
+      <td>Capture a screenshot</td>
+    </tr>
+    <tr>
+      <td><code>automate reload</code></td>
+      <td>Reload the WebView</td>
+    </tr>
+    <tr>
+      <td><code>automate wait</code></td>
+      <td>Wait for <code>ready=true</code> in the snapshot</td>
+    </tr>
+    <tr>
+      <td><code>automate bridge &lt;json&gt;</code></td>
+      <td>Send a bridge command (origin <code>zero://inline</code>)</td>
+    </tr>
+  </tbody>
+</table>
+
+## Environment variables
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>ZERO_NATIVE_FRONTEND_URL</code></td>
+      <td>Dev server URL (read by <code>frontend.sourceFromEnv</code>)</td>
+    </tr>
+    <tr>
+      <td><code>ZERO_NATIVE_FRONTEND_ASSETS</code></td>
+      <td>App convention for signaling pre-built assets</td>
+    </tr>
+    <tr>
+      <td><code>ZERO_NATIVE_LOG_DIR</code></td>
+      <td>Override log output directory</td>
+    </tr>
+    <tr>
+      <td><code>ZERO_NATIVE_LOG_FORMAT</code></td>
+      <td>Log format: <code>text</code> or <code>jsonl</code></td>
+    </tr>
+  </tbody>
+</table>

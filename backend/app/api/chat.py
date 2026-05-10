@@ -5,17 +5,16 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pathlib import Path
-
 from app.channels import resolve_channel, surface_from_header
-from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.agent_tools import build_agent_tools
+from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
@@ -36,6 +35,7 @@ from app.crud.conversation import (
     get_conversation_service,
     update_conversation_model_service,
 )
+from app.crud.workspace import get_default_workspace
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
@@ -135,9 +135,7 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(
-            user.id, session, request.conversation_id
-        )
+        conversation = await get_conversation_service(user.id, session, request.conversation_id)
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -207,9 +205,7 @@ def get_chat_router() -> APIRouter:
         if not root.exists():
             # Workspace row exists but the directory is gone (manually
             # deleted, volume wipe, etc.).  Same outcome — do not run.
-            logger.error(
-                "CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root
-            )
+            logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
             raise HTTPException(
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",

@@ -20,7 +20,6 @@ from .types import (
 )
 
 __all__ = [
-    "agent_loop",
     "AgentContext",
     "AgentEvent",
     "AgentLoopConfig",
@@ -36,4 +35,5 @@ __all__ = [
     "StreamFn",
     "ToolResultMessage",
     "UserMessage",
+    "agent_loop",
 ]

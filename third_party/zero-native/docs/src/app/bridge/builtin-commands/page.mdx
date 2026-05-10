@@ -1,0 +1,112 @@
+# Builtin Commands
+
+zero-native provides built-in bridge commands for window management and native dialogs. These are controlled by the `builtin_bridge` policy in `RuntimeOptions`, separate from app-defined commands.
+
+## Window commands
+
+<table>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Required permission</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>zero-native.window.list</code></td>
+      <td><code>window</code></td>
+      <td>List all open windows</td>
+    </tr>
+    <tr>
+      <td><code>zero-native.window.create</code></td>
+      <td><code>window</code></td>
+      <td>Create a new window</td>
+    </tr>
+    <tr>
+      <td><code>zero-native.window.focus</code></td>
+      <td><code>window</code></td>
+      <td>Focus a window by ID</td>
+    </tr>
+    <tr>
+      <td><code>zero-native.window.close</code></td>
+      <td><code>window</code></td>
+      <td>Close a window by ID</td>
+    </tr>
+  </tbody>
+</table>
+
+Window commands are available through `window.zero.windows.*` when `js_window_api` is `true`, but the runtime still checks the request origin and the `window` permission when permissions are configured. Use an explicit `builtin_bridge` policy when you want per-command origin lists.
+
+## Dialog commands
+
+<table>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>zero-native.dialog.openFile</code></td>
+      <td>Show a file open dialog</td>
+    </tr>
+    <tr>
+      <td><code>zero-native.dialog.saveFile</code></td>
+      <td>Show a file save dialog</td>
+    </tr>
+    <tr>
+      <td><code>zero-native.dialog.showMessage</code></td>
+      <td>Show a message dialog</td>
+    </tr>
+  </tbody>
+</table>
+
+Dialog commands are **always default-deny** and require an explicit `builtin_bridge` policy.
+
+## Enabling builtin commands
+
+```zig
+const app_permissions = [_][]const u8{zero_native.security.permission_window};
+
+.security = .{
+    .permissions = &app_permissions,
+    .navigation = .{ .allowed_origins = &.{ "zero://app" } },
+},
+.builtin_bridge = .{
+    .enabled = true,
+    .commands = &.{
+        .{ .name = "zero-native.window.list", .permissions = .{ "window" }, .origins = .{ "zero://app" } },
+        .{ .name = "zero-native.window.create", .permissions = .{ "window" }, .origins = .{ "zero://app" } },
+        .{ .name = "zero-native.dialog.openFile", .origins = .{ "zero://app" } },
+        .{ .name = "zero-native.dialog.showMessage", .origins = .{ "zero://app" } },
+    },
+},
+```
+
+## JavaScript usage
+
+```javascript
+const win = await window.zero.windows.create({
+  label: "tools",
+  title: "Tools",
+  width: 420,
+  height: 320,
+});
+
+const files = await window.zero.invoke("zero-native.dialog.openFile", {
+  title: "Select a file",
+  allowMultiple: true,
+});
+
+const result = await window.zero.invoke("zero-native.dialog.showMessage", {
+  style: "warning",
+  title: "Confirm",
+  message: "Are you sure?",
+  primaryButton: "Yes",
+  secondaryButton: "No",
+});
+```
+
+See also: [Dialogs](/dialogs) for the full dialog type reference, [Security](/security) for policy details.

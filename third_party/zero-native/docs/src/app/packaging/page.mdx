@@ -1,0 +1,297 @@
+# Packaging
+
+zero-native provides tooling to bundle your app into distributable packages for macOS, Linux, and Windows. Chromium packages include the platform-specific CEF runtime when `.web_engine = "chromium"` and the matching CEF layout is installed.
+
+## Quick start
+
+Build and package in two steps:
+
+```bash
+zig build package
+```
+
+Or use the CLI directly with more control:
+
+```bash
+zero-native package --target macos --manifest app.zon --binary zig-out/bin/MyApp
+```
+
+## Build options
+
+The build system exposes options that control platform, web engine, and build features:
+
+<table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Values</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>-Dplatform</code></td>
+      <td><code>auto</code>, <code>null</code>, <code>macos</code>, <code>linux</code></td>
+      <td><code>auto</code></td>
+      <td>Target platform</td>
+    </tr>
+    <tr>
+      <td><code>-Dweb-engine</code></td>
+      <td><code>system</code>, <code>chromium</code></td>
+      <td><code>app.zon</code></td>
+      <td>Temporary WebView engine override</td>
+    </tr>
+    <tr>
+      <td><code>-Dcef-dir</code></td>
+      <td>path</td>
+      <td>--</td>
+      <td>Temporary CEF distribution directory override</td>
+    </tr>
+    <tr>
+      <td><code>-Dtrace</code></td>
+      <td><code>off</code>, <code>events</code>, <code>runtime</code>, <code>all</code></td>
+      <td><code>events</code></td>
+      <td>Trace output level</td>
+    </tr>
+    <tr>
+      <td><code>-Ddebug-overlay</code></td>
+      <td><code>true</code>, <code>false</code></td>
+      <td><code>false</code></td>
+      <td>Enable debug overlay in WebView</td>
+    </tr>
+    <tr>
+      <td><code>-Dautomation</code></td>
+      <td><code>true</code>, <code>false</code></td>
+      <td><code>false</code></td>
+      <td>Enable automation server</td>
+    </tr>
+    <tr>
+      <td><code>-Djs-bridge</code></td>
+      <td><code>true</code>, <code>false</code></td>
+      <td><code>false</code></td>
+      <td>Enable JavaScript bridge</td>
+    </tr>
+  </tbody>
+</table>
+
+## app.zon packaging fields
+
+The manifest drives packaging metadata:
+
+```zig
+.{
+    .id = "com.example.myapp",
+    .name = "myapp",
+    .display_name = "My App",
+    .version = "1.0.0",
+    .icons = .{ "assets/icon.icns", "assets/icon.ico" },
+    .platforms = .{ "macos", "linux" },
+    .web_engine = "system",
+    .cef = .{ .dir = "third_party/cef/macos", .auto_install = false },
+}
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Used for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>id</code></td>
+      <td>macOS bundle identifier, Linux desktop file, log paths</td>
+    </tr>
+    <tr>
+      <td><code>display_name</code></td>
+      <td>Menu bar name, window title fallback</td>
+    </tr>
+    <tr>
+      <td><code>version</code></td>
+      <td><code>Info.plist</code> version, package metadata</td>
+    </tr>
+    <tr>
+      <td><code>icons</code></td>
+      <td>Copied into the app bundle per platform convention</td>
+    </tr>
+    <tr>
+      <td><code>platforms</code></td>
+      <td>Which platform packages to generate</td>
+    </tr>
+  </tbody>
+</table>
+
+## macOS
+
+### App bundle
+
+`zig build package` creates a `.app` bundle with:
+
+- `Contents/MacOS/<binary>` -- the compiled executable
+- `Contents/Resources/icon.icns` -- the app icon
+- `Contents/Info.plist` -- generated from `app.zon`
+- `Contents/Resources/dist/` -- frontend assets (if configured)
+
+See [Code Signing](/packaging/signing) for signing, notarization, and DMG creation.
+
+## Linux
+
+### Package structure
+
+Linux packaging creates an install tree:
+
+- `bin/<name>` -- the executable
+- `share/applications/<name>.desktop` -- desktop entry file
+- `share/icons/hicolor/.../<name>.png` -- icons at standard sizes
+
+```bash
+zero-native package --target linux --manifest app.zon --binary zig-out/bin/MyApp
+```
+
+## Windows
+
+```bash
+zero-native package --target windows --manifest app.zon --binary zig-out/bin/MyApp.exe
+```
+
+Windows packaging is in early development. The packager copies the binary and assets into a distributable directory structure.
+
+## Frontend assets
+
+### Bundle assets
+
+If your app has a frontend build step, bundle the output:
+
+```bash
+zig build bundle-assets
+```
+
+This copies the configured `dist` directory into the build output. Production packages serve these through `zero://app/`, so paths like `/assets/app.js` work without `file://` URLs.
+
+### Configure in app.zon
+
+```zig
+.frontend = .{
+    .dist = "dist",
+    .entry = "index.html",
+    .spa_fallback = true,
+}
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>dist</code></td>
+      <td>Path to the built frontend output</td>
+    </tr>
+    <tr>
+      <td><code>entry</code></td>
+      <td>HTML entry point within <code>dist</code></td>
+    </tr>
+    <tr>
+      <td><code>spa_fallback</code></td>
+      <td>Serve <code>entry</code> for unknown routes (SPA mode)</td>
+    </tr>
+  </tbody>
+</table>
+
+## CEF bundling
+
+When using the Chromium engine, bundle CEF alongside the app:
+
+```bash
+zig build cef-bundle -Dcef-dir=/path/to/cef
+```
+
+This copies the required CEF framework, libraries, and resources into the app bundle. The CEF distribution must match the target platform and architecture.
+
+Use the same CEF version for install, build, package, and CI verification. The usual app-developer flow is:
+
+```bash
+zero-native cef install --version <pinned-version>
+zig build
+zero-native package --target macos
+```
+
+Set `.web_engine = "chromium"` and `.cef = .{ .dir = "third_party/cef/macos", .auto_install = false }` in `app.zon` for the normal Chromium package path. Use `-Dweb-engine`, `--web-engine`, `-Dcef-dir`, or `--cef-dir` only when you need a one-off override.
+
+Verify the Chromium macOS package layout locally with:
+
+```bash
+zig build test-package-cef-layout -Dplatform=macos
+```
+
+This gated check requires a local CEF layout or `-Dcef-auto-install=true` and verifies that the packaged app contains the CEF framework and resource files.
+
+## Icon generation
+
+Generate platform-specific icon files from a source PNG:
+
+```bash
+zig build generate-icon
+```
+
+This produces `icon.icns` (macOS) and `icon.ico` (Windows) from `assets/icon.png`.
+
+## Validation
+
+Check that your manifest and environment are ready for packaging:
+
+```bash
+zero-native doctor --manifest app.zon --strict
+zero-native validate app.zon
+```
+
+`doctor` checks the host environment, WebView availability, manifest validity, log paths, and optional CEF paths. Add `--strict` to fail on any warning. See [Debugging](/debugging) for details on what `zero-native doctor` checks.
+
+## Platform shortcut commands
+
+In addition to `zero-native package --target <platform>`, the CLI provides shortcut commands:
+
+```bash
+zero-native package-windows [--output path] [--binary path]
+zero-native package-linux [--output path] [--binary path]
+zero-native package-ios [--output path] [--binary path]
+zero-native package-android [--output path] [--binary path]
+```
+
+## Platform targets
+
+<table>
+  <thead>
+    <tr>
+      <th>Target</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>macos</code></td>
+      <td>Full support: <code>.app</code> bundle, signing, notarization, DMG</td>
+    </tr>
+    <tr>
+      <td><code>linux</code></td>
+      <td>Desktop entry, icon install, binary packaging</td>
+    </tr>
+    <tr>
+      <td><code>windows</code></td>
+      <td>Early support: directory-based packaging</td>
+    </tr>
+    <tr>
+      <td><code>ios</code></td>
+      <td>Experimental</td>
+    </tr>
+    <tr>
+      <td><code>android</code></td>
+      <td>Experimental</td>
+    </tr>
+  </tbody>
+</table>

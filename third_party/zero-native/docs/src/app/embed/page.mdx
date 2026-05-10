@@ -1,0 +1,81 @@
+# Embedded App
+
+`EmbeddedApp` drives the runtime without the full platform event loop. Use it for embedding zero-native in an existing application, game engine, or custom render loop.
+
+## Usage
+
+```zig
+var embedded = zero_native.embed.EmbeddedApp.init(my_app.app(), my_platform);
+
+try embedded.start();
+
+// In your render loop:
+try embedded.frame();
+
+// On resize:
+try embedded.resize(new_surface);
+
+// On shutdown:
+try embedded.stop();
+```
+
+## Methods
+
+<table>
+  <thead>
+    <tr>
+      <th>Method</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>init(app, platform)</code></td>
+      <td>Create an embedded app with a runtime</td>
+    </tr>
+    <tr>
+      <td><code>start()</code></td>
+      <td>Dispatch <code>app_start</code> event, loads the WebView source</td>
+    </tr>
+    <tr>
+      <td><code>resize(surface)</code></td>
+      <td>Dispatch <code>surface_resized</code> event</td>
+    </tr>
+    <tr>
+      <td><code>frame()</code></td>
+      <td>Dispatch <code>frame_requested</code> event</td>
+    </tr>
+    <tr>
+      <td><code>stop()</code></td>
+      <td>Dispatch <code>app_shutdown</code> event</td>
+    </tr>
+  </tbody>
+</table>
+
+## How it works
+
+`EmbeddedApp` wraps a `Runtime` and an `App`. Each method dispatches a platform event via `runtime.dispatchPlatformEvent`, giving you full control over the event loop while still using zero-native's runtime, bridge, and window management.
+
+## Mobile examples
+
+The repository includes full mobile host examples:
+
+- `examples/ios` - Xcode project with a Swift `UIViewController`, `WKWebView`, and `zero_native.h` bridge.
+- `examples/android` - Gradle/Kotlin project with JNI and CMake wiring for `libzero-native.a`.
+
+Both examples expect a local `libzero-native.a` built from the repository and copied into the path documented in each example README.
+
+## Testing with EmbeddedApp
+
+```zig
+var null_platform = zero_native.NullPlatform.init(.{});
+var state: u8 = 0;
+var embedded = zero_native.embed.EmbeddedApp.init(.{
+    .context = &state,
+    .name = "embedded",
+    .source = zero_native.WebViewSource.html("<p>Embedded</p>"),
+}, null_platform.platform());
+
+try embedded.start();
+// null_platform.loaded_source now contains the loaded HTML
+```

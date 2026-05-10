@@ -19,7 +19,6 @@ from app.core.agent_loop.types import AgentTool
 from app.core.tools.exa_search import ExaSearchResult
 from app.core.tools.exa_search_agent import make_exa_search_tool
 
-
 # ---------------------------------------------------------------------------
 # make_exa_search_tool — shape
 # ---------------------------------------------------------------------------
@@ -49,7 +48,6 @@ class TestMakeExaSearchTool:
         assert "query" in tool.parameters.get("required", [])
 
     def test_execute_is_callable(self) -> None:
-        import asyncio
 
         tool = make_exa_search_tool()
         assert callable(tool.execute)
@@ -105,9 +103,7 @@ class TestExaSearchToolExecute:
 
     async def test_execute_passes_num_results(self) -> None:
         """num_results kwarg should be forwarded to the core function."""
-        mock_search = AsyncMock(
-            return_value={"query": "x", "results": [], "error": None}
-        )
+        mock_search = AsyncMock(return_value={"query": "x", "results": [], "error": None})
         tool = make_exa_search_tool()
         with patch("app.core.tools.exa_search_agent.exa_search", new=mock_search):
             await tool.execute("dummy-id", query="x", num_results=3)
@@ -118,9 +114,7 @@ class TestExaSearchToolExecute:
 
     async def test_execute_passes_include_full_text(self) -> None:
         """include_full_text kwarg should be forwarded to the core function."""
-        mock_search = AsyncMock(
-            return_value={"query": "x", "results": [], "error": None}
-        )
+        mock_search = AsyncMock(return_value={"query": "x", "results": [], "error": None})
         tool = make_exa_search_tool()
         with patch("app.core.tools.exa_search_agent.exa_search", new=mock_search):
             await tool.execute("dummy-id", query="x", include_full_text=True)
@@ -130,9 +124,7 @@ class TestExaSearchToolExecute:
 
     async def test_execute_defaults_num_results_to_5(self) -> None:
         """When num_results is not supplied it should default to 5."""
-        mock_search = AsyncMock(
-            return_value={"query": "x", "results": [], "error": None}
-        )
+        mock_search = AsyncMock(return_value={"query": "x", "results": [], "error": None})
         tool = make_exa_search_tool()
         with patch("app.core.tools.exa_search_agent.exa_search", new=mock_search):
             await tool.execute("dummy-id", query="x")
@@ -164,7 +156,7 @@ class TestGeminiToolPassthrough:
         """Tools supplied by the caller arrive at the StreamFn unmodified."""
         import uuid
 
-        from app.core.agent_loop.types import AgentMessage, AgentTool
+        from app.core.agent_loop.types import AgentMessage
         from app.core.providers.gemini_provider import GeminiLLM
 
         in_tools = [make_exa_search_tool()]
@@ -205,7 +197,7 @@ class TestGeminiToolPassthrough:
         """
         import uuid
 
-        from app.core.agent_loop.types import AgentMessage, AgentTool
+        from app.core.agent_loop.types import AgentMessage
         from app.core.providers.gemini_provider import GeminiLLM
 
         captured_tools: list[AgentTool] | None = None
@@ -226,9 +218,7 @@ class TestGeminiToolPassthrough:
             patch("app.core.config.settings.exa_api_key", "test-key"),
             patch.object(provider, "_stream_fn", recording_stream_fn),
         ):
-            async for _ in provider.stream(
-                "hello", uuid.uuid4(), uuid.uuid4(), history=[]
-            ):
+            async for _ in provider.stream("hello", uuid.uuid4(), uuid.uuid4(), history=[]):
                 pass
 
         # Even with EXA_API_KEY set, the provider must NOT inject Exa
@@ -244,7 +234,6 @@ class TestGeminiToolPassthrough:
         """
         import uuid
 
-        from app.core.agent_loop.types import AgentMessage, AgentTool
         from app.core.providers.gemini_provider import GeminiLLM
         from tests.agent_harness import ScriptedStreamFn, text_turn, tool_call_turn
 
@@ -252,10 +241,12 @@ class TestGeminiToolPassthrough:
 
         # Script: LLM calls exa_search, Exa fails (returns error result),
         # then LLM replies with an apology.
-        script = ScriptedStreamFn([
-            tool_call_turn("exa_search", {"query": "python"}, turn_id="tc-exa"),
-            text_turn("I was unable to search right now."),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn("exa_search", {"query": "python"}, turn_id="tc-exa"),
+                text_turn("I was unable to search right now."),
+            ]
+        )
 
         provider = GeminiLLM("gemini-test")
         patch.object(provider, "_stream_fn", script)
@@ -287,8 +278,10 @@ class TestGeminiToolPassthrough:
         tool_results = [e for e in events if e["type"] == "tool_result"]
         assert len(tool_results) == 1
         # Error text surfaces in the result content so the LLM can see it.
-        assert "not configured" in tool_results[0]["content"].lower() or \
-               "failed" in tool_results[0]["content"].lower()
+        assert (
+            "not configured" in tool_results[0]["content"].lower()
+            or "failed" in tool_results[0]["content"].lower()
+        )
 
         # The LLM's graceful reply also arrives.
         delta_events = [e for e in events if e["type"] == "delta"]

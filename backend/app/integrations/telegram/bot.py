@@ -61,11 +61,11 @@ _running_tasks: dict[int, asyncio.Task[None]] = {}
 class TelegramService:
     """Holds the aiogram primitives so the lifespan can stop them cleanly."""
 
-    bot: "Bot"
-    dispatcher: "Dispatcher"
+    bot: Bot
+    dispatcher: Dispatcher
     polling_task: asyncio.Task[None] | None = None
 
-    async def feed_webhook_update(self, update: "Update") -> None:
+    async def feed_webhook_update(self, update: Update) -> None:
         """Hand a single ``Update`` parsed from the webhook body to aiogram.
 
         Used by the FastAPI webhook route in production. Polling does
@@ -74,7 +74,7 @@ class TelegramService:
         await self.dispatcher.feed_update(self.bot, update)
 
 
-def build_telegram_service() -> "TelegramService":
+def build_telegram_service() -> TelegramService:
     """Construct the aiogram primitives and register the dispatcher routes.
 
     Raises ``RuntimeError`` if Telegram support is not configured. The
@@ -89,9 +89,7 @@ def build_telegram_service() -> "TelegramService":
     from aiogram.filters import Command, CommandStart  # noqa: PLC0415
 
     if not settings.telegram_bot_token:
-        raise RuntimeError(
-            "TELEGRAM_BOT_TOKEN must be set to start the Telegram service."
-        )
+        raise RuntimeError("TELEGRAM_BOT_TOKEN must be set to start the Telegram service.")
 
     bot = Bot(
         token=settings.telegram_bot_token,
@@ -101,20 +99,18 @@ def build_telegram_service() -> "TelegramService":
 
     @dispatcher.message(CommandStart(deep_link=True))
     @dispatcher.message(CommandStart())
-    async def _on_start(message: "Message") -> None:
+    async def _on_start(message: Message) -> None:
         sender = _sender_from_message(message)
         # aiogram exposes the deep-link argument via `command.args` on
         # the parsed CommandObject, but using `message.text` keeps the
         # handler robust if a user manually types `/start ABC123`.
         payload = _extract_start_payload(message.text or "")
         async with async_session_maker() as session:
-            reply = await handle_start_command(
-                sender=sender, payload=payload, session=session
-            )
+            reply = await handle_start_command(sender=sender, payload=payload, session=session)
         await message.answer(reply)
 
     @dispatcher.message(Command("stop"))
-    async def _on_stop(message: "Message") -> None:
+    async def _on_stop(message: Message) -> None:
         chat_id = message.chat.id
         task = _running_tasks.pop(chat_id, None)
         was_running = task is not None and not task.done()
@@ -125,27 +121,23 @@ def build_telegram_service() -> "TelegramService":
         await message.answer(reply)
 
     @dispatcher.message(Command("model"))
-    async def _on_model(message: "Message") -> None:
+    async def _on_model(message: Message) -> None:
         text = message.text or ""
         # Strip the "/model" prefix (plus optional @botname) and grab the rest.
         parts = text.strip().split(maxsplit=1)
         model_arg = parts[1].strip() if len(parts) > 1 else ""
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
-            reply = await handle_model_command(
-                sender=sender, model_arg=model_arg, session=session
-            )
+            reply = await handle_model_command(sender=sender, model_arg=model_arg, session=session)
         await message.answer(reply)
 
     @dispatcher.message()
-    async def _on_message(message: "Message") -> None:
+    async def _on_message(message: Message) -> None:
         if not message.text:
             return
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
-            result = await handle_plain_message(
-                sender=sender, text=message.text, session=session
-            )
+            result = await handle_plain_message(sender=sender, text=message.text, session=session)
 
         if isinstance(result, str):
             # Terminal reply — user isn't bound or some other error.
@@ -200,7 +192,7 @@ def build_telegram_service() -> "TelegramService":
     return TelegramService(bot=bot, dispatcher=dispatcher)
 
 
-def _sender_from_message(message: "Message") -> TelegramSender:
+def _sender_from_message(message: Message) -> TelegramSender:
     """Project an aiogram ``Message`` onto our framework-free dataclass."""
     user = message.from_user
     if user is None:
@@ -253,9 +245,7 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
     else:
         url = settings.telegram_webhook_url
         if not url:
-            raise RuntimeError(
-                "TELEGRAM_MODE=webhook requires TELEGRAM_WEBHOOK_URL to be set."
-            )
+            raise RuntimeError("TELEGRAM_MODE=webhook requires TELEGRAM_WEBHOOK_URL to be set.")
         secret = settings.telegram_webhook_secret or None
         await service.bot.set_webhook(
             url=url,
@@ -271,9 +261,9 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
             service.polling_task.cancel()
             try:
                 await service.polling_task
-            except (asyncio.CancelledError, Exception):  # noqa: BLE001
+            except (asyncio.CancelledError, Exception):
                 pass
         try:
             await service.bot.session.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning("TELEGRAM_SHUTDOWN session_close_failed", exc_info=True)

@@ -26,7 +26,8 @@
 			"!**/playwright-report",
 			"!**/test-results",
 			"!frontend/e2e/output",
-			"!frontend/lib/react-dropdown"
+			"!frontend/lib",
+			"!third_party"
 		]
 	},
 	"formatter": {

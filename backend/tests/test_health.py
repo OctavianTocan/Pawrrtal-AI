@@ -28,7 +28,6 @@ sys.path.insert(0, str(BACKEND_ROOT))
 
 from main import create_app
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -164,6 +163,4 @@ async def test_health_endpoint_at_canonical_path(raw_client: AsyncClient) -> Non
     wrong_paths = ["/health", "/api/health", "/api/v2/health"]
     for path in wrong_paths:
         r = await raw_client.get(path)
-        assert r.status_code != 200, (
-            f"Unexpected 200 at {path!r} — path drift may have occurred"
-        )
+        assert r.status_code != 200, f"Unexpected 200 at {path!r} — path drift may have occurred"

@@ -14,7 +14,7 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -36,7 +36,6 @@ from app.crud.workspace import (
 )
 from app.db import User
 from app.models import UserPersonalization
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -62,7 +61,7 @@ def _make_personalization(**kwargs: Any) -> UserPersonalization:
         custom_instructions=None,
         chatgpt_context=None,
         connected_channels=None,
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
     )
     return UserPersonalization(**{**defaults, **kwargs})
 
@@ -149,9 +148,7 @@ class TestSeedWorkspace:
         soul = (root / "SOUL.md").read_text()
         assert "analytical" in soul.lower()
 
-    def test_falls_back_to_balanced_soul_for_unknown_personality(
-        self, tmp_path: Path
-    ) -> None:
+    def test_falls_back_to_balanced_soul_for_unknown_personality(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         p = _make_personalization(personality="goblin")
         with patch("app.core.workspace.settings") as mock_settings:
@@ -162,9 +159,7 @@ class TestSeedWorkspace:
         # Balanced soul is the fallback.
         assert "SOUL.md" in soul
 
-    def test_seed_without_personalization_writes_placeholder_user_md(
-        self, tmp_path: Path
-    ) -> None:
+    def test_seed_without_personalization_writes_placeholder_user_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
@@ -181,9 +176,7 @@ class TestSeedWorkspace:
 
 class TestBuildUserMd:
     def test_includes_name_role_company(self) -> None:
-        p = _make_personalization(
-            name="Bob", role="CTO", company_website="https://acme.com"
-        )
+        p = _make_personalization(name="Bob", role="CTO", company_website="https://acme.com")
         md = _build_user_md(p)
         assert "Bob" in md
         assert "CTO" in md
@@ -206,9 +199,7 @@ class TestBuildUserMd:
 
 
 class TestBuildSoulMd:
-    @pytest.mark.parametrize(
-        "personality", ["analytical", "creative", "direct", "balanced"]
-    )
+    @pytest.mark.parametrize("personality", ["analytical", "creative", "direct", "balanced"])
     def test_known_personalities_return_content(self, personality: str) -> None:
         p = _make_personalization(personality=personality)
         md = _build_soul_md(p)
@@ -467,9 +458,7 @@ class TestWorkspaceAPI:
         assert "memory" in names
 
     @pytest.mark.anyio
-    async def test_tree_returns_404_for_unknown_workspace(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_tree_returns_404_for_unknown_workspace(self, client: AsyncClient) -> None:
         resp = await client.get(f"/api/v1/workspaces/{uuid.uuid4()}/tree")
         assert resp.status_code == 404
 
@@ -526,9 +515,7 @@ class TestWorkspaceAPI:
         )
         assert put_resp.status_code == 200
 
-        get_resp = await client.get(
-            f"/api/v1/workspaces/{ws.id}/files/memory/2026-05-06.md"
-        )
+        get_resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/memory/2026-05-06.md")
         assert get_resp.status_code == 200
         assert get_resp.json()["content"] == content
 
@@ -550,14 +537,10 @@ class TestWorkspaceAPI:
             f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt",
             json={"content": "some output"},
         )
-        del_resp = await client.delete(
-            f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt"
-        )
+        del_resp = await client.delete(f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt")
         assert del_resp.status_code == 204
 
-        get_resp = await client.get(
-            f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt"
-        )
+        get_resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt")
         assert get_resp.status_code == 404
 
     @pytest.mark.anyio

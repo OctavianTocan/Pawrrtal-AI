@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  zig:
+    name: Zig Core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test
+      - run: zig build validate
+
+  macos-webview:
+    name: macOS WebView
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test-webview-system-link
+      - run: zig build test-webview-smoke
+
+  linux-webkitgtk:
+    name: Linux WebKitGTK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Install WebKitGTK dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - run: zig build test-webview-system-link -Dplatform=linux
+
+  windows-webview:
+    name: Windows WebView
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test-webview-system-link -Dplatform=windows
+
+  cef-platform-tooling:
+    name: CEF Platform Tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test-tooling
+
+  npm-package:
+    name: npm Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm --prefix packages/zero-native run version:check
+      - run: npm --prefix packages/zero-native run scripts:check
+
+  frontend-examples:
+    name: Frontend Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test-examples-frontends
+
+  mobile-examples:
+    name: Mobile Examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build test-examples-mobile
+
+  scaffold:
+    name: Generated App Scaffolds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - run: zig build
+      - name: Scaffold and test frontend templates
+        run: |
+          set -euo pipefail
+          for frontend in next vite react svelte vue; do
+            app=".zig-cache/scaffold-${frontend}"
+            rm -rf "$app"
+            ./zig-out/bin/zero-native init "$app" --frontend "$frontend"
+            (cd "$app" && zig build test -Dplatform=null && ../../zig-out/bin/zero-native validate app.zon)
+          done
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+          package_json_file: docs/package.json
+      - run: pnpm install --frozen-lockfile
+        working-directory: docs
+      - run: pnpm check
+        working-directory: docs

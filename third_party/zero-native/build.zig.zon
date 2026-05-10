@@ -1,0 +1,23 @@
+.{
+    .name = .zero_native,
+    .fingerprint = 0x338d08a1e3dd81aa,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{},
+    .paths = .{
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE",
+        "SECURITY.md",
+        "app.zon",
+        "assets",
+        "build.zig",
+        "build.zig.zon",
+        "docs",
+        "examples",
+        "src",
+        "templates",
+        "tests",
+        "tools",
+    },
+}

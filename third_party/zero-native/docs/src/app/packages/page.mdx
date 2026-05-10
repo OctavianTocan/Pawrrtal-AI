@@ -1,0 +1,28 @@
+# Package Distribution
+
+zero-native is distributed as a Zig codebase plus a small npm wrapper package for the CLI. The former primitive modules (`geometry`, `assets`, `app_dirs`, `trace`, `app_manifest`, `diagnostics`, and `platform_info`) are now internal zero-native modules and are available through the main `zero-native` import instead of standalone Zig packages.
+
+<table>
+  <thead>
+    <tr>
+      <th>Package</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>zero-native</code></td>
+      <td>npm package that installs the <code>zero-native</code> command and wraps the native Zig CLI binary</td>
+    </tr>
+  </tbody>
+</table>
+
+## Install
+
+The zero-native CLI is published to npm as `zero-native`:
+
+```bash
+npm install -g zero-native
+```
+
+The npm package includes prebuilt binaries for macOS (arm64/x64), Linux (gnu/musl, arm64/x64), and Windows (x64). See `packages/zero-native/` in the repository for the wrapper scripts and packaging metadata.

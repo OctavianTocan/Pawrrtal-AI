@@ -4,9 +4,12 @@ import { ModalHeader } from '@octavian-tocan/react-overlay';
 import { FolderPlus, Lightbulb } from 'lucide-react';
 import type * as React from 'react';
 import { useId, useState } from 'react';
+import { AppDialog } from '@/components/ui/app-dialog';
+import { AppDialogCallout } from '@/components/ui/app-dialog-callout';
+import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
+import { AppFormRow } from '@/components/ui/app-form-row';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
 /** Props for {@link CreateProjectModal}. */
 export interface CreateProjectModalProps {
@@ -25,7 +28,7 @@ export interface CreateProjectModalProps {
  * project name field with a placeholder, a one-line helper explaining what
  * projects are for, Cancel + Create project buttons.
  *
- * Uses {@link ResponsiveModal} **`header`** / **`footer`** slots so
+ * Uses {@link AppDialog} **`header`** / **`footer`** slots so
  * {@link BottomSheet} gets sticky chrome and {@link Modal} composes like the
  * react-overlay docs (`ModalHeader` + body + actions).
  *
@@ -68,7 +71,7 @@ export function CreateProjectModal({
 	);
 
 	const footer = (
-		<div className="flex justify-end gap-2">
+		<AppDialogFooter>
 			<Button
 				className="cursor-pointer"
 				disabled={isPending}
@@ -81,11 +84,11 @@ export function CreateProjectModal({
 			<Button className="cursor-pointer" disabled={!canSubmit} form={formId} type="submit">
 				{isPending ? 'Creating…' : 'Create project'}
 			</Button>
-		</div>
+		</AppDialogFooter>
 	);
 
 	return (
-		<ResponsiveModal
+		<AppDialog
 			ariaLabel="Create project"
 			footer={footer}
 			header={header}
@@ -100,10 +103,7 @@ export function CreateProjectModal({
 				id={formId}
 				onSubmit={handleSubmit}
 			>
-				<div className="flex flex-col gap-2">
-					<label className="text-sm font-medium text-foreground" htmlFor={inputId}>
-						Project name
-					</label>
+				<AppFormRow htmlFor={inputId} label="Project name">
 					<Input
 						autoFocus
 						id={inputId}
@@ -112,16 +112,18 @@ export function CreateProjectModal({
 						placeholder="Copenhagen Trip"
 						value={draft}
 					/>
-				</div>
+				</AppFormRow>
 
-				<aside className="flex items-start gap-3 rounded-[10px] bg-foreground/[0.05] p-3 text-sm text-muted-foreground">
-					<Lightbulb aria-hidden className="mt-0.5 size-4 shrink-0 text-info" />
+				<AppDialogCallout
+					icon={<Lightbulb aria-hidden className="size-4 text-info" />}
+					tone="info"
+				>
 					<p className="leading-snug">
 						Projects keep chats, files, and custom instructions in one place. Use them
 						for ongoing work, or just to keep things tidy.
 					</p>
-				</aside>
+				</AppDialogCallout>
 			</form>
-		</ResponsiveModal>
+		</AppDialog>
 	);
 }

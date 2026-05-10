@@ -1,0 +1,139 @@
+# Automation
+
+The automation server exposes runtime state and accepts commands via a file-based protocol. Use it for integration testing, CI smoke tests, and inspecting running apps.
+
+## Enabling automation
+
+Build with the automation flag:
+
+```bash
+zig build run-webview -Dautomation=true
+```
+
+In your runner, pass an `automation.Server` to `RuntimeOptions`:
+
+```zig
+const server = zero_native.automation.Server.init(io, ".zig-cache/zero-native-automation", "My App");
+var runtime = zero_native.Runtime.init(.{
+    .platform = my_platform,
+    .automation = server,
+});
+```
+
+The default directory is `.zig-cache/zero-native-automation`.
+
+## File protocol
+
+When the runtime publishes a snapshot, it writes these files to the automation directory:
+
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>snapshot.txt</code></td>
+      <td>Runtime state: app name, source kind, window metadata, <code>ready=true/false</code></td>
+    </tr>
+    <tr>
+      <td><code>accessibility.txt</code></td>
+      <td>Accessibility tree summary</td>
+    </tr>
+    <tr>
+      <td><code>windows.txt</code></td>
+      <td>Window list: <code>window @w{"{id}"} "{"{title}"}" focused={"{bool}"}</code> per line</td>
+    </tr>
+    <tr>
+      <td><code>screenshot.ppm</code></td>
+      <td>Screenshot in PPM format (currently a 2x2 placeholder)</td>
+    </tr>
+    <tr>
+      <td><code>command.txt</code></td>
+      <td>Command input: written by the CLI, consumed by the runtime</td>
+    </tr>
+    <tr>
+      <td><code>bridge-response.txt</code></td>
+      <td>JSON response from the last bridge command</td>
+    </tr>
+  </tbody>
+</table>
+
+## Commands
+
+The runtime polls `command.txt` and processes these actions:
+
+<table>
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>reload</code></td>
+      <td>Reload the WebView source</td>
+    </tr>
+    <tr>
+      <td><code>wait</code></td>
+      <td>Block until the snapshot shows <code>ready=true</code></td>
+    </tr>
+    <tr>
+      <td><code>bridge &lt;json&gt;</code></td>
+      <td>Send a bridge command with origin <code>zero://inline</code></td>
+    </tr>
+  </tbody>
+</table>
+
+After processing a command, the runtime writes `done` to `command.txt`.
+
+## CLI usage
+
+The `zero-native automate` subcommand interacts with the automation directory:
+
+```bash
+# Wait for the app to be ready (polls snapshot.txt for ready=true)
+zero-native automate wait
+
+# List running automation-enabled apps
+zero-native automate list
+
+# Dump the current snapshot
+zero-native automate snapshot
+
+# Capture a screenshot
+zero-native automate screenshot
+
+# Reload the WebView
+zero-native automate reload
+
+# Send a bridge command and get the response
+zero-native automate bridge '{"id":"1","command":"native.ping","payload":{"source":"automation"}}'
+```
+
+## Testing with automation
+
+The `test-webview-smoke` build step demonstrates a full automation test flow:
+
+1. Build and start the app with `-Dautomation=true`
+2. Run `zero-native automate wait` to block until the app is ready
+3. Run `zero-native automate snapshot` to verify window metadata and source kind
+4. Run `zero-native automate bridge '...'` to test the native bridge round-trip
+5. Verify the response in `bridge-response.txt`
+
+```bash
+zig build test-webview-smoke -Dplatform=macos
+```
+
+## Custom directory
+
+Pass a custom path to `automation.Server.init()`:
+
+```zig
+const server = zero_native.automation.Server.init(io, "/tmp/my-app-automation", "My App");
+```
+
+The CLI reads from the default `.zig-cache/zero-native-automation` unless you specify a directory via the automation subcommand.

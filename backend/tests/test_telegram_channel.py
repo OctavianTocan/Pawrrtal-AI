@@ -31,7 +31,6 @@ from app.integrations.telegram.handlers import (
     handle_stop_command,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -106,9 +105,7 @@ class TestTelegramChannelDeliver:
         channel = TelegramChannel()
         chunks = [
             chunk
-            async for chunk in channel.deliver(
-                _stream({"type": "delta", "content": "hello"}), msg
-            )
+            async for chunk in channel.deliver(_stream({"type": "delta", "content": "hello"}), msg)
         ]
         assert chunks == []
 
@@ -127,9 +124,7 @@ class TestTelegramChannelDeliver:
         msg = _make_channel_message(bot, chat_id=7, message_id=99)
         channel = TelegramChannel()
 
-        async for _ in channel.deliver(
-            _stream({"type": "delta", "content": "hi"}), msg
-        ):
+        async for _ in channel.deliver(_stream({"type": "delta", "content": "hi"}), msg):
             pass
 
         bot.edit_message_text.assert_called_once_with(
@@ -177,9 +172,7 @@ class TestTelegramChannelDeliver:
     async def test_not_modified_error_swallowed(self) -> None:
         """TelegramBadRequest: message is not modified must not propagate."""
         bot = _make_bot()
-        bot.edit_message_text.side_effect = Exception(
-            "TelegramBadRequest: message is not modified"
-        )
+        bot.edit_message_text.side_effect = Exception("TelegramBadRequest: message is not modified")
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
@@ -207,17 +200,13 @@ class TestTelegramChannelDeliver:
 class TestHandlePlainMessage:
     async def test_unbound_user_returns_string(self) -> None:
         """An unknown external_user_id must return the not-bound nudge string."""
-        sender = TelegramSender(
-            user_id=999, chat_id=999, username=None, full_name="Stranger"
-        )
+        sender = TelegramSender(user_id=999, chat_id=999, username=None, full_name="Stranger")
         session = AsyncMock()
         with patch(
             "app.integrations.telegram.handlers.get_user_id_for_external",
             new=AsyncMock(return_value=None),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="hello", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="hello", session=session)
         assert isinstance(result, str)
         assert "don't recognize" in result.lower() or "connect" in result.lower()
 
@@ -225,9 +214,7 @@ class TestHandlePlainMessage:
         """A known user must get a TelegramTurnContext with correct fields."""
         nexus_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
-        sender = TelegramSender(
-            user_id=42, chat_id=42, username="tavi", full_name="Tavi"
-        )
+        sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
 
         # Fake conversation row with no model override.
@@ -245,9 +232,7 @@ class TestHandlePlainMessage:
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="what is RAG?", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="what is RAG?", session=session)
 
         assert isinstance(result, TelegramTurnContext)
         assert result.nexus_user_id == nexus_uid
@@ -258,9 +243,7 @@ class TestHandlePlainMessage:
         """When conversation.model_id is set it must propagate into the context."""
         nexus_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
-        sender = TelegramSender(
-            user_id=42, chat_id=42, username="tavi", full_name="Tavi"
-        )
+        sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
 
         fake_conv = AsyncMock()
@@ -277,9 +260,7 @@ class TestHandlePlainMessage:
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="hey", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="hey", session=session)
 
         assert isinstance(result, TelegramTurnContext)
         assert result.model_id == "anthropic/claude-opus-4-5"

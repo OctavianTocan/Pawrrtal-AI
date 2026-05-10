@@ -62,7 +62,6 @@ from app.core.agent_loop.types import (
     ToolCallContent,
 )
 
-
 # ---------------------------------------------------------------------------
 # Turn builders — each returns a list of LLMEvents for one LLM call
 # ---------------------------------------------------------------------------
@@ -184,8 +183,8 @@ def parallel_tool_calls_turn(
 
 
 def make_recording_stream_fn(
-    turns: "list[list[LLMEvent] | Exception]",
-) -> "ScriptedStreamFn":
+    turns: list[list[LLMEvent] | Exception],
+) -> ScriptedStreamFn:
     """Return a ``ScriptedStreamFn`` that also records messages passed per call.
 
     The returned script's ``messages_seen[N]`` contains the ``messages`` list
@@ -244,9 +243,7 @@ class ScriptedStreamFn:
 
     turns: list[list[LLMEvent] | Exception]
     call_count: int = dataclasses.field(default=0, init=False)
-    messages_seen: list[list["AgentMessage"]] = dataclasses.field(
-        default_factory=list, init=False
-    )
+    messages_seen: list[list[AgentMessage]] = dataclasses.field(default_factory=list, init=False)
 
     async def __call__(
         self,

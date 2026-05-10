@@ -1,0 +1,30 @@
+.{
+    .id = "dev.zero_native",
+    .name = "zero-native",
+    .display_name = "zero-native",
+    .version = "0.1.0",
+    .icons = .{ "assets/icon.icns", "assets/icon.ico" },
+    .platforms = .{ "macos" },
+    .permissions = .{ "window" },
+    .capabilities = .{ "webview", "js_bridge", "native_module" },
+    .bridge = .{
+        .commands = .{
+            .{ .name = "native.ping", .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.list", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.create", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.focus", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.close", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+        },
+    },
+    .security = .{
+        .navigation = .{
+            .allowed_origins = .{ "zero://app", "zero://inline", "http://127.0.0.1:5173" },
+            .external_links = .{ .action = "deny" },
+        },
+    },
+    .web_engine = "system",
+    .cef = .{ .dir = "third_party/cef/macos", .auto_install = false },
+    .windows = .{
+        .{ .label = "main", .title = "zero-native", .width = 720, .height = 480, .restore_state = true },
+    },
+}

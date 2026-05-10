@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 
 interface ConversationsEmptyStateProps {
 	/** Icon rendered inside a subtle container above the title. */
@@ -27,23 +28,12 @@ export function ConversationsEmptyState({
 	onAction,
 }: ConversationsEmptyStateProps): React.JSX.Element {
 	return (
-		<div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-			<div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-foreground/[0.03] text-muted-foreground/70 shadow-minimal">
-				{icon}
-			</div>
-			<h3 className="mt-4 text-sm font-medium text-foreground">{title}</h3>
-			<p className="mt-1.5 max-w-[220px] text-xs leading-5 text-muted-foreground">
-				{description}
-			</p>
-			{buttonLabel && onAction ? (
-				<button
-					type="button"
-					onClick={onAction}
-					className="mt-4 inline-flex items-center h-7 px-3 text-xs font-medium rounded-[8px] bg-background shadow-minimal hover:bg-foreground/[0.03] transition-colors"
-				>
-					{buttonLabel}
-				</button>
-			) : null}
-		</div>
+		<AppEmptyState
+			action={buttonLabel && onAction ? { label: buttonLabel, onClick: onAction } : undefined}
+			description={description}
+			icon={icon}
+			title={title}
+			tone="sidebar"
+		/>
 	);
 }

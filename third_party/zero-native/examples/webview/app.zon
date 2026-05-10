@@ -1,0 +1,27 @@
+.{
+    .id = "dev.zero_native.webview",
+    .name = "webview",
+    .display_name = "WebView Example",
+    .version = "0.1.0",
+    .icons = .{ "assets/icon.icns" },
+    .platforms = .{ "macos", "linux" },
+    .permissions = .{ "window" },
+    .capabilities = .{ "webview", "js_bridge" },
+    .bridge = .{
+        .commands = .{
+            .{ .name = "native.ping", .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.list", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.create", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.focus", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+            .{ .name = "zero-native.window.close", .permissions = .{ "window" }, .origins = .{ "zero://inline", "zero://app" } },
+        },
+    },
+    .security = .{
+        .navigation = .{
+            .allowed_origins = .{ "zero://app", "zero://inline", "http://127.0.0.1:5173" },
+            .external_links = .{ .action = "deny" },
+        },
+    },
+    .web_engine = "system",
+    .cef = .{ .dir = "third_party/cef/macos", .auto_install = false },
+}

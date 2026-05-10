@@ -7,7 +7,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.agent_loop.types import AgentSafetyConfig
-from app.models import Workspace  # noqa: F401  # used via fixture type hint
+from app.models import Workspace  # used via fixture type hint
 from tests.agent_harness import ScriptedStreamFn, echo_tool, text_turn, tool_call_turn
 
 
@@ -52,9 +52,7 @@ async def test_chat_returns_412_when_user_has_no_workspace(
     than silently running with degraded tools.
     """
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "NoWS"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "NoWS"})
 
     response = await client.post(
         "/api/v1/chat/",
@@ -73,9 +71,7 @@ async def test_chat_streams_provider_events(
 ) -> None:
     """Chat streams provider events as SSE frames and terminates with DONE."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"})
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
         lambda _model_id, **kwargs: FakeProvider(
@@ -101,9 +97,7 @@ async def test_chat_persists_requested_model_id(
 ) -> None:
     """Chat stores the requested model on the conversation."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Model"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Model"})
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
         lambda _model_id, **kwargs: FakeProvider([{"type": "delta", "content": "ok"}]),
@@ -131,9 +125,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
 ) -> None:
     """Provider exceptions are emitted as stream-level error events."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Error"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Error"})
 
     class FailingProvider:
         async def stream(
@@ -186,10 +178,12 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     from app.core.providers.gemini_provider import GeminiLLM
 
     echo = echo_tool()
-    script = ScriptedStreamFn([
-        tool_call_turn("echo", {"value": "test"}, turn_id="tc-http"),
-        text_turn("I echoed test for you."),
-    ])
+    script = ScriptedStreamFn(
+        [
+            tool_call_turn("echo", {"value": "test"}, turn_id="tc-http"),
+            text_turn("I echoed test for you."),
+        ]
+    )
 
     provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(provider, "_stream_fn", script)
@@ -201,9 +195,7 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     )
 
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Tool HTTP Test"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Tool HTTP Test"})
 
     response = await client.post(
         "/api/v1/chat/",
@@ -273,9 +265,7 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     )
 
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Safety Test"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Safety Test"})
 
     response = await client.post(
         "/api/v1/chat/",

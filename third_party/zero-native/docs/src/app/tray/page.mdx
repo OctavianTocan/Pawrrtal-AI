@@ -1,0 +1,91 @@
+# System Tray
+
+zero-native supports system tray icons with menus. Tray actions dispatch as `CommandEvent` with name `"tray.action"` in the runtime.
+
+Tray support is currently implemented on macOS. Linux returns `UnsupportedService` until a portable status notifier implementation is selected.
+
+## TrayOptions
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>icon_path</code></td>
+      <td><code>[]const u8</code></td>
+      <td><code>""</code></td>
+    </tr>
+    <tr>
+      <td><code>tooltip</code></td>
+      <td><code>[]const u8</code></td>
+      <td><code>""</code></td>
+    </tr>
+    <tr>
+      <td><code>items</code></td>
+      <td><code>[]const TrayMenuItem</code></td>
+      <td><code>&.{}</code></td>
+    </tr>
+  </tbody>
+</table>
+
+## TrayMenuItem
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>id</code></td>
+      <td><code>TrayItemId</code> (<code>u32</code>)</td>
+      <td><code>0</code></td>
+    </tr>
+    <tr>
+      <td><code>label</code></td>
+      <td><code>[]const u8</code></td>
+      <td><code>""</code></td>
+    </tr>
+    <tr>
+      <td><code>separator</code></td>
+      <td><code>bool</code></td>
+      <td><code>false</code></td>
+    </tr>
+    <tr>
+      <td><code>enabled</code></td>
+      <td><code>bool</code></td>
+      <td><code>true</code></td>
+    </tr>
+  </tbody>
+</table>
+
+## PlatformServices methods
+
+- `createTray(options)` -- create or replace the tray icon
+- `updateTrayMenu(items)` -- update menu items without recreating the tray
+- `removeTray()` -- remove the tray icon
+
+## Handling tray actions
+
+When a user clicks a tray menu item, the runtime dispatches a `CommandEvent` with the name `"tray.action"`. Use your `event_fn` to handle it:
+
+```zig
+fn event(context: *anyopaque, runtime: *Runtime, ev: Event) anyerror!void {
+    switch (ev) {
+        .command => |cmd| {
+            if (std.mem.eql(u8, cmd.name, "tray.action")) {
+                // Handle tray menu click
+            }
+        },
+        else => {},
+    }
+}
+```

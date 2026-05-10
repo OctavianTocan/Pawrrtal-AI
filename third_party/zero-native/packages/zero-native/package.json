@@ -1,0 +1,32 @@
+{
+  "name": "zero-native",
+  "version": "0.1.9",
+  "description": "Zig desktop app shell with WebView — CLI tools",
+  "type": "module",
+  "bin": {
+    "zero-native": "bin/zero-native.js"
+  },
+  "types": "./zero-native.d.ts",
+  "files": [
+    "bin",
+    "scripts",
+    "src",
+    "zero-native.d.ts",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel-labs/zero-native.git"
+  },
+  "homepage": "https://zero-native.dev",
+  "scripts": {
+    "version": "npm run version:sync && git add ../../tools/zero-native/main.zig",
+    "version:sync": "node scripts/sync-version.js",
+    "version:check": "node scripts/check-version-sync.js",
+    "scripts:check": "node --check bin/zero-native.js && node --check scripts/postinstall.js && node --check scripts/copy-native.js && node --check scripts/copy-framework.js && node --check scripts/sync-version.js && node --check scripts/check-version-sync.js",
+    "build:native": "npm run version:sync && cd ../.. && zig build && node packages/zero-native/scripts/copy-native.js",
+    "prepack": "node scripts/copy-framework.js",
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "license": "Apache-2.0"
+}

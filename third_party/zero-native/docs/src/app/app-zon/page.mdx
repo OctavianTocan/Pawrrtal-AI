@@ -1,0 +1,156 @@
+# app.zon Reference
+
+The `app.zon` manifest declares app metadata, permissions, bridge policies, security rules, and window layout. It is read by the CLI and tooling at build, package, and validation time.
+
+## Example
+
+```zig
+.{
+    .id = "dev.zero_native",
+    .name = "zero-native",
+    .display_name = "zero-native",
+    .version = "0.1.0",
+    .icons = .{ "assets/icon.icns", "assets/icon.ico" },
+    .platforms = .{ "macos" },
+    .permissions = .{ "window" },
+    .capabilities = .{ "webview", "js_bridge" },
+    .bridge = .{
+        .commands = .{
+            .{ .name = "native.ping", .origins = .{ "zero://app" } },
+            .{ .name = "zero-native.window.create", .permissions = .{ "window" }, .origins = .{ "zero://app" } },
+        },
+    },
+    .security = .{
+        .navigation = .{
+            .allowed_origins = .{ "zero://app", "http://127.0.0.1:5173" },
+            .external_links = .{ .action = "deny" },
+        },
+    },
+    .web_engine = "system",
+    .cef = .{ .dir = "third_party/cef/macos", .auto_install = false },
+    .windows = .{
+        .{ .label = "main", .title = "zero-native", .width = 720, .height = 480, .restore_state = true },
+    },
+}
+```
+
+## Fields
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>id</code></td>
+      <td>Reverse-DNS bundle identifier (e.g. <code>com.example.myapp</code>)</td>
+    </tr>
+    <tr>
+      <td><code>name</code></td>
+      <td>Short machine name</td>
+    </tr>
+    <tr>
+      <td><code>display_name</code></td>
+      <td>Human-readable app name (menu bar, window title fallback)</td>
+    </tr>
+    <tr>
+      <td><code>version</code></td>
+      <td>Semver version string</td>
+    </tr>
+    <tr>
+      <td><code>icons</code></td>
+      <td>Paths to icon files for packaging</td>
+    </tr>
+    <tr>
+      <td><code>platforms</code></td>
+      <td>Target platforms: <code>macos</code>, <code>linux</code>, <code>windows</code></td>
+    </tr>
+    <tr>
+      <td><code>permissions</code></td>
+      <td>Runtime permissions (see <a href="/security">Security</a>)</td>
+    </tr>
+    <tr>
+      <td><code>capabilities</code></td>
+      <td>Feature declarations (see <a href="/security">Security</a>)</td>
+    </tr>
+    <tr>
+      <td><code>bridge</code></td>
+      <td>Bridge command policies (see <a href="/bridge">Bridge</a>)</td>
+    </tr>
+    <tr>
+      <td><code>security</code></td>
+      <td>Navigation and external link policies (see <a href="/security">Security</a>)</td>
+    </tr>
+    <tr>
+      <td><code>web_engine</code></td>
+      <td><code>system</code> or <code>chromium</code>; Chromium is currently supported for macOS builds (see <a href="/web-engines">Web Engines</a>)</td>
+    </tr>
+    <tr>
+      <td><code>cef</code></td>
+      <td>CEF runtime config for Chromium apps: <code>dir</code> and <code>auto_install</code></td>
+    </tr>
+    <tr>
+      <td><code>windows</code></td>
+      <td>Window definitions (see <a href="/windows">Windows</a>)</td>
+    </tr>
+    <tr>
+      <td><code>frontend</code></td>
+      <td>Frontend build/dev config (see <a href="/frontend">Frontend Projects</a>)</td>
+    </tr>
+  </tbody>
+</table>
+
+## `frontend.dev`
+
+The optional `frontend.dev` block configures the managed dev server for `zero-native dev` and `zig build dev`:
+
+```zig
+.frontend = .{
+    .dist = "frontend/dist",
+    .entry = "index.html",
+    .spa_fallback = true,
+    .dev = .{
+        .url = "http://127.0.0.1:5173/",
+        .command = .{ "npm", "--prefix", "frontend", "run", "dev" },
+        .ready_path = "/",
+        .timeout_ms = 30000,
+    },
+},
+```
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>url</code></td>
+      <td>Dev server URL to load in the WebView during development</td>
+    </tr>
+    <tr>
+      <td><code>command</code></td>
+      <td>Command to start the dev server (spawned as a child process)</td>
+    </tr>
+    <tr>
+      <td><code>ready_path</code></td>
+      <td>HTTP path to poll until the dev server is ready (default <code>/</code>)</td>
+    </tr>
+    <tr>
+      <td><code>timeout_ms</code></td>
+      <td>Milliseconds to wait for the dev server before failing (default <code>30000</code>)</td>
+    </tr>
+  </tbody>
+</table>
+
+## Validation
+
+```bash
+zero-native validate app.zon
+zero-native doctor --manifest app.zon --strict
+```

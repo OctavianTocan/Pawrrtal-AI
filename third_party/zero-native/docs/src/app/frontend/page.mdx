@@ -1,0 +1,116 @@
+# Frontend Projects
+
+For apps with a build step (React, Vue, Svelte, etc.), zero-native provides helpers to switch between a dev server and bundled assets.
+
+## Dynamic source function
+
+Use `source_fn` on your `App` so development uses a localhost server and production uses bundled assets:
+
+```zig
+fn source(context: *anyopaque) anyerror!zero_native.WebViewSource {
+    const self: *App = @ptrCast(@alignCast(context));
+    return zero_native.frontend.sourceFromEnv(self.env_map, .{
+        .dist = "dist",
+        .entry = "index.html",
+    });
+}
+```
+
+`sourceFromEnv` checks `ZERO_NATIVE_FRONTEND_URL`. If set, it returns a URL source; otherwise it returns an assets source from `config.dist`.
+
+## frontend.Config
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>dist</code></td>
+      <td><code>"dist"</code></td>
+      <td>Path to the built frontend output</td>
+    </tr>
+    <tr>
+      <td><code>entry</code></td>
+      <td><code>"index.html"</code></td>
+      <td>HTML entry point within dist</td>
+    </tr>
+    <tr>
+      <td><code>origin</code></td>
+      <td><code>"zero://app"</code></td>
+      <td>Origin for asset URLs</td>
+    </tr>
+    <tr>
+      <td><code>spa_fallback</code></td>
+      <td><code>true</code></td>
+      <td>Serve entry for unknown routes</td>
+    </tr>
+    <tr>
+      <td><code>dev_url_env</code></td>
+      <td><code>"ZERO_NATIVE_FRONTEND_URL"</code></td>
+      <td>Environment variable checked by <code>sourceFromEnv</code></td>
+    </tr>
+  </tbody>
+</table>
+
+## Configure in app.zon
+
+```zig
+.frontend = .{
+    .dist = "dist",
+    .entry = "index.html",
+    .spa_fallback = true,
+    .dev = .{
+        .url = "http://127.0.0.1:5173/",
+        .command = .{ "npm", "run", "dev", "--", "--host", "127.0.0.1" },
+        .ready_path = "/",
+        .timeout_ms = 30000,
+    },
+}
+```
+
+## Dev server
+
+Use `zero-native dev` to let zero-native manage the frontend server lifecycle:
+
+```bash
+zero-native dev --binary zig-out/bin/MyApp
+zero-native dev --binary zig-out/bin/MyApp --url http://127.0.0.1:3000/ --command "npm run dev"
+```
+
+The command starts the frontend process, waits for the port to accept connections, launches the native shell with `ZERO_NATIVE_FRONTEND_URL`, and terminates the frontend when the shell exits. See [Dev Server](/cli/dev) for all flags.
+
+## Framework recipes
+
+**Vite**: `.url = "http://127.0.0.1:5173/"`, command `npm run dev -- --host 127.0.0.1`.
+
+**Next.js**: `.url = "http://127.0.0.1:3000/"`, command `npm run dev -- --hostname 127.0.0.1`.
+
+**Static preview**: point `.dist` at the build output and use any local server command.
+
+## Examples
+
+The repository includes complete frontend examples:
+
+- `examples/next` - Next.js app with `frontend/out` production assets.
+- `examples/react` - React app built with Vite.
+- `examples/svelte` - Svelte app built with Vite.
+- `examples/vue` - Vue app built with Vite.
+
+Each example can be run from its directory with `zig build run`, or with `zig build dev` for the managed frontend dev server flow.
+
+## Production source
+
+For packaged builds that always use local assets:
+
+```zig
+return zero_native.frontend.productionSource(.{ .dist = "dist", .entry = "index.html" });
+```
+
+## ZERO_NATIVE_FRONTEND_ASSETS
+
+`ZERO_NATIVE_FRONTEND_ASSETS` is an app-defined convention (not read by the `frontend` module). Examples use it to signal that pre-built assets should be loaded via `productionSource` instead of the default dev/prod branching.

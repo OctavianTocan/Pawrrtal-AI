@@ -60,7 +60,7 @@ class SSEChannel:
     async def deliver(
         self,
         stream: AsyncIterator[StreamEvent],
-        message: ChannelMessage,  # noqa: ARG002 — reserved for future metadata use
+        message: ChannelMessage,
     ) -> AsyncIterator[bytes]:
         """Yield SSE-framed bytes for every event in *stream*, then ``[DONE]``.
 

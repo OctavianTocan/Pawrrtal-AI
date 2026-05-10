@@ -1,0 +1,10 @@
+.{
+    .id = "dev.zero_native.android-example",
+    .name = "android-example",
+    .display_name = "Android Example",
+    .version = "0.1.0",
+    .platforms = .{ "android" },
+    .permissions = .{},
+    .capabilities = .{ "webview" },
+    .web_engine = "system",
+}

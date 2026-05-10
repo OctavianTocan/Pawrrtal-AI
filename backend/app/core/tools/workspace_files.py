@@ -90,7 +90,7 @@ def _wrap_workspace_tool(
     tool bodies stay tiny and only encode their own behaviour.
     """
 
-    async def execute(tool_call_id: str, **kwargs: Any) -> str:  # noqa: ARG001
+    async def execute(tool_call_id: str, **kwargs: Any) -> str:
         raw_path = kwargs.pop("path", None)
         if path_required and not raw_path:
             return ToolError(
@@ -144,9 +144,7 @@ async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
         ) from exc
 
 
-async def _write_file_body(
-    *, target: Path, raw_path: str, content: str = "", **_: Any
-) -> str:
+async def _write_file_body(*, target: Path, raw_path: str, content: str = "", **_: Any) -> str:
     if target.is_dir():
         raise ToolError(
             ToolErrorCode.WRONG_KIND,

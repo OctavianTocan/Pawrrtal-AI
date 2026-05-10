@@ -1,0 +1,48 @@
+# zero-native
+
+Build native desktop apps with web UI. Tiny binaries. Minimal memory. Instant rebuilds.
+
+## Why zero-native
+
+### Tiny and fast
+
+zero-native apps using the system WebView produce sub-megabyte binaries and use a fraction of the memory you'd expect from a native app framework. No bundled runtime bloating your app.
+
+### Choose your web engine
+
+Use the system WebView for lightweight apps, or bundle Chromium via CEF when you need pixel-perfect rendering consistency. Same API, different tradeoff. You choose per project.
+
+### Fast native rebuilds
+
+Zig compiles fast. Change your bridge commands, system integrations, or app logic and get a rebuilt binary in seconds. Your frontend still hot-reloads instantly.
+
+### Any C library, one import away
+
+Zig calls C directly. No binding generation, no `unsafe` wrappers, no glue code. Native SDKs, audio codecs, ML runtimes: include the header and call it. When your app needs to go deeper than the built-in APIs, nothing is out of reach.
+
+### Cross-platform foundation
+
+Build macOS and Linux desktop shells from one Zig codebase today, with Windows and mobile work in progress. The native layer stays small and explicit while the WebView surface stays familiar.
+
+### Simpler native layer
+
+No borrow checker. No lifetimes. No fighting the compiler for 20 minutes over a string. Zig is a simple, readable systems language that web developers can pick up in an afternoon.
+
+## Get started
+
+```bash
+zero-native init my_app --frontend next
+cd my_app
+zig build run
+```
+
+The first run installs the generated frontend dependencies, then opens a native window rendering your HTML. Read the full [Quick Start](/quick-start) to go from zero to a packaged app.
+
+## Learn more
+
+- [Quick Start](/quick-start) -- Create, run, and package your first app
+- [Web Engines](/web-engines) -- System WebView vs. Chromium (CEF)
+- [App Model](/app-model) -- Apps, sources, and lifecycle
+- [Bridge](/bridge) -- Call native Zig from JavaScript
+- [Frontend Projects](/frontend) -- Use React, Vue, or Svelte
+- [Security](/security) -- Permissions, policies, and navigation rules

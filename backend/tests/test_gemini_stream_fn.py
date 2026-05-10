@@ -24,14 +24,12 @@ from app.core.agent_loop.types import (
     ToolCallContent,
 )
 from app.core.providers.base import StreamEvent
-
 from tests.agent_harness import (
     ScriptedStreamFn,
     echo_tool,
     text_turn,
     tool_call_turn,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test 1 — delta events pass through the provider translation layer
@@ -46,9 +44,7 @@ async def test_gemini_provider_yields_delta_events_from_loop(
     from app.core.providers.gemini_provider import GeminiLLM
 
     provider = GeminiLLM("gemini-test")
-    monkeypatch.setattr(
-        provider, "_stream_fn", ScriptedStreamFn([text_turn("hello")])
-    )
+    monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("hello")]))
 
     events: list[StreamEvent] = []
     async for event in provider.stream(
@@ -149,10 +145,12 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     monkeypatch.setattr(
         provider,
         "_stream_fn",
-        ScriptedStreamFn([
-            tool_call_turn("echo", {"value": "hi"}, turn_id="tc-0"),
-            text_turn("Done!"),
-        ]),
+        ScriptedStreamFn(
+            [
+                tool_call_turn("echo", {"value": "hi"}, turn_id="tc-0"),
+                text_turn("Done!"),
+            ]
+        ),
     )
 
     events: list[StreamEvent] = []
@@ -171,10 +169,7 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     # All three event types appeared in the SSE stream.
     assert any(e["type"] == "tool_use" for e in events)
     assert any(e["type"] == "tool_result" for e in events)
-    assert any(
-        e["type"] == "delta" and "Done!" in e.get("content", "")
-        for e in events
-    )
+    assert any(e["type"] == "delta" and "Done!" in e.get("content", "") for e in events)
 
 
 # ---------------------------------------------------------------------------
