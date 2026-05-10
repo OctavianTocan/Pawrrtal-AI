@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './server';
 
 // jsdom doesn't ship a ResizeObserver — radix-ui's Slider, DropdownMenu,
 // and a few other primitives crash without it. Stub the minimum surface
@@ -90,6 +91,24 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
 		}) as MediaQueryList;
 }
 
+// ---------------------------------------------------------------------------
+// MSW server lifecycle — runs once per Vitest worker process.
+// ---------------------------------------------------------------------------
+
+// Start the MSW intercept server before any tests run.  `onUnhandledRequest`
+// warns (not errors) on unhandled routes so accidental real-network calls are
+// surfaced without hard-failing unrelated tests.
+beforeAll((): void => {
+	server.listen({ onUnhandledRequest: 'warn' });
+});
+
+// Reset per-test handler overrides after each test so overrides don't leak.
 afterEach((): void => {
+	server.resetHandlers();
 	cleanup();
+});
+
+// Stop the server after all tests in the suite have run.
+afterAll((): void => {
+	server.close();
 });

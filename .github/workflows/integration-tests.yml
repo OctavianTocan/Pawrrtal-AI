@@ -46,7 +46,7 @@ jobs:
     # is on Tavi's box, not GitHub's.  Reserving 「ubuntu-latest」 for
     # the GitHub-hosted-only workloads (「playwright install --with-deps」
     # in the dev-console smoke).
-    runs-on: [self-hosted, ainexus]
+    runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -66,7 +66,7 @@ jobs:
         working-directory: backend
         run: uv sync --frozen
 
-      # Self-hosted ainexus runner doesn't carry node/npm by default,
+      # Self-hosted pawrrtal runner doesn't carry node/npm by default,
       # and the comment in this workflow that claimed the CLI was
       # "already installed locally" was stale — every run of this job
       # was failing on `npm: command not found`.  setup-node provides
