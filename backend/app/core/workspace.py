@@ -29,14 +29,9 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
-
 from app.core.config import settings
 
 log = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from app.models import UserPersonalization
 
 
 # ---------------------------------------------------------------------------
