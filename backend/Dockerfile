@@ -28,6 +28,9 @@ FROM python:3.13-slim AS runtime
 
 WORKDIR /app
 
+# libpq5 is required by psycopg's pure-Python implementation at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends libpq5 && rm -rf /var/lib/apt/lists/*
+
 # Grab the populated venv from the builder stage.
 COPY --from=builder /app/.venv /app/.venv
 
