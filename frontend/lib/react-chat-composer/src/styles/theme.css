@@ -1,0 +1,56 @@
+/*
+ * Tailwind v4 `@theme` block registering every CSS variable the composer
+ * references. Consumers import this once in their globals.css and may
+ * override any variable to retheme the composer.
+ *
+ * Scaffold — the variable list will grow as the composer code is vendored
+ * (see the host repo's docs/plans/extract-react-chat-composer.md and the
+ * styling ADR docs/decisions/2026-05-10-react-chat-composer-styling.md).
+ */
+
+@theme {
+	/* Surfaces */
+	--color-chat-bg-elevated: oklch(0.99 0 0);
+	--color-chat-bg-elevated-shade: oklch(0.96 0 0);
+
+	/* Foreground / text */
+	--color-chat-foreground: oklch(0.21 0.005 285);
+	--color-chat-muted: oklch(0.55 0.005 285);
+
+	/* Hairline borders */
+	--color-chat-border: oklch(0.9 0.005 285);
+
+	/* Brand / actions */
+	--color-chat-accent: oklch(0.66 0.21 38);
+	--color-chat-accent-foreground: oklch(0.99 0 0);
+
+	/* Semantic */
+	--color-chat-info: oklch(0.74 0.18 55);
+	--color-chat-warning: oklch(0.74 0.18 75);
+	--color-chat-destructive: oklch(0.55 0.22 32);
+	--color-chat-success: oklch(0.55 0.17 145);
+
+	/* Radii */
+	--radius-chat-lg: 14px;
+	--radius-chat-md: 10px;
+	--radius-chat-sm: 7px;
+
+	/* Shadows */
+	--shadow-chat-minimal: 0 1px 0 oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.04);
+
+	/* Animations */
+	--animate-chat-placeholder: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
+	--animate-chat-waveform-scroll: waveform-scroll 6s linear infinite;
+}
+
+/* Dark-mode overrides — applied when the consumer adds `.dark` to <html>. */
+.dark {
+	--color-chat-bg-elevated: oklch(0.18 0 0);
+	--color-chat-bg-elevated-shade: oklch(0.15 0 0);
+	--color-chat-foreground: oklch(0.95 0.005 285);
+	--color-chat-muted: oklch(0.65 0.005 285);
+	--color-chat-border: oklch(0.3 0.005 285);
+	--color-chat-accent: oklch(0.7 0.21 38);
+	--color-chat-accent-foreground: oklch(0.12 0 0);
+	--shadow-chat-minimal: 0 1px 0 oklch(0 0 0 / 0.4), 0 4px 12px oklch(0 0 0 / 0.5);
+}

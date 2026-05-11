@@ -1,0 +1,130 @@
+{
+  "name": "@octavian-tocan/react-chat-composer",
+  "version": "0.1.0",
+  "description": "Themable React composer for AI chat UIs — text + attachments + model picker + voice recording + prompt suggestions",
+  "author": "Octavian Tocan",
+  "license": "MIT",
+  "homepage": "https://github.com/OctavianTocan/react-chat-composer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OctavianTocan/react-chat-composer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OctavianTocan/react-chat-composer/issues"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./primitives": {
+      "types": "./dist/primitives.d.ts",
+      "import": "./dist/primitives.js",
+      "require": "./dist/primitives.cjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "import": "./dist/hooks.js",
+      "require": "./dist/hooks.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts"
+    },
+    "./styles/theme.css": "./dist/styles/theme.css",
+    "./styles/animations.css": "./dist/styles/animations.css",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "clean": "rm -rf dist coverage",
+    "prepublishOnly": "pnpm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "@octavian-tocan/react-dropdown": ">=1.0.0",
+    "@radix-ui/react-tooltip": ">=1.1.0",
+    "clsx": "^2.0.0",
+    "lucide-react": ">=0.300.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "tailwind-merge": "^3.0.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@octavian-tocan/react-dropdown": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.2.6",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/npm": "^13.1.3",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^25.2.1",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.3",
+    "clsx": "^2.1.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.3.0",
+    "jsdom": "^28.0.0",
+    "lucide-react": "^0.563.0",
+    "prettier": "^3.8.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "semantic-release": "^25.0.3",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "^4.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^4.0.18"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "keywords": [
+    "react",
+    "chat",
+    "composer",
+    "ai",
+    "llm",
+    "prompt-input",
+    "model-picker",
+    "voice-recording",
+    "attachments",
+    "tailwind",
+    "tailwindcss-v4",
+    "typescript",
+    "themable"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
