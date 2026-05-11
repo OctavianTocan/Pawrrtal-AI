@@ -1,10 +1,10 @@
 /**
- * Frontend server lifecycle for the Electrobun shell.
+ * Frontend + backend server lifecycle for the Electrobun shell.
  *
- * Mirrors electron/src/server.ts exactly. Two modes:
+ * Mirrors electron/src/server.ts. Two modes:
  *
- *   dev  — spawns the Next.js dev server (`pnpm dev` inside frontend/)
- *           and waits for it to accept connections on :3001.
+ *   dev  — spawns `bun run dev` from the monorepo root, which runs dev.ts:
+ *           starts Next.js on :3001 AND the FastAPI backend on :8000.
  *           PAWRRTAL_REPO_ROOT env var (set by the `bun start` script)
  *           tells us where the monorepo root is.
  *
@@ -102,17 +102,13 @@ async function startDevServer(): Promise<StartedServer> {
 		);
 	}
 
-	const frontendDir = path.join(repoRoot, 'frontend');
-
-	console.log(`[electrobun] spawning Next.js dev server in ${frontendDir} …`);
-
-	// Use the bundled bun binary via process.execPath instead of 'bun' string.
-	// On macOS app bundles, PATH may not include ~/.bun/bin, so 'bun' as a
-	// command fails with ENOENT. process.execPath gives us the bun binary that
-	// is actually running this process (the one bundled in the .app by Electrobun).
-	// 'bun run dev' inside frontend/ runs: next dev --port 3001
+	console.log(`[electrobun] spawning frontend + backend via dev.ts from ${repoRoot} …`);
+	// dev.ts starts both:
+	//   - Next.js frontend  (bun --filter pawrrtal dev) on :3001
+	//   - FastAPI backend   (uvicorn main:app)           on :8000
+	// Use process.execPath (bundled bun) to avoid PATH issues on macOS app bundles.
 	const child = Bun.spawn([process.execPath, 'run', 'dev'], {
-		cwd: frontendDir,
+		cwd: repoRoot,
 		env: { ...process.env as Record<string, string> },
 		stdout: 'inherit',
 		stderr: 'inherit',

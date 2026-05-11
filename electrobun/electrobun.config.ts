@@ -20,9 +20,13 @@ export default {
 		bun: {
 			entrypoint: 'src/bun/index.ts',
 		},
-		// No `views` entries needed: BrowserWindow loads the Next.js frontend
-		// via a plain http(s):// URL (`url: FRONTEND_URL` in src/bun/index.ts).
-		// The `views` block is only for bundled TypeScript webview entrypoints
-		// served under the views:// scheme — not applicable here.
+		// No TypeScript view bundles needed — BrowserWindow loads Next.js via http://.
+		// We DO copy a static splash HTML so we can use views://splash/index.html
+		// as the initial URL while waiting for Next.js to boot. views:// is a
+		// proper secure context (unlike data: URLs) so Electrobun preload scripts
+		// (which use crypto.subtle) work correctly on the splash page.
+		copy: {
+			'src/splash/index.html': 'views/splash/index.html',
+		},
 	},
 };

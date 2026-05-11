@@ -163,8 +163,24 @@ ApplicationMenu.setApplicationMenu([
 
 ensureDefaultWorkspaceRoot();
 
-// Handle custom menu actions (registered before window so the menu is
-// interactive immediately when the window appears).
+// Open the splash window immediately so the app appears in the Dock
+// and the user sees visible feedback while Next.js + FastAPI boot.
+// views://splash/index.html is served by Electrobun's own server — a
+// proper secure context, unlike data: URLs (which break crypto.subtle
+// in Electrobun's injected preload scripts).
+win = new BrowserWindow({
+	title: 'Pawrrtal',
+	url: 'views://splash/index.html',
+	frame: { width: 1280, height: 820 },
+	titleBarStyle: 'hiddenInset',
+	rpc,
+});
+
+setPromptFn((request) => {
+	win?.webview.rpc.send.permissionsPrompt(request);
+});
+
+// Handle custom menu actions.
 ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 	const { action } = event as { action: string };
 	if (action === 'new-chat') {
@@ -172,24 +188,13 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 	}
 });
 
+// Start frontend + backend, then navigate the splash to the real URL.
 startNextServer({ isDev })
 	.then((server) => {
-		win = new BrowserWindow({
-			title: 'Pawrrtal',
-			url: server.url,
-			frame: { width: 1280, height: 820 },
-			titleBarStyle: 'hiddenInset',
-			rpc,
-		});
-		// Wire the prompt sender now that we have a window.
-		setPromptFn((request) => {
-			win?.webview.rpc.send.permissionsPrompt(request);
-		});
+		win?.webview.loadURL(server.url);
 	})
 	.catch((err: unknown) => {
 		const reason = err instanceof Error ? err.message : String(err);
 		console.error('[electrobun] startup failed:', reason);
-		// Can't show a nice error page without a window — log to console
-		// and exit so the process doesn't hang invisibly.
 		process.exit(1);
 	});
