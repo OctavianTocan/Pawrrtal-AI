@@ -20,15 +20,9 @@ export default {
 		bun: {
 			entrypoint: 'src/bun/index.ts',
 		},
-		views: {
-			// The webview that loads the Next.js shell.
-			// In dev it hits http://localhost:3000; in production it
-			// points to the bundled standalone Next.js server URL.
-			mainview: {
-				// No bundled HTML — we navigate to a URL at runtime.
-				// The views:// scheme is only used for bundled static assets;
-				// for Next.js we use http(s):// at all times.
-			},
-		},
+		// No `views` entries needed: BrowserWindow loads the Next.js frontend
+		// via a plain http(s):// URL (`url: FRONTEND_URL` in src/bun/index.ts).
+		// The `views` block is only for bundled TypeScript webview entrypoints
+		// served under the views:// scheme — not applicable here.
 	},
 };
