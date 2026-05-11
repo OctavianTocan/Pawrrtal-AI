@@ -50,6 +50,13 @@ export const OPEN_ONBOARDING_SERVER_STEP_EVENT = 'ai-nexus:open-onboarding-serve
 export const E2E_SKIP_ONBOARDING_STORAGE_KEY = 'pawrrtal:e2e-skip-onboarding';
 export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
 
+/**
+ * Persisted when the user completes the onboarding wizard via {@link finish}.
+ * Prevents the wizard from re-opening on subsequent page loads.
+ * Clear this key to re-trigger the wizard (e.g. from Settings → Onboarding).
+ */
+export const ONBOARDING_COMPLETE_STORAGE_KEY = 'pawrrtal:onboarding-v2-complete';
+
 /** Wizard step IDs in render order. */
 const STEP_IDS = ['identity', 'server', 'context', 'personality', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
@@ -73,6 +80,20 @@ function shouldSkipOnboardingForE2E(): boolean {
 	}
 	const searchParams = new URLSearchParams(window.location.search);
 	return searchParams.get(E2E_SKIP_ONBOARDING_QUERY_PARAM) === '1';
+}
+
+/**
+ * Returns true when the user has already completed the onboarding wizard
+ * in this browser. Safe to call on the server — the window guard returns
+ * false during SSR so the modal hydrates correctly.
+ */
+function hasCompletedOnboarding(): boolean {
+	if (typeof window === 'undefined') return false;
+	try {
+		return window.localStorage.getItem(ONBOARDING_COMPLETE_STORAGE_KEY) === '1';
+	} catch {
+		return false;
+	}
 }
 
 /** Props for {@link OnboardingFlow}. */
@@ -106,8 +127,10 @@ export function OnboardingFlow({
 	// mode. Production users' `initialOpen=true` survives unchanged
 	// because the skip helper short-circuits to false without the flag.
 	const [open, setOpen] = useState<boolean>(() => {
-		if (initialOpen && shouldSkipOnboardingForE2E()) return false;
-		return initialOpen;
+		if (!initialOpen) return false;
+		if (shouldSkipOnboardingForE2E()) return false;
+		if (hasCompletedOnboarding()) return false;
+		return true;
 	});
 	const [step, setStep] = useState<StepId>('identity');
 	const remotePersonalization = useGetPersonalization();
@@ -157,6 +180,11 @@ export function OnboardingFlow({
 	}, [step]);
 
 	const finish = useCallback(() => {
+		try {
+			window.localStorage.setItem(ONBOARDING_COMPLETE_STORAGE_KEY, '1');
+		} catch {
+			/* quota / private browsing — ignore */
+		}
 		setOpen(false);
 		// Reset to step 1 so re-opening from the workspace selector starts
 		// fresh — without this the user would land on whatever step they
