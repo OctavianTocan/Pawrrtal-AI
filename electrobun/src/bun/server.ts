@@ -106,9 +106,12 @@ async function startDevServer(): Promise<StartedServer> {
 
 	console.log(`[electrobun] spawning Next.js dev server in ${frontendDir} …`);
 
-	// Use bun (bun workspace project — not pnpm).
+	// Use the bundled bun binary via process.execPath instead of 'bun' string.
+	// On macOS app bundles, PATH may not include ~/.bun/bin, so 'bun' as a
+	// command fails with ENOENT. process.execPath gives us the bun binary that
+	// is actually running this process (the one bundled in the .app by Electrobun).
 	// 'bun run dev' inside frontend/ runs: next dev --port 3001
-	const child = Bun.spawn(['bun', 'run', 'dev'], {
+	const child = Bun.spawn([process.execPath, 'run', 'dev'], {
 		cwd: frontendDir,
 		env: { ...process.env as Record<string, string> },
 		stdout: 'inherit',
