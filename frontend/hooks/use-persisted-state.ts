@@ -207,10 +207,10 @@ function readPersistedValue<T>(
 				// default is written on next persist rather than staying
 				// as an invisible bad value in storage indefinitely.
 				try {
-				window.localStorage.removeItem(storageKey);
-			} catch {
-				/* quota / private browsing */
-			}
+					window.localStorage.removeItem(storageKey);
+				} catch {
+					/* quota / private browsing */
+				}
 				parsed = defaultValue;
 			} else {
 				parsed = parsedUnknown as T;
