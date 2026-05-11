@@ -8,17 +8,17 @@
  * voice meter) and `./hooks` for the hooks layer.
  */
 
-export { ChatComposer } from './composer/ChatComposer.js';
+export { ChatComposer } from './composer/ChatComposer';
 export {
 	ChatComposerView,
 	type ChatComposerViewProps,
-} from './composer/ChatComposerView.js';
+} from './composer/ChatComposerView';
 export {
 	ChatPromptSuggestions,
 	type ChatPromptSuggestionsProps,
-} from './prompt-suggestions/ChatPromptSuggestions.js';
-export { CHAT_MODELS_2026 } from './presets/chat-models-2026.js';
-export { defineChatModel } from './presets/define-chat-model.js';
+} from './prompt-suggestions/ChatPromptSuggestions';
+export { CHAT_MODELS_2026 } from './presets/chat-models-2026';
+export { defineChatModel } from './presets/define-chat-model';
 export type {
 	ChatComposerMessage,
 	ChatComposerProps,
@@ -26,4 +26,4 @@ export type {
 	ChatPromptSuggestion,
 	ChatProviderSlug,
 	ChatReasoningLevel,
-} from './types/index.js';
+} from './types/index';

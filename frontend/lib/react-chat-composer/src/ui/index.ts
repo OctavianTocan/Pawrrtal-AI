@@ -4,11 +4,11 @@
  * these; reach for your own design system primitives instead.
  */
 
-export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button.js';
+export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button';
 export {
 	Tooltip,
 	TooltipContent,
 	type TooltipContentProps,
 	TooltipProvider,
 	TooltipTrigger,
-} from './Tooltip.js';
+} from './Tooltip';

@@ -6,7 +6,7 @@
  * their own catalogue yet, or use it as a template to author their own.
  */
 
-import type { ChatModelOption } from '../types/index.js';
+import type { ChatModelOption } from '../types/index';
 
 /** Sample model list — 7 entries spanning Anthropic, OpenAI, and Google. */
 export const CHAT_MODELS_2026: ChatModelOption[] = [

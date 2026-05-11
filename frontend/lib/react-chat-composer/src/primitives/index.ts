@@ -6,11 +6,11 @@
 export {
 	ComposerActionSelector,
 	type ComposerActionSelectorProps,
-} from './ComposerActionSelector.js';
+} from './ComposerActionSelector';
 export {
 	ComposerActionSelectorView,
 	type ComposerActionSelectorItem,
 	type ComposerActionSelectorViewProps,
-} from './ComposerActionSelectorView.js';
-export { ProviderLogo, type ProviderLogoProps } from './ProviderLogo.js';
-export { VoiceMeter, type VoiceMeterProps } from '../composer/controls/VoiceMeter.js';
+} from './ComposerActionSelectorView';
+export { ProviderLogo, type ProviderLogoProps } from './ProviderLogo';
+export { VoiceMeter, type VoiceMeterProps } from '../composer/controls/VoiceMeter';

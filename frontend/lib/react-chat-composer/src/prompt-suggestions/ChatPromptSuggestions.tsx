@@ -15,9 +15,9 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from '../ui/Tooltip.js';
-import { cn } from '../utils/cn.js';
-import type { ChatPromptSuggestion } from '../types/index.js';
+} from '../ui/Tooltip';
+import { cn } from '../utils/cn';
+import type { ChatPromptSuggestion } from '../types/index';
 
 /** Props for {@link ChatPromptSuggestions}. */
 export interface ChatPromptSuggestionsProps {

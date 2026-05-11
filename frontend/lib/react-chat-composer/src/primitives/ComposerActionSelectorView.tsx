@@ -11,14 +11,14 @@
 import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '../ui/Button.js';
+import { Button } from '../ui/Button';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from '../ui/Tooltip.js';
-import { cn } from '../utils/cn.js';
+} from '../ui/Tooltip';
+import { cn } from '../utils/cn';
 
 /** Item entry rendered inside the selector. */
 export interface ComposerActionSelectorItem {

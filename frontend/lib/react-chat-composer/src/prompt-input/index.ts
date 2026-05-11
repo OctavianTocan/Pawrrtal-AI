@@ -9,23 +9,23 @@ export {
 	type PromptInputFormError,
 	type PromptInputFormErrorCode,
 	type PromptInputMessage,
-} from './PromptInputForm.js';
-export { PromptInputTextarea, type PromptInputTextareaProps } from './PromptInputTextarea.js';
+} from './PromptInputForm';
+export { PromptInputTextarea, type PromptInputTextareaProps } from './PromptInputTextarea';
 export {
 	PromptInputAttachment,
 	type PromptInputAttachmentProps,
 	PromptInputAttachments,
 	type PromptInputAttachmentsProps,
-} from './PromptInputAttachments.js';
+} from './PromptInputAttachments';
 export {
 	PromptInputFooter,
 	type PromptInputFooterProps,
 	PromptInputSubmit,
 	type PromptInputSubmitProps,
 	type PromptInputSubmitStatus,
-} from './PromptInputLayout.js';
+} from './PromptInputLayout';
 export {
 	type AttachmentFilePart,
 	type AttachmentsContext,
 	usePromptInputAttachments,
-} from './promptInputContext.js';
+} from './promptInputContext';

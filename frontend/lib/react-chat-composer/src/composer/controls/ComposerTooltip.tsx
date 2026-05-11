@@ -8,7 +8,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/Tooltip.js';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/Tooltip';
 
 /** Props for the shared composer tooltip. */
 export interface ComposerTooltipProps {

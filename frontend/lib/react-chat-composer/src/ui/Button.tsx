@@ -1,7 +1,7 @@
 'use client';
 
 import { type ButtonHTMLAttributes, forwardRef } from 'react';
-import { cn } from '../utils/cn.js';
+import { cn } from '../utils/cn';
 
 /** Visual style variants used by composer-side buttons. Derived from shadcn/ui. */
 export type ButtonVariant = 'default' | 'ghost' | 'outline' | 'destructive';

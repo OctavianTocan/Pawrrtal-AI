@@ -4,19 +4,19 @@
  * pieces (e.g. `VoiceMeter`) without rendering the full composer.
  */
 
-export { AttachButton } from './AttachButton.js';
-export { ComposerTooltip, type ComposerTooltipProps } from './ComposerTooltip.js';
-export { PlanButton, type PlanButtonProps } from './PlanButton.js';
-export { VoiceMeter, type VoiceMeterProps } from './VoiceMeter.js';
-export { WaveformTimeline, type WaveformTimelineProps } from './WaveformTimeline.js';
+export { AttachButton } from './AttachButton';
+export { ComposerTooltip, type ComposerTooltipProps } from './ComposerTooltip';
+export { PlanButton, type PlanButtonProps } from './PlanButton';
+export { VoiceMeter, type VoiceMeterProps } from './VoiceMeter';
+export { WaveformTimeline, type WaveformTimelineProps } from './WaveformTimeline';
 export {
 	buildTranscriptContent,
 	fallbackTranscript,
 	formatRecordingTime,
-} from './transcript.js';
+} from './transcript';
 export {
 	type BrowserSpeechRecognition,
 	type BrowserSpeechRecognitionEvent,
 	getSpeechRecognition,
 	readSpeechTranscript,
-} from './voice-recognition.js';
+} from './voice-recognition';

@@ -9,7 +9,7 @@
 
 import { useDropdownContext } from '@octavian-tocan/react-dropdown';
 import { CheckIcon } from 'lucide-react';
-import type { ChatReasoningLevel } from '../types/index.js';
+import type { ChatReasoningLevel } from '../types/index';
 
 /** Props for {@link ReasoningRow}. */
 export interface ReasoningRowProps {

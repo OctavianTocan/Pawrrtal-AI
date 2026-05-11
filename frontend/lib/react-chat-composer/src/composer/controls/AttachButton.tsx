@@ -9,9 +9,9 @@
 'use client';
 
 import { PlusIcon } from 'lucide-react';
-import { usePromptInputAttachments } from '../../prompt-input/promptInputContext.js';
-import { Button } from '../../ui/Button.js';
-import { ComposerTooltip } from './ComposerTooltip.js';
+import { usePromptInputAttachments } from '../../prompt-input/promptInputContext';
+import { Button } from '../../ui/Button';
+import { ComposerTooltip } from './ComposerTooltip';
 
 /**
  * Renders the file attachment trigger bound to the prompt-input controller.

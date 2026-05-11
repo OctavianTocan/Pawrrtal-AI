@@ -8,14 +8,14 @@
 
 'use client';
 
-import { useTooltipDropdown } from '../hooks/useTooltipDropdown.js';
-import type { ChatModelOption, ChatReasoningLevel } from '../types/index.js';
+import { useTooltipDropdown } from '../hooks/useTooltipDropdown';
+import type { ChatModelOption, ChatReasoningLevel } from '../types/index';
 import {
 	buildRootRows,
 	getModelOption,
 	getReasoningLabel,
-} from './model-selector-data.js';
-import { ModelSelectorPopoverView } from './ModelSelectorPopoverView.js';
+} from './model-selector-data';
+import { ModelSelectorPopoverView } from './ModelSelectorPopoverView';
 
 /** Props for the model + reasoning selector. */
 export interface ModelSelectorPopoverProps {

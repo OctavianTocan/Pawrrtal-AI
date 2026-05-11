@@ -3,7 +3,7 @@
  * inference at the call site.
  */
 
-import type { ChatModelOption } from '../types/index.js';
+import type { ChatModelOption } from '../types/index';
 
 /**
  * Identity wrapper for a {@link ChatModelOption} declaration.

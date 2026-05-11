@@ -3,11 +3,11 @@
  * `@octavian-tocan/react-chat-composer/hooks`.
  */
 
-export { type UsePersistedStateOptions, usePersistedState } from './usePersistedState.js';
-export { type UseTooltipDropdownReturn, useTooltipDropdown } from './useTooltipDropdown.js';
+export { type UsePersistedStateOptions, usePersistedState } from './usePersistedState';
+export { type UseTooltipDropdownReturn, useTooltipDropdown } from './useTooltipDropdown';
 export {
 	type UseVoiceRecordingOptions,
 	type UseVoiceRecordingResult,
 	useVoiceRecording,
 	type VoiceRecordingStatus,
-} from './useVoiceRecording.js';
+} from './useVoiceRecording';

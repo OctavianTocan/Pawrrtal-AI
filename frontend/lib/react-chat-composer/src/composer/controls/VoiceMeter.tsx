@@ -8,10 +8,10 @@
 'use client';
 
 import { ArrowUpIcon, Loader2, SquareIcon } from 'lucide-react';
-import { Button } from '../../ui/Button.js';
-import { ComposerTooltip } from './ComposerTooltip.js';
-import { formatRecordingTime } from './transcript.js';
-import { WaveformTimeline } from './WaveformTimeline.js';
+import { Button } from '../../ui/Button';
+import { ComposerTooltip } from './ComposerTooltip';
+import { formatRecordingTime } from './transcript';
+import { WaveformTimeline } from './WaveformTimeline';
 
 /** Props for the live voice meter. */
 export interface VoiceMeterProps {

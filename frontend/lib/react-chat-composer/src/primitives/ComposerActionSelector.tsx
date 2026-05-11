@@ -10,11 +10,11 @@
 
 'use client';
 
-import { useTooltipDropdown } from '../hooks/useTooltipDropdown.js';
+import { useTooltipDropdown } from '../hooks/useTooltipDropdown';
 import {
 	ComposerActionSelectorView,
 	type ComposerActionSelectorItem,
-} from './ComposerActionSelectorView.js';
+} from './ComposerActionSelectorView';
 
 export type { ComposerActionSelectorItem };
 

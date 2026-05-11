@@ -15,25 +15,25 @@ import {
 	DropdownSubmenuTrigger,
 } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import type { ChatModelOption, ChatReasoningLevel } from '../types/index.js';
-import { Button } from '../ui/Button.js';
+import type { ChatModelOption, ChatReasoningLevel } from '../types/index';
+import { Button } from '../ui/Button';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from '../ui/Tooltip.js';
-import { cn } from '../utils/cn.js';
-import { ModelRow } from './ModelRow.js';
+} from '../ui/Tooltip';
+import { cn } from '../utils/cn';
+import { ModelRow } from './ModelRow';
 import {
 	getModelsByProvider,
 	providerLabel,
 	type RootRow,
 	rootRowDisplay,
 	rootRowKey,
-} from './model-selector-data.js';
-import { ProviderLogo } from '../primitives/ProviderLogo.js';
-import { ReasoningRow } from './ReasoningRow.js';
+} from './model-selector-data';
+import { ProviderLogo } from '../primitives/ProviderLogo';
+import { ReasoningRow } from './ReasoningRow';
 
 /** Props for the pure presentational shell of the model + reasoning selector. */
 export interface ModelSelectorPopoverViewProps {

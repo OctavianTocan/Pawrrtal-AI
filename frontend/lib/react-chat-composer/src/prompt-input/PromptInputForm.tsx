@@ -21,12 +21,12 @@ import {
 	useRef,
 	useState,
 } from 'react';
-import { cn } from '../utils/cn.js';
+import { cn } from '../utils/cn';
 import {
 	type AttachmentFilePart,
 	type AttachmentsContext,
 	LocalAttachmentsContext,
-} from './promptInputContext.js';
+} from './promptInputContext';
 
 /** Message payload emitted when the prompt input form submits. */
 export interface PromptInputMessage {

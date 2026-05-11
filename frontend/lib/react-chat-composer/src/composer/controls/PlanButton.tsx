@@ -10,12 +10,12 @@
 
 import { ListChecksIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes } from 'react';
-import { Button } from '../../ui/Button.js';
+import { Button } from '../../ui/Button';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from '../../ui/Tooltip.js';
+} from '../../ui/Tooltip';
 
 /** Props for {@link PlanButton}. */
 export interface PlanButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {

@@ -9,18 +9,18 @@
 
 import { PaperclipIcon, XIcon } from 'lucide-react';
 import { Fragment, type HTMLAttributes, type ReactNode } from 'react';
-import { Button } from '../ui/Button.js';
+import { Button } from '../ui/Button';
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from '../ui/Tooltip.js';
-import { cn } from '../utils/cn.js';
+} from '../ui/Tooltip';
+import { cn } from '../utils/cn';
 import {
 	type AttachmentFilePart,
 	usePromptInputAttachments,
-} from './promptInputContext.js';
+} from './promptInputContext';
 
 /** Props for a single prompt input attachment chip. */
 export interface PromptInputAttachmentProps extends HTMLAttributes<HTMLDivElement> {

@@ -11,8 +11,8 @@
 
 import { CornerDownLeftIcon, Loader2Icon, SquareIcon, XIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-import { Button, type ButtonProps } from '../ui/Button.js';
-import { cn } from '../utils/cn.js';
+import { Button, type ButtonProps } from '../ui/Button';
+import { cn } from '../utils/cn';
 
 /** Props for the footer slot rendered below the textarea. */
 export interface PromptInputFooterProps extends HTMLAttributes<HTMLDivElement> {

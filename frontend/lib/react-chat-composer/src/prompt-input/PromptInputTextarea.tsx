@@ -15,8 +15,8 @@ import {
 	forwardRef,
 	useState,
 } from 'react';
-import { cn } from '../utils/cn.js';
-import { usePromptInputAttachments } from './promptInputContext.js';
+import { cn } from '../utils/cn';
+import { usePromptInputAttachments } from './promptInputContext';
 
 /** Props for the prompt input textarea. */
 export interface PromptInputTextareaProps

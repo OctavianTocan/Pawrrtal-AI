@@ -2,7 +2,7 @@
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { forwardRef, type ReactNode } from 'react';
-import { cn } from '../utils/cn.js';
+import { cn } from '../utils/cn';
 
 /**
  * Re-export Radix Tooltip primitives directly so consumers can compose them

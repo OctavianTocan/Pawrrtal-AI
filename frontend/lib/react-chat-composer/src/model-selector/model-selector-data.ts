@@ -7,7 +7,7 @@
  * lists as arguments to keep the package free of hardcoded providers.
  */
 
-import type { ChatModelOption, ChatProviderSlug, ChatReasoningLevel } from '../types/index.js';
+import type { ChatModelOption, ChatProviderSlug, ChatReasoningLevel } from '../types/index';
 
 /**
  * Discriminated union of root-menu rows (provider groups + the thinking

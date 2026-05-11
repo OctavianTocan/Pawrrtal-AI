@@ -11,8 +11,8 @@
 
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
-import { ModelSelectorPopover } from '../model-selector/ModelSelectorPopover.js';
-import { TooltipProvider } from '../ui/Tooltip.js';
+import { ModelSelectorPopover } from '../model-selector/ModelSelectorPopover';
+import { TooltipProvider } from '../ui/Tooltip';
 import {
 	PromptInputAttachment,
 	PromptInputAttachments,
@@ -21,16 +21,16 @@ import {
 	type PromptInputMessage,
 	PromptInputSubmit,
 	PromptInputTextarea,
-} from '../prompt-input/index.js';
+} from '../prompt-input/index';
 import type {
 	ChatModelOption,
 	ChatReasoningLevel,
-} from '../types/index.js';
-import { Button } from '../ui/Button.js';
-import { cn } from '../utils/cn.js';
-import { AttachButton } from './controls/AttachButton.js';
-import { ComposerTooltip } from './controls/ComposerTooltip.js';
-import { VoiceMeter } from './controls/VoiceMeter.js';
+} from '../types/index';
+import { Button } from '../ui/Button';
+import { cn } from '../utils/cn';
+import { AttachButton } from './controls/AttachButton';
+import { ComposerTooltip } from './controls/ComposerTooltip';
+import { VoiceMeter } from './controls/VoiceMeter';
 
 /**
  * Props for the pure presentational shell of the chat composer.

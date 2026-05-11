@@ -10,14 +10,14 @@
 'use client';
 
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
-import { useVoiceRecording } from '../hooks/useVoiceRecording.js';
-import type { PromptInputMessage } from '../prompt-input/index.js';
+import { useVoiceRecording } from '../hooks/useVoiceRecording';
+import type { PromptInputMessage } from '../prompt-input/index';
 import type {
 	ChatComposerMessage,
 	ChatComposerProps,
-} from '../types/index.js';
-import { buildTranscriptContent } from './controls/transcript.js';
-import { ChatComposerView } from './ChatComposerView.js';
+} from '../types/index';
+import { buildTranscriptContent } from './controls/transcript';
+import { ChatComposerView } from './ChatComposerView';
 
 export type { ChatComposerProps };
 
