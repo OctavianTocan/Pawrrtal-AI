@@ -11,9 +11,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from google import genai
-from google.genai import types
 from dotenv import load_dotenv
+from google import genai
+
+from app.core.gemini_utils import generate_content_sync_recorded
 
 # Load .env from project root (two levels up from backend/app/cli/)
 _project_root = Path(__file__).resolve().parents[2]
@@ -71,13 +72,12 @@ async def generate_message(stat: str, diff: str) -> str:
     """Send the diff to Gemini and return the commit message."""
     client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
     prompt = COMMIT_PROMPT.format(stat=stat, diff=diff)
-    response = await client.aio.models.generate_content(
-        model=COMMIT_AGENT_MODEL,
-        contents=[
-            types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
-        ],
+    text = await generate_content_sync_recorded(
+        client,
+        COMMIT_AGENT_MODEL,
+        prompt,
+        pipeline_tag="commit-cli",
     )
-    text = (response.text or "").strip()
     if not text:
         raise RuntimeError("Gemini returned an empty response.")
     return text

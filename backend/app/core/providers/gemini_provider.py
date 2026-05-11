@@ -9,6 +9,7 @@ from typing import Any
 
 from google import genai
 from google.genai import types as gtypes
+from sigil_sdk import with_conversation_id
 
 from app.core.agent_loop import (
     AgentContext,
@@ -24,13 +25,23 @@ from app.core.agent_loop import (
     UserMessage,
     agent_loop,
 )
+from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
-from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.config import settings
 from app.core.keys import resolve_api_key
+from app.core.telemetry.sigil_gemini import (
+    build_assistant_output_message,
+    gemini_usage_to_token_usage,
+    log_recorder_err,
+    make_generation_start,
+    maybe_note_first_token,
+    messages_to_sigil_input,
+)
+from app.core.telemetry.sigil_runtime import get_sigil_client
+
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -104,7 +115,12 @@ def _build_gemini_contents(
     return contents
 
 
-def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
+def make_gemini_stream_fn(  # noqa: C901, PLR0915
+    model_id: str,
+    user_id: uuid.UUID | None = None,
+    *,
+    conversation_id: uuid.UUID | None = None,
+) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
     Args:
@@ -114,13 +130,15 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
             ``settings.google_api_key`` is used directly, matching
             ``ClaudeLLM``'s optional ``user_id`` contract for unauthenticated
             background work (e.g. utility agents).
+        conversation_id: Chat conversation UUID for Sigil ``gen_ai.conversation.id``
+            routing when Grafana Sigil is enabled.
 
     Returns:
         An async generator factory that yields ``LLMEvent``s. The generator
         is provider-specific; the calling ``agent_loop()`` is not.
     """
 
-    async def stream_fn(
+    async def stream_fn(  # noqa: C901, PLR0912, PLR0915
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
@@ -148,84 +166,118 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
 
         full_text = ""
         tool_calls: list[dict[str, Any]] = []
+        usage_meta: Any | None = None
+
+        sigil_client = get_sigil_client()
+        sigil_rec: Any | None = None
+        first_token_marked = [False]
+        if sigil_client is not None:
+            cid = str(conversation_id) if conversation_id is not None else ""
+            sigil_rec = sigil_client.start_streaming_generation(
+                make_generation_start(model_id, cid),
+            )
+            sigil_rec.__enter__()
 
         try:
-            # google-genai's async ``generate_content_stream`` returns
-            # an awaitable that resolves to an ``AsyncIterator`` (per the
-            # SDK's own docstring example). The earlier code relied on
-            # the implicit-coroutine-as-iter pattern; mypy 1.x rejects it.
-            stream = await client.aio.models.generate_content_stream(
-                model=model_id,
-                contents=contents,
-                config=config,
-            )
-            async for chunk in stream:
-                # Text delta
-                if chunk.text:
-                    yield LLMTextDeltaEvent(type="text_delta", text=chunk.text)
-                    full_text += chunk.text
+            try:
+                # google-genai's async ``generate_content_stream`` returns
+                # an awaitable that resolves to an ``AsyncIterator`` (per the
+                # SDK's own docstring example). The earlier code relied on
+                # the implicit-coroutine-as-iter pattern; mypy 1.x rejects it.
+                stream = await client.aio.models.generate_content_stream(
+                    model=model_id,
+                    contents=contents,
+                    config=config,
+                )
+                async for chunk in stream:
+                    if getattr(chunk, "usage_metadata", None) is not None:
+                        usage_meta = chunk.usage_metadata
 
-                # Tool / function calls
-                if chunk.candidates:
-                    for candidate in chunk.candidates:
-                        if not candidate.content or not candidate.content.parts:
-                            continue
-                        for part in candidate.content.parts:
-                            if part.function_call:
-                                fc = part.function_call
-                                # ``fc.name`` is typed as ``str | None`` by
-                                # the SDK; the API never returns nameless
-                                # function calls in practice, but we
-                                # default to the empty string for typing.
-                                fn_name = fc.name or ""
-                                tool_call_id = f"call-{fn_name}-{len(tool_calls)}"
-                                args = dict(fc.args) if fc.args else {}
-                                yield LLMToolCallEvent(
-                                    type="tool_call",
-                                    tool_call_id=tool_call_id,
-                                    name=fn_name,
-                                    arguments=args,
-                                )
-                                tool_calls.append(
-                                    {
-                                        "tool_call_id": tool_call_id,
-                                        "name": fn_name,
-                                        "arguments": args,
-                                    }
-                                )
+                    # Text delta
+                    if chunk.text:
+                        if sigil_rec is not None:
+                            maybe_note_first_token(sigil_rec, marked=first_token_marked)
+                        yield LLMTextDeltaEvent(type="text_delta", text=chunk.text)
+                        full_text += chunk.text
 
-        except Exception as exc:
-            # Log so the error is visible in app.log — previously swallowed silently.
-            logger.error(
-                "Gemini streaming error model=%s: %s", model_id, exc, exc_info=True
-            )
-            error_text = f"Gemini error: {exc}"
-            # Emit a text delta so the frontend shows the error instead of an empty bubble.
-            yield LLMTextDeltaEvent(type="text_delta", text=error_text)
-            yield LLMDoneEvent(
-                type="done",
-                stop_reason="error",
-                content=[TextContent(type="text", text=error_text)],
-            )
-            return
+                    # Tool / function calls
+                    if chunk.candidates:
+                        for candidate in chunk.candidates:
+                            if not candidate.content or not candidate.content.parts:
+                                continue
+                            for part in candidate.content.parts:
+                                if part.function_call:
+                                    fc = part.function_call
+                                    # ``fc.name`` is typed as ``str | None`` by
+                                    # the SDK; the API never returns nameless
+                                    # function calls in practice, but we
+                                    # default to the empty string for typing.
+                                    fn_name = fc.name or ""
+                                    tool_call_id = f"call-{fn_name}-{len(tool_calls)}"
+                                    args = dict(fc.args) if fc.args else {}
+                                    yield LLMToolCallEvent(
+                                        type="tool_call",
+                                        tool_call_id=tool_call_id,
+                                        name=fn_name,
+                                        arguments=args,
+                                    )
+                                    tool_calls.append(
+                                        {
+                                            "tool_call_id": tool_call_id,
+                                            "name": fn_name,
+                                            "arguments": args,
+                                        }
+                                    )
 
-        # Determine stop reason
-        stop_reason = "tool_use" if tool_calls else "stop"
+            except Exception as exc:
+                # Log so the error is visible in app.log — previously swallowed silently.
+                logger.error("Gemini streaming error model=%s: %s", model_id, exc, exc_info=True)
+                if sigil_rec is not None:
+                    sigil_rec.set_call_error(exc)
+                error_text = f"Gemini error: {exc}"
+                # Emit a text delta so the frontend shows the error instead of an empty bubble.
+                yield LLMTextDeltaEvent(type="text_delta", text=error_text)
+                yield LLMDoneEvent(
+                    type="done",
+                    stop_reason="error",
+                    content=[TextContent(type="text", text=error_text)],
+                )
+                return
 
-        content: list[TextContent | ToolCallContent] = []
-        if full_text:
-            content.append(TextContent(type="text", text=full_text))
-        for tc in tool_calls:
-            content.append(
+            # Determine stop reason
+            stop_reason = "tool_use" if tool_calls else "stop"
+
+            content: list[TextContent | ToolCallContent] = []
+            if full_text:
+                content.append(TextContent(type="text", text=full_text))
+            content.extend(
                 ToolCallContent(
                     type="toolCall",
                     tool_call_id=tc["tool_call_id"],
                     name=tc["name"],
                     arguments=tc["arguments"],
                 )
+                for tc in tool_calls
             )
 
-        yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
+            if sigil_rec is not None:
+                sigil_input = messages_to_sigil_input(messages)
+                result_kw: dict[str, Any] = {
+                    "input": sigil_input,
+                    "output": [build_assistant_output_message(full_text, tool_calls)],
+                    "stop_reason": stop_reason,
+                    "response_model": model_id,
+                }
+                if usage_meta is not None:
+                    result_kw["usage"] = gemini_usage_to_token_usage(usage_meta)
+                sigil_rec.set_result(**result_kw)
+                log_recorder_err("Sigil generation recorder", sigil_rec)
+
+            yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
+
+        finally:
+            if sigil_rec is not None:
+                sigil_rec.__exit__(None, None, None)
 
     return stream_fn
 
@@ -253,7 +305,10 @@ class GeminiLLM:
                 ``ClaudeLLM``'s contract for unauthenticated callers.
         """
         self._model_id = model_id
-        self._stream_fn = make_gemini_stream_fn(model_id, user_id)
+        self._user_id = user_id
+        # Tests monkeypatch ``_stream_fn`` with a scripted StreamFn. Production
+        # builds the StreamFn per request so Sigil receives ``conversation_id``.
+        self._stream_fn: StreamFn | None = None
 
     async def stream(
         self,
@@ -315,45 +370,52 @@ class GeminiLLM:
             safety=safety_from_settings(settings),
         )
 
+        stream_fn = self._stream_fn or make_gemini_stream_fn(
+            self._model_id,
+            self._user_id,
+            conversation_id=conversation_id,
+        )
+
         try:
-            async for event in agent_loop([prompt], context, config, self._stream_fn):
-                # Narrow the AgentEvent union by its discriminant so TypedDict
-                # field access types as ``str`` instead of ``object``.
-                if event["type"] == "text_delta":
-                    yield StreamEvent(type="delta", content=event["text"])
+            with with_conversation_id(str(conversation_id)):
+                async for event in agent_loop([prompt], context, config, stream_fn):
+                    # Narrow the AgentEvent union by its discriminant so TypedDict
+                    # field access types as ``str`` instead of ``object``.
+                    if event["type"] == "text_delta":
+                        yield StreamEvent(type="delta", content=event["text"])
 
-                elif event["type"] == "tool_call_start":
-                    yield StreamEvent(
-                        type="tool_use",
-                        name=event["name"],
-                        input={},
-                        tool_use_id=event["tool_call_id"],
-                    )
+                    elif event["type"] == "tool_call_start":
+                        yield StreamEvent(
+                            type="tool_use",
+                            name=event["name"],
+                            input={},
+                            tool_use_id=event["tool_call_id"],
+                        )
 
-                elif event["type"] == "tool_result":
-                    yield StreamEvent(
-                        type="tool_result",
-                        content=event["content"],
-                        tool_use_id=event["tool_call_id"],
-                    )
+                    elif event["type"] == "tool_result":
+                        yield StreamEvent(
+                            type="tool_result",
+                            content=event["content"],
+                            tool_use_id=event["tool_call_id"],
+                        )
 
-                elif event["type"] == "agent_terminated":
-                    # Safety layer tripped — forward the structured event so
-                    # the frontend can render a distinct termination notice
-                    # instead of a generic error banner.  ``reason`` is the
-                    # machine-readable label; ``message`` is the human copy.
-                    logger.warning(
-                        "AGENT_TERMINATED reason=%s details=%s",
-                        event["reason"],
-                        event["details"],
-                    )
-                    yield StreamEvent(
-                        type="agent_terminated",
-                        content=event["message"],
-                    )
+                    elif event["type"] == "agent_terminated":
+                        # Safety layer tripped — forward the structured event so
+                        # the frontend can render a distinct termination notice
+                        # instead of a generic error banner.  ``reason`` is the
+                        # machine-readable label; ``message`` is the human copy.
+                        logger.warning(
+                            "AGENT_TERMINATED reason=%s details=%s",
+                            event["reason"],
+                            event["details"],
+                        )
+                        yield StreamEvent(
+                            type="agent_terminated",
+                            content=event["message"],
+                        )
 
-                elif event["type"] == "agent_end":
-                    pass  # loop complete — chat.py sends [DONE]
+                    elif event["type"] == "agent_end":
+                        pass  # loop complete — chat.py sends [DONE]
 
         except Exception as exc:
             yield StreamEvent(type="error", content=f"Gemini provider error: {exc}")

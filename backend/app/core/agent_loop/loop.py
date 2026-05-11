@@ -1,5 +1,4 @@
-"""
-Pi-inspired provider-agnostic agent loop.
+"""Pi-inspired provider-agnostic agent loop.
 
 Architecture mirrors @mariozechner/pi-agent-core from pi-mono:
   https://github.com/badlogic/pi-mono/blob/main/packages/agent/src/agent-loop.ts
@@ -24,6 +23,7 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
+from .execute_tool import run_agent_tool
 from .types import (
     AgentContext,
     AgentEndEvent,
@@ -75,13 +75,11 @@ async def agent_loop(
         yield MessageStartEvent(type="message_start", message=prompt)
         yield MessageEndEvent(type="message_end", message=prompt)
 
-    async for event in _run_loop(
-        current_messages, context.tools, new_messages, config, stream_fn
-    ):
+    async for event in _run_loop(current_messages, context.tools, new_messages, config, stream_fn):
         yield event
 
 
-async def _run_loop(
+async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — safety layer + tool dispatch
     messages: list[AgentMessage],
     tools: list[AgentTool],
     new_messages: list[AgentMessage],
@@ -106,10 +104,7 @@ async def _run_loop(
 
     while True:
         # ── Pre-turn safety checks ────────────────────────────────────────
-        if (
-            safety.max_iterations is not None
-            and iteration >= safety.max_iterations
-        ):
+        if safety.max_iterations is not None and iteration >= safety.max_iterations:
             yield _terminated(
                 reason="max_iterations",
                 message=(
@@ -125,10 +120,7 @@ async def _run_loop(
             break
 
         elapsed = time.monotonic() - started_at
-        if (
-            safety.max_wall_clock_seconds is not None
-            and elapsed >= safety.max_wall_clock_seconds
-        ):
+        if safety.max_wall_clock_seconds is not None and elapsed >= safety.max_wall_clock_seconds:
             yield _terminated(
                 reason="max_wall_clock",
                 message=(
@@ -198,17 +190,12 @@ async def _run_loop(
                 is_error = False
                 result_text: str
 
-                if tool is None:
-                    result_text = f"Tool '{tc['name']}' not found."
-                    is_error = True
-                else:
-                    try:
-                        result_text = await tool.execute(
-                            tc["tool_call_id"], **tc["arguments"]
-                        )
-                    except Exception as exc:
-                        result_text = f"Tool error: {exc}"
-                        is_error = True
+                result_text, is_error = await run_agent_tool(
+                    tool,
+                    tc["name"],
+                    tc["tool_call_id"],
+                    tc["arguments"],
+                )
 
                 yield ToolResultEvent(
                     type="tool_result",
@@ -231,8 +218,7 @@ async def _run_loop(
                     consecutive_tool_errors += 1
                     if (
                         safety.max_consecutive_tool_errors is not None
-                        and consecutive_tool_errors
-                        >= safety.max_consecutive_tool_errors
+                        and consecutive_tool_errors >= safety.max_consecutive_tool_errors
                     ):
                         tool_safety_terminated = _terminated(
                             reason="consecutive_tool_errors",
@@ -295,10 +281,10 @@ class _StreamOutcome:
     """
 
     __slots__ = (
-        "events",
         "assistant_content",
-        "stop_reason",
         "consecutive_llm_errors_after",
+        "events",
+        "stop_reason",
         "terminated_event",
     )
 
@@ -353,11 +339,10 @@ async def _stream_with_retry(
                 # the assignments here capture the final state.
                 assistant_content = done["content"] if done else assistant_content
                 stop_reason = done["stop_reason"] if done else stop_reason
-        except Exception as exc:  # noqa: BLE001 — re-raised after budget check
+        except Exception as exc:
             consecutive_llm_errors += 1
             _log.warning(
-                "agent_loop: provider stream failed (attempt %d, "
-                "consecutive=%d/%s): %s",
+                "agent_loop: provider stream failed (attempt %d, consecutive=%d/%s): %s",
                 attempts,
                 consecutive_llm_errors,
                 max_errors if max_errors is not None else "∞",
