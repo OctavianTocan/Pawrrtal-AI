@@ -34,6 +34,7 @@ from app.core.config import settings
 from app.core.keys import resolve_api_key
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
+from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
 
@@ -41,6 +42,7 @@ def build_agent_tools(
     *,
     workspace_root: Path,
     user_id: uuid.UUID | None = None,
+    send_fn: SendFn | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -58,6 +60,11 @@ def build_agent_tools(
             under prompt pressure.
         user_id: Authenticated user UUID, used to resolve per-workspace
             API key overrides for tools that call external services.
+        send_fn: Optional channel delivery callback.  When supplied the
+            ``send_message`` tool is added to the list so the agent can
+            proactively push text and files back to the user.  Absent
+            for callers that only need read/compute tools (e.g. the web
+            chat path, which handles delivery at the streaming layer).
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -93,5 +100,13 @@ def build_agent_tools(
     # picks up artifact tool-calls and lifts the spec into a sibling
     # SSE event (see ``app.api.chat`` and ``app.core.tools.artifact``).
     tools.append(make_artifact_tool())
+
+    # Channel delivery — only present when a SendFn was injected.  The
+    # Telegram bot passes one so the agent can call ``send_message`` to
+    # deliver files; the web chat path omits it because SSE handles that.
+    if send_fn is not None:
+        tools.append(
+            make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
+        )
 
     return tools
