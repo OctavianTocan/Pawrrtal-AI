@@ -135,36 +135,45 @@ setPromptFn((request) => {
 });
 
 // ─── App menu (replaces electron/src/menu.ts) ────────────────────────────────
+//
+// Electrobun's ApplicationMenu API:
+//   - Takes a flat Array<ApplicationMenuItemConfig>, not { menu: [...] }
+//   - Custom actions use action: 'string' + ApplicationMenu.on('application-menu-clicked')
+//   - onClick is not supported; native roles (quit, undo, etc.) fire automatically
 
-ApplicationMenu.setMenu({
-	menu: [
-		{
-			label: 'File',
-			submenu: [
-				{
-					label: 'New Chat',
-					accelerator: 'CmdOrCtrl+T',
-					onClick: () => {
-						win.webview.rpc.send.menuNewChat({});
-					},
-				},
-				{ type: 'separator' },
-				{ label: 'Quit', accelerator: 'CmdOrCtrl+Q', role: 'quit' },
-			],
-		},
-		{
-			label: 'Edit',
-			submenu: [
-				{ label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-				{ label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z', role: 'redo' },
-				{ type: 'separator' },
-				{ label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
-				{ label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-				{ label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
-				{ label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectAll' },
-			],
-		},
-	],
+ApplicationMenu.setApplicationMenu([
+	{
+		label: 'File',
+		submenu: [
+			{
+				label: 'New Chat',
+				accelerator: 'CmdOrCtrl+T',
+				action: 'new-chat',
+			},
+			{ type: 'separator' },
+			{ label: 'Quit', accelerator: 'CmdOrCtrl+Q', role: 'quit' },
+		],
+	},
+	{
+		label: 'Edit',
+		submenu: [
+			{ label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+			{ label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z', role: 'redo' },
+			{ type: 'separator' },
+			{ label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+			{ label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+			{ label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+			{ label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectAll' },
+		],
+	},
+]);
+
+// Handle custom menu actions via the application-menu-clicked event.
+ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
+	const { action } = event as { action: string };
+	if (action === 'new-chat') {
+		win.webview.rpc.send.menuNewChat({});
+	}
 });
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
