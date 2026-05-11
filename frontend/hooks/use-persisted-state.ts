@@ -206,7 +206,11 @@ function readPersistedValue<T>(
 				// Value is stale (e.g. renamed model ID). Remove it so the
 				// default is written on next persist rather than staying
 				// as an invisible bad value in storage indefinitely.
-				try { window.localStorage.removeItem(storageKey); } catch { /* quota / private browsing */ }
+				try {
+				window.localStorage.removeItem(storageKey);
+			} catch {
+				/* quota / private browsing */
+			}
 				parsed = defaultValue;
 			} else {
 				parsed = parsedUnknown as T;

@@ -62,12 +62,7 @@ describe('ModelSelectorPopover', () => {
 
 	it('calls onSelectModel with the correct id on pointer-down', () => {
 		const onSelectModel = vi.fn();
-		render(
-			<ModelSelectorPopover
-				{...DEFAULT_PROPS}
-				onSelectModel={onSelectModel}
-			/>
-		);
+		render(<ModelSelectorPopover {...DEFAULT_PROPS} onSelectModel={onSelectModel} />);
 		// The component uses onPointerDown for selection (beats hover-close timing).
 		// We fire the event directly on the trigger — full submenu interaction
 		// requires a Radix portal integration test which is out of scope here.
