@@ -1,0 +1,32 @@
+/*
+ * Non-Tailwind keyframes + animation classes used by the chat composer.
+ * Consumers import this once in their globals.css. Token references resolve
+ * against `theme.css` (or any consumer override of the same variables).
+ *
+ * Scaffold — keyframe content will be refined as the composer code is
+ * vendored.
+ */
+
+@keyframes composer-placeholder-enter {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.composer-placeholder-enter {
+	animation: var(--animate-chat-placeholder);
+}
+
+@keyframes waveform-scroll {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}

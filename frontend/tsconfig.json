@@ -29,7 +29,9 @@
 			"@octavian-tocan/react-dropdown": ["./lib/react-dropdown/src/index.ts"],
 			"@octavian-tocan/react-dropdown/*": ["./lib/react-dropdown/src/*"],
 			"@octavian-tocan/react-overlay": ["./lib/react-overlay/src/index.ts"],
-			"@octavian-tocan/react-overlay/*": ["./lib/react-overlay/src/*"]
+			"@octavian-tocan/react-overlay/*": ["./lib/react-overlay/src/*"],
+			"@octavian-tocan/react-chat-composer": ["./lib/react-chat-composer/src/index.ts"],
+			"@octavian-tocan/react-chat-composer/*": ["./lib/react-chat-composer/src/*"]
 		},
 		"esModuleInterop": true
 	},

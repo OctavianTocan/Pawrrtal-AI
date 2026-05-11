@@ -147,6 +147,26 @@ export type SafetyMode = (typeof SAFETY_MODES)[number];
 /** Default selection — matches the previously hardcoded "Auto-review" entry. */
 export const DEFAULT_SAFETY_MODE: SafetyMode = 'auto-review';
 
+/**
+ * Display order for the safety-mode dropdown (top → bottom).
+ * Mirrors SAFETY_MODES but is explicit so future reorders are intentional.
+ */
+export const SAFETY_MODE_ORDER: SafetyMode[] = [
+	'default-permissions',
+	'auto-review',
+	'full-access',
+	'custom',
+];
+
+/**
+ * "Advanced" modes — the dropdown renders a separator ABOVE the first item in
+ * this set so users see a clear boundary between safe and dangerous choices.
+ */
+export const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set<SafetyMode>([
+	'full-access',
+	'custom',
+]);
+
 // ─── miscellaneous chat-container constants ────────────────────────────────
 
 /** Maximum length for a sidebar-safe fallback conversation title. */

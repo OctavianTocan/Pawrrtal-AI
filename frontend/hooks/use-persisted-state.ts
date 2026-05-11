@@ -168,6 +168,19 @@ const snapshotCache = new Map<string, { raw: string | null; value: unknown }>();
  * reads with an unchanged underlying string return a stable reference — required
  * for `useSyncExternalStore` correctness when the value is an object or array.
  */
+
+/**
+ * Silently remove a localStorage key, swallowing quota / private-browsing
+ * errors so the caller doesn't need a nested try-catch.
+ */
+function silentlyRemove(key: string): void {
+	try {
+		window.localStorage.removeItem(key);
+	} catch {
+		/* quota / private browsing — ignore */
+	}
+}
+
 function readPersistedValue<T>(
 	storageKey: string,
 	defaultValue: T,
@@ -206,7 +219,7 @@ function readPersistedValue<T>(
 				// Value is stale (e.g. renamed model ID). Remove it so the
 				// default is written on next persist rather than staying
 				// as an invisible bad value in storage indefinitely.
-				try { window.localStorage.removeItem(storageKey); } catch { /* quota / private browsing */ }
+				silentlyRemove(storageKey);
 				parsed = defaultValue;
 			} else {
 				parsed = parsedUnknown as T;

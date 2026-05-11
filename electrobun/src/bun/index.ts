@@ -203,23 +203,36 @@ setPromptFn((request) => {
 	win?.webview.rpc.send.permissionsPrompt(request);
 });
 
-// ─── Drag region injection ─────────────────────────────────────────────────
-// Electrobun's drag-region preload activates on CSS class
-// `.electrobun-webkit-app-region-drag`. Re-injected after every navigation
-// so the title bar stays draggable across Next.js soft-nav route changes.
+// ─── Drag region + traffic-light safe zone injection ────────────────────────
+// Injects a <style> tag directly using -webkit-app-region: drag so the
+// title bar is draggable without relying on Electrobun's class-based preload,
+// which can race against the webview's own preload script execution.
+//
+// Also injects --eb-traffic-light-h (CSS var) so the frontend can push its
+// header content below the macOS traffic-light buttons without hard-coding
+// a pixel value. The value matches trafficLightOffset.y + button height (~28px).
+//
+// Re-injected on every navigation to survive Next.js soft-nav route changes.
+
+const TRAFFIC_LIGHT_SAFE_H = 44; // px — trafficLightOffset.y(16) + button(28)
 
 const INJECT_DRAG_REGION = `
 (function () {
-  var nav = document.querySelector('header')
-          || document.querySelector('nav')
-          || document.querySelector('[role="navigation"]');
-  if (!nav) return;
-  nav.classList.add('electrobun-webkit-app-region-drag');
-  // Keep buttons/links/inputs clickable inside the drag zone.
-  nav.querySelectorAll('button, a, input, select, textarea, [role="button"]')
-    .forEach(function (el) {
-      el.classList.add('electrobun-webkit-app-region-no-drag');
-    });
+  var prev = document.getElementById('__eb_drag');
+  if (prev) prev.remove();
+  var s = document.createElement('style');
+  s.id = '__eb_drag';
+  s.textContent = [
+    /* Make the top nav bar the window drag handle. */
+    'header, nav, [role="navigation"] { -webkit-app-region: drag; }',
+    /* Everything inside must be explicitly no-drag so clicks still work. */
+    'header *, nav *, [role="navigation"] * { -webkit-app-region: no-drag; }',
+    /* Traffic-light safe-zone variable — frontend reads this to add padding. */
+    ':root { --eb-traffic-light-h: ${TRAFFIC_LIGHT_SAFE_H}px; }',
+    /* Push header content below the traffic lights. */
+    'header { padding-top: max(0px, calc(var(--eb-traffic-light-h, 0px) - 1rem)); }',
+  ].join(' ');
+  document.head.appendChild(s);
 })();
 `;
 
