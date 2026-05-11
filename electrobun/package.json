@@ -12,6 +12,7 @@
 		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
+		"chokidar": "^5.0.0",
 		"electrobun": "^1.18.1"
 	},
 	"devDependencies": {
