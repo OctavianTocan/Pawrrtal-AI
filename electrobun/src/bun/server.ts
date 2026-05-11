@@ -106,12 +106,29 @@ async function startDevServer(): Promise<StartedServer> {
 
 	console.log(`[electrobun] spawning Next.js dev server in ${frontendDir} …`);
 
-	const child = Bun.spawn(['pnpm', 'dev'], {
+	// Use bun (bun workspace project — not pnpm).
+	// 'bun run dev' inside frontend/ runs: next dev --port 3001
+	const child = Bun.spawn(['bun', 'run', 'dev'], {
 		cwd: frontendDir,
-		env: { ...process.env },
+		env: { ...process.env as Record<string, string> },
 		stdout: 'inherit',
 		stderr: 'inherit',
 	});
+
+	// If the process exits immediately it means the command failed
+	// (e.g., bun not in PATH, missing node_modules). Surface it fast.
+	const exitRaceMs = 3_000;
+	const exitEarly = await Promise.race([
+		child.exited.then((code) => code),
+		new Promise<null>((r) => setTimeout(() => r(null), exitRaceMs)),
+	]);
+	if (exitEarly !== null) {
+		throw new Error(
+			`Next.js dev server process exited immediately with code ${exitEarly}. ` +
+			`Check that 'bun install' has been run from the repo root and that ` +
+			`'bun run dev' works inside frontend/.`,
+		);
+	}
 
 	// Give Next.js up to 120s to compile and bind the port.
 	await waitForPort(DEV_FRONTEND_PORT, 'localhost', 120_000);
