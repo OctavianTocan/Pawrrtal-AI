@@ -110,6 +110,8 @@ class TelegramSender:
     chat_id: int
     username: str | None
     full_name: str | None
+    # Telegram Bot API 9.3+ topic thread ID.  None when topics not enabled.
+    thread_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -129,6 +131,9 @@ class TelegramTurnContext:
 
     model_id: str
     """Model to use for this turn (default or conversation override)."""
+
+    thread_id: int | None = None
+    """Telegram topic thread ID, forwarded from the sender. None for plain DMs."""
 
 
 async def handle_start_command(
@@ -230,15 +235,17 @@ async def handle_plain_message(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
     model_id = conversation.model_id or _DEFAULT_MODEL
 
     logger.info(
-        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s text_len=%d",
+        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s thread_id=%s text_len=%d",
         nexus_user_id,
         conversation.id,
         model_id,
+        sender.thread_id,
         len(text),
     )
 
@@ -246,6 +253,7 @@ async def handle_plain_message(
         nexus_user_id=nexus_user_id,
         conversation_id=conversation.id,
         model_id=model_id,
+        thread_id=sender.thread_id,
     )
 
 
@@ -314,6 +322,7 @@ async def handle_model_command(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
     updated = await update_conversation_model(

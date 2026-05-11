@@ -212,6 +212,9 @@ def _sender_from_message(message: "Message") -> TelegramSender:
         chat_id=message.chat.id,
         username=user.username,
         full_name=user.full_name,
+        # Bot API 9.3+: present when the message lives in a topic thread.
+        # None for ordinary DMs without topics enabled.
+        thread_id=message.message_thread_id,
     )
 
 
