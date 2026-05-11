@@ -4,7 +4,7 @@
 	"private": true,
 	"description": "Pawrrtal desktop shell — Electrobun spike replacing Electron.",
 	"scripts": {
-		"start": "bun run build:dev && electrobun dev",
+		"start": "PAWRRTAL_REPO_ROOT=$(cd .. && pwd) bun run build:dev && PAWRRTAL_REPO_ROOT=$(cd .. && pwd) electrobun dev",
 		"build:dev": "bun install && electrobun build",
 		"build": "electrobun build --env=stable",
 		"test": "vitest run",

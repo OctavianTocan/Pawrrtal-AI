@@ -28,12 +28,13 @@ import type { PawrrtalRPCType } from '../shared/rpc-types';
 import { handleFsListDirectory, handleFsReadFile, handleFsUnwatch, handleFsWatchDirectory, handleFsWriteFile } from './handlers/fs';
 import { handleShellKill, handleShellRun, handleShellSpawnStreaming } from './handlers/shell';
 import { getMode, requestPermission, resolvePrompt, setMode, setPromptFn } from './permissions';
+import { startNextServer } from './server';
 import { addRoot, ensureDefaultWorkspaceRoot, listRoots, removeRoot } from './workspace';
 
 const isDev = process.env['ELECTROBUN_DEV'] === '1';
 
-/** Next.js dev server or standalone server URL. */
-const FRONTEND_URL = isDev ? 'http://localhost:3000' : 'http://localhost:3001';
+/** Must match server.ts — used in the splash message only. */
+const DEV_FRONTEND_PORT = 3001;
 
 // ─── RPC definition (replaces ipc.ts + preload.ts) ───────────────────────────
 
@@ -118,22 +119,6 @@ const rpc = BrowserView.defineRPC<PawrrtalRPCType>({
 	},
 });
 
-// ─── Window ───────────────────────────────────────────────────────────────────
-
-const win = new BrowserWindow({
-	title: 'Pawrrtal',
-	url: FRONTEND_URL,
-	frame: { width: 1280, height: 820 },
-	// hiddenInset mirrors MACOS_TITLE_BAR_STYLE = 'hiddenInset' in Electron shell.
-	titleBarStyle: 'hiddenInset',
-	rpc,
-});
-
-// Wire the prompt sender now that we have a window to send to.
-setPromptFn((request) => {
-	win.webview.rpc.send.permissionsPrompt(request);
-});
-
 // ─── App menu (replaces electron/src/menu.ts) ────────────────────────────────
 //
 // Electrobun's ApplicationMenu API:
@@ -145,11 +130,7 @@ ApplicationMenu.setApplicationMenu([
 	{
 		label: 'File',
 		submenu: [
-			{
-				label: 'New Chat',
-				accelerator: 'CmdOrCtrl+T',
-				action: 'new-chat',
-			},
+			{ label: 'New Chat', accelerator: 'CmdOrCtrl+T', action: 'new-chat' },
 			{ type: 'separator' },
 			{ label: 'Quit', accelerator: 'CmdOrCtrl+Q', role: 'quit' },
 		],
@@ -168,7 +149,37 @@ ApplicationMenu.setApplicationMenu([
 	},
 ]);
 
-// Handle custom menu actions via the application-menu-clicked event.
+// ─── Startup ──────────────────────────────────────────────────────────────────
+//
+// 1. Ensure workspace root.
+// 2. Open a splash window immediately so the dock icon and chrome appear
+//    while the Next.js server is booting (mirrors Electron splash pattern).
+// 3. startNextServer: in dev, spawns `pnpm dev` from <repo>/frontend/;
+//    in prod, spawns the bundled standalone server on a free port.
+// 4. Navigate the webview to the real URL once the server is ready.
+
+ensureDefaultWorkspaceRoot();
+
+const splashHtml = `<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#F7F4ED;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;color:#2a2a2a;-webkit-font-smoothing:antialiased}
+.s{text-align:center}.sp{width:24px;height:24px;border:2px solid rgba(0,0,0,.12);border-top-color:#2a2a2a;border-radius:50%;margin:0 auto 12px;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+h1{font-size:13px;font-weight:500;margin:0 0 4px}p{font-size:11px;opacity:.5;margin:0}
+</style></head><body><div class="s"><div class="sp"></div><h1>Starting Pawrrtal…</h1><p>Booting dev server on :3001</p></div></body></html>`;
+
+const win = new BrowserWindow({
+	title: 'Pawrrtal',
+	url: `data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`,
+	frame: { width: 1280, height: 820 },
+	titleBarStyle: 'hiddenInset',
+	rpc,
+});
+
+// Wire the prompt sender now that we have a window.
+setPromptFn((request) => {
+	win.webview.rpc.send.permissionsPrompt(request);
+});
+
+// Handle custom menu actions.
 ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 	const { action } = event as { action: string };
 	if (action === 'new-chat') {
@@ -176,6 +187,22 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 	}
 });
 
-// ─── Startup ──────────────────────────────────────────────────────────────────
-
-ensureDefaultWorkspaceRoot();
+// Start the Next.js server, then navigate the splash to the real URL.
+startNextServer({ isDev })
+	.then((server) => {
+		win.webview.loadURL(server.url);
+	})
+	.catch((err: unknown) => {
+		const reason = err instanceof Error ? err.message : String(err);
+		console.error('[electrobun] failed to start Next.js server:', reason);
+		const errorHtml = `<!doctype html><html><head><meta charset="utf-8"><style>
+			html,body{margin:0;height:100%;background:#F7F4ED;display:flex;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;}
+			.b{max-width:480px;padding:24px}h1{font-size:15px;margin:0 0 10px}p{font-size:13px;opacity:.7;line-height:1.5;margin:0 0 8px}
+			code{font-family:ui-monospace,monospace;font-size:12px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px}
+		</style></head><body><div class="b">
+			<h1>Could not start the Next.js server</h1>
+			<p>${reason.replace(/[<>&]/g, '')}</p>
+			<p>Run <code>bun start</code> from the <code>electrobun/</code> directory.</p>
+		</div></body></html>`;
+		win.webview.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(errorHtml)}`);
+	});
