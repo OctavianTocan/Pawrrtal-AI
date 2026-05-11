@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
@@ -220,7 +221,26 @@ def get_chat_router() -> APIRouter:
         # per-agent / per-user permission gating will land).  Provider
         # files stay tool-agnostic; see
         # `.claude/rules/architecture/no-tools-in-providers.md`.
-        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id)
+        # Web send_fn — lets the agent call send_message() to push text or
+        # files back to the user mid-turn.  Events are placed on a per-request
+        # queue and drained into the SSE stream after each provider event,
+        # keeping chat.py free of any tool-name coupling.
+        _web_send_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+
+        async def _web_send_fn(
+            text: str | None,
+            file_path: Path | None,
+            mime: str | None,
+        ) -> None:
+            event: StreamEvent = {"type": "message", "content": text or ""}
+            if file_path is not None:
+                event["attachment"] = str(file_path.relative_to(root))
+                event["mime"] = mime
+            await _web_send_queue.put(event)
+
+        agent_tools = build_agent_tools(
+            workspace_root=root, user_id=user.id, send_fn=_web_send_fn
+        )
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate
@@ -277,6 +297,13 @@ def get_chat_router() -> APIRouter:
                             event_count += 1
                             aggregator.apply(artifact_event)
                             yield artifact_event
+                        # Drain side-channel events placed by send_message
+                        # tool during this iteration's tool execution.
+                        while not _web_send_queue.empty():
+                            side = _web_send_queue.get_nowait()
+                            event_count += 1
+                            aggregator.apply(side)
+                            yield side
                 except Exception as exc:
                     logger.exception(
                         "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
