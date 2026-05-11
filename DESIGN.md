@@ -180,30 +180,30 @@ components:
     backgroundColor: "{colors.border}"
     height: 1px
   dropdown-menu-item-disabled:
-    backgroundColor: "Muted tray — Tailwind `bg-muted/50` (theme token `--muted`, see globals.css)"
+    backgroundColor: "Muted tray - Tailwind `bg-muted/50` (theme token `--muted`, see globals.css)"
     textColor: "{colors.muted-foreground}"
     rounded: "{rounded.sm}"
   metadata:
     textColor: "{colors.muted-foreground}"
     typography: caption
   app-empty-state:
-    backgroundColor: "Transparent or `{colors.background}` — tone-dependent (see prose)"
+    backgroundColor: "Transparent or `{colors.background}` - tone-dependent (see prose)"
     textColor: "{colors.foreground}"
     rounded: "{rounded.md}"
-    padding: "Tone-dependent spacing — sidebar/page/card/panel recipes (see prose)"
+    padding: "Tone-dependent spacing - sidebar/page/card/panel recipes (see prose)"
     typography: "sidebar-row / display / body-sm depending on tone"
   app-form-row:
     textColor: "{colors.foreground}"
-    typography: "body-sm label — FieldLabel density for dialog bodies"
+    typography: "body-sm label - FieldLabel density for dialog bodies"
     padding: "Vertical rhythm locked between label, helper, control, error"
   app-dialog-callout:
-    backgroundColor: "`foreground` wash (`bg-foreground/[0.04]`–`[0.05]`) — tone via prose"
+    backgroundColor: "`foreground` wash (`bg-foreground/[0.04]`-`[0.05]`) - tone via prose"
     textColor: "{colors.foreground}"
     rounded: "{rounded.md}"
     padding: "12px comfortable density"
   app-dialog-footer:
     backgroundColor: "Inherits modal sheet surface"
-    padding: "Sticky footer gap — `flex-col-reverse` narrow / `sm:flex-row sm:justify-end` wide"
+    padding: "Sticky footer gap - `flex-col-reverse` narrow / `sm:flex-row sm:justify-end` wide"
   sidebar-nav-row:
     backgroundColor: "Hover `{colors.foreground}` @ 4%; selected @ 7%"
     textColor: "{colors.foreground}"
@@ -213,12 +213,12 @@ components:
   sidebar-section-header:
     textColor: "{colors.foreground}"
     typography: sidebar-section-header
-    padding: "Floating tray hover — absolute inset micro-padding + `rounded-[6px]` wash"
+    padding: "Floating tray hover - absolute inset micro-padding + `rounded-[6px]` wash"
   app-pill:
-    backgroundColor: "Semantic washes (`bg-info/15`, `bg-success/15`, etc.) — see prose"
-    textColor: "Matched semantic text (`info-text`, `success-text`, …)"
-    rounded: "{rounded.full} pill — `{rounded.sm}` tag shape"
-    padding: "4px pill micro-padding — tag `px-1.5 h-5`"
+    backgroundColor: "Semantic washes (`bg-info/15`, `bg-success/15`, etc.) - see prose"
+    textColor: "Matched semantic text (`info-text`, `success-text`, ...)"
+    rounded: "{rounded.full} pill - `{rounded.sm}` tag shape"
+    padding: "4px pill micro-padding - tag `px-1.5 h-5`"
 ---
 
 ## Overview
@@ -226,7 +226,7 @@ components:
 Pawrrtal is a chat-first AI workspace with a **Craft Agents-inspired** visual
 language: warm, flat, and editorial. Surfaces are matte (**no decorative gradients on
 buttons/cards**); hierarchy comes from typography, neutral interpolation, and a single
-brand accent. **Overlay / frosted stacks** (blur + tint—see **Overlay & frosted surfaces**)
+brand accent. **Overlay / frosted stacks** (blur + tint-see **Overlay & frosted surfaces**)
 are the exception to flat matte chrome.
 
 The system is dual-theme. Light mode is a warm, low-chroma palette with a
@@ -244,12 +244,12 @@ The palette is six semantic roles plus neutral interpolation. Canonical values
 in code are `oklch()` triples; the front matter records the sRGB hex
 approximations the linter expects.
 
-- **Background** — page surface. Warm off-white in light, near-black in dark.
-- **Foreground** — text and icons. Deep ink in light, soft white in dark.
-- **Accent** — interaction and brand. Subdued purple in light, GitHub-blue in dark.
-- **Info** — amber. "Ask" mode, warnings, neutral notifications.
-- **Success** — green. Connected states, checkmarks, positive confirmations.
-- **Destructive** — red. Errors, failed states, dangerous actions.
+- **Background** - page surface. Warm off-white in light, near-black in dark.
+- **Foreground** - text and icons. Deep ink in light, soft white in dark.
+- **Accent** - interaction and brand. Subdued purple in light, GitHub-blue in dark.
+- **Info** - amber. "Ask" mode, warnings, neutral notifications.
+- **Success** - green. Connected states, checkmarks, positive confirmations.
+- **Destructive** - red. Errors, failed states, dangerous actions.
 
 ### Per-User Overrides
 
@@ -264,7 +264,7 @@ Mistral-inspired defaults in
 `frontend/features/appearance/defaults.ts`, and writes the resolved
 values onto `<html>` as CSS custom properties. Every surface that
 references `--background` / `--foreground` / `--accent` / etc.
-inherits the user's overrides automatically — sidebar, chat, modals,
+inherits the user's overrides automatically - sidebar, chat, modals,
 popovers, the lot.
 
 The defaults documented in this file are the values the user gets
@@ -281,14 +281,14 @@ all agree.
 The system avoids defining gray steps. Instead, `--foreground-N` solid mixes
 toward the background give us a continuous tonal scale that auto-inverts
 between light and dark themes. Tailwind exposes these as
-`bg-foreground-5`, `bg-foreground-10`, … `bg-foreground-95`.
+`bg-foreground-5`, `bg-foreground-10`, ... `bg-foreground-95`.
 
 Common roles:
 
-- `foreground-5` — hover states, sidebar accent surfaces, subtle borders.
-- `foreground-10` — input affordances, dividers.
-- `foreground-50` — muted body text, secondary copy.
-- `foreground-80` — dimmed-but-still-readable text.
+- `foreground-5` - hover states, sidebar accent surfaces, subtle borders.
+- `foreground-10` - input affordances, dividers.
+- `foreground-50` - muted body text, secondary copy.
+- `foreground-80` - dimmed-but-still-readable text.
 
 Alpha variants (`bg-foreground/10`, `text-accent/60`, etc.) are also valid;
 prefer the solid `-N` mixes for surface fills and the `/N` alpha for borders
@@ -305,7 +305,7 @@ or overlays where the layer underneath should bleed through.
 | success     | `#22783C`    | `oklch(0.55 0.17 145)`       |
 | destructive | `#CC3A05`    | `oklch(0.55 0.22 32)`        |
 
-The **background** is Mistral cream (~#fff8e0) — warm, sunlit, high
+The **background** is Mistral cream (~#fff8e0) - warm, sunlit, high
 luminance. **Accent** is Mistral orange (~#fa520f), the saturated CTA
 voltage that carries every primary action across the app. **Info** is
 Mistral sunshine (~#ff8105) for "Ask" mode and warnings, **destructive**
@@ -341,8 +341,8 @@ All body UI type (`--font-sans`, `--font-default`, Tailwind `font-sans`, and
   `var(--font-google-sans-loaded, "Google Sans")` (variables are optional; without
   `next/font` they stay unset and the string fallbacks match the `@font-face`
   family names from the Google Fonts `<link>` in `frontend/app/layout.tsx`).
-- **Front matter below:** tokens labeled `fontFamily: Google Sans Flex` mean “the
-  primary face in that stack”; runtime always includes **Google Sans** and
+- **Front matter below:** tokens labeled `fontFamily: Google Sans Flex` mean "the
+  primary face in that stack"; runtime always includes **Google Sans** and
   **Helvetica Neue** before the generic `sans-serif` fallback.
 
 Optional **Inter** remains available via `html[data-font="inter"]` in the same
@@ -350,33 +350,33 @@ file (prepend `"Inter"` to the stack); that path is separate from the default.
 
 Three families anchor the system:
 
-- **Newsreader** (`--font-display`) — editorial near-serif, Mistral-inspired,
+- **Newsreader** (`--font-display`) - editorial near-serif, Mistral-inspired,
   used for `display` and `h1` only. Loaded via `next/font/google` in
   `frontend/app/layout.tsx` and exposed as `--font-display-loaded`. The
   display token chain (`--font-display-stack`) falls back to Iowan Old
   Style → Charter → Georgia → Times so the editorial character still reads
   before the web font arrives.
-- **Google Sans Flex / Google Sans** (`--font-sans`) — default UI sans for
+- **Google Sans Flex / Google Sans** (`--font-sans`) - default UI sans for
   everything from `h2` down through body, captions, and sidebar rows. Loaded
   via a **Google Fonts** `<link rel="stylesheet">` in `frontend/app/layout.tsx`
   (same families as the old `next/font/google` path; see `globals.css`
   `--font-sans-stack` and optional `var(--font-google-sans-*)` fallbacks), with
   stack fallbacks **Helvetica Neue** →
   generic `sans-serif`. **Inter** remains an opt-in upgrade via
-  `<html data-font="inter">`; with Inter active, OpenType features `cv01`–`cv04`
+  `<html data-font="inter">`; with Inter active, OpenType features `cv01`-`cv04`
   and `case` switch on for slightly more geometric letterforms.
-- **JetBrains Mono** (`--font-mono`) — code, terminals, and the system's
+- **JetBrains Mono** (`--font-mono`) - code, terminals, and the system's
   aliased serif slot. This is a chat surface, not long-form reading; mono
   doubles as serif on purpose.
 
-The contrast — editorial display + geometric sans + monospace — IS the
+The contrast - editorial display + geometric sans + monospace - IS the
 brand voice. Hero headings carry near-classical character; everything below
 the page-title level uses Google Sans Flex for density and legibility.
 
-The root font size is **16px** — `<html>` reads `--font-size-base`, so every
+The root font size is **16px** - `<html>` reads `--font-size-base`, so every
 `rem`-denominated value scales off 16. Tailwind v4 utilities (`text-xs`,
-`text-sm`, `text-base`, …) map to the standard rem values and resolve to
-clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, …).
+`text-sm`, `text-base`, ...) map to the standard rem values and resolve to
+clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, ...).
 
 ### Scale
 
@@ -395,8 +395,8 @@ clean pixel sizes (12, 14, 16, 18, 20, 24, 30, 36, 48, …).
 
 Display sizes use **tighter line-height** (1.05 / 1.10) and **stronger
 negative letter-spacing** (-0.025em / -0.02em) to give hero type magazine-
-grade tightness. Sub-display headings (`h2`–`h3`) keep negative tracking
-(-0.015em / -0.01em) but ease leading to 1.20–1.25. Body uses default
+grade tightness. Sub-display headings (`h2`-`h3`) keep negative tracking
+(-0.015em / -0.01em) but ease leading to 1.20-1.25. Body uses default
 tracking. Caption uses slightly **positive tracking** (`+0.01em`) for
 legibility at small sizes.
 
@@ -413,7 +413,7 @@ that would shrink with the row.
 | Section header (Projects, Chats) | sidebar-section-header  | `text-sm font-semibold` | 14 |
 | Conversation row              | sidebar-row             | `text-sm`  | 14 |
 | Date-group header (Today, May 3) + count | sidebar-group-meta | `text-sm font-medium` | 14 |
-| Status glyph + unread bubble  | —                       | `h-3.5 w-3.5` | (14px square) |
+| Status glyph + unread bubble  | -                       | `h-3.5 w-3.5` | (14px square) |
 
 **Do not** drop sidebar text to `text-[11px]` or `text-xs` (12px); the
 old 11px on date group headers shipped briefly and looked broken next to
@@ -441,7 +441,7 @@ interactive surface opts in.
 
 The verify question for every PR: *"Does every clickable element in this
 diff have `cursor-pointer` (or one of the variants above) on it?"* The
-project linter does not enforce this — humans and review agents do.
+project linter does not enforce this - humans and review agents do.
 
 ### Hit Targets
 
@@ -512,7 +512,7 @@ solid panels into glass.
 
 Stack a **1px white inset shadow + 1px black 4% outer shadow** instead of
 a flat `border: 1px solid var(--color-border)`. The inset highlight reads
-as a top-edge sheen and the outer drop reads as a soft contact shadow —
+as a top-edge sheen and the outer drop reads as a soft contact shadow -
 together they make the element feel sharper and more dimensional, the
 same way macOS, Linear, and modern iOS surfaces do, without the muddy
 look of a single hairline.
@@ -543,7 +543,7 @@ Reach for `shadow-edge` first when:
 - the `shadow-minimal` is *too elevated* and reads as a popover
 
 Stick with `shadow-thin` (single 1px ring, no drop) when the surface is
-explicitly nested inside another bordered surface — `shadow-edge`'s outer
+explicitly nested inside another bordered surface - `shadow-edge`'s outer
 drop competes with the parent's edge in that case.
 
 ## Shapes
@@ -551,15 +551,15 @@ drop competes with the parent's edge in that case.
 The system is **flat by default**: `--radius` is `0` and Tailwind's
 `rounded-{sm,md,lg,xl}` utilities all resolve to 0. Use the `rounded` scale
 above (`sm: 4px`, `md: 8px`, `lg: 14px`) **explicitly** when a component needs
-softening — popovers, chat composer surfaces, dropdown menus.
+softening - popovers, chat composer surfaces, dropdown menus.
 
 ### The Bubble Exception
 
 Chat message bubbles use an **asymmetric "tail" radius** so the bubble
 visually attaches to its author edge:
 
-- `--radius-bubble: 1.25rem` (20px) — three rounded corners.
-- `--radius-bubble-tail: 0.25rem` (4px) — the corner adjacent to the author.
+- `--radius-bubble: 1.25rem` (20px) - three rounded corners.
+- `--radius-bubble-tail: 0.25rem` (4px) - the corner adjacent to the author.
 
 User messages tail toward the right; assistant messages tail toward the left.
 This is the only place in the system that breaks the flat default.
@@ -567,8 +567,8 @@ This is the only place in the system that breaks the flat default.
 ## Overlay & frosted surfaces
 
 **Direction:** Use **background blur** (`backdrop-filter` / stack blur) **plus**
-a **subtle tint**—for example a **linear gradient** with roughly **10–15% black**
-(or theme-equivalent stops)—**instead of** a **simple flat opacity overlay** (such
+a **subtle tint**-for example a **linear gradient** with roughly **10-15% black**
+(or theme-equivalent stops)-**instead of** a **simple flat opacity overlay** (such
 as a single dark layer at **~40% opacity** over the viewport).
 
 Blur puts the scene behind the glass; the gradient adds controlled depth without
@@ -578,7 +578,7 @@ uniform opacity alone reads **flat** and dull.
 **In practice:** Prefer the same pattern already described for **`popover`**
 (menu panels): blur strength + percentage tint on the panel surface. Apply the
 same discipline to **modal scrims**, **sheet backdrops**, and any full-bleed
-dimming—reach for **blur + gradient tint**, not **`bg-black/40`**-style solids
+dimming-reach for **blur + gradient tint**, not **`bg-black/40`**-style solids
 unless a deliberate exception is documented.
 
 **Implementation (this repo):** Radix **Dialog**, **Alert dialog**, and **Sheet** overlays use the `.modal-scrim` utility in `frontend/app/globals.css`: **8px** backdrop blur (aligned with `.popover-styled`) plus a **vertical gradient** from ~**10%** to ~**14%** black (`rgba(0, 0, 0, 0.1)` → `rgba(0, 0, 0, 0.14)`), replacing the prior flat **`bg-black/80`** wash.
@@ -591,7 +591,7 @@ that triggers layout. Three patterns are load-bearing enough to call out.
 ### Open / close timing
 
 Overlays (dropdowns, popovers, tooltips, context menus) follow Linear-snappy
-timing — fast enough to feel responsive, slow enough to read.
+timing - fast enough to feel responsive, slow enough to read.
 
 | Direction | Duration | Easing                                          |
 | --------- | -------- | ----------------------------------------------- |
@@ -603,7 +603,7 @@ close is "get out of my way."
 
 Animate **opacity + scale + y + `filter: blur(8 px)`** on enter/exit. The blur
 transition makes overlays feel like they're coming into focus rather than
-abruptly appearing — element starts blurry and out-of-place, focuses into
+abruptly appearing - element starts blurry and out-of-place, focuses into
 clarity. 8 px is the sweet spot: enough to read as motion without making the
 contents unreadable mid-transition. Reduced-motion (see below) collapses to
 opacity-only.
@@ -620,7 +620,7 @@ Larger surfaces use proportionally longer durations:
 
 Submenus run faster than root overlays so cursor traversal between
 sibling submenu triggers (e.g. Anthropic → OpenAI → Google in the
-model picker) doesn't visibly overlap two panels — the previous
+model picker) doesn't visibly overlap two panels - the previous
 panel finishes exiting before the next one finishes entering.
 Easing inherits from the root so the family stays cohesive.
 
@@ -632,7 +632,7 @@ close-faster discipline.
 ### Sidebar Open / Close
 
 The sidebar opens and closes by **translating the panel along the X axis
-at its full open width** — not by interpolating its width from `0` to
+at its full open width** - not by interpolating its width from `0` to
 `288px`. Animating width forces the content area's text and controls to
 reflow on every frame, which manifests as right-side controls "creeping"
 toward the conversation titles during the animation.
@@ -645,7 +645,7 @@ Implementation contract:
   when closed, with `transition-transform duration-200 ease-out`.
 - The main content area listens to the same open/closed state and shifts
   via `margin-left` (or grid-template-columns), in sync with the panel
-  transform — never via `width`.
+  transform - never via `width`.
 - The resize handle is disabled / hidden while the panel is closed; the
   user can't grab a panel they can't see.
 
@@ -659,12 +659,12 @@ becomes visible: **500 ms**. The single source of truth is
 re-pass a number.
 
 500 ms reads as "I noticed you paused on this control" without firing
-on cursor fly-throughs — a user can scan an entire toolbar at speed
+on cursor fly-throughs - a user can scan an entire toolbar at speed
 without any tip popping; lingering on a single icon resolves the tip.
 Override per-call only when a surface explicitly needs a different
 cadence (none currently do).
 
-The earlier value was 300 ms, applied inconsistently — some call sites
+The earlier value was 300 ms, applied inconsistently - some call sites
 re-passed `delayDuration={300}` (matching the default) while others
 relied on the provider default, which made future timing tweaks fragile.
 
@@ -699,8 +699,8 @@ implementation is vendored at **`frontend/lib/react-dropdown`** (`package.json`
 ```
 
 (Path is relative to `app/globals.css`.) If you add utilities only inside
-`lib/react-dropdown/` and styles “do nothing” at runtime, verify the compiled
-CSS contains those classes—missing **`@source`** is the usual cause.
+`lib/react-dropdown/` and styles "do nothing" at runtime, verify the compiled
+CSS contains those classes-missing **`@source`** is the usual cause.
 
 **Disabled rows:** Pass **`disabled`** on **`DropdownMenuItem`**. Visuals rely on
 native **`:disabled`** Tailwind variants (`disabled:*`) on the underlying
@@ -709,7 +709,7 @@ native **`:disabled`** Tailwind variants (`disabled:*`) on the underlying
 **`hover:bg-foreground/[0.03]`** wash), **`text-muted-foreground`**, and softer
 default Lucide icons
 (`disabled:[&>svg:not([class*='text-'])]:text-muted-foreground/55`). Enabled
-rows stay flat until hover—so unavailable actions read unambiguously.
+rows stay flat until hover-so unavailable actions read unambiguously.
 
 **Disabled submenu triggers:** **`DropdownSubmenuTrigger`** accepts **`disabled`**.
 Implementation merges the shared **`MENU_ROW_DISABLED_VISUAL_CLASSNAME`** module
@@ -740,7 +740,7 @@ dialog. That only delivers the intended UX when you split **chrome** from **body
 pass **`header`** (e.g. **`ModalHeader`** + **`ModalDescription`** from the
 overlay package), **`footer`** (primary/secondary actions), and keep forms and copy
 in **`children`**. Then the sheet gets sticky header/footer regions and a
-scrollable middle — matching “proper” bottom-sheet behavior. Putting titles and
+scrollable middle - matching "proper" bottom-sheet behavior. Putting titles and
 buttons only inside **`children`** works but stacks everything in one scroll
 region; prefer explicit **`header`** / **`footer`** for flows that must feel native
 on phones. Optionally set **`sheetTitle`** for short aria text on the sheet
@@ -748,7 +748,7 @@ handle/backdrop when it helps screen readers.
 
 **Variants:** Each product surface (create project, rename conversation, delete
 confirm, integrations, etc.) should be a small component that wraps **`AppDialog`**
-and supplies domain-specific markup — not a one-off overlay implementation.
+and supplies domain-specific markup - not a one-off overlay implementation.
 
 **Dialog bodies vs full-page forms:** Top-level auth/settings surfaces may keep
 **`Field`** / **`FieldLabel`** from **`field.tsx`**. Flows inside **`AppDialog`**
@@ -762,13 +762,13 @@ sm:justify-end`, optional `align="between"`).
 **`AppEmptyState`** centralizes empty placeholders so sidebar, editorial pages,
 cards, and settings panels stop drifting on radius and type scale.
 
-- **`tone="sidebar"`** — Compact sidebar stack (`text-sm`), icon in a **`rounded-md`**
+- **`tone="sidebar"`** - Compact sidebar stack (`text-sm`), icon in a **`rounded-md`**
   token container sized for the sidebar rhythm.
-- **`tone="page"`** — Editorial headline (`font-display`) + muted description for
+- **`tone="page"`** - Editorial headline (`font-display`) + muted description for
   full-column tasks/workspace empties.
-- **`tone="card"`** — Bordered inset card for Knowledge-style archives.
-- **`tone="panel"`** — Dashed inset panel for Settings archived lists.
-- **`layout="inlineCta"`** — Single clickable row; **`title`** doubles as the button
+- **`tone="card"`** - Bordered inset card for Knowledge-style archives.
+- **`tone="panel"`** - Dashed inset panel for Settings archived lists.
+- **`layout="inlineCta"`** - Single clickable row; **`title`** doubles as the button
   label (`action` supplies **`onClick`** only).
 
 Feature wrappers (**`ConversationsEmptyState`**, **`TasksEmptyState`**, Knowledge
@@ -776,11 +776,11 @@ Feature wrappers (**`ConversationsEmptyState`**, **`TasksEmptyState`**, Knowledg
 
 ### Dialog scaffolding (`app-form-row`, `app-dialog-callout`, `app-dialog-footer`)
 
-- **`AppFormRow`** — Label (`text-sm font-medium text-foreground`), optional helper,
+- **`AppFormRow`** - Label (`text-sm font-medium text-foreground`), optional helper,
   **`htmlFor`** wiring, error text slot, consistent vertical gap for modal forms.
-- **`AppDialogCallout`** — Info/warning strips with shared radius/density (replaces
+- **`AppDialogCallout`** - Info/warning strips with shared radius/density (replaces
   one-off `rounded-[10px]` / `rounded-[8px]` washes).
-- **`AppDialogFooter`** — Matches destructive-dialog stacking on phones; widens to
+- **`AppDialogFooter`** - Matches destructive-dialog stacking on phones; widens to
   end-aligned rows from **`sm:`** upward.
 
 ### Sidebar navigation chrome (`frontend/components/ui/sidebar-nav-row.tsx`)
@@ -789,8 +789,8 @@ Feature wrappers (**`ConversationsEmptyState`**, **`TasksEmptyState`**, Knowledg
 
 - **Hover:** `hover:bg-foreground/[0.04]`
 - **Selected:** `bg-foreground/[0.07]`
-- **`density="comfortable"`** — `min-h-9` rows (conversations, projects).
-- **`density="compact"`** — `h-8` metadata-heavy rows (tasks sidebar).
+- **`density="comfortable"`** - `min-h-9` rows (conversations, projects).
+- **`density="compact"`** - `h-8` metadata-heavy rows (tasks sidebar).
 
 **`entity-row.tsx`** keeps selection + context-menu behavior and delegates surface
 classes via **`sidebarNavRowSurfaceClassName`**. **`ProjectRow`** composes the same
@@ -801,10 +801,10 @@ primitive and layers drag/drop ring locally. **`TasksSubSidebar`** `NavRow` uses
 
 **`SidebarSectionHeader`** covers:
 
-- **`variant="collapsible"`** — Chevron + label + optional collapsed count meta +
+- **`variant="collapsible"`** - Chevron + label + optional collapsed count meta +
   **`trailingSlot`** (e.g. quick-add). Provide **`toggleButtonProps`** for
   **`aria-expanded`** / **`aria-controls`** / **`aria-label`** on the hit target.
-- **`variant="static"`** — Uppercase micro-label for task group labels.
+- **`variant="static"`** - Uppercase micro-label for task group labels.
 
 The floating hover tray (`absolute` inset + **`rounded-[6px]`** group-hover wash) is
 owned here so **`CollapsibleGroupHeader`**, Projects list headers, and Tasks groups
@@ -816,8 +816,8 @@ stay visually aligned.
 (**`bg-info/15`**, **`bg-success/15`**, **`bg-destructive/15`**, etc.) and matched
 text tokens.
 
-- **`shape="pill"`** — Uppercase micro-label (integration provider badges).
-- **`shape="tag"`** — Sentence-case metadata (**`TagChip`** task tags); neutral tag
+- **`shape="pill"`** - Uppercase micro-label (integration provider badges).
+- **`shape="tag"`** - Sentence-case metadata (**`TagChip`** task tags); neutral tag
   uses a subtle `bg-foreground/[0.04]` tray.
 
 **`KnowledgePageHeader`** count segments compose **`AppPill`** with local casing
@@ -832,63 +832,63 @@ overrides where needed.
 (Path is relative to `app/globals.css`.) Without this, overlay-specific utilities
 may not appear in the compiled CSS.
 
-- **`dropdown-menu-item-disabled`** — Unavailable **`DropdownMenuItem`** rows
+- **`dropdown-menu-item-disabled`** - Unavailable **`DropdownMenuItem`** rows
   (`disabled` prop). **Surface:** `bg-muted/50` row tray, **`text-muted-foreground`**
   labels, **4px** row radius (`rounded.sm`) inside the panel. **Do not** recreate
-  one-off disabled styling at call sites unless the default is insufficient—fix
+  one-off disabled styling at call sites unless the default is insufficient-fix
   **`DEFAULT_ITEM_CLASSNAME`** instead. See **Menu primitives
   (`@octavian-tocan/react-dropdown`)** above for **`@source`** and file paths.
 
-- **`popover`** — Used by all menu containers via the `popover-styled`
+- **`popover`** - Used by all menu containers via the `popover-styled`
   utility class. 8px radius (`rounded.md`), `shadow-modal-small`, no border.
   Default mode: **8 px backdrop blur** and a **95% background tint** so the
   panel surface reads as solid (the lower 88% used previously caused
   busy sidebar / chat content to bleed through and hurt readability).
   Scenic mode keeps the more-transparent **88% tint + 24 px blur** so the
   user's chosen background image is still visible behind the menu.
-  Aligns with **Overlay & frosted surfaces**—avoid swapping this for a **flat
+  Aligns with **Overlay & frosted surfaces**-avoid swapping this for a **flat
   opacity-only** dim.
-- **`chat-composer`** — The message input surface. Soft (`shadow-minimal`),
+- **`chat-composer`** - The message input surface. Soft (`shadow-minimal`),
   no border on focus (the shadow alone defines the edge). Dropdowns opened
   from the composer (e.g. model picker) inherit `chat-composer-dropdown-menu`
-  styling — 14px radius (`rounded.lg`), `--foreground-5` background.
-- **`bubble-user`** — User message bubbles use `--user-message-bubble` (a
+  styling - 14px radius (`rounded.lg`), `--foreground-5` background.
+- **`bubble-user`** - User message bubbles use `--user-message-bubble` (a
   tinted-foreground alpha) with the asymmetric tail described in **Shapes**.
-- **`bubble-assistant`** — Assistant messages have **no bubble** by default.
+- **`bubble-assistant`** - Assistant messages have **no bubble** by default.
   They sit on the page background with the foreground color, with prose
   styling for long-form output.
-- **`step-icon`** — Onboarding step iconography. 64px square, 16px radius,
+- **`step-icon`** - Onboarding step iconography. 64px square, 16px radius,
   inverse fill (foreground on background-inverse). Inner glyph is 32px.
-- **`select-button`** — Project-internal compact picker (see
+- **`select-button`** - Project-internal compact picker (see
   `frontend/components/ui/select-button.tsx`). Trigger is a `Button`
   with `bg-foreground/[0.04]` ghost styling, `rounded-[7px]`,
   `h-8`, chevron right. Popover reuses `chat-composer-dropdown-menu`
   so the model picker, theme preset picker, and any future picker
   share visual chrome. **Use this instead of native `<select>`** for
   every dropdown across the app.
-- **`settings-section-header`** — Standard top-of-card header used by
+- **`settings-section-header`** - Standard top-of-card header used by
   every Settings section (see
   `frontend/features/settings/primitives.tsx`). Title is
   `text-base font-semibold tracking-tight text-foreground`, description
   is `text-sm text-muted-foreground leading-snug text-pretty`, optional
   right-aligned actions slot. Bottom hairline (`border-border/40`),
-  `pb-3`. **Every Settings section MUST use this** — bespoke headers
+  `pb-3`. **Every Settings section MUST use this** - bespoke headers
   are a consistency bug. Apply inside a `SettingsCard`; the card
   handles the rounded surface and the header handles the layout.
-- **`settings-page-shell`** — Page-level wrapper rendered by
+- **`settings-page-shell`** - Page-level wrapper rendered by
   `SettingsPage` in `frontend/features/settings/primitives.tsx`. Title
   is `text-3xl font-semibold tracking-tight text-foreground` (balanced
   wrap), optional description is `text-sm leading-relaxed
   text-muted-foreground` capped at `60ch`. Children stack with
-  `gap-6`. **Every Settings section MUST wrap itself in this** —
+  `gap-6`. **Every Settings section MUST wrap itself in this** -
   per-section `<header><h1>` blocks are a consistency bug.
-- **`settings-card`** — Rounded surface used to group related rows in
+- **`settings-card`** - Rounded surface used to group related rows in
   a Settings section. Uses theme-aware tokens (`bg-card`,
   `border-border/60`) so the card tints itself correctly under either
   light or dark mode. `rounded-[14px]`, `px-6 pt-3 pb-3`. Header
   rendered via `settings-section-header`; body is a vertical stack of
   `SettingsRow`s separated by `border-border/40` hairlines.
-- **`color-pill`** — Codex-style filled color picker used by the
+- **`color-pill`** - Codex-style filled color picker used by the
   Appearance section (see
   `frontend/features/settings/primitives.tsx`). The entire pill
   background renders as the resolved color; the hex literal floats on
@@ -900,7 +900,7 @@ may not appear in the compiled CSS.
   re-renders triggered by upstream state updates don't snap the OS
   picker back to a stale value (the lurping bug). Picker commits are
   RAF-batched upstream so a 60fps drag yields ≤60 PUTs/s.
-- **`button-primary`** / **`button-secondary`** — Buttons follow the flat
+- **`button-primary`** / **`button-secondary`** - Buttons follow the flat
   default (`rounded.none`). Primary fills with accent; secondary inherits
   the page background and relies on `shadow-thin` for definition.
   **Note on contrast:** white-on-Mistral-orange is 3.34:1, which clears
@@ -908,23 +908,23 @@ may not appear in the compiled CSS.
   always render with `font-medium` body-md (16px+) so they qualify as
   large text; the lint warning here is acknowledged, not a bug. Use a
   darker `--accent` if you ever drop the weight or size.
-- **`personalization-modal`** — The home-page personalization surface
+- **`personalization-modal`** - The home-page personalization surface
   (fires on every load while the feature is WIP). Sits over the same
   scenic dotted backdrop used by the workspace onboarding, with a
   panel-backed card holding the form fields. Field styling matches
   `Field` / `FieldLabel` / `Input` from the form primitives. Typography
   follows the standard `h3` heading + `body-md` body + `caption` helper
-  pattern — it does **not** introduce new font sizes. Dismiss closes
+  pattern - it does **not** introduce new font sizes. Dismiss closes
   for the session only; no localStorage flag while WIP.
 - **`deferred-fetch-on-surface-open`** — Any panel, step, or popover that
   must hit the network the moment it becomes visible should show an
   explicit **loading state** (spinner, skeleton, or muted pulse) until
   the first response resolves — never render a false empty/disconnected
   state while the request is in flight. After data arrives, swap to the
-  resolved UI in one transition. Onboarding “Connect Telegram” uses a
+  resolved UI in one transition. Onboarding "Connect Telegram" uses a
   row-level spinner; reuse the same pattern for future channel pickers
   or permission probes.
-- **`project-row` (drop target)** — Projects feature wrapper around
+- **`project-row` (drop target)** - Projects feature wrapper around
   **`SidebarNavRow`** chrome plus **drag-and-drop** affordances. Row hover/selected
   fills come from **`sidebar-nav-row`** tokens (`hover:bg-foreground/[0.04]`,
   selected `bg-foreground/[0.07]`). Project-specific behavior: full-row drop
@@ -941,24 +941,24 @@ may not appear in the compiled CSS.
 - **Use the `--foreground-N` scale** for tonal grays. It auto-inverts and
   preserves the warm/cool tint of the theme.
 - **Keep surfaces flat by default.** If you find yourself adding a radius,
-  ask whether it's a popover, composer, or chat bubble — those are the only
+  ask whether it's a popover, composer, or chat bubble - those are the only
   shapes with curvature in this system.
 - **Reach for `shadow-minimal` first.** Most surfaces need only a hairline.
   Save `shadow-middle` and `shadow-strong` for true elevation (modals,
   floating panels).
-- **Reference z-index tokens** (`z-modal`, `z-tooltip`) — never hard-code.
+- **Reference z-index tokens** (`z-modal`, `z-tooltip`) - never hard-code.
 - **Trust the 16px root.** All Tailwind sizing utilities resolve to clean
   pixels; you should rarely need a literal `px` value outside 1px borders
   and a handful of icon-sized affordances.
 - **Prefer frosted overlays over flat opacity washes.** For scrims and stacked
-  glass surfaces, use **backdrop blur + subtle gradient tint** (~10–15% black
-  equivalent)—not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
+  glass surfaces, use **backdrop blur + subtle gradient tint** (~10-15% black
+  equivalent)-not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
 - **Register linked UI packages with Tailwind.** Packages resolved under
   `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
   `frontend/lib/react-dropdown`, `@octavian-tocan/react-overlay` →
   `frontend/lib/react-overlay`) often define Tailwind class strings. Add an
   `@source` path in `frontend/app/globals.css` for each such package so those
-  utilities are emitted—see **Menu primitives (`@octavian-tocan/react-dropdown`)**
+  utilities are emitted-see **Menu primitives (`@octavian-tocan/react-dropdown`)**
   under **Components**.
 
 - **Bump up, never down, the sidebar text scale.** The 14px floor is
@@ -979,17 +979,17 @@ may not appear in the compiled CSS.
 - **Don't put decorative gradients on matte UI chrome** (buttons, cards, flat
   panels). The editorial surface is load-bearing. **Exception:** **overlay /
   scrim / frosted panels** may use a **controlled linear gradient** as part of
-  **blur + tint** (see **Overlay & frosted surfaces**)—that is not “decorative chrome,”
+  **blur + tint** (see **Overlay & frosted surfaces**)-that is not "decorative chrome,"
   it is depth for glass stacks.
 - **Don't use flat opacity-only viewport dims** (e.g. uniform **40% black**) as the
-  default scrim pattern when blur + gradient tint can carry the effect—see **Overlay &
+  default scrim pattern when blur + gradient tint can carry the effect-see **Overlay &
   frosted surfaces**.
 - **Don't add new `--radius-*` tokens.** Use the existing scale or use 0.
 - **Don't use `text-gray-*` or any literal Tailwind color utility.** They
   bypass the theme system and won't invert in dark mode.
 - **Don't hard-code shadow stacks.** Reach for the named shadow utilities;
   if none fit, add a new named token rather than inlining `box-shadow`.
-- **Don't replace the default UI sans stack** casually — it is fixed to **Google
+- **Don't replace the default UI sans stack** casually - it is fixed to **Google
   Sans Flex, Google Sans, Helvetica Neue, sans-serif** (see Typography). New
   alternate families still need an opt-in `data-*` toggle on `<html>`, mirroring
   how `data-font="inter"` is wired.

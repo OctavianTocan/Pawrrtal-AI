@@ -9,6 +9,7 @@
 		"commit": "bun run commit.ts",
 		"lint:policies": "bun run check-policies.mjs",
 		"lint:file-lines": "node scripts/check-file-lines.mjs",
+		"lint:view-container": "node scripts/check-view-container.mjs",
 		"lint:docs": "bun run scripts/check-docs.ts",
 		"design:lint": "bunx @google/design.md lint DESIGN.md",
 		"design:diff": "bunx @google/design.md diff",
@@ -28,7 +29,8 @@
 		"frontend",
 		"electrobun",
 		"frontend/lib/react-dropdown",
-		"frontend/lib/react-overlay"
+		"frontend/lib/react-overlay",
+		"frontend/lib/react-chat-composer"
 	],
 	"overrides": {
 		"react": "19.2.6",

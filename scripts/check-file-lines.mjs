@@ -79,6 +79,7 @@ const EXEMPT_PATH_FRAGMENTS = [
 	// that don't match upstream's structure.
 	'frontend/lib/react-dropdown/',
 	'frontend/lib/react-overlay/',
+	'frontend/lib/react-chat-composer/',
 ];
 
 /** Recursively yield every source file under `dir` that we should check. */

@@ -8,7 +8,7 @@
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { ChatModelId } from '../components/ModelSelectorPopover';
+import type { ChatModelId } from '../constants';
 import type { ChatStreamEvent } from '../types';
 
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */

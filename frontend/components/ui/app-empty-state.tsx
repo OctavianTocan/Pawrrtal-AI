@@ -63,7 +63,6 @@ export function AppEmptyState({
 		}
 		return (
 			<button
-				aria-label={title}
 				className={cn(
 					'flex cursor-pointer items-center gap-1.5 rounded-control px-2 py-1.5 text-left text-sm text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
 					className
@@ -71,9 +70,8 @@ export function AppEmptyState({
 				onClick={action.onClick}
 				type="button"
 			>
-				{/* Icon is decorative — the button's aria-label carries the accessible name. */}
-				<span aria-hidden="true">{icon}</span>
-				<span>{title}</span>
+				{icon}
+				{title}
 			</button>
 		);
 	}

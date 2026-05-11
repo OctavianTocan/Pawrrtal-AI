@@ -57,6 +57,7 @@
 		"lib/react-overlay/playwright.config.ts",
 		"lib/react-overlay/tsup.config.ts",
 		"lib/react-overlay/vitest.config.ts",
-		"lib/react-overlay/vitest.setup.ts"
+		"lib/react-overlay/vitest.setup.ts",
+		"lib/react-chat-composer"
 	]
 }
