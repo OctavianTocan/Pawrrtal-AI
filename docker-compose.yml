@@ -10,6 +10,9 @@
 #   cp backend/.env.docker backend/.env   # fill in your API keys
 #   docker compose up --build
 #
+# Production (VPS + Tailscale Serve):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
 # The backend will be available at http://localhost:8000.
 # The postgres port is also exposed at localhost:5432 so you can
 # connect with any database client without extra config.
