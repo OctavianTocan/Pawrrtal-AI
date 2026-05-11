@@ -96,6 +96,10 @@ _MODEL_UNKNOWN_PREFIX_MESSAGE = (
 )
 _MODEL_OK_MESSAGE = "Model switched to <code>{model_id}</code> ✅"
 _MODEL_FAIL_MESSAGE = "Couldn't update model — please try again."
+_NEW_NOT_BOUND_MESSAGE = (
+    "Connect your account first before starting a new conversation."
+)
+_NEW_OK_MESSAGE = "✨ New conversation started. What's on your mind?"
 
 
 @dataclass(frozen=True)
@@ -110,6 +114,8 @@ class TelegramSender:
     chat_id: int
     username: str | None
     full_name: str | None
+    # Telegram Bot API 9.3+ topic thread ID.  None when topics not enabled.
+    thread_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -129,6 +135,9 @@ class TelegramTurnContext:
 
     model_id: str
     """Model to use for this turn (default or conversation override)."""
+
+    thread_id: int | None = None
+    """Telegram topic thread ID, forwarded from the sender. None for plain DMs."""
 
 
 async def handle_start_command(
@@ -230,15 +239,17 @@ async def handle_plain_message(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
     model_id = conversation.model_id or _DEFAULT_MODEL
 
     logger.info(
-        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s text_len=%d",
+        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s thread_id=%s text_len=%d",
         nexus_user_id,
         conversation.id,
         model_id,
+        sender.thread_id,
         len(text),
     )
 
@@ -246,7 +257,59 @@ async def handle_plain_message(
         nexus_user_id=nexus_user_id,
         conversation_id=conversation.id,
         model_id=model_id,
+        thread_id=sender.thread_id,
     )
+
+
+async def handle_new_command(
+    *,
+    sender: TelegramSender,
+    session: AsyncSession,
+) -> str:
+    """Create a fresh conversation for this sender, staying in the same topic.
+
+    ``/new`` inside a Telegram topic thread creates a new conversation
+    scoped to that thread — the reply stays in the same topic. In a plain
+    DM (no topics) it simply opens a blank slate, same as the web ``/new``.
+
+    Args:
+        sender: Normalized sender identity (carries ``thread_id``).
+        session: Async database session.
+
+    Returns:
+        Reply string the bot should send immediately.
+    """
+    nexus_user_id = await get_user_id_for_external(
+        provider=PROVIDER,
+        external_user_id=str(sender.user_id),
+        session=session,
+    )
+    if nexus_user_id is None:
+        return _NEW_NOT_BOUND_MESSAGE
+
+    from datetime import datetime  # noqa: PLC0415 — already imported by callers
+
+    from app.models import Conversation  # noqa: PLC0415
+
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        user_id=nexus_user_id,
+        title="Telegram",
+        origin_channel="telegram",
+        telegram_thread_id=sender.thread_id,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(conversation)
+    await session.commit()
+
+    logger.info(
+        "TELEGRAM_NEW_CONVERSATION user_id=%s conversation_id=%s thread_id=%s",
+        nexus_user_id,
+        conversation.id,
+        sender.thread_id,
+    )
+    return _NEW_OK_MESSAGE
 
 
 def handle_stop_command(*, was_running: bool) -> str:
@@ -314,6 +377,7 @@ async def handle_model_command(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
     updated = await update_conversation_model(

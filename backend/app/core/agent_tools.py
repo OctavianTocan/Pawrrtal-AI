@@ -34,6 +34,8 @@ from app.core.config import settings
 from app.core.keys import resolve_api_key
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
+from app.core.tools.image_gen_agent import make_image_gen_tool
+from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
 
@@ -41,6 +43,7 @@ def build_agent_tools(
     *,
     workspace_root: Path,
     user_id: uuid.UUID | None = None,
+    send_fn: SendFn | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -58,6 +61,12 @@ def build_agent_tools(
             under prompt pressure.
         user_id: Authenticated user UUID, used to resolve per-workspace
             API key overrides for tools that call external services.
+        send_fn: Optional channel delivery callback.  When supplied the
+            ``send_message`` tool is added to the list so the agent can
+            proactively push text and files back to the user.  Both the
+            web path (via a per-request asyncio queue drained into the
+            SSE stream) and the Telegram path supply one; the distinction
+            is purely in how the callback delivers — not whether it exists.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -93,5 +102,23 @@ def build_agent_tools(
     # picks up artifact tool-calls and lifts the spec into a sibling
     # SSE event (see ``app.api.chat`` and ``app.core.tools.artifact``).
     tools.append(make_artifact_tool())
+
+    # Image generation — pure tool: generates PNG, saves to workspace,
+    # returns path.  The agent decides whether to send it via send_message.
+    # Capability-gated on OPENAI_CODEX_OAUTH_TOKEN being resolvable.
+    if user_id is not None:
+        codex_token = resolve_api_key(user_id, "OPENAI_CODEX_OAUTH_TOKEN")
+    else:
+        codex_token = None
+    if codex_token:
+        tools.append(make_image_gen_tool(workspace_root=workspace_root, user_id=user_id))
+
+    # Channel delivery — present for both web (asyncio-queue SSE drain)
+    # and Telegram (MIME-aware bot API calls).  The mechanism differs;
+    # the tool contract is identical.
+    if send_fn is not None:
+        tools.append(
+            make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
+        )
 
     return tools

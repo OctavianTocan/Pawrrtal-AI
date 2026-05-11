@@ -15,11 +15,14 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import mimetypes
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.workspace import list_workspaces
+from app.crud.workspace import get_default_workspace, list_workspaces
 from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
@@ -238,5 +241,62 @@ def get_workspace_router() -> APIRouter:
             )
 
         target.unlink()
+
+    # ------------------------------------------------------------------
+    # Serve binary file from the default workspace
+    # ------------------------------------------------------------------
+
+    @router.get(
+        "/default/serve/{file_path:path}",
+        response_class=FileResponse,
+        summary="Serve a binary file from the user's default workspace",
+    )
+    async def serve_default_workspace_file(
+        file_path: str,
+        user: User = Depends(current_active_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> FileResponse:
+        """Serve a file from the user's default workspace with its detected MIME type.
+
+        Unlike the text-only ``GET /{workspace_id}/files/{file_path}`` endpoint,
+        this route returns raw bytes (``FileResponse``) so the frontend can render
+        images, audio, and other binary artifacts that agents produce via the
+        ``send_message`` tool.
+
+        Path traversal is blocked: the resolved target must stay inside the
+        workspace root or the request is rejected with 400.
+
+        Args:
+            file_path: Workspace-relative path (e.g. ``artifacts/chart.png``).
+
+        Returns:
+            The file streamed with the appropriate ``Content-Type`` header.
+        """
+        ws = await get_default_workspace(user.id, session)
+        if ws is None:
+            raise HTTPException(
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail="No default workspace found.  Complete onboarding first.",
+            )
+
+        root = Path(ws.path).resolve()
+        target = _safe_child(root, file_path)
+
+        if not target.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
+            )
+        if target.is_dir():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Path is a directory, not a file",
+            )
+
+        mime, _ = mimetypes.guess_type(str(target))
+        return FileResponse(
+            path=str(target),
+            media_type=mime or "application/octet-stream",
+            filename=target.name,
+        )
 
     return router

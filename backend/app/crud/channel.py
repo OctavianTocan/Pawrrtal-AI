@@ -246,7 +246,8 @@ async def get_or_create_telegram_conversation_full(
     *,
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> Conversation:
+    thread_id: int | None = None,
+) -> "Conversation":
     """Like :func:`get_or_create_telegram_conversation` but returns the full row.
 
     The extra fields (particularly ``model_id``) let the bot honour per-session
@@ -255,11 +256,17 @@ async def get_or_create_telegram_conversation_full(
     Args:
         user_id: Nexus user who owns the conversation.
         session: Async database session.
+        thread_id: Telegram topic thread ID (Bot API 9.3+).  When set,
+            the query scopes to conversations with a matching
+            ``telegram_thread_id``; otherwise it falls back to the
+            legacy ``title.like("Telegram%")`` lookup for plain DMs.
 
     Returns:
         The resolved or newly created ``Conversation`` ORM row.
     """
-    return await _get_or_create_telegram_conv_row(user_id=user_id, session=session)
+    return await _get_or_create_telegram_conv_row(
+        user_id=user_id, session=session, thread_id=thread_id
+    )
 
 
 async def update_conversation_model(
@@ -298,21 +305,44 @@ async def _get_or_create_telegram_conv_row(
     *,
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> Conversation:
-    """Internal helper: find or create the Telegram conversation row."""
+    thread_id: int | None = None,
+) -> "Conversation":
+    """Internal helper: find or create the Telegram conversation row.
+
+    Routing branches:
+    - ``thread_id`` set → query by ``(user_id, telegram_thread_id)``; each
+      Telegram topic gets its own independent conversation.
+    - ``thread_id`` None → legacy DM mode; find the most recently updated
+      conversation whose title starts with "Telegram" and has no thread ID.
+    """
     from sqlalchemy import select  # already imported at module level; re-import safe
 
     from app.models import Conversation  # noqa: PLC0415
 
-    stmt = (
-        select(Conversation)
-        .where(
-            Conversation.user_id == user_id,
-            Conversation.title.like("Telegram%"),
+    if thread_id is not None:
+        # Topic mode — one conversation per thread.
+        stmt = (
+            select(Conversation)
+            .where(
+                Conversation.user_id == user_id,
+                Conversation.telegram_thread_id == thread_id,
+            )
+            .order_by(Conversation.created_at.desc())
+            .limit(1)
         )
-        .order_by(Conversation.updated_at.desc())
-        .limit(1)
-    )
+    else:
+        # Legacy DM mode — reuse the existing Telegram conversation.
+        stmt = (
+            select(Conversation)
+            .where(
+                Conversation.user_id == user_id,
+                Conversation.title.like("Telegram%"),
+                Conversation.telegram_thread_id.is_(None),
+            )
+            .order_by(Conversation.updated_at.desc())
+            .limit(1)
+        )
+
     result = await session.execute(stmt)
     existing = result.scalar_one_or_none()
     if existing is not None:
@@ -324,6 +354,8 @@ async def _get_or_create_telegram_conv_row(
         id=uuid.uuid4(),
         user_id=user_id,
         title="Telegram",
+        origin_channel="telegram",
+        telegram_thread_id=thread_id,
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )

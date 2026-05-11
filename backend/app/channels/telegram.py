@@ -44,9 +44,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.core.providers.base import StreamEvent
+from app.core.tools.send_message import SendFn
 
 from .base import ChannelMessage
 
@@ -176,3 +178,109 @@ async def _safe_edit(
             message_id,
             exc,
         )
+
+
+# ---------------------------------------------------------------------------
+# MIME-aware media sender factory
+# ---------------------------------------------------------------------------
+
+
+def make_telegram_sender(
+    bot: "Bot",
+    chat_id: int | str,
+    *,
+    message_thread_id: int | None = None,
+) -> SendFn:
+    """Return a :data:`~app.core.tools.send_message.SendFn` for Telegram.
+
+    The returned coroutine routes delivery based on MIME type::
+
+        image/*          → bot.send_photo(file, caption=text)
+        audio/ogg        → bot.send_voice(file)          # Telegram renders as voice
+        audio/opus       → bot.send_voice(file)
+        audio/*          → bot.send_audio(file, caption=text)
+        video/*          → bot.send_video(file, caption=text)
+        *                → bot.send_document(file, caption=text)
+
+    Text-only calls (no file) fall through to ``bot.send_message``.
+
+    When *message_thread_id* is set every call includes it so the reply
+    lands in the correct Telegram topic thread.
+
+    Args:
+        bot: Live aiogram ``Bot`` instance.
+        chat_id: Target Telegram chat ID.
+        message_thread_id: Optional topic thread ID (Bot API 9.3+).
+            Pass ``None`` (the default) for DMs without topics enabled.
+
+    Returns:
+        An async :data:`~app.core.tools.send_message.SendFn` callback ready
+        to pass to :func:`~app.core.tools.send_message.make_send_message_tool`.
+    """
+
+    async def _send(
+        text: str | None,
+        file_path: Path | None,
+        mime: str | None,
+    ) -> None:
+        thread_kwargs: dict[str, Any] = {}
+        if message_thread_id is not None:
+            thread_kwargs["message_thread_id"] = message_thread_id
+
+        if file_path is None:
+            # Text-only delivery.
+            await bot.send_message(
+                chat_id=chat_id,
+                text=text or "",
+                **thread_kwargs,
+            )
+            return
+
+        from aiogram.types import FSInputFile  # noqa: PLC0415 — lazy import; aiogram optional
+
+        file = FSInputFile(file_path)
+        caption = text or None
+        m = (mime or "").lower()
+
+        if m.startswith("image/"):
+            await bot.send_photo(
+                chat_id=chat_id,
+                photo=file,
+                caption=caption,
+                **thread_kwargs,
+            )
+            return
+        if m in ("audio/ogg", "audio/opus"):
+            # Telegram renders ogg/opus as an in-chat voice note.
+            await bot.send_voice(
+                chat_id=chat_id,
+                voice=file,
+                caption=caption,
+                **thread_kwargs,
+            )
+            return
+        if m.startswith("audio/"):
+            await bot.send_audio(
+                chat_id=chat_id,
+                audio=file,
+                caption=caption,
+                **thread_kwargs,
+            )
+            return
+        if m.startswith("video/"):
+            await bot.send_video(
+                chat_id=chat_id,
+                video=file,
+                caption=caption,
+                **thread_kwargs,
+            )
+            return
+        # Fallback — send as a downloadable document.
+        await bot.send_document(
+            chat_id=chat_id,
+            document=file,
+            caption=caption,
+            **thread_kwargs,
+        )
+
+    return _send

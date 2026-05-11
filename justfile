@@ -110,49 +110,31 @@ e2e:
     cd frontend && bunx --bun playwright install --with-deps chromium
     cd frontend && bunx --bun playwright test
 
-# --- Electron desktop shell -------------------------------------------------
+# --- Electrobun desktop shell -----------------------------------------------
 
-# Compile the Electron main + preload TypeScript once.
-electron-build:
-    cd electron && bun run build
+# One-command dev: build the Electrobun shell then launch it.
+# Spawns the root dev orchestrator (Next.js + FastAPI) automatically —
+# no separate terminal needed.
+electrobun-dev:
+    cd electrobun && bun run start
 
-# Run the Electron shell against the running Next.js dev server.
-# Requires `just dev` in another terminal so the FE is already on :3001.
-# The shell waits for the dev server before opening the BrowserWindow,
-# so order doesn't matter beyond eventually being up.
-electron-dev: electron-build
-    cd electron && bun run start:dev
+# Build the Electrobun shell (type-check + bundle) without launching.
+electrobun-build:
+    cd electrobun && bun run build:dev
 
-# One-shot dev: spin up the Next.js dev server AND launch Electron in
-# a single terminal. Best for desktop-only iteration where you don't
-# need the backend running. For full-stack dev, run `just dev` and
-# `just electron-dev` in two terminals instead.
-electron-dev-all: electron-build
-    cd electron && bun run dev:all
-
-# Full-stack one-shot: backend + frontend + Electron in a single
-# terminal. Spawns the root dev orchestrator (`bun run dev.ts`),
-# waits for :3001 to come up, then launches the Electron shell. Use
-# this for full-stack desktop iteration when you don't want to juggle
-# multiple terminals. Ctrl-C tears the whole stack down.
-electron-dev-full: electron-build
-    cd electron && bun run dev:all:full
-
-# Build the Next.js standalone bundle the desktop app spawns at runtime.
-electron-frontend-build:
+# Build the Next.js standalone bundle the production app spawns at runtime.
+electrobun-frontend-build:
     cd frontend && bun run build
 
-# Full production-style run inside Electron (no external dev server):
-# build the FE, build the shell, launch it pointing at the spawned
-# Next.js standalone server.
-electron-prod: electron-frontend-build electron-build
-    cd electron && bun run start
+# Full production-style run (no external dev server):
+# build the FE standalone, build the shell, launch against the bundled server.
+electrobun-prod: electrobun-frontend-build
+    cd electrobun && bun run build && electrobun dev
 
-# Package the desktop app via electron-builder. Outputs to electron/dist-app/.
-# Defaults to the host platform; pass --mac/--win/--linux via electron-builder
-# directly if you need a cross-target build.
-electron-dist: electron-frontend-build
-    cd electron && bun run dist
+# Package the desktop .app via electrobun build --env=stable.
+# Outputs to electrobun/dist/.
+electrobun-dist: electrobun-frontend-build
+    cd electrobun && bun run build
 
 # --- Stagehand E2E (LLM-driven, lives under frontend/e2e/stagehand) --------
 
