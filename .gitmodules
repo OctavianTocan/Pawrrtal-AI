@@ -4,3 +4,6 @@
 [submodule "frontend/lib/react-overlay"]
 	path = frontend/lib/react-overlay
 	url = https://github.com/OctavianTocan/react-overlay.git
+[submodule "frontend/lib/react-chat-composer"]
+	path = frontend/lib/react-chat-composer
+	url = https://github.com/OctavianTocan/react-chat-composer.git

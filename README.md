@@ -159,17 +159,6 @@ just clean     # Remove build caches
                               └─────────┘ └────────┘ └────────┘
 ```
 
-## CodeGraph
-
-`.codegraph/` contains a [CodeGraph](https://codegraph.dev) configuration for AI-assisted codebase navigation and context generation. The lock file (`codegraph.lock`) pins the dependency graph snapshot.
-
-To regenerate after large structural changes:
-```bash
-codegraph sync
-```
-
-The config and lock file are committed so AI tools get a consistent view of the project structure without needing a live sync.
-
 ## License
 
 MIT

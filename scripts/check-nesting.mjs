@@ -114,6 +114,7 @@ const EXEMPT_PATH_FRAGMENTS = [
 	'frontend/components/ui/', // shadcn-generated primitives
 	'frontend/lib/react-dropdown/', // vendored sibling package
 	'frontend/lib/react-overlay/', // vendored sibling package
+	'frontend/lib/react-chat-composer/', // vendored sibling package
 	'routeTree.gen.ts', // TanStack Router generated tree
 ];
 

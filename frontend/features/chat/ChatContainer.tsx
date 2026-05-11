@@ -1,8 +1,8 @@
 'use client';
+import type { ChatComposerMessage } from '@octavian-tocan/react-chat-composer';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
@@ -10,11 +10,9 @@ import ChatView from './ChatView';
 import {
 	CHAT_MODEL_IDS,
 	CHAT_REASONING_LEVELS,
+	CHAT_STORAGE_KEYS,
 	type ChatModelId,
 	type ChatReasoningLevel,
-} from './components/ModelSelectorPopover';
-import {
-	CHAT_STORAGE_KEYS,
 	DEFAULT_CHAT_MODEL_ID,
 	DEFAULT_REASONING_LEVEL,
 	FALLBACK_TITLE_MAX_LENGTH,
@@ -22,7 +20,6 @@ import {
 import { useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
 import { useChatTurns } from './hooks/use-chat-turns';
-import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
 
@@ -74,7 +71,12 @@ interface ChatContainerProps {
  * - Streams assistant responses and accumulates chat history (via {@link useChatTurns}).
  * - Keeps the browser URL and the Next.js router in sync.
  *
- * Render logic is delegated to the presentational {@link ChatView}.
+ * Render logic is delegated to the presentational {@link ChatView}. The
+ * composer's textarea value lives here as a plain controlled string —
+ * `@octavian-tocan/react-chat-composer` accepts both controlled (`value` +
+ * `onChange`) and uncontrolled modes; pawrrtal uses the controlled form so
+ * the container can clear the draft on submit + insert prompt suggestions
+ * programmatically.
  */
 export default function ChatContainer({
 	conversationId,
@@ -87,13 +89,9 @@ export default function ChatContainer({
 	const { setActiveConversation, clearActiveConversation } = useChatActivity();
 	const hasNavigated = useRef(false);
 
-	const {
-		message,
-		setMessage,
-		onUpdateMessage: handleUpdateMessage,
-		onReplaceMessageContent: handleReplaceMessageContent,
-		onSelectSuggestion: handleSelectSuggestion,
-	} = useComposerMessage();
+	// Composer textarea — controlled string so the container can reset it on
+	// send + write into it from suggestion clicks.
+	const [composerText, setComposerText] = useState('');
 	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
 		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
 		defaultValue: DEFAULT_CHAT_MODEL_ID,
@@ -146,18 +144,19 @@ export default function ChatContainer({
 	});
 
 	const handleSendMessage = useCallback(
-		async (sentMessage: PromptInputMessage): Promise<void> => {
-			setMessage({ content: '', files: [] });
-			beginStream(sentMessage.content);
+		async (message: ChatComposerMessage): Promise<void> => {
+			const prompt = message.text;
+			setComposerText('');
+			beginStream(prompt);
 			try {
-				await send(sentMessage.content);
+				await send(prompt);
 			} finally {
 				endStream();
 				// Sync the Next.js router after streaming so sidebar router.push works.
 				if (hasNavigated.current) router.replace(`/c/${conversationId}`);
 			}
 		},
-		[beginStream, conversationId, endStream, router, send, setMessage]
+		[beginStream, conversationId, endStream, router, send]
 	);
 
 	// Read chatHistory through a ref so the callback identity doesn't churn
@@ -184,6 +183,10 @@ export default function ChatContainer({
 		[copy]
 	);
 
+	const handleSelectSuggestion = useCallback((prompt: string) => {
+		setComposerText(prompt);
+	}, []);
+
 	// Keep the sidebar's chat-activity context in sync. Fires on every change so
 	// the sidebar can show spinners, unread badges, and content-search matches.
 	useEffect(() => {
@@ -200,17 +203,16 @@ export default function ChatContainer({
 	return (
 		<ChatView
 			chatHistory={chatHistory}
+			composerText={composerText}
 			copiedMessageId={copiedId}
 			isLoading={isLoading}
-			message={message}
+			onChangeComposerText={setComposerText}
 			onCopy={handleCopy}
 			onRegenerate={handleRegenerate}
-			onReplaceMessageContent={handleReplaceMessageContent}
 			onSelectModel={setSelectedModelId}
 			onSelectReasoning={setSelectedReasoning}
 			onSelectSuggestion={handleSelectSuggestion}
 			onSendMessage={handleSendMessage}
-			onUpdateMessage={handleUpdateMessage}
 			regeneratingIndex={regeneratingIndex}
 			selectedModelId={selectedModelId}
 			selectedReasoning={selectedReasoning}

@@ -14,12 +14,13 @@
 		"lint": "bunx --bun @biomejs/biome lint --write",
 		"format": "bunx --bun @biomejs/biome format --write",
 		"fix": "bunx --bun @biomejs/biome check --write",
-		"check": "bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs && node ../scripts/check-nesting.mjs"
+		"check": "bunx --bun @biomejs/biome check && tsc --noEmit && node ../scripts/check-file-lines.mjs && node ../scripts/check-nesting.mjs && node ../scripts/check-view-container.mjs"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
 		"@hugeicons/core-free-icons": "^4.1.2",
 		"@hugeicons/react": "^1.1.6",
+		"@octavian-tocan/react-chat-composer": "workspace:*",
 		"@octavian-tocan/react-dropdown": "workspace:*",
 		"@octavian-tocan/react-overlay": "workspace:*",
 		"@radix-ui/react-use-controllable-state": "^1.2.2",
