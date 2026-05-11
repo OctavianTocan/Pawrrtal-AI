@@ -1,7 +1,7 @@
 /**
  * Electrobun main process for the Pawrrtal desktop shell.
  *
- * Equivalent of electron/src/main.ts but using Electrobun APIs.
+ * Equivalent of the removed electron/src/main.ts but using Electrobun APIs.
  *
  * Key differences from the Electron shell:
  *
@@ -13,6 +13,7 @@
  *   app.getPath('home')                  homedir() from node:os
  *   webContents.send('chan', payload)    win.webview.rpc.send.channelName(payload)
  *   ipcMain.on('permissions:respond')    bun.messages.permissionsRespond handler
+ *   win.getBounds() + setBounds()        store.get/set('window') — persisted JSON
  *   BrowserWindow.on('closed')           win.on('close') [same pattern]
  *   app.requestSingleInstanceLock()      Electrobun handles automatically
  *
@@ -28,16 +29,32 @@ import type { PawrrtalRPCType } from '../shared/rpc-types';
 import { handleFsListDirectory, handleFsReadFile, handleFsUnwatch, handleFsWatchDirectory, handleFsWriteFile } from './handlers/fs';
 import { handleShellKill, handleShellRun, handleShellSpawnStreaming } from './handlers/shell';
 import { getMode, requestPermission, resolvePrompt, setMode, setPromptFn } from './permissions';
-import { startNextServer } from './server';
+import { startNextServer, type StartedServer } from './server';
+import { createStore } from './store';
 import { addRoot, ensureDefaultWorkspaceRoot, listRoots, removeRoot } from './workspace';
 
 // ELECTROBUN_DEV is not reliably propagated in v1.18 — detect dev mode via
 // PAWRRTAL_REPO_ROOT, which the 'bun start' script injects.
 const isDev = Boolean(process.env['PAWRRTAL_REPO_ROOT']);
 
-// Mutable window reference — assigned after the Next.js server is ready.
-// RPC handlers use optional chaining (win?.webview...) to be safe.
+// ─── Window state persistence ────────────────────────────────────────────────
+// Restores the previous window size between launches (mirrors Electron shell).
+
+interface WindowState {
+	width: number;
+	height: number;
+}
+
+const windowStore = createStore<{ window: WindowState }>({
+	name: 'window',
+	defaults: { window: { width: 1280, height: 820 } },
+});
+
+const savedWindow = windowStore.get('window');
+
+// Mutable references — assigned after the Next.js server is ready.
 let win: BrowserWindow<PawrrtalRPCType> | undefined;
+let server: StartedServer | undefined;
 
 // ─── RPC definition (replaces ipc.ts + preload.ts) ───────────────────────────
 
@@ -54,8 +71,6 @@ const rpc = BrowserView.defineRPC<PawrrtalRPCType>({
 				} catch {
 					return;
 				}
-				// Electrobun exposes shell.openExternal via app utilities.
-				// In Electrobun 1.x use the platform shell command.
 				const cmd =
 					process.platform === 'darwin'
 						? 'open'
@@ -79,7 +94,6 @@ const rpc = BrowserView.defineRPC<PawrrtalRPCType>({
 			workspaceListRoots: async () => listRoots(),
 			workspaceAddRoot: async ({ rootPath }) => {
 				if (rootPath) return addRoot(rootPath);
-				// No path provided — show open-folder dialog (stub for now).
 				const defaultRoot = path.join(homedir(), 'Pawrrtal-Workspace');
 				return addRoot(defaultRoot);
 			},
@@ -123,11 +137,6 @@ const rpc = BrowserView.defineRPC<PawrrtalRPCType>({
 });
 
 // ─── App menu (replaces electron/src/menu.ts) ────────────────────────────────
-//
-// Electrobun's ApplicationMenu API:
-//   - Takes a flat Array<ApplicationMenuItemConfig>, not { menu: [...] }
-//   - Custom actions use action: 'string' + ApplicationMenu.on('application-menu-clicked')
-//   - onClick is not supported; native roles (quit, undo, etc.) fire automatically
 
 ApplicationMenu.setApplicationMenu([
 	{
@@ -150,31 +159,41 @@ ApplicationMenu.setApplicationMenu([
 			{ label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectAll' },
 		],
 	},
+	{
+		label: 'View',
+		submenu: [
+			{ label: 'Reload', accelerator: 'CmdOrCtrl+R', role: 'reload' },
+			{ type: 'separator' },
+			{ label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+			{ label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+			{ label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+			{ type: 'separator' },
+			{ label: 'Toggle Full Screen', accelerator: 'Ctrl+CmdOrCtrl+F', role: 'togglefullscreen' },
+		],
+	},
+	{
+		label: 'Window',
+		submenu: [
+			{ label: 'Minimize', accelerator: 'CmdOrCtrl+M', role: 'minimize' },
+			{ label: 'Zoom', role: 'zoom' },
+			{ type: 'separator' },
+			{ label: 'Bring All to Front', role: 'front' },
+		],
+	},
 ]);
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
-//
-// 1. Ensure workspace root.
-// 2. Start the Next.js server (dev: spawn pnpm dev; prod: spawn standalone).
-// 3. Create the BrowserWindow only after the server is ready, pointing
-//    straight at the real URL. No data: URL splash — Electrobun's preload
-//    scripts inject into every page and crypto.subtle is unavailable in
-//    data: security contexts.
 
 ensureDefaultWorkspaceRoot();
 
-// Open the splash window immediately so the app appears in the Dock
-// and the user sees visible feedback while Next.js + FastAPI boot.
-// views://splash/index.html is served by Electrobun's own server — a
-// proper secure context, unlike data: URLs (which break crypto.subtle
-// in Electrobun's injected preload scripts).
+// Open the splash window immediately — views://splash/index.html is a proper
+// secure context (crypto.subtle works), unlike data: URLs.
 win = new BrowserWindow({
 	title: 'Pawrrtal',
 	url: 'views://splash/index.html',
-	frame: { width: 1280, height: 820 },
+	frame: { width: savedWindow.width, height: savedWindow.height },
 	// hiddenInset: traffic lights float over the content area.
-	// trafficLightOffset moves them down so they sit inside the nav bar
-	// without clipping the buttons on the left.
+	// trafficLightOffset moves them down so they sit inside the nav bar.
 	titleBarStyle: 'hiddenInset',
 	trafficLightOffset: { x: 10, y: 16 },
 	rpc,
@@ -185,10 +204,9 @@ setPromptFn((request) => {
 });
 
 // ─── Drag region injection ─────────────────────────────────────────────────
-// Electrobun's drag-region preload activates on the CSS class
-// `.electrobun-webkit-app-region-drag`.  We inject it onto the top nav
-// after every navigation so the title bar stays draggable across
-// client-side route changes (Next.js soft navigations fire did-navigate-in-page).
+// Electrobun's drag-region preload activates on CSS class
+// `.electrobun-webkit-app-region-drag`. Re-injected after every navigation
+// so the title bar stays draggable across Next.js soft-nav route changes.
 
 const INJECT_DRAG_REGION = `
 (function () {
@@ -197,7 +215,7 @@ const INJECT_DRAG_REGION = `
           || document.querySelector('[role="navigation"]');
   if (!nav) return;
   nav.classList.add('electrobun-webkit-app-region-drag');
-  // Keep buttons/links/inputs clickable — exclude them from the drag zone.
+  // Keep buttons/links/inputs clickable inside the drag zone.
   nav.querySelectorAll('button, a, input, select, textarea, [role="button"]')
     .forEach(function (el) {
       el.classList.add('electrobun-webkit-app-region-no-drag');
@@ -212,6 +230,14 @@ function injectDragRegion() {
 win.webview.on('did-navigate', () => { injectDragRegion(); });
 win.webview.on('did-navigate-in-page', () => { injectDragRegion(); });
 
+// ─── Graceful shutdown ─────────────────────────────────────────────────────
+// Kill the spawned Next.js server when the window closes to avoid ghost
+// processes lingering after the app quits (mirrors Electron shell behaviour).
+
+win.on('close', async () => {
+	await server?.stop().catch(() => undefined);
+});
+
 // Handle custom menu actions.
 ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 	const { action } = event as { action: string };
@@ -222,8 +248,9 @@ ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
 
 // Start frontend + backend, then navigate the splash to the real URL.
 startNextServer({ isDev })
-	.then((server) => {
-		win?.webview.loadURL(server.url);
+	.then((started) => {
+		server = started;
+		win?.webview.loadURL(started.url);
 	})
 	.catch((err: unknown) => {
 		const reason = err instanceof Error ? err.message : String(err);
