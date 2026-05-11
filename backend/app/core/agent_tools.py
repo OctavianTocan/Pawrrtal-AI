@@ -62,9 +62,10 @@ def build_agent_tools(
             API key overrides for tools that call external services.
         send_fn: Optional channel delivery callback.  When supplied the
             ``send_message`` tool is added to the list so the agent can
-            proactively push text and files back to the user.  Absent
-            for callers that only need read/compute tools (e.g. the web
-            chat path, which handles delivery at the streaming layer).
+            proactively push text and files back to the user.  Both the
+            web path (via a per-request asyncio queue drained into the
+            SSE stream) and the Telegram path supply one; the distinction
+            is purely in how the callback delivers — not whether it exists.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -101,9 +102,9 @@ def build_agent_tools(
     # SSE event (see ``app.api.chat`` and ``app.core.tools.artifact``).
     tools.append(make_artifact_tool())
 
-    # Channel delivery — only present when a SendFn was injected.  The
-    # Telegram bot passes one so the agent can call ``send_message`` to
-    # deliver files; the web chat path omits it because SSE handles that.
+    # Channel delivery — present for both web (asyncio-queue SSE drain)
+    # and Telegram (MIME-aware bot API calls).  The mechanism differs;
+    # the tool contract is identical.
     if send_fn is not None:
         tools.append(
             make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
