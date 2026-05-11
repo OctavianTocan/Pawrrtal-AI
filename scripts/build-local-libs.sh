@@ -70,6 +70,14 @@ for lib_dir in frontend/lib/*/; do
 		continue
 	fi
 	case "$name" in
+		react-chat-composer)
+			# Vendored source — the host's bundler compiles it directly from
+			# TypeScript; no pre-build step required.  Its DTS pass also
+			# fails without the sibling react-dropdown workspace being
+			# installed first, so we skip it entirely here.
+			echo "✔ $name is vendored source — skipping pre-build"
+			continue
+			;;
 		react-dropdown) patch_react_dropdown_tsconfig "$lib_dir" ;;
 	esac
 	echo "→ building $name with $PM"

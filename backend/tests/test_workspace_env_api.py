@@ -54,6 +54,7 @@ async def test_get_returns_all_keys_empty_for_new_user(
         "CLAUDE_CODE_OAUTH_TOKEN",
         "EXA_API_KEY",
         "XAI_API_KEY",
+        "OPENAI_CODEX_OAUTH_TOKEN",
     }
     assert set(body["vars"].keys()) == expected_keys
     assert all(v == "" for v in body["vars"].values())
