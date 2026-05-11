@@ -29,6 +29,7 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
+
 from app.core.config import settings
 
 log = logging.getLogger(__name__)
@@ -156,7 +157,7 @@ false confidence.  You are here to be genuinely useful.
 _DEFAULT_SOUL = _PERSONALITY_SOULS["balanced"]
 
 
-def _build_user_md(p: "UserPersonalization | None") -> str:
+def _build_user_md(p: UserPersonalization | None) -> str:
     if p is None:
         return "# USER.md — About You\n\n_(Fill in your details here.)_\n"
 
@@ -186,7 +187,7 @@ def _build_user_md(p: "UserPersonalization | None") -> str:
     return "\n".join(lines)
 
 
-def _build_soul_md(p: "UserPersonalization | None") -> str:
+def _build_soul_md(p: UserPersonalization | None) -> str:
     if p is None or not p.personality:
         return _DEFAULT_SOUL
     return _PERSONALITY_SOULS.get(p.personality.lower(), _DEFAULT_SOUL)
@@ -204,7 +205,7 @@ def _workspace_path(workspace_id: uuid.UUID) -> Path:
 
 def seed_workspace(
     workspace_id: uuid.UUID,
-    personalization: "UserPersonalization | None" = None,
+    personalization: UserPersonalization | None = None,
 ) -> Path:
     """Create the workspace directory tree and write seed files.
 
@@ -236,6 +237,3 @@ def seed_workspace(
             target.write_text(content, encoding="utf-8")
 
     return root
-
-
-

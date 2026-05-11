@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.crud.channel import (
@@ -27,7 +28,6 @@ from app.integrations.telegram.handlers import (
     handle_plain_message,
     handle_start_command,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 
 pytestmark = pytest.mark.anyio
 
@@ -55,7 +55,7 @@ async def test_link_returns_503_when_telegram_unconfigured(
 
 async def test_link_issues_code_with_deep_link(
     client: AsyncClient,
-    telegram_configured: None,  # noqa: ARG001
+    telegram_configured: None,
 ) -> None:
     """The link endpoint returns plaintext code + deep link, exactly once."""
     response = await client.post("/api/v1/channels/telegram/link")
@@ -148,15 +148,11 @@ async def test_plain_message_acks_bound_users(
     test_user: User,
 ) -> None:
     """A bound user's message returns a TelegramTurnContext for LLM routing."""
-    code, _ = await issue_link_code(
-        user_id=test_user.id, provider=PROVIDER, session=db_session
-    )
+    code, _ = await issue_link_code(user_id=test_user.id, provider=PROVIDER, session=db_session)
     sender = TelegramSender(user_id=222, chat_id=222, username="bound", full_name=None)
     await handle_start_command(sender=sender, payload=code, session=db_session)
 
-    reply = await handle_plain_message(
-        sender=sender, text="how's it going", session=db_session
-    )
+    reply = await handle_plain_message(sender=sender, text="how's it going", session=db_session)
     # Bound users no longer get a string ack — they get a routing context
     # the bot dispatcher hands to the LLM pipeline.
     assert not isinstance(reply, str)
@@ -168,19 +164,13 @@ async def test_unbind_removes_binding(
     test_user: User,
 ) -> None:
     """delete_binding wipes the row so the next message gets the nudge again."""
-    code, _ = await issue_link_code(
-        user_id=test_user.id, provider=PROVIDER, session=db_session
-    )
+    code, _ = await issue_link_code(user_id=test_user.id, provider=PROVIDER, session=db_session)
     sender = TelegramSender(user_id=333, chat_id=333, username=None, full_name=None)
     await handle_start_command(sender=sender, payload=code, session=db_session)
 
-    deleted = await delete_binding(
-        user_id=test_user.id, provider=PROVIDER, session=db_session
-    )
+    deleted = await delete_binding(user_id=test_user.id, provider=PROVIDER, session=db_session)
     assert deleted is True
 
-    reply = await handle_plain_message(
-        sender=sender, text="still here?", session=db_session
-    )
+    reply = await handle_plain_message(sender=sender, text="still here?", session=db_session)
     assert isinstance(reply, str)
     assert "don't recognize" in reply.lower()

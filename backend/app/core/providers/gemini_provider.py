@@ -24,11 +24,11 @@ from app.core.agent_loop import (
     UserMessage,
     agent_loop,
 )
+from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
-from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.config import settings
 from app.core.keys import resolve_api_key
 from .base import StreamEvent
@@ -196,9 +196,7 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
 
         except Exception as exc:
             # Log so the error is visible in app.log — previously swallowed silently.
-            logger.error(
-                "Gemini streaming error model=%s: %s", model_id, exc, exc_info=True
-            )
+            logger.error("Gemini streaming error model=%s: %s", model_id, exc, exc_info=True)
             error_text = f"Gemini error: {exc}"
             # Emit a text delta so the frontend shows the error instead of an empty bubble.
             yield LLMTextDeltaEvent(type="text_delta", text=error_text)

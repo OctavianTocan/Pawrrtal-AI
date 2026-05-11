@@ -47,9 +47,12 @@ Full-stack AI chatbot with real-time streaming responses, built with **Next.js 1
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/OctavianTocan/pawrrtal.git
+# Clone the repository (include vendored frontend libs: react-dropdown, react-overlay)
+git clone --recurse-submodules https://github.com/OctavianTocan/pawrrtal.git
 cd pawrrtal
+
+# If you cloned without submodules, fetch them once:
+# git submodule update --init --recursive
 
 # Install all dependencies
 just install
@@ -155,6 +158,17 @@ just clean     # Remove build caches
                               │+ Gemini │ │(SQLite)│ │(SQLite)│
                               └─────────┘ └────────┘ └────────┘
 ```
+
+## CodeGraph
+
+`.codegraph/` contains a [CodeGraph](https://codegraph.dev) configuration for AI-assisted codebase navigation and context generation. The lock file (`codegraph.lock`) pins the dependency graph snapshot.
+
+To regenerate after large structural changes:
+```bash
+codegraph sync
+```
+
+The config and lock file are committed so AI tools get a consistent view of the project structure without needing a live sync.
 
 ## License
 

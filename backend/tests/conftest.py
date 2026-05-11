@@ -85,7 +85,7 @@ async def seeded_default_workspace(
     )
     db_session.add(workspace)
     await db_session.commit()
-    yield workspace
+    return workspace
 
 
 @pytest.fixture

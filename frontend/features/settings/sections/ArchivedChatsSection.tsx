@@ -2,6 +2,7 @@
 
 import { Archive } from 'lucide-react';
 import type * as React from 'react';
+import { AppEmptyState } from '@/components/ui/app-empty-state';
 import { Button } from '@/components/ui/button';
 import { useUpdateConversationMetadata } from '@/features/nav-chats/hooks/use-conversation-mutations';
 import useGetConversations from '@/hooks/get-conversations';
@@ -134,15 +135,11 @@ function formatRowDate(date: Date): string {
 /** Empty state shown when the user has no archived conversations. */
 function ArchivedEmptyState(): React.JSX.Element {
 	return (
-		<div className="flex flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-border/60 bg-foreground/[0.02] px-6 py-16 text-center">
-			<div className="flex size-10 items-center justify-center rounded-[6px] bg-foreground/[0.05] text-muted-foreground">
-				<Archive aria-hidden="true" className="size-5" />
-			</div>
-			<h3 className="text-sm font-medium text-foreground">No archived chats</h3>
-			<p className="max-w-sm text-sm text-muted-foreground">
-				Chats you archive from the sidebar appear here. They stay searchable but stay out of
-				the active list.
-			</p>
-		</div>
+		<AppEmptyState
+			description="Chats you archive from the sidebar appear here. They stay searchable but stay out of the active list."
+			icon={<Archive aria-hidden="true" className="size-5" />}
+			title="No archived chats"
+			tone="panel"
+		/>
 	);
 }

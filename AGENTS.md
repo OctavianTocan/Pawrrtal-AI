@@ -339,6 +339,7 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 - When a UI fix establishes a reusable pattern, or when a surface fetches data as soon as it appears (for example integration connection state), use a loader or skeleton until the result is known; capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
 - Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
 - Electron desktop distribution should plan for an in-app update prompt flow so everyday users are not manually reinstalling each new build.
+- For `@octavian-tocan/react-overlay`, compose overlays using the package’s header and footer surfaces (`ModalHeader`, `ModalDescription`, `ResponsiveModal` `header`/`footer`, and BottomSheet `header`/`footer`) instead of putting titles and primary actions only in the scrollable body.
 
 ## Learned Workspace Facts
 

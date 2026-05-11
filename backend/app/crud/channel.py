@@ -21,7 +21,7 @@ import hashlib
 import hmac
 import secrets
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -48,7 +48,7 @@ LINK_CODE_TTL = timedelta(minutes=10)
 
 def _utcnow() -> datetime:
     """Return a naive UTC ``datetime`` matching the column type used elsewhere."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _hash_code(code: str) -> str:

@@ -41,7 +41,7 @@ Claude Code rules live in `.claude/rules/`. They fire automatically based on fil
 
 ## Modals & Bottom Sheets
 - All modal, dialog, and bottom-sheet UI is built on `@octavian-tocan/react-overlay`.
-- Compose through `@/components/ui/responsive-modal` (`ResponsiveModal`) — it renders `Modal` on desktop and `BottomSheet` on mobile via `useIsMobile`.
+- Compose through `@/components/ui/app-dialog` (`AppDialog`) — it renders `Modal` on desktop and `BottomSheet` on mobile via `useIsMobile` (implementation: `responsive-modal.tsx`).
 - Reach for the raw `Modal` / `BottomSheet` / `ModalWrapper` exports only for viewport-specific surfaces.
 - shadcn `Dialog` / `AlertDialog` / `Sheet` in `components/ui/` are low-level primitives for other shadcn components — do not import them into feature code.
 - Rule: `.claude/rules/react/use-octavian-overlay-for-modals.md`.

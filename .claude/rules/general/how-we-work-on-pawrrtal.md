@@ -53,8 +53,8 @@ Do NOT introduce literal Tailwind colors (`text-gray-*`,
 Before reaching for a new tool, mechanism, or library, check what the
 codebase already has:
 
-- Modals/sheets → `ResponsiveModal` from `components/ui` (uses
-  `@octavian-tocan/react-overlay`). Never raw shadcn `Dialog` /
+- Modals/sheets → `AppDialog` from `components/ui` (uses
+  `@octavian-tocan/react-overlay` via `ResponsiveModal`). Never raw shadcn `Dialog` /
   `Sheet` in feature code.
 - Server state → TanStack Query via `useAuthedQuery` /
   `useAuthedFetch`.

@@ -53,9 +53,15 @@ Do NOT introduce literal Tailwind colors (`text-gray-*`,
 Before reaching for a new tool, mechanism, or library, check what the
 codebase already has:
 
-- Modals/sheets → `ResponsiveModal` from `components/ui` (uses
-  `@octavian-tocan/react-overlay`). Never raw shadcn `Dialog` /
-  `Sheet` in feature code.
+- Modals/sheets → `AppDialog` from `components/ui` (uses
+  `@octavian-tocan/react-overlay` via `ResponsiveModal`). Never raw shadcn `Dialog` /
+  `Sheet` in feature code. **`AppDialogFooter`** + **`AppFormRow`** + **`AppDialogCallout`**
+  for dialog chrome; **`Field`** stays for full-page forms (login, personalization).
+- Empty states → **`AppEmptyState`** (`tone` sidebar/page/card/panel; **`inlineCta`**
+  for single-row CTAs). Thin feature wrappers only.
+- Sidebar lists → **`SidebarNavRow`** + **`SidebarSectionHeader`** instead of one-off
+  hover stacks / uppercase labels.
+- Badges / tags / counts → **`AppPill`** (`shape` pill vs tag; semantic **`tone`**).
 - Server state → TanStack Query via `useAuthedQuery` /
   `useAuthedFetch`.
 - Client UI prefs → `usePersistedState` (localStorage). Not Query.

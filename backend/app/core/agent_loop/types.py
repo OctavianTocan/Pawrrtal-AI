@@ -1,5 +1,4 @@
-"""
-Types for the Pi-inspired agent loop.
+"""Types for the Pi-inspired agent loop.
 
 Architecture mirrors @mariozechner/pi-agent-core from pi-mono:
   https://github.com/badlogic/pi-mono/blob/main/packages/agent/src/types.ts
@@ -15,7 +14,6 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Any, Literal, TypedDict
-
 
 # ---------------------------------------------------------------------------
 # Content blocks (inside messages)

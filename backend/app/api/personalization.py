@@ -5,11 +5,11 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.workspace import ensure_default_workspace
 from app.crud.personalization import (
     get_personalization_service,
     upsert_personalization_service,
 )
+from app.crud.workspace import ensure_default_workspace
 from app.db import User, get_async_session
 from app.models import UserPersonalization
 from app.schemas import PersonalizationProfile

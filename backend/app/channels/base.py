@@ -37,7 +37,6 @@ from typing import Any, Protocol, TypedDict
 
 from app.core.providers.base import StreamEvent
 
-
 # ---------------------------------------------------------------------------
 # Normalized message types
 # ---------------------------------------------------------------------------

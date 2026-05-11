@@ -78,6 +78,7 @@ const EXEMPT_PATH_FRAGMENTS = [
 	// to the package, not the host app — this budget would force splits
 	// that don't match upstream's structure.
 	'frontend/lib/react-dropdown/',
+	'frontend/lib/react-overlay/',
 ];
 
 /** Recursively yield every source file under `dir` that we should check. */

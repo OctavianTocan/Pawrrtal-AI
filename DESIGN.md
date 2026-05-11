@@ -186,6 +186,39 @@ components:
   metadata:
     textColor: "{colors.muted-foreground}"
     typography: caption
+  app-empty-state:
+    backgroundColor: "Transparent or `{colors.background}` — tone-dependent (see prose)"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.md}"
+    padding: "Tone-dependent spacing — sidebar/page/card/panel recipes (see prose)"
+    typography: "sidebar-row / display / body-sm depending on tone"
+  app-form-row:
+    textColor: "{colors.foreground}"
+    typography: "body-sm label — FieldLabel density for dialog bodies"
+    padding: "Vertical rhythm locked between label, helper, control, error"
+  app-dialog-callout:
+    backgroundColor: "`foreground` wash (`bg-foreground/[0.04]`–`[0.05]`) — tone via prose"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.md}"
+    padding: "12px comfortable density"
+  app-dialog-footer:
+    backgroundColor: "Inherits modal sheet surface"
+    padding: "Sticky footer gap — `flex-col-reverse` narrow / `sm:flex-row sm:justify-end` wide"
+  sidebar-nav-row:
+    backgroundColor: "Hover `{colors.foreground}` @ 4%; selected @ 7%"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.sm}"
+    padding: "Comfortable `min-h-9`; compact `h-8` density split"
+    typography: sidebar-row
+  sidebar-section-header:
+    textColor: "{colors.foreground}"
+    typography: sidebar-section-header
+    padding: "Floating tray hover — absolute inset micro-padding + `rounded-[6px]` wash"
+  app-pill:
+    backgroundColor: "Semantic washes (`bg-info/15`, `bg-success/15`, etc.) — see prose"
+    textColor: "Matched semantic text (`info-text`, `success-text`, …)"
+    rounded: "{rounded.full} pill — `{rounded.sm}` tag shape"
+    padding: "4px pill micro-padding — tag `px-1.5 h-5`"
 ---
 
 ## Overview
@@ -653,7 +686,7 @@ fall back to the prose below for behavioral notes.
 Panel-style dropdowns (sidebar profile menu, composer attachment menus, etc.)
 use **`DropdownMenuItem`** from **`@octavian-tocan/react-dropdown`**. The
 implementation is vendored at **`frontend/lib/react-dropdown`** (`package.json`
-`link:` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
+`workspace:*` + **`frontend/tsconfig.json`** path alias → `./lib/react-dropdown/src/index.ts`).
 
 **Tailwind v4 scanning:** Default row chrome lives in
 **`frontend/lib/react-dropdown/src/DropdownPanelItems.tsx`**
@@ -687,6 +720,117 @@ disabled`** as usual (they remain unreachable when the trigger is disabled).
 
 The write-up in **`docs/solutions/ui-bugs/dropdown-disabled-menu-items-not-visually-distinct.md`**
 captures the full diagnosis (scan gap + contrast strategy) for future debugging.
+
+### Modal / sheet overlays (`@octavian-tocan/react-overlay`)
+
+Centered **`Modal`** and draggable **`BottomSheet`** patterns live in this package.
+The implementation is vendored at **`frontend/lib/react-overlay`** (git submodule),
+wired like **`react-dropdown`**: root **`package.json`** **`workspace:*`** +
+**`frontend/tsconfig.json`** path alias → **`./lib/react-overlay/src/index.ts`**.
+
+Feature code composes through **`frontend/components/ui/app-dialog.tsx`**
+(`AppDialog`), which picks **`Modal`** on desktop and **`BottomSheet`** on narrow
+viewports. **`AppDialog`** is a thin shell over **`ResponsiveModal`**
+(`responsive-modal.tsx`) with the AI Nexus contract documented in this section.
+
+**How modals become bottom sheets:** On viewports narrower than **768px** (same
+threshold as **`useIsMobile`**), the same
+component renders as a draggable sheet from the bottom instead of a centered
+dialog. That only delivers the intended UX when you split **chrome** from **body**:
+pass **`header`** (e.g. **`ModalHeader`** + **`ModalDescription`** from the
+overlay package), **`footer`** (primary/secondary actions), and keep forms and copy
+in **`children`**. Then the sheet gets sticky header/footer regions and a
+scrollable middle — matching “proper” bottom-sheet behavior. Putting titles and
+buttons only inside **`children`** works but stacks everything in one scroll
+region; prefer explicit **`header`** / **`footer`** for flows that must feel native
+on phones. Optionally set **`sheetTitle`** for short aria text on the sheet
+handle/backdrop when it helps screen readers.
+
+**Variants:** Each product surface (create project, rename conversation, delete
+confirm, integrations, etc.) should be a small component that wraps **`AppDialog`**
+and supplies domain-specific markup — not a one-off overlay implementation.
+
+**Dialog bodies vs full-page forms:** Top-level auth/settings surfaces may keep
+**`Field`** / **`FieldLabel`** from **`field.tsx`**. Flows inside **`AppDialog`**
+should compose **`AppFormRow`** (label + optional description + error slot),
+trust/warning strips via **`AppDialogCallout`** (`tone="info" | "warning"`), and
+stack actions with **`AppDialogFooter`** (default `flex-col-reverse` + `sm:flex-row
+sm:justify-end`, optional `align="between"`).
+
+### Empty states (`frontend/components/ui/app-empty-state.tsx`)
+
+**`AppEmptyState`** centralizes empty placeholders so sidebar, editorial pages,
+cards, and settings panels stop drifting on radius and type scale.
+
+- **`tone="sidebar"`** — Compact sidebar stack (`text-sm`), icon in a **`rounded-md`**
+  token container sized for the sidebar rhythm.
+- **`tone="page"`** — Editorial headline (`font-display`) + muted description for
+  full-column tasks/workspace empties.
+- **`tone="card"`** — Bordered inset card for Knowledge-style archives.
+- **`tone="panel"`** — Dashed inset panel for Settings archived lists.
+- **`layout="inlineCta"`** — Single clickable row; **`title`** doubles as the button
+  label (`action` supplies **`onClick`** only).
+
+Feature wrappers (**`ConversationsEmptyState`**, **`TasksEmptyState`**, Knowledge
+**`EmptyState`**, etc.) should stay thin and delegate chrome here.
+
+### Dialog scaffolding (`app-form-row`, `app-dialog-callout`, `app-dialog-footer`)
+
+- **`AppFormRow`** — Label (`text-sm font-medium text-foreground`), optional helper,
+  **`htmlFor`** wiring, error text slot, consistent vertical gap for modal forms.
+- **`AppDialogCallout`** — Info/warning strips with shared radius/density (replaces
+  one-off `rounded-[10px]` / `rounded-[8px]` washes).
+- **`AppDialogFooter`** — Matches destructive-dialog stacking on phones; widens to
+  end-aligned rows from **`sm:`** upward.
+
+### Sidebar navigation chrome (`frontend/components/ui/sidebar-nav-row.tsx`)
+
+**`SidebarNavRow`** owns hover/selected fills for sidebar lists:
+
+- **Hover:** `hover:bg-foreground/[0.04]`
+- **Selected:** `bg-foreground/[0.07]`
+- **`density="comfortable"`** — `min-h-9` rows (conversations, projects).
+- **`density="compact"`** — `h-8` metadata-heavy rows (tasks sidebar).
+
+**`entity-row.tsx`** keeps selection + context-menu behavior and delegates surface
+classes via **`sidebarNavRowSurfaceClassName`**. **`ProjectRow`** composes the same
+primitive and layers drag/drop ring locally. **`TasksSubSidebar`** `NavRow` uses
+**`density="compact"`**.
+
+### Sidebar section headers (`frontend/components/ui/sidebar-section-header.tsx`)
+
+**`SidebarSectionHeader`** covers:
+
+- **`variant="collapsible"`** — Chevron + label + optional collapsed count meta +
+  **`trailingSlot`** (e.g. quick-add). Provide **`toggleButtonProps`** for
+  **`aria-expanded`** / **`aria-controls`** / **`aria-label`** on the hit target.
+- **`variant="static"`** — Uppercase micro-label for task group labels.
+
+The floating hover tray (`absolute` inset + **`rounded-[6px]`** group-hover wash) is
+owned here so **`CollapsibleGroupHeader`**, Projects list headers, and Tasks groups
+stay visually aligned.
+
+### Status pills (`frontend/components/ui/app-pill.tsx`)
+
+**`AppPill`** replaces literal emerald/amber utility stacks with semantic washes
+(**`bg-info/15`**, **`bg-success/15`**, **`bg-destructive/15`**, etc.) and matched
+text tokens.
+
+- **`shape="pill"`** — Uppercase micro-label (integration provider badges).
+- **`shape="tag"`** — Sentence-case metadata (**`TagChip`** task tags); neutral tag
+  uses a subtle `bg-foreground/[0.04]` tray.
+
+**`KnowledgePageHeader`** count segments compose **`AppPill`** with local casing
+overrides where needed.
+
+**Tailwind v4 scanning:** register the package in **`frontend/app/globals.css`**:
+
+```css
+@source "../lib/react-overlay/src";
+```
+
+(Path is relative to `app/globals.css`.) Without this, overlay-specific utilities
+may not appear in the compiled CSS.
 
 - **`dropdown-menu-item-disabled`** — Unavailable **`DropdownMenuItem`** rows
   (`disabled` prop). **Surface:** `bg-muted/50` row tray, **`text-muted-foreground`**
@@ -780,12 +924,13 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
   resolved UI in one transition. Onboarding “Connect Telegram” uses a
   row-level spinner; reuse the same pattern for future channel pickers
   or permission probes.
-- **`project-row` (drop target)** — Sidebar Projects row. Full-row drop
-  target (the whole `<button>` listens for `dragover`/`drop`), `min-h-9`
-  for hit area, `cursor-pointer` always, `cursor-copy` while a valid
-  conversation drag hovers, hover background `bg-foreground-5`, drag-over
-  background `bg-foreground-10` with a 1px accent ring. Names are set via
-  the project create modal; never auto-named "New Project".
+- **`project-row` (drop target)** — Projects feature wrapper around
+  **`SidebarNavRow`** chrome plus **drag-and-drop** affordances. Row hover/selected
+  fills come from **`sidebar-nav-row`** tokens (`hover:bg-foreground/[0.04]`,
+  selected `bg-foreground/[0.07]`). Project-specific behavior: full-row drop
+  target (the whole `<button>` listens for `dragover`/`drop`), `cursor-copy` while
+  a valid conversation drag hovers, drag-over ring + tint layered locally. Names are
+  set via the project create modal; never auto-named "New Project".
 
 ## Do's and Don'ts
 
@@ -810,7 +955,8 @@ captures the full diagnosis (scan gap + contrast strategy) for future debugging.
   equivalent)—not a single **~40% opacity** dark layer. See **Overlay & frosted surfaces**.
 - **Register linked UI packages with Tailwind.** Packages resolved under
   `frontend/lib/` (for example `@octavian-tocan/react-dropdown` →
-  `frontend/lib/react-dropdown`) often define Tailwind class strings. Add an
+  `frontend/lib/react-dropdown`, `@octavian-tocan/react-overlay` →
+  `frontend/lib/react-overlay`) often define Tailwind class strings. Add an
   `@source` path in `frontend/app/globals.css` for each such package so those
   utilities are emitted—see **Menu primitives (`@octavian-tocan/react-dropdown`)**
   under **Components**.

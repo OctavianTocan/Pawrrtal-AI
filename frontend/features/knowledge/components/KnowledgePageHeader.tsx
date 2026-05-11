@@ -12,6 +12,7 @@
 
 import { LayersIcon, UserIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AppPill } from '@/components/ui/app-pill';
 import { cn } from '@/lib/utils';
 
 /**
@@ -25,12 +26,6 @@ interface StatusChipSegment {
 	count: number;
 	tone: StatusChipTone;
 }
-
-const TONE_DOT_CLASS: Record<StatusChipTone, string> = {
-	info: 'bg-info text-info-text',
-	success: 'bg-success text-success-text',
-	neutral: 'bg-foreground-20 text-muted-foreground',
-};
 
 const STATUS_CHIPS: readonly StatusChipSegment[] = [
 	{ label: 'Working', count: 1, tone: 'info' },
@@ -46,17 +41,21 @@ const STATUS_CHIPS: readonly StatusChipSegment[] = [
  * segment except the last, keeping the chip a single rounded container.
  */
 function StatusChipSegmentView({ segment }: { segment: StatusChipSegment }): ReactNode {
+	const pillTone =
+		segment.tone === 'info' ? 'info' : segment.tone === 'success' ? 'success' : 'neutral';
 	return (
 		<span className="inline-flex h-7 items-center gap-1.5 px-2.5 text-[12px] font-medium text-foreground">
 			{segment.label}
-			<span
+			<AppPill
 				className={cn(
-					'inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums',
-					TONE_DOT_CLASS[segment.tone]
+					'h-4 min-w-4 normal-case px-1 text-[11px] font-semibold tabular-nums',
+					segment.tone === 'neutral' && 'bg-foreground-20'
 				)}
+				shape="pill"
+				tone={pillTone}
 			>
 				{segment.count}
-			</span>
+			</AppPill>
 		</span>
 	);
 }

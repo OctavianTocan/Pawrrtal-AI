@@ -121,8 +121,7 @@ class TelegramChannel:
                 elapsed = now - last_edit_at
 
                 should_edit = (
-                    chars_since_edit >= _EDIT_DEBOUNCE_CHARS
-                    or elapsed >= _MAX_EDIT_INTERVAL_S
+                    chars_since_edit >= _EDIT_DEBOUNCE_CHARS or elapsed >= _MAX_EDIT_INTERVAL_S
                 )
                 if should_edit and accumulated:
                     await _safe_edit(bot, chat_id, message_id, accumulated)
@@ -145,7 +144,7 @@ class TelegramChannel:
 
 
 async def _safe_edit(
-    bot: "Bot",
+    bot: Bot,
     chat_id: int | str,
     message_id: int,
     text: str,
@@ -168,7 +167,7 @@ async def _safe_edit(
             message_id=message_id,
             text=text,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         err_str = str(exc).lower()
         if "not modified" in err_str:
             # Benign — model emitted an empty delta, nothing changed.

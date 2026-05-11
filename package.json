@@ -27,7 +27,8 @@
 	"workspaces": [
 		"frontend",
 		"electrobun",
-		"frontend/lib/react-dropdown"
+		"frontend/lib/react-dropdown",
+		"frontend/lib/react-overlay"
 	],
 	"overrides": {
 		"react": "19.2.6",

@@ -40,7 +40,7 @@ class AILLM(Protocol):
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         history: list[dict[str, str]] | None = None,
-        tools: list["AgentTool"] | None = None,
+        tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
