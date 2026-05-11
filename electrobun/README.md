@@ -53,6 +53,24 @@ electrobun/
 
 **Electrobun:** `bun.messages.permissionsRespond` RPC message handler + `webview.messages.permissionsPrompt` RPC send.
 
+## Dev Setup
+
+The Electrobun shell is a **wrapper** around the Next.js frontend — it needs the frontend server running separately.
+
+**Terminal 1 — Next.js frontend** (from the repo root):
+```bash
+pnpm dev   # starts on http://localhost:3000
+```
+
+**Terminal 2 — Electrobun shell** (from `electrobun/`):
+```bash
+bun start  # builds then launches the native window
+```
+
+The native window will load `http://localhost:3000` automatically. A white screen means the Next.js server is not yet running.
+
+> **Note:** `bun start` builds the Bun main-process bundle and native wrapper each time. First cold build takes ~30s; subsequent runs are faster.
+
 ## Running Tests
 
 ```bash
