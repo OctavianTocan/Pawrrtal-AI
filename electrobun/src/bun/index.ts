@@ -172,13 +172,45 @@ win = new BrowserWindow({
 	title: 'Pawrrtal',
 	url: 'views://splash/index.html',
 	frame: { width: 1280, height: 820 },
+	// hiddenInset: traffic lights float over the content area.
+	// trafficLightOffset moves them down so they sit inside the nav bar
+	// without clipping the buttons on the left.
 	titleBarStyle: 'hiddenInset',
+	trafficLightOffset: { x: 10, y: 16 },
 	rpc,
 });
 
 setPromptFn((request) => {
 	win?.webview.rpc.send.permissionsPrompt(request);
 });
+
+// ─── Drag region injection ─────────────────────────────────────────────────
+// Electrobun's drag-region preload activates on the CSS class
+// `.electrobun-webkit-app-region-drag`.  We inject it onto the top nav
+// after every navigation so the title bar stays draggable across
+// client-side route changes (Next.js soft navigations fire did-navigate-in-page).
+
+const INJECT_DRAG_REGION = `
+(function () {
+  var nav = document.querySelector('header')
+          || document.querySelector('nav')
+          || document.querySelector('[role="navigation"]');
+  if (!nav) return;
+  nav.classList.add('electrobun-webkit-app-region-drag');
+  // Keep buttons/links/inputs clickable — exclude them from the drag zone.
+  nav.querySelectorAll('button, a, input, select, textarea, [role="button"]')
+    .forEach(function (el) {
+      el.classList.add('electrobun-webkit-app-region-no-drag');
+    });
+})();
+`;
+
+function injectDragRegion() {
+	win?.webview.executeJavascript(INJECT_DRAG_REGION);
+}
+
+win.webview.on('did-navigate', () => { injectDragRegion(); });
+win.webview.on('did-navigate-in-page', () => { injectDragRegion(); });
 
 // Handle custom menu actions.
 ApplicationMenu.on('application-menu-clicked', (event: unknown) => {
