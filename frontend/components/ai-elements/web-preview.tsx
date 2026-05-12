@@ -8,7 +8,7 @@
 
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, use, useEffect, useReducer, useState } from 'react';
+import { createContext, use, useReducer, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -118,14 +118,20 @@ export const WebPreviewNavigationButton = ({
 
 export type WebPreviewUrlProps = ComponentProps<typeof Input>;
 
-export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPreviewUrlProps) => {
-	const { url, setUrl } = useWebPreview();
-	const [inputValue, setInputValue] = useState(url);
+type WebPreviewUrlInputProps = WebPreviewUrlProps & {
+	url: string;
+	setUrl: (url: string) => void;
+};
 
-	// Sync input value with context URL when it changes externally
-	useEffect(() => {
-		setInputValue(url);
-	}, [url]);
+const WebPreviewUrlInput = ({
+	value,
+	onChange,
+	onKeyDown,
+	url,
+	setUrl,
+	...props
+}: WebPreviewUrlInputProps) => {
+	const [inputValue, setInputValue] = useReducer(replaceStringState, url);
 
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		setInputValue(event.target.value);
@@ -150,6 +156,12 @@ export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPrevi
 			{...props}
 		/>
 	);
+};
+
+export const WebPreviewUrl = (props: WebPreviewUrlProps) => {
+	const { url, setUrl } = useWebPreview();
+
+	return <WebPreviewUrlInput key={url} url={url} setUrl={setUrl} {...props} />;
 };
 
 export type WebPreviewBodyProps = ComponentProps<'iframe'> & {
