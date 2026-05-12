@@ -12,20 +12,13 @@
 import { mkdirSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 // We need to reset the module-level cache between tests.
 // Use vi.resetModules() + dynamic re-import to get a fresh module.
 // Simpler approach: just call _resetCacheForTests() between each test.
 
-import {
-	_resetCacheForTests,
-	addRoot,
-	ensureDefaultWorkspaceRoot,
-	listRoots,
-	removeRoot,
-	validateFilePath,
-} from './workspace';
+import { _resetCacheForTests, addRoot, listRoots, removeRoot, validateFilePath } from './workspace';
 
 // The workspace module uses createStore internally. We patch it so the
 // store writes into a temp directory and doesn't pollute ~/Library.
@@ -39,7 +32,10 @@ let tmpWorkspace: string;
 let tmpOtherDir: string;
 
 beforeEach(() => {
-	const base = path.join(tmpdir(), `pawrrtal-ws-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	const base = path.join(
+		tmpdir(),
+		`pawrrtal-ws-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+	);
 	tmpWorkspace = path.join(base, 'workspace');
 	tmpOtherDir = path.join(base, 'other');
 	mkdirSync(tmpWorkspace, { recursive: true });

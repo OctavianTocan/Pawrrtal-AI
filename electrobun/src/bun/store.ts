@@ -26,12 +26,15 @@ export function getDataDir(): string {
 		case 'darwin':
 			return path.join(home, 'Library', 'Application Support', 'Pawrrtal');
 		case 'win32':
-			return path.join(process.env['APPDATA'] ?? path.join(home, 'AppData', 'Roaming'), 'Pawrrtal');
+			return path.join(
+				process.env.APPDATA ?? path.join(home, 'AppData', 'Roaming'),
+				'Pawrrtal'
+			);
 		default:
 			// Linux / BSD — follow XDG
 			return path.join(
-				process.env['XDG_DATA_HOME'] ?? path.join(home, '.local', 'share'),
-				'Pawrrtal',
+				process.env.XDG_DATA_HOME ?? path.join(home, '.local', 'share'),
+				'Pawrrtal'
 			);
 	}
 }

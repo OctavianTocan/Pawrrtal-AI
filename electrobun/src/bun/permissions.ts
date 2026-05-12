@@ -140,7 +140,7 @@ function promptWebview(details: PromptDetails): Promise<PromptResponse> {
 			clearTimeout(timeout);
 			resolve(response);
 		});
-		_sendPrompt!(request);
+		_sendPrompt?.(request);
 	});
 }
 

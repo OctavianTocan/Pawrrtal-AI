@@ -12,10 +12,15 @@
  *     with the Bun runtime Electrobun ships.
  */
 
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-import type { Result, RunRequest, RunResult, ShellStreamEnd, ShellStreamEvent } from '../../shared/rpc-types';
+import type {
+	Result,
+	RunRequest,
+	RunResult,
+	ShellStreamEnd,
+	ShellStreamEvent,
+} from '../../shared/rpc-types';
 import { requestPermission } from '../permissions';
 import { validateFilePath } from '../workspace';
 
@@ -30,22 +35,19 @@ export async function handleShellRun(request: RunRequest): Promise<Result<RunRes
 
 	const decision = await requestPermission({
 		op: 'shell:run',
-		subject: `${request.command}${request.args ? ' ' + request.args.join(' ') : ''}`,
+		subject: `${request.command}${request.args ? ` ${request.args.join(' ')}` : ''}`,
 		rootId: cwdValidated.root,
 		context: { cwd: request.cwd },
 	});
 	if (decision === 'deny') return { ok: false, reason: 'Permission denied by user.' };
 
 	try {
-		const proc = Bun.spawn(
-			[request.command, ...(request.args ?? [])],
-			{
-				cwd: cwdValidated.resolvedPath,
-				env: { ...process.env, ...(request.env ?? {}) },
-				stdout: 'pipe',
-				stderr: 'pipe',
-			},
-		);
+		const proc = Bun.spawn([request.command, ...(request.args ?? [])], {
+			cwd: cwdValidated.resolvedPath,
+			env: { ...process.env, ...(request.env ?? {}) },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
 
 		const timeoutMs = request.timeoutMs ?? 60_000;
 		let timedOut = false;
@@ -76,14 +78,14 @@ export async function handleShellRun(request: RunRequest): Promise<Result<RunRes
 export async function handleShellSpawnStreaming(
 	request: RunRequest,
 	onStream: (event: ShellStreamEvent) => void,
-	onEnd: (event: ShellStreamEnd) => void,
+	onEnd: (event: ShellStreamEnd) => void
 ): Promise<Result<{ jobId: string }>> {
 	const cwdValidated = validateFilePath(request.cwd);
 	if (!cwdValidated.ok) return cwdValidated;
 
 	const decision = await requestPermission({
 		op: 'shell:spawn',
-		subject: `${request.command}${request.args ? ' ' + request.args.join(' ') : ''}`,
+		subject: `${request.command}${request.args ? ` ${request.args.join(' ')}` : ''}`,
 		rootId: cwdValidated.root,
 		context: { cwd: request.cwd },
 	});
@@ -91,33 +93,28 @@ export async function handleShellSpawnStreaming(
 
 	const jobId = randomUUID();
 	try {
-		const proc = Bun.spawn(
-			[request.command, ...(request.args ?? [])],
-			{
-				cwd: cwdValidated.resolvedPath,
-				env: { ...process.env, ...(request.env ?? {}) },
-				stdout: 'pipe',
-				stderr: 'pipe',
-			},
-		);
+		const proc = Bun.spawn([request.command, ...(request.args ?? [])], {
+			cwd: cwdValidated.resolvedPath,
+			env: { ...process.env, ...(request.env ?? {}) },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
 		streamingJobs.set(jobId, proc);
 
 		// Stream stdout
-		streamLines(proc.stdout, (line) =>
-			onStream({ jobId, channel: 'stdout', line }),
-		);
+		streamLines(proc.stdout, (line) => onStream({ jobId, channel: 'stdout', line }));
 		// Stream stderr
-		streamLines(proc.stderr, (line) =>
-			onStream({ jobId, channel: 'stderr', line }),
-		);
+		streamLines(proc.stderr, (line) => onStream({ jobId, channel: 'stderr', line }));
 		// On exit, send the end event.
-		proc.exited.then((exitCode) => {
-			streamingJobs.delete(jobId);
-			onEnd({ jobId, exitCode });
-		}).catch((error) => {
-			streamingJobs.delete(jobId);
-			onEnd({ jobId, exitCode: null, error: stringifyError(error) });
-		});
+		proc.exited
+			.then((exitCode) => {
+				streamingJobs.delete(jobId);
+				onEnd({ jobId, exitCode });
+			})
+			.catch((error) => {
+				streamingJobs.delete(jobId);
+				onEnd({ jobId, exitCode: null, error: stringifyError(error) });
+			});
 
 		return { ok: true, jobId };
 	} catch (error) {
@@ -147,16 +144,18 @@ async function readAll(stream: ReadableStream<Uint8Array> | null): Promise<strin
 
 async function streamLines(
 	stream: ReadableStream<Uint8Array> | null,
-	onLine: (line: string) => void,
+	onLine: (line: string) => void
 ): Promise<void> {
 	if (!stream) return;
 	let buffer = '';
 	for await (const chunk of stream) {
 		buffer += new TextDecoder().decode(chunk);
 		let nl: number;
-		while ((nl = buffer.indexOf('\n')) !== -1) {
+		nl = buffer.indexOf('\n');
+		while (nl !== -1) {
 			onLine(buffer.slice(0, nl));
 			buffer = buffer.slice(nl + 1);
+			nl = buffer.indexOf('\n');
 		}
 	}
 	if (buffer.length > 0) onLine(buffer);
