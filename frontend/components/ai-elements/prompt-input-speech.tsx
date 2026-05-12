@@ -82,7 +82,7 @@ export const PromptInputSpeechButton = ({
 	...props
 }: PromptInputSpeechButtonProps) => {
 	const [isListening, setIsListening] = useState(false);
-	const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+	const [isSpeechSupported, setIsSpeechSupported] = useState(false);
 	const recognitionRef = useRef<SpeechRecognition | null>(null);
 
 	useEffect(() => {
@@ -131,7 +131,7 @@ export const PromptInputSpeechButton = ({
 			};
 
 			recognitionRef.current = speechRecognition;
-			setRecognition(speechRecognition);
+			setIsSpeechSupported(true);
 		}
 
 		return () => {
@@ -142,6 +142,7 @@ export const PromptInputSpeechButton = ({
 	}, [textareaRef, onTranscriptionChange]);
 
 	const toggleListening = useCallback(() => {
+		const recognition = recognitionRef.current;
 		if (!recognition) {
 			return;
 		}
@@ -151,7 +152,7 @@ export const PromptInputSpeechButton = ({
 		} else {
 			recognition.start();
 		}
-	}, [recognition, isListening]);
+	}, [isListening]);
 
 	return (
 		<PromptInputButton
@@ -160,7 +161,7 @@ export const PromptInputSpeechButton = ({
 				isListening && 'animate-pulse bg-accent text-accent-foreground',
 				className
 			)}
-			disabled={!recognition}
+			disabled={!isSpeechSupported}
 			onClick={toggleListening}
 			{...props}
 		>

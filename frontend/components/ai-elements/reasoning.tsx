@@ -9,7 +9,7 @@
 import { useControllableState } from '@radix-ui/react-use-controllable-state';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, memo, use, useEffect, useState } from 'react';
+import { createContext, memo, use, useEffect, useRef } from 'react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -64,33 +64,33 @@ export const Reasoning = memo(
 			defaultProp: undefined,
 		});
 
-		const [hasAutoClosed, setHasAutoClosed] = useState(false);
-		const [startTime, setStartTime] = useState<number | null>(null);
+		const hasAutoClosedRef = useRef(false);
+		const startTimeRef = useRef<number | null>(null);
 
 		// Track duration when streaming starts and ends
 		useEffect(() => {
 			if (isStreaming) {
-				if (startTime === null) {
-					setStartTime(Date.now());
+				if (startTimeRef.current === null) {
+					startTimeRef.current = Date.now();
 				}
-			} else if (startTime !== null) {
-				setDuration(Math.ceil((Date.now() - startTime) / MS_IN_S));
-				setStartTime(null);
+			} else if (startTimeRef.current !== null) {
+				setDuration(Math.ceil((Date.now() - startTimeRef.current) / MS_IN_S));
+				startTimeRef.current = null;
 			}
-		}, [isStreaming, startTime, setDuration]);
+		}, [isStreaming, setDuration]);
 
 		// Auto-open when streaming starts, auto-close when streaming ends (once only)
 		useEffect(() => {
-			if (defaultOpen && !isStreaming && isOpen && !hasAutoClosed) {
+			if (defaultOpen && !isStreaming && isOpen && !hasAutoClosedRef.current) {
 				// Add a small delay before closing to allow user to see the content
 				const timer = setTimeout(() => {
 					setIsOpen(false);
-					setHasAutoClosed(true);
+					hasAutoClosedRef.current = true;
 				}, AUTO_CLOSE_DELAY);
 
 				return () => clearTimeout(timer);
 			}
-		}, [isStreaming, isOpen, defaultOpen, setIsOpen, hasAutoClosed]);
+		}, [isStreaming, isOpen, defaultOpen, setIsOpen]);
 
 		const handleOpenChange = (newOpen: boolean) => {
 			setIsOpen(newOpen);
