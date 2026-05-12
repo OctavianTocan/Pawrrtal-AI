@@ -40,15 +40,20 @@ export function StepMessaging({
 	const [serverTelegramConnected, setServerTelegramConnected] = useState(false);
 
 	const refreshTelegramSnapshot = useCallback(async (): Promise<void> => {
+		let hasServerTelegramConnection = false;
 		try {
 			const rows = await listChannels();
-			setServerTelegramConnected(rows.some((row) => row.provider === 'telegram'));
+			hasServerTelegramConnection = rows.some((row) => row.provider === 'telegram');
+			setServerTelegramConnected(hasServerTelegramConnection);
 		} catch {
 			setServerTelegramConnected(false);
 		} finally {
 			setChannelsReady(true);
 		}
-	}, []);
+		if (hasServerTelegramConnection && !connected.includes('telegram')) {
+			onPatch({ connectedChannels: [...connected, 'telegram'] });
+		}
+	}, [connected, onPatch]);
 
 	useEffect(() => {
 		if (telegramDialogOpen) return;
@@ -56,12 +61,6 @@ export function StepMessaging({
 	}, [telegramDialogOpen, refreshTelegramSnapshot]);
 
 	const hasOne = connected.length > 0 || serverTelegramConnected;
-
-	useEffect(() => {
-		if (!channelsReady || !serverTelegramConnected) return;
-		if (connected.includes('telegram')) return;
-		onPatch({ connectedChannels: [...connected, 'telegram'] });
-	}, [channelsReady, serverTelegramConnected, connected, onPatch]);
 
 	const markChannelConnected = (id: MessagingChannelId): void => {
 		if (connected.includes(id)) return;
