@@ -59,25 +59,17 @@ export const Reasoning = memo(
 			defaultProp: defaultOpen,
 			onChange: onOpenChange,
 		});
-		const [duration, setDuration] = useControllableState({
-			prop: durationProp,
-			defaultProp: undefined,
-		});
-
 		const hasAutoClosedRef = useRef(false);
+		const durationRef = useRef<number | undefined>(undefined);
 		const startTimeRef = useRef<number | null>(null);
-
-		// Track duration when streaming starts and ends
-		useEffect(() => {
-			if (isStreaming) {
-				if (startTimeRef.current === null) {
-					startTimeRef.current = Date.now();
-				}
-			} else if (startTimeRef.current !== null) {
-				setDuration(Math.ceil((Date.now() - startTimeRef.current) / MS_IN_S));
-				startTimeRef.current = null;
-			}
-		}, [isStreaming, setDuration]);
+		if (isStreaming && startTimeRef.current === null) {
+			startTimeRef.current = Date.now();
+		}
+		if (!isStreaming && startTimeRef.current !== null) {
+			durationRef.current = Math.ceil((Date.now() - startTimeRef.current) / MS_IN_S);
+			startTimeRef.current = null;
+		}
+		const duration = durationProp ?? durationRef.current;
 
 		// Auto-open when streaming starts, auto-close when streaming ends (once only)
 		useEffect(() => {

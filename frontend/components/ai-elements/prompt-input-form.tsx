@@ -263,18 +263,25 @@ const usePromptInputAttachmentState = ({
 	const openFileDialog = usingProvider
 		? controller.attachments.openFileDialog
 		: () => inputRef.current?.click();
-
-	useEffect(() => {
-		if (usingProvider) {
-			controller.__registerFileInput(inputRef, () => inputRef.current?.click());
-		}
-	}, [usingProvider, controller, inputRef]);
-
-	useEffect(() => {
-		if (syncHiddenInput && inputRef.current && files.length === 0) {
+	const clearHiddenInput = useCallback((): void => {
+		if (syncHiddenInput && inputRef.current) {
 			inputRef.current.value = '';
 		}
-	}, [files, inputRef, syncHiddenInput]);
+	}, [inputRef, syncHiddenInput]);
+	const removeAndSyncInput = useCallback(
+		(id: string): void => {
+			const removesLastFile = filesRef.current.length === 1 && filesRef.current[0]?.id === id;
+			remove(id);
+			if (removesLastFile) {
+				clearHiddenInput();
+			}
+		},
+		[clearHiddenInput, remove]
+	);
+	const clearAndSyncInput = useCallback((): void => {
+		clear();
+		clearHiddenInput();
+	}, [clear, clearHiddenInput]);
 
 	useDocumentDropTarget({ add, globalDrop });
 	useEffect(() => {
@@ -289,12 +296,12 @@ const usePromptInputAttachmentState = ({
 		() => ({
 			files: files.map((item) => ({ ...item, id: item.id })),
 			add,
-			remove,
-			clear,
+			remove: removeAndSyncInput,
+			clear: clearAndSyncInput,
 			openFileDialog,
 			fileInputRef: inputRef,
 		}),
-		[files, add, remove, clear, openFileDialog, inputRef]
+		[files, add, removeAndSyncInput, clearAndSyncInput, openFileDialog, inputRef]
 	);
 
 	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
@@ -328,7 +335,7 @@ const usePromptInputAttachmentState = ({
 		ingestSelectedFiles,
 		handleFormDragOver,
 		handleFormDrop,
-		clear,
+		clear: clearAndSyncInput,
 	};
 };
 
@@ -416,6 +423,15 @@ export const PromptInput = ({
 		onSubmit,
 		usingProvider,
 	});
+	const setInputNode = useCallback(
+		(node: HTMLInputElement | null): void => {
+			inputRef.current = node;
+			if (usingProvider) {
+				controller?.__registerFileInput(inputRef, () => inputRef.current?.click());
+			}
+		},
+		[controller, usingProvider]
+	);
 
 	const inner = (
 		<>
@@ -425,7 +441,7 @@ export const PromptInput = ({
 				className="hidden"
 				multiple={multiple}
 				onChange={ingestSelectedFiles}
-				ref={inputRef}
+				ref={setInputNode}
 				title="Upload files"
 				type="file"
 			/>
