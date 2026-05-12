@@ -2,7 +2,7 @@
 
 import { ArrowRight, CheckCircle2Icon, CloudIcon, ServerIcon } from 'lucide-react';
 import type * as React from 'react';
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useId, useReducer } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PersonalizationProfile } from '@/features/personalization/storage';
@@ -18,6 +18,44 @@ export interface StepServerProps {
 }
 
 type ServerMode = 'hosted' | 'self-hosted';
+
+interface StepServerState {
+	mode: ServerMode;
+	url: string;
+	urlError: string | null;
+	verified: boolean;
+	verifying: boolean;
+}
+
+type StepServerAction =
+	| { type: 'mode-selected'; mode: ServerMode }
+	| { type: 'url-changed'; url: string }
+	| { type: 'verification-failed'; message: string }
+	| { type: 'verification-started' }
+	| { type: 'verification-succeeded' }
+	| { type: 'verification-stopped' };
+
+function stepServerReducer(state: StepServerState, action: StepServerAction): StepServerState {
+	if (action.type === 'mode-selected') {
+		return { ...state, mode: action.mode, urlError: null, verified: false };
+	}
+	if (action.type === 'url-changed') {
+		return { ...state, url: action.url, urlError: null, verified: false };
+	}
+	if (action.type === 'verification-failed') {
+		return { ...state, urlError: action.message, verified: false };
+	}
+	if (action.type === 'verification-started') {
+		return { ...state, urlError: null, verifying: true };
+	}
+	if (action.type === 'verification-succeeded') {
+		return { ...state, verified: true };
+	}
+	if (action.type === 'verification-stopped') {
+		return { ...state, verifying: false };
+	}
+	return state;
+}
 
 /**
  * Validates that a URL string is an http/https URL pointing at a non-localhost
@@ -200,46 +238,51 @@ export function StepServer({
 	onSkip,
 }: StepServerProps): React.JSX.Element {
 	const serverUrlId = useId();
-	const [mode, setMode] = useState<ServerMode>(() =>
-		profile.remoteServerUrl ? 'self-hosted' : 'hosted'
+	const [state, dispatchStepServer] = useReducer(
+		stepServerReducer,
+		null,
+		(): StepServerState => ({
+			mode: profile.remoteServerUrl ? 'self-hosted' : 'hosted',
+			url: profile.remoteServerUrl ?? '',
+			urlError: null,
+			verified: false,
+			verifying: false,
+		})
 	);
-	const [url, setUrl] = useState<string>(profile.remoteServerUrl ?? '');
-	const [urlError, setUrlError] = useState<string | null>(null);
-	const [verified, setVerified] = useState(false);
-	const [verifying, setVerifying] = useState(false);
+	const { mode, url, urlError, verified, verifying } = state;
 
 	const handleModeSelect = useCallback((next: ServerMode) => {
-		setMode(next);
-		setUrlError(null);
-		setVerified(false);
+		dispatchStepServer({ type: 'mode-selected', mode: next });
 	}, []);
 
 	const handleVerify = useCallback(async () => {
 		const error = validateServerUrl(url);
 		if (error) {
-			setUrlError(error);
+			dispatchStepServer({ type: 'verification-failed', message: error });
 			return;
 		}
-		setUrlError(null);
-		setVerifying(true);
+		dispatchStepServer({ type: 'verification-started' });
 		try {
 			// Ping the health endpoint — a 200 with any body is enough.
 			const res = await fetch(`${url.trim()}/api/v1/health`, {
 				signal: AbortSignal.timeout(6000),
 			});
 			if (res.ok || res.status < 500) {
-				setVerified(true);
+				dispatchStepServer({ type: 'verification-succeeded' });
 			} else {
-				setUrlError(
-					`Server responded with HTTP ${res.status}. Check the URL and try again.`
-				);
+				dispatchStepServer({
+					type: 'verification-failed',
+					message: `Server responded with HTTP ${res.status}. Check the URL and try again.`,
+				});
 			}
 		} catch {
-			setUrlError(
-				'Could not reach the server. Check the URL, your network, or the server logs.'
-			);
+			dispatchStepServer({
+				type: 'verification-failed',
+				message:
+					'Could not reach the server. Check the URL, your network, or the server logs.',
+			});
 		} finally {
-			setVerifying(false);
+			dispatchStepServer({ type: 'verification-stopped' });
 		}
 	}, [url]);
 
@@ -252,7 +295,7 @@ export function StepServer({
 		// Self-hosted path: validate before proceeding.
 		const error = validateServerUrl(url);
 		if (error) {
-			setUrlError(error);
+			dispatchStepServer({ type: 'verification-failed', message: error });
 			return;
 		}
 		onPatch({ remoteServerUrl: url.trim() });
@@ -298,9 +341,7 @@ export function StepServer({
 						verified={verified}
 						verifying={verifying}
 						onUrlChange={(next) => {
-							setUrl(next);
-							setUrlError(null);
-							setVerified(false);
+							dispatchStepServer({ type: 'url-changed', url: next });
 						}}
 						onVerify={handleVerify}
 					/>
