@@ -30,6 +30,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+const DEFAULT_OPEN_IN_TRIGGER = (
+	<Button type="button" variant="outline">
+		Open in chat
+		<ChevronDownIcon className="size-4" />
+	</Button>
+);
+
 const providers = {
 	github: {
 		title: 'Open in GitHub',
@@ -246,13 +253,6 @@ export const OpenIn = ({ query, children, className }: OpenInProps) => {
 		}
 	});
 
-	const defaultTrigger = (
-		<Button type="button" variant="outline">
-			Open in chat
-			<ChevronDownIcon className="size-4" />
-		</Button>
-	);
-
 	return (
 		<OpenInContext.Provider value={{ query }}>
 			<DropdownPanelMenu
@@ -261,7 +261,7 @@ export const OpenIn = ({ query, children, className }: OpenInProps) => {
 				align="start"
 				className={className}
 				contentClassName={cn('popover-styled p-1 w-[240px]')}
-				trigger={triggerNode ?? defaultTrigger}
+				trigger={triggerNode ?? DEFAULT_OPEN_IN_TRIGGER}
 			>
 				{contentNode}
 			</DropdownPanelMenu>
