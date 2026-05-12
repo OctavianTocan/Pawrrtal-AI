@@ -153,7 +153,7 @@ const FUNCTION_KINDS = new Set([
 
 /** Best-effort name for a function-like node. */
 function functionName(node, parent) {
-	if (node.name && node.name.escapedText) return String(node.name.escapedText);
+	if (node.name?.escapedText) return String(node.name.escapedText);
 	// Arrow / function expression assigned to a variable: `const foo = () => {}`.
 	if (parent && parent.kind === ts.SyntaxKind.VariableDeclaration && parent.name) {
 		return String(parent.name.escapedText ?? parent.name.getText?.() ?? '<anonymous>');
