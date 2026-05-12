@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { useCallback, useEffect, useId, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useReducer, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import { OnboardingCreateWorkspaceStep } from '@/features/onboarding/onboarding-create-workspace-step';
@@ -13,7 +13,40 @@ type OnboardingStep = 'welcome' | 'create' | 'local';
 
 /** Browser event used by app chrome to reopen the cosmetic onboarding flow. */
 export const OPEN_ONBOARDING_EVENT = 'pawrrtal:open-onboarding';
-const replaceOpenState = (_current: boolean, next: boolean): boolean => next;
+
+type OnboardingModalState = {
+	open: boolean;
+	step: OnboardingStep;
+	folderLabel: string | null;
+};
+
+type OnboardingModalAction =
+	| { type: 'set-open'; open: boolean }
+	| { type: 'set-step'; step: OnboardingStep }
+	| { type: 'set-folder-label'; folderLabel: string }
+	| { type: 'restart' };
+
+const createInitialState = (open: boolean): OnboardingModalState => ({
+	open,
+	step: 'welcome',
+	folderLabel: null,
+});
+
+const onboardingModalReducer = (
+	state: OnboardingModalState,
+	action: OnboardingModalAction
+): OnboardingModalState => {
+	switch (action.type) {
+		case 'set-open':
+			return { ...state, open: action.open };
+		case 'set-step':
+			return { ...state, step: action.step };
+		case 'set-folder-label':
+			return { ...state, folderLabel: action.folderLabel };
+		case 'restart':
+			return { open: true, step: 'welcome', folderLabel: null };
+	}
+};
 
 /** Props for the onboarding modal host. */
 export interface OnboardingModalProps {
@@ -33,12 +66,11 @@ export function OnboardingModal({
 }: OnboardingModalProps): React.JSX.Element {
 	const folderInputRef = useRef<HTMLInputElement>(null);
 	const folderInputId = useId();
-	const [open, setOpen] = useReducer(replaceOpenState, initialOpen);
-	const [step, setStep] = useState<OnboardingStep>('welcome');
-	const [folderLabel, setFolderLabel] = useState<string | null>(null);
+	const [state, dispatch] = useReducer(onboardingModalReducer, initialOpen, createInitialState);
+	const { open, step, folderLabel } = state;
 
 	const handleOpenChange = useCallback((next: boolean) => {
-		setOpen(next);
+		dispatch({ type: 'set-open', open: next });
 	}, []);
 
 	const handleFolderChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +81,10 @@ export function OnboardingModal({
 		}
 		const relative = first.webkitRelativePath;
 		const nameFromPath = relative.includes('/') ? relative.split('/')[0] : null;
-		setFolderLabel(nameFromPath ?? first.name ?? 'Selected folder');
+		dispatch({
+			type: 'set-folder-label',
+			folderLabel: nameFromPath ?? first.name ?? 'Selected folder',
+		});
 	}, []);
 
 	const handleSelectFolderClick = useCallback(() => {
@@ -57,7 +92,7 @@ export function OnboardingModal({
 	}, []);
 
 	const handleFinish = useCallback(() => {
-		setOpen(false);
+		dispatch({ type: 'set-open', open: false });
 	}, []);
 
 	useEffect(() => {
@@ -65,11 +100,7 @@ export function OnboardingModal({
 			return undefined;
 		}
 
-		const handleOpenOnboarding = (): void => {
-			setStep('welcome');
-			setFolderLabel(null);
-			setOpen(true);
-		};
+		const handleOpenOnboarding = (): void => dispatch({ type: 'restart' });
 
 		window.addEventListener(OPEN_ONBOARDING_EVENT, handleOpenOnboarding);
 
@@ -97,12 +128,14 @@ export function OnboardingModal({
 				<OnboardingBackdrop />
 				<div className="relative z-10 grid min-h-[100dvh] place-items-center px-5 py-20 sm:px-8">
 					{step === 'welcome' ? (
-						<OnboardingWelcomeStep onContinue={() => setStep('create')} />
+						<OnboardingWelcomeStep
+							onContinue={() => dispatch({ type: 'set-step', step: 'create' })}
+						/>
 					) : null}
 					{step === 'create' ? (
 						<OnboardingCreateWorkspaceStep
-							onPickLocal={() => setStep('local')}
-							onClose={() => setOpen(false)}
+							onPickLocal={() => dispatch({ type: 'set-step', step: 'local' })}
+							onClose={() => dispatch({ type: 'set-open', open: false })}
 						/>
 					) : null}
 					{step === 'local' ? (
@@ -112,7 +145,7 @@ export function OnboardingModal({
 							folderLabel={folderLabel}
 							onFolderChange={handleFolderChange}
 							onSelectFolderClick={handleSelectFolderClick}
-							onBack={() => setStep('create')}
+							onBack={() => dispatch({ type: 'set-step', step: 'create' })}
 							onFinish={handleFinish}
 						/>
 					) : null}
