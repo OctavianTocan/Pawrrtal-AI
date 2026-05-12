@@ -156,6 +156,12 @@ class Settings(BaseSettings):
             if addr.strip()
         )
 
+    # Per-user chat rate limit (requests per 60-second rolling window).
+    # Zero disables the limit entirely — useful for local dev.  Production
+    # deployments should pick a value that matches the operator's monthly
+    # token budget divided by expected request count.
+    chat_rate_limit_per_minute: int = 0
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:
