@@ -29,8 +29,8 @@ hardening you can defer.
 7. [First boot](#7-first-boot-required)
 8. [Configure Google OAuth](#8-configure-google-oauth-optional-but-recommended)
 9. [Telegram channel](#9-telegram-channel-optional)
-10. [Backups](#10-backups-required-before-real-use)
-11. [Monitoring](#11-monitoring-optional)
+10. [Backups](#10-backups-skip)
+11. [Monitoring — OpenTelemetry traces](#11-monitoring--opentelemetry-traces-required)
 12. [Updating](#12-updating)
 13. [Disaster recovery](#13-disaster-recovery)
 14. [Troubleshooting](#14-troubleshooting)
@@ -319,64 +319,92 @@ TELEGRAM_WEBHOOK_URL=https://pawrrtal.your-domain.com/api/v1/telegram/webhook
 TELEGRAM_WEBHOOK_SECRET=<generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))">
 ```
 
-## 10. Backups (REQUIRED before real use)
+## 10. Backups (SKIP)
 
-Two volumes hold all state:
+Tavi has explicitly opted out of automated backups for the current
+deploy shape.  Conversations and workspace files live in their
+respective Docker volumes (`postgres_data`, `workspace_data`).  If
+those disappear, the deploy starts over from empty.  Accept the risk
+or revisit this section later — don't half-build it.
 
-- `postgres_data` — every conversation, user, channel binding, etc.
-- `workspace_data` — every user's workspace files, including
-  `preferences.toml`, encrypted `.env` overrides, generated artifacts.
+## 11. Monitoring — OpenTelemetry traces (REQUIRED)
 
-If both are lost, the deploy is gone.  Plan accordingly.
+Pawrrtal emits OpenTelemetry traces for every HTTP request,
+SQLAlchemy query, and outbound httpx call (Claude / Gemini / Codex /
+Telegram / OAuth providers).  Enabling tracing is a one-env-var swap.
 
-### Quick nightly cron (host-side)
+### Pick a backend
 
-```bash
-sudo tee /usr/local/bin/pawrrtal-backup > /dev/null <<'EOF'
-#!/bin/bash
-set -euo pipefail
-TS=$(date +%Y%m%d_%H%M%S)
-DEST=/var/backups/pawrrtal
-mkdir -p "$DEST"
-cd /opt/pawrrtal
-docker compose exec -T postgres pg_dump -U nexus nexus | gzip > "$DEST/postgres_$TS.sql.gz"
-docker run --rm -v pawrrtal_workspace_data:/data -v "$DEST":/backup alpine \
-    tar czf "/backup/workspace_$TS.tar.gz" -C /data .
-# Keep 14 days
-find "$DEST" -mtime +14 -delete
-EOF
-sudo chmod +x /usr/local/bin/pawrrtal-backup
-sudo crontab -e   # add: 0 3 * * * /usr/local/bin/pawrrtal-backup
+Any OTLP/HTTP-compatible backend works.  Common picks:
+
+- **Grafana Cloud** — generous free tier, OTel-native.  Sign up at
+  grafana.com, create an OTel connection, copy the endpoint + auth
+  header.  Same backend PR #155's Sigil instrumentation publishes to.
+- **Honeycomb** — best UX for slow-request triage.  Free tier covers
+  a small private deploy comfortably.
+- **Self-hosted Jaeger / Tempo / SigNoz** — if you don't want a
+  third-party in the path.  Stand it up as another Docker service.
+
+### Configure
+
+Add to `backend/.env`:
+
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-eu-west-2.grafana.net/otlp
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-of-instance:token>
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_SERVICE_NAME=pawrrtal-backend
 ```
 
-### Offsite
+`OTEL_EXPORTER_OTLP_HEADERS` value is URL-encoded comma-separated
+`key=value` pairs.  Most vendors give you the exact string to paste.
 
-Push `/var/backups/pawrrtal/` to S3 / Backblaze / Hetzner Storage Box
-nightly with `rclone sync`.  Local-only backups don't survive a VPS
-loss.
+Restart the backend:
 
-### Restore drill
+```bash
+docker compose restart backend
+docker compose logs backend | grep TELEMETRY_ENABLED
+# TELEMETRY_ENABLED service=pawrrtal-backend endpoint=https://otlp-gateway-...
+```
 
-Do this **before** you have real data.  Spin up a second clean VPS,
-restore the latest dump, confirm logins still work.  If you don't
-test the restore, you don't have backups.
+### What you'll see
 
-## 11. Monitoring (OPTIONAL)
+Every chat request produces a trace tree like:
 
-Minimum viable observability for a private deploy:
+```
+POST /api/v1/chat/                       (FastAPI span, ~3.4 s)
+├─ SELECT conversations ...               (SQLAlchemy span, 4 ms)
+├─ INSERT chat_messages ...               (SQLAlchemy span, 6 ms)
+├─ POST anthropic.com/v1/messages         (httpx span, 3.1 s)
+│  └─ stream chunks (provider-internal)
+└─ UPDATE chat_messages SET content=...   (SQLAlchemy span, 5 ms)
+```
 
-- **Liveness:** Uptime Robot / Better Stack hitting
-  `https://pawrrtal.your-domain.com/api/v1/health` every minute.
-- **Readiness:** same vendor hitting
-  `https://pawrrtal.your-domain.com/api/v1/health/ready` every 5
-  minutes (alerts when a provider key expires / DB dies).
-- **Logs:** if you want shipping rather than `docker compose logs`,
-  the simplest path is the `loki-docker-driver` Docker plugin →
-  Grafana Cloud's free tier.  Configure in `daemon.json`.
+The FastAPI root span carries semantic attributes set in the chat
+router: `pawrrtal.user_id`, `pawrrtal.conversation_id`,
+`pawrrtal.model_id`, `pawrrtal.surface`, `pawrrtal.question_len`,
+`pawrrtal.request_id`.  Search by any of those to find the trace for
+a specific user / conversation / model.
 
-PR #155 has a more ambitious Grafana + OTLP observability path —
-optional for a private deploy, recommended once you grow past 2-3
-users.
+Log lines are auto-correlated: every `logger.info(...)` call inside
+a traced request gets the `trace_id` + `span_id` injected so the
+backend can join traces to logs in one view.
+
+### Liveness / readiness still useful
+
+Tracing covers per-request observability but doesn't replace simple
+uptime probes.  Set up either:
+
+- Uptime Robot / Better Stack hitting `/api/v1/health` every minute
+  (liveness) + `/api/v1/health/ready` every 5 minutes (alerts when a
+  provider key expires / DB dies).
+- Or alerts directly off the OTel backend (Grafana / Honeycomb both
+  support "trace count for `error_code != 0` over 5 min" rules).
+
+PR #155 layers AI-provider-specific Sigil instrumentation on top of
+the same OTel TracerProvider — once merged, you also get per-token
+generations + cost in the same trace view.  Optional for a Tier 1
+deploy.
 
 ## 12. Updating
 
@@ -517,7 +545,7 @@ deploy:
 - [ ] `docker compose up -d` boots cleanly
 - [ ] `/api/v1/health/ready` returns 200 with all checks green
 - [ ] One signup → one chat message → AI reply round-trip works
-- [ ] Nightly backup cron installed AND tested (restore drill)
+- [ ] `OTEL_EXPORTER_OTLP_ENDPOINT` + auth headers set, trace visible in your backend
 - [ ] Uptime Robot / equivalent monitoring `/health` every minute
 
 When all 10 boxes are checked, point Esther at the URL.
