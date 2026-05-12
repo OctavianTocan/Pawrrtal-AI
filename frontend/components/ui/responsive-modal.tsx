@@ -20,9 +20,13 @@
 
 import { BottomSheet, Modal, type ModalSize } from '@octavian-tocan/react-overlay';
 import type * as React from 'react';
-import { useLayoutEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+const subscribeToHydration = (): (() => void) => () => {};
+const getClientHydrationSnapshot = (): boolean => true;
+const getServerHydrationSnapshot = (): boolean => false;
 
 /**
  * Props accepted by {@link ResponsiveModal}.
@@ -106,13 +110,11 @@ export function ResponsiveModal({
 	const usesChromeSlots = header !== undefined || footerNode !== undefined;
 	// Mounting flag so we don't try to portal during SSR — `document` is
 	// undefined on the server and the first render has to match.
-	// `useLayoutEffect` (not `useEffect`) so the first client paint already
-	// uses `createPortal` — otherwise the desktop `Modal` renders one frame
-	// inside the sidebar and is clipped by `overflow` / stacking context.
-	const [isMounted, setIsMounted] = useState(false);
-	useLayoutEffect(() => {
-		setIsMounted(true);
-	}, []);
+	const isMounted = useSyncExternalStore(
+		subscribeToHydration,
+		getClientHydrationSnapshot,
+		getServerHydrationSnapshot
+	);
 
 	if (isMobile) {
 		const sheetDismiss = showDismissButton
