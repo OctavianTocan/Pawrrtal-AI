@@ -12,8 +12,8 @@ import {
 	type RefObject,
 	useCallback,
 	useEffect,
+	useReducer,
 	useRef,
-	useState,
 } from 'react';
 import { cn } from '@/lib/utils';
 import { PromptInputButton } from './prompt-input-layout';
@@ -68,6 +68,9 @@ declare global {
 	}
 }
 
+type SpeechStatus = 'unsupported' | 'idle' | 'listening';
+const replaceSpeechStatus = (_current: SpeechStatus, next: SpeechStatus): SpeechStatus => next;
+
 /** Props for the speech-recognition prompt input button. */
 export type PromptInputSpeechButtonProps = ComponentProps<typeof PromptInputButton> & {
 	textareaRef?: RefObject<HTMLTextAreaElement | null>;
@@ -81,9 +84,10 @@ export const PromptInputSpeechButton = ({
 	onTranscriptionChange,
 	...props
 }: PromptInputSpeechButtonProps) => {
-	const [isListening, setIsListening] = useState(false);
-	const [isSpeechSupported, setIsSpeechSupported] = useState(false);
+	const [speechStatus, dispatchSpeechStatus] = useReducer(replaceSpeechStatus, 'unsupported');
 	const recognitionRef = useRef<SpeechRecognition | null>(null);
+	const isListening = speechStatus === 'listening';
+	const isSpeechSupported = speechStatus !== 'unsupported';
 
 	useEffect(() => {
 		if (
@@ -98,11 +102,11 @@ export const PromptInputSpeechButton = ({
 			speechRecognition.lang = 'en-US';
 
 			speechRecognition.onstart = () => {
-				setIsListening(true);
+				dispatchSpeechStatus('listening');
 			};
 
 			speechRecognition.onend = () => {
-				setIsListening(false);
+				dispatchSpeechStatus('idle');
 			};
 
 			speechRecognition.onresult = (event) => {
@@ -127,11 +131,11 @@ export const PromptInputSpeechButton = ({
 			};
 
 			speechRecognition.onerror = (_event) => {
-				setIsListening(false);
+				dispatchSpeechStatus('idle');
 			};
 
 			recognitionRef.current = speechRecognition;
-			setIsSpeechSupported(true);
+			dispatchSpeechStatus('idle');
 		}
 
 		return () => {
