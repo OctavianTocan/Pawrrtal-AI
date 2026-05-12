@@ -14,20 +14,14 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.workspace import (
-    _build_soul_md,
-    _build_user_md,
-    seed_workspace,
-)
+from app.core.workspace import seed_workspace
 from app.crud.workspace import (
     create_workspace,
     ensure_default_workspace,
@@ -35,35 +29,6 @@ from app.crud.workspace import (
     list_workspaces,
 )
 from app.db import User
-from app.models import UserPersonalization
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_personalization(**kwargs: Any) -> UserPersonalization:
-    """Build an unpersisted UserPersonalization for the workspace seeders.
-
-    The seeders only read attributes — they never call session methods —
-    so we can instantiate the ORM model directly without a session and
-    feed it to ``seed_workspace`` / ``_build_*_md`` with full type
-    fidelity.
-    """
-    defaults: dict[str, Any] = dict(
-        user_id=uuid.uuid4(),
-        name="Tavi",
-        role="Engineer",
-        company_website="https://example.com",
-        linkedin="https://linkedin.com/in/tavi",
-        goals=["Build great products", "Automate toil"],
-        personality="direct",
-        custom_instructions=None,
-        chatgpt_context=None,
-        connected_channels=None,
-        updated_at=datetime.now(UTC),
-    )
-    return UserPersonalization(**{**defaults, **kwargs})
 
 
 # ---------------------------------------------------------------------------
@@ -127,93 +92,26 @@ class TestSeedWorkspace:
 
         assert (root / "AGENTS.md").read_text() == custom
 
-    def test_populates_user_md_from_personalization(self, tmp_path: Path) -> None:
+    def test_writes_default_user_md_stub(self, tmp_path: Path) -> None:
+        """USER.md is now a generic stub — user-facing data lives in preferences.toml."""
         ws_id = uuid.uuid4()
-        p = _make_personalization(name="Alice", role="PM")
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
-            root = seed_workspace(ws_id, personalization=p)
+            root = seed_workspace(ws_id)
 
         user_md = (root / "USER.md").read_text()
-        assert "Alice" in user_md
-        assert "PM" in user_md
+        assert "USER.md" in user_md
+        assert "preferences.toml" in user_md
 
-    def test_uses_personality_for_soul_md(self, tmp_path: Path) -> None:
+    def test_writes_default_soul_md(self, tmp_path: Path) -> None:
+        """SOUL.md gets the default 'well-rounded' content — no personality presets."""
         ws_id = uuid.uuid4()
-        p = _make_personalization(personality="analytical")
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
-            root = seed_workspace(ws_id, personalization=p)
+            root = seed_workspace(ws_id)
 
         soul = (root / "SOUL.md").read_text()
-        assert "analytical" in soul.lower()
-
-    def test_falls_back_to_balanced_soul_for_unknown_personality(self, tmp_path: Path) -> None:
-        ws_id = uuid.uuid4()
-        p = _make_personalization(personality="goblin")
-        with patch("app.core.workspace.settings") as mock_settings:
-            mock_settings.workspace_base_dir = str(tmp_path)
-            root = seed_workspace(ws_id, personalization=p)
-
-        soul = (root / "SOUL.md").read_text()
-        # Balanced soul is the fallback.
-        assert "SOUL.md" in soul
-
-    def test_seed_without_personalization_writes_placeholder_user_md(self, tmp_path: Path) -> None:
-        ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
-            mock_settings.workspace_base_dir = str(tmp_path)
-            root = seed_workspace(ws_id, personalization=None)
-
-        user_md = (root / "USER.md").read_text()
-        assert "Fill in" in user_md
-
-
-# ---------------------------------------------------------------------------
-# Template builders
-# ---------------------------------------------------------------------------
-
-
-class TestBuildUserMd:
-    def test_includes_name_role_company(self) -> None:
-        p = _make_personalization(name="Bob", role="CTO", company_website="https://acme.com")
-        md = _build_user_md(p)
-        assert "Bob" in md
-        assert "CTO" in md
-        assert "https://acme.com" in md
-
-    def test_includes_goals_list(self) -> None:
-        p = _make_personalization(goals=["Ship fast", "Sleep well"])
-        md = _build_user_md(p)
-        assert "Ship fast" in md
-        assert "Sleep well" in md
-
-    def test_includes_custom_instructions(self) -> None:
-        p = _make_personalization(custom_instructions="Always use British English.")
-        md = _build_user_md(p)
-        assert "British English" in md
-
-    def test_none_personalization_returns_placeholder(self) -> None:
-        md = _build_user_md(None)
-        assert "Fill in" in md
-
-
-class TestBuildSoulMd:
-    @pytest.mark.parametrize("personality", ["analytical", "creative", "direct", "balanced"])
-    def test_known_personalities_return_content(self, personality: str) -> None:
-        p = _make_personalization(personality=personality)
-        md = _build_soul_md(p)
-        assert len(md) > 50
-
-    def test_unknown_personality_returns_balanced(self) -> None:
-        p = _make_personalization(personality="wizard")
-        md = _build_soul_md(p)
-        # Balanced soul contains "well-rounded".
-        assert "well-rounded" in md
-
-    def test_none_personalization_returns_balanced(self) -> None:
-        md = _build_soul_md(None)
-        assert "well-rounded" in md
+        assert "well-rounded" in soul
 
 
 # ---------------------------------------------------------------------------

@@ -20,7 +20,7 @@ from app.core.workspace import seed_workspace
 log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from app.models import UserPersonalization, Workspace
+    from app.models import Workspace
 
 
 async def get_default_workspace(
@@ -59,7 +59,6 @@ async def create_workspace(
     name: str = "Main",
     slug: str = "main",
     is_default: bool = True,
-    personalization: UserPersonalization | None = None,
 ) -> Workspace:
     """Create a new workspace row in the DB and seed its directory.
 
@@ -71,7 +70,7 @@ async def create_workspace(
     workspace_id = uuid.uuid4()
 
     # Seed filesystem first so we can capture the canonical path.
-    root = seed_workspace(workspace_id, personalization)
+    root = seed_workspace(workspace_id)
 
     ws = Workspace(
         id=workspace_id,
@@ -90,7 +89,6 @@ async def create_workspace(
 async def ensure_default_workspace(
     user_id: uuid.UUID,
     session: AsyncSession,
-    personalization: UserPersonalization | None = None,
 ) -> Workspace:
     """Return the existing default workspace or create one.
 
@@ -120,7 +118,6 @@ async def ensure_default_workspace(
                 name="Main",
                 slug="main",
                 is_default=True,
-                personalization=personalization,
             )
         return ws
     except IntegrityError:

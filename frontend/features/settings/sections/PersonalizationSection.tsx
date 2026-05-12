@@ -1,14 +1,11 @@
 'use client';
 
 import type * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
 import { Textarea } from '@/components/ui/textarea';
 import {
 	loadPersonalizationProfile,
-	PERSONALITY_OPTIONS,
-	type PersonalityId,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
 } from '@/features/personalization/storage';
@@ -24,9 +21,13 @@ import {
  * Personalization settings section.
  *
  * Reads + writes the same `nexus:personalization` localStorage profile
- * that the v2 onboarding flow collects, so a personality picked in
- * onboarding shows up here pre-selected (and edits here flow back to
- * the profile).
+ * that the v2 onboarding flow collects. On save the same shape is PUT
+ * to the backend, which writes `preferences.toml` into the user's
+ * workspace so the agent can read AND edit it natively (including from
+ * Telegram).
+ *
+ * Agent personality lives in workspace `SOUL.md`, which the agent
+ * itself can edit — there is no preset picker here on purpose.
  */
 export function PersonalizationSection(): React.JSX.Element {
 	const [profile, setProfile] = useState<PersonalizationProfile>(() =>
@@ -49,48 +50,11 @@ export function PersonalizationSection(): React.JSX.Element {
 		});
 	};
 
-	const personality: PersonalityId = profile.personality ?? PERSONALITY_OPTIONS[0].id;
-
-	// Map the storage `PERSONALITY_OPTIONS` tuple to the SelectButton's
-	// `SelectButtonOption[]` shape once per render. Each personality's
-	// one-line `summary` becomes the muted sub-line in the dropdown row,
-	// mirroring the Codex pattern of "label + secondary explanation"
-	// for picker entries.
-	const personalityOptions = useMemo<SelectButtonOption[]>(
-		() =>
-			PERSONALITY_OPTIONS.map((option) => ({
-				id: option.id,
-				label: option.label,
-				description: option.summary,
-			})),
-		[]
-	);
-	const activePersonality = PERSONALITY_OPTIONS.find((option) => option.id === personality);
-
 	return (
 		<SettingsPage
 			description="Tune how Pawrrtal addresses you, what context it carries between chats, and how it builds memory."
 			title="Personalization"
 		>
-			<SettingsCard>
-				<SettingsSectionHeader
-					description="Default tone applied to every response."
-					title="Personality"
-				/>
-				<SettingsRow
-					description="Choose a default tone for your agent's responses."
-					label="Personality"
-				>
-					<SelectButton
-						activeId={personality}
-						ariaLabel="Personality"
-						onSelect={(id) => patchProfile({ personality: id as PersonalityId })}
-						options={personalityOptions}
-						triggerLabel={activePersonality?.label ?? 'Choose'}
-					/>
-				</SettingsRow>
-			</SettingsCard>
-
 			<SettingsCard>
 				<SettingsSectionHeader
 					description="Give your agent extra instructions and context for your project."

@@ -23,7 +23,6 @@ interface BackendPersonalization {
 	goals?: string[] | null;
 	connected_channels?: string[] | null;
 	chatgpt_context?: string | null;
-	personality?: string | null;
 	custom_instructions?: string | null;
 }
 
@@ -38,7 +37,6 @@ function fromBackend(payload: BackendPersonalization): PersonalizationProfile {
 			(payload.connected_channels as PersonalizationProfile['connectedChannels']) ??
 			undefined,
 		chatgptContext: payload.chatgpt_context ?? undefined,
-		personality: (payload.personality as PersonalizationProfile['personality']) ?? undefined,
 		customInstructions: payload.custom_instructions ?? undefined,
 	};
 }
@@ -52,7 +50,6 @@ function toBackend(profile: PersonalizationProfile): BackendPersonalization {
 		goals: profile.goals ?? null,
 		connected_channels: profile.connectedChannels ?? null,
 		chatgpt_context: profile.chatgptContext ?? null,
-		personality: profile.personality ?? null,
 		custom_instructions: profile.customInstructions ?? null,
 	};
 }

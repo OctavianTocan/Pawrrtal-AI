@@ -95,42 +95,11 @@ class Project(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
-class UserPreferences(Base):
-    """User preferences stored in the application database."""
-
-    __tablename__ = "user_preferences"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
-    )
-    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
-    accent_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
-    font_size: Mapped[int] = mapped_column()
-
-
-class UserPersonalization(Base):
-    """Personalization profile filled in by the home-page wizard.
-
-    1:1 with `user`. Every field is nullable so a partial profile (e.g.
-    user skipped the ChatGPT-context step) round-trips cleanly through
-    GET / PUT without coercing missing fields into empty strings.
-    """
-
-    __tablename__ = "user_personalization"
-
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
-    )
-    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    company_website: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    linkedin: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    role: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    goals: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    connected_channels: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    chatgpt_context: Mapped[str | None] = mapped_column(Text, nullable=True)
-    personality: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    custom_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime)
+# NOTE: ``UserPreferences`` and ``UserPersonalization`` were removed in the
+# preferences-toml refactor.  User-facing preferences now live as a TOML
+# file at ``{workspace_root}/preferences.toml`` so the agent can read and
+# write them natively via ``workspace_files`` from any surface.  See
+# ``app.core.preferences`` and ``app.api.personalization``.
 
 
 class UserAppearance(Base):
@@ -289,7 +258,8 @@ class Workspace(Base):
 
     One user can own many workspaces.  The first workspace created for a user
     is flagged ``is_default=True`` and seeded automatically at the end of the
-    onboarding flow using the user's ``UserPersonalization`` data.
+    onboarding flow.  User-facing preferences live in ``preferences.toml``
+    at the workspace root (see ``app.core.preferences``).
 
     The ``path`` column is the absolute path on the host.  Agents that need
     filesystem access resolve the path from here rather than constructing it

@@ -63,6 +63,11 @@ def assemble_workspace_prompt(workspace_root: Path) -> str | None:
     AGENTS.md ("how to operate here").  Either may be missing
     independently; the missing section is omitted with no trace in the
     output so the agent doesn't see "(file missing)" placeholders.
+
+    User preferences live in ``preferences.toml`` at the workspace root
+    but are intentionally NOT injected here — the agent reads that file
+    via ``workspace_files`` only when relevant, so we don't bloat every
+    turn's prompt with settings the model rarely needs.
     """
     soul = read_soul_md(workspace_root)
     agents = read_agents_md(workspace_root)

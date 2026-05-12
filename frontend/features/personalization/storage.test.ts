@@ -3,7 +3,6 @@ import {
 	EMPTY_PROFILE,
 	loadPersonalizationProfile,
 	MESSAGING_CHANNELS,
-	PERSONALITY_OPTIONS,
 	PERSONALIZATION_STORAGE_KEY,
 	savePersonalizationProfile,
 } from './storage';
@@ -53,14 +52,14 @@ describe('personalization storage', () => {
 	it('round-trips a saved profile via savePersonalizationProfile', () => {
 		savePersonalizationProfile({
 			name: 'Tavi',
-			personality: 'goose',
 			goals: ['SEO'],
+			customInstructions: 'Be terse.',
 		});
 
 		const loaded = loadPersonalizationProfile();
 		expect(loaded.name).toBe('Tavi');
-		expect(loaded.personality).toBe('goose');
 		expect(loaded.goals).toEqual(['SEO']);
+		expect(loaded.customInstructions).toBe('Be terse.');
 		expect(loaded.connectedChannels).toEqual([]);
 	});
 
@@ -69,9 +68,7 @@ describe('personalization storage', () => {
 		expect(loadPersonalizationProfile()).toEqual(EMPTY_PROFILE);
 	});
 
-	it('exposes a non-empty personality + messaging channel catalog', () => {
-		expect(PERSONALITY_OPTIONS.length).toBeGreaterThan(0);
-		expect(PERSONALITY_OPTIONS.every((option) => option.id && option.label)).toBe(true);
+	it('exposes a non-empty messaging channel catalog', () => {
 		expect(MESSAGING_CHANNELS.length).toBeGreaterThan(0);
 		expect(MESSAGING_CHANNELS.every((channel) => channel.id && channel.label)).toBe(true);
 	});
