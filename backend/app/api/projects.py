@@ -14,7 +14,7 @@ from app.crud.project import (
 from app.db import User, get_async_session
 from app.models import Project
 from app.schemas import ProjectCreate, ProjectResponse, ProjectUpdate
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 
 def _serialize(project: Project) -> ProjectResponse:
@@ -34,7 +34,7 @@ def get_projects_router() -> APIRouter:
 
     @router.get("", response_model=list[ProjectResponse])
     async def list_projects(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[ProjectResponse]:
         """List every project owned by the authenticated user."""
@@ -44,7 +44,7 @@ def get_projects_router() -> APIRouter:
     @router.post("", response_model=ProjectResponse, status_code=201)
     async def create_project(
         payload: ProjectCreate,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ProjectResponse:
         """Create a new project owned by the authenticated user."""
@@ -55,7 +55,7 @@ def get_projects_router() -> APIRouter:
     async def update_project(
         project_id: uuid.UUID,
         payload: ProjectUpdate,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ProjectResponse:
         """Rename a project (currently the only mutable field)."""
@@ -72,7 +72,7 @@ def get_projects_router() -> APIRouter:
     @router.delete("/{project_id}", status_code=204)
     async def delete_project(
         project_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a project. Linked conversations are unlinked, not deleted."""

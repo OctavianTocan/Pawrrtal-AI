@@ -13,7 +13,7 @@ from app.crud.workspace import ensure_default_workspace
 from app.db import User, get_async_session
 from app.models import UserPersonalization
 from app.schemas import PersonalizationProfile
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def get_personalization_router() -> APIRouter:
 
     @router.get("", response_model=PersonalizationProfile)
     async def get_personalization(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> PersonalizationProfile:
         """Return the authenticated user's personalization profile."""
@@ -55,7 +55,7 @@ def get_personalization_router() -> APIRouter:
     @router.put("", response_model=PersonalizationProfile)
     async def upsert_personalization(
         payload: PersonalizationProfile,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> PersonalizationProfile:
         """Create or replace the authenticated user's personalization profile.

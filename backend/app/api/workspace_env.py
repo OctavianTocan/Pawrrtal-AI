@@ -19,7 +19,7 @@ from app.core.keys import (
     save_workspace_env,
 )
 from app.db import User
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 # Maximum number of distinct keys a single PUT may set/update. Each user can
 # set at most this many overrides regardless of MAX_VALUE_LENGTH; this is a
@@ -109,7 +109,7 @@ def get_workspace_env_router() -> APIRouter:
 
     @router.get("/env", response_model=WorkspaceEnvResponse)
     async def get_workspace_env(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
     ) -> WorkspaceEnvResponse:
         """Return the current user's workspace env overrides."""
         return _all_keys_response(load_workspace_env(user.id))
@@ -117,7 +117,7 @@ def get_workspace_env_router() -> APIRouter:
     @router.put("/env", response_model=WorkspaceEnvResponse)
     async def put_workspace_env(
         payload: WorkspaceEnvVars,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
     ) -> WorkspaceEnvResponse:
         """Merge ``payload.vars`` into the user's workspace env file.
 
@@ -157,7 +157,7 @@ def get_workspace_env_router() -> APIRouter:
     @router.delete("/env/{key}", status_code=status.HTTP_204_NO_CONTENT)
     async def delete_workspace_env_key(
         key: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
     ) -> None:
         """Remove a single override key for the current user."""
         if key not in OVERRIDABLE_KEYS:

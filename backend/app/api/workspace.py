@@ -32,7 +32,7 @@ from app.schemas import (
     WorkspaceRead,
     WorkspaceTreeResponse,
 )
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -120,7 +120,7 @@ def get_workspace_router() -> APIRouter:
 
     @router.get("", response_model=list[WorkspaceRead])
     async def list_user_workspaces(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[WorkspaceRead]:
         """Return all workspaces owned by the authenticated user."""
@@ -134,7 +134,7 @@ def get_workspace_router() -> APIRouter:
     @router.get("/{workspace_id}/tree", response_model=WorkspaceTreeResponse)
     async def get_workspace_tree(
         workspace_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceTreeResponse:
         """Return the full file tree of a workspace as a flat node list."""
@@ -158,7 +158,7 @@ def get_workspace_router() -> APIRouter:
     async def read_workspace_file(
         workspace_id: uuid.UUID,
         file_path: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceFileContent:
         """Read a file's text content from the workspace."""
@@ -196,7 +196,7 @@ def get_workspace_router() -> APIRouter:
         workspace_id: uuid.UUID,
         file_path: str,
         payload: WorkspaceFileWrite,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceFileContent:
         """Create or replace a text file inside the workspace."""
@@ -225,7 +225,7 @@ def get_workspace_router() -> APIRouter:
     async def delete_workspace_file(
         workspace_id: uuid.UUID,
         file_path: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a file from the workspace.  Does not delete directories."""
@@ -253,7 +253,7 @@ def get_workspace_router() -> APIRouter:
     )
     async def serve_default_workspace_file(
         file_path: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> FileResponse:
         """Serve a file from the user's default workspace with its detected MIME type.

@@ -25,7 +25,7 @@ from app.schemas import (
     ConversationResponse,
     ConversationUpdate,
 )
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 # Logger follows module namespace conventions for consistent filtering and tracing.
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     @router.get("/{conversation_id}/messages")
     async def get_conversation_messages(
         conversation_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[ChatMessageRead]:
         """Return message history for a conversation.
@@ -109,7 +109,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     @router.get("/{conversation_id}")
     async def get_conversation(
         conversation_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ConversationResponse | None:
         """Return metadata for a single conversation."""
@@ -137,7 +137,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     async def generate_conversation_title(
         conversation_id: uuid.UUID,
         first_message: str = "",
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> str:
         """Generate and persist a short conversation title from the first message."""
@@ -177,7 +177,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     async def update_conversation(
         conversation_id: uuid.UUID,
         payload: ConversationUpdate,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ConversationResponse:
         """Update mutable conversation metadata for the authenticated user.
@@ -217,7 +217,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     @router.delete("/{conversation_id}", status_code=204)
     async def delete_conversation(
         conversation_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a conversation owned by the authenticated user."""
@@ -227,7 +227,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
 
     @router.get("")
     async def list_conversations(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[ConversationResponse]:
         """List all conversations for the authenticated user, most recent first."""
@@ -256,7 +256,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     async def create_conversation(
         conversation_id: uuid.UUID,
         payload: ConversationCreate | None = Body(default=None),
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ConversationResponse:
         """Create a new conversation with an immediate initial title.
