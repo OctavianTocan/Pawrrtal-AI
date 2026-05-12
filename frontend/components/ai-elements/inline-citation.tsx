@@ -170,7 +170,7 @@ export const InlineCitationCarouselPrev = ({
 }: InlineCitationCarouselPrevProps) => {
 	const api = useCarouselApi();
 
-	const handleClick = useCallback(() => {
+	const scrollToPreviousCitation = useCallback(() => {
 		if (api) {
 			api.scrollPrev();
 		}
@@ -180,7 +180,7 @@ export const InlineCitationCarouselPrev = ({
 		<button
 			aria-label="Previous"
 			className={cn('shrink-0', className)}
-			onClick={handleClick}
+			onClick={scrollToPreviousCitation}
 			type="button"
 			{...props}
 		>
@@ -197,7 +197,7 @@ export const InlineCitationCarouselNext = ({
 }: InlineCitationCarouselNextProps) => {
 	const api = useCarouselApi();
 
-	const handleClick = useCallback(() => {
+	const scrollToNextCitation = useCallback(() => {
 		if (api) {
 			api.scrollNext();
 		}
@@ -207,7 +207,7 @@ export const InlineCitationCarouselNext = ({
 		<button
 			aria-label="Next"
 			className={cn('shrink-0', className)}
-			onClick={handleClick}
+			onClick={scrollToNextCitation}
 			type="button"
 			{...props}
 		>

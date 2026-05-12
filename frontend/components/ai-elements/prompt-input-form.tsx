@@ -72,7 +72,7 @@ type PromptInputAttachmentState = {
 	usingProvider: boolean;
 	files: LocalFilePart[];
 	contextValue: AttachmentsContext;
-	handleChange: ChangeEventHandler<HTMLInputElement>;
+	ingestSelectedFiles: ChangeEventHandler<HTMLInputElement>;
 	handleFormDragOver: DragEventHandler<HTMLFormElement>;
 	handleFormDrop: DragEventHandler<HTMLFormElement>;
 	clear: () => void;
@@ -295,7 +295,7 @@ const usePromptInputAttachmentState = ({
 		[files, add, remove, clear, openFileDialog, inputRef]
 	);
 
-	const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
 		if (event.currentTarget.files) {
 			add(event.currentTarget.files);
 		}
@@ -323,7 +323,7 @@ const usePromptInputAttachmentState = ({
 		usingProvider,
 		files,
 		contextValue,
-		handleChange,
+		ingestSelectedFiles,
 		handleFormDragOver,
 		handleFormDrop,
 		clear,
@@ -394,7 +394,7 @@ export const PromptInput = ({
 		contextValue,
 		controller,
 		files,
-		handleChange,
+		ingestSelectedFiles,
 		handleFormDragOver,
 		handleFormDrop,
 		usingProvider,
@@ -422,7 +422,7 @@ export const PromptInput = ({
 				aria-label="Upload files"
 				className="hidden"
 				multiple={multiple}
-				onChange={handleChange}
+				onChange={ingestSelectedFiles}
 				ref={inputRef}
 				title="Upload files"
 				type="file"

@@ -318,19 +318,26 @@ function ActiveConversationState({
 		<div className="relative flex size-full min-w-0 flex-col">
 			<Conversation className="scrollbar-hide min-h-0 flex-1 overflow-y-auto" resize="smooth">
 				<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
-					{chatHistory.map((chatMessage, index) => (
-						<ConversationRow
-							chatMessage={chatMessage}
-							copiedMessageId={copiedMessageId}
-							index={index}
-							isLast={index === chatHistory.length - 1}
-							isLoading={isLoading}
-							key={`${chatMessage.role}-${index}`}
-							onCopy={onCopy}
-							onRegenerate={onRegenerate}
-							regeneratingIndex={regeneratingIndex}
-						/>
-					))}
+					{chatHistory.map((chatMessage, index) => {
+						const messageKey = [
+							chatMessage.role,
+							chatMessage.thinking_started_at ?? 'saved',
+							chatMessage.content.slice(0, 80),
+						].join(':');
+						return (
+							<ConversationRow
+								chatMessage={chatMessage}
+								copiedMessageId={copiedMessageId}
+								index={index}
+								isLast={index === chatHistory.length - 1}
+								isLoading={isLoading}
+								key={messageKey}
+								onCopy={onCopy}
+								onRegenerate={onRegenerate}
+								regeneratingIndex={regeneratingIndex}
+							/>
+						);
+					})}
 				</ConversationContent>
 				<ChatScrollAnchor track={chatHistory.length} />
 			</Conversation>

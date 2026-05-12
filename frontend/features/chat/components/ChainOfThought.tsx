@@ -172,7 +172,7 @@ export const ChainOfThought = memo(function ChainOfThought({
 				return (
 					<ThinkingStep
 						content={item.content}
-						key={`thinking-${index}-${item.title}`}
+						key={`thinking-${item.title}-${item.content.slice(0, 80)}`}
 						title={item.title}
 					/>
 				);

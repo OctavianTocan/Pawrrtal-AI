@@ -158,7 +158,7 @@ export function FontRow({
 		return () => clearTimeout(handle);
 	}, [draft, overrideValue]);
 
-	const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+	const updateFontFamilyDraft = useCallback((event: ChangeEvent<HTMLInputElement>) => {
 		setDraft(event.target.value);
 	}, []);
 
@@ -167,7 +167,7 @@ export function FontRow({
 			<Input
 				aria-label={`${label} family`}
 				className="w-72 text-xs"
-				onChange={handleChange}
+				onChange={updateFontFamilyDraft}
 				placeholder={defaultValue}
 				value={draft}
 			/>
