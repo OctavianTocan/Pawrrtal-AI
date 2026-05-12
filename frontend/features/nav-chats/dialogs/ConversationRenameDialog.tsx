@@ -79,14 +79,7 @@ export function ConversationRenameDialog({
 			size="md"
 			testId="conversation-rename-dialog"
 		>
-			<form
-				className="grid gap-4 text-foreground"
-				id={formId}
-				onSubmit={(event) => {
-					event.preventDefault();
-					onSubmit();
-				}}
-			>
+			<form action={onSubmit} className="grid gap-4 text-foreground" id={formId}>
 				<ModalDescription className="text-muted-foreground">
 					Update the sidebar title for this conversation.
 				</ModalDescription>
