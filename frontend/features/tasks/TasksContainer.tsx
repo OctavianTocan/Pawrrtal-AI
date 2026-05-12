@@ -17,7 +17,7 @@
  */
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, Suspense, useCallback, useMemo, useState } from 'react';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { DEFAULT_TASK_VIEW, TASK_QUERY_KEYS, TASK_STORAGE_KEYS, TASK_VIEWS } from './constants';
 import { formatDueLabel, isOverdue } from './format-utils';
@@ -87,7 +87,7 @@ function useCollapsedSections(storageKey: string): {
  * and forwards everything to the pure View. Always rendered as a client
  * component because it needs `useSearchParams` and local mock state.
  */
-export function TasksContainer(): ReactNode {
+function TasksContainerContent(): ReactNode {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { get } = searchParams;
@@ -198,5 +198,18 @@ export function TasksContainer(): ReactNode {
 			onAddTask={handlers.handleAddTask}
 			onNew={handlers.handleNew}
 		/>
+	);
+}
+
+/**
+ * Suspense boundary colocated with the search-param hook so static analysis
+ * can see the App Router CSR-bailout guard even when this component is used
+ * outside the route entry.
+ */
+export function TasksContainer(): ReactNode {
+	return (
+		<Suspense fallback={null}>
+			<TasksContainerContent />
+		</Suspense>
 	);
 }
