@@ -9,6 +9,7 @@
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import {
 	type ComponentProps,
+	type CSSProperties,
 	createContext,
 	type HTMLAttributes,
 	use,
@@ -16,7 +17,7 @@ import {
 	useRef,
 	useState,
 } from 'react';
-import { type BundledLanguage, codeToHtml, type ShikiTransformer } from 'shiki';
+import { type BundledLanguage, codeToTokens } from 'shiki';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -30,50 +31,96 @@ type CodeBlockContextType = {
 	code: string;
 };
 
+type HighlightedToken = {
+	content: string;
+	color?: string;
+	bgColor?: string;
+	fontStyle?: number;
+};
+
+type HighlightedCode = {
+	tokens: HighlightedToken[][];
+};
+
 const CodeBlockContext = createContext<CodeBlockContextType>({
 	code: '',
 });
 
-const lineNumberTransformer: ShikiTransformer = {
-	name: 'line-numbers',
-	line(node, line) {
-		node.children.unshift({
-			type: 'element',
-			tagName: 'span',
-			properties: {
-				className: [
-					'inline-block',
-					'min-w-10',
-					'mr-4',
-					'text-right',
-					'select-none',
-					'text-muted-foreground',
-				],
-			},
-			children: [{ type: 'text', value: String(line) }],
-		});
-	},
-};
-
 export async function highlightCode(
 	code: string,
-	language: BundledLanguage,
-	showLineNumbers = false
-) {
-	const transformers: ShikiTransformer[] = showLineNumbers ? [lineNumberTransformer] : [];
-
+	language: BundledLanguage
+): Promise<[HighlightedCode, HighlightedCode]> {
 	return await Promise.all([
-		codeToHtml(code, {
+		codeToTokens(code, {
 			lang: language,
 			theme: 'one-light',
-			transformers,
 		}),
-		codeToHtml(code, {
+		codeToTokens(code, {
 			lang: language,
 			theme: 'one-dark-pro',
-			transformers,
 		}),
 	]);
+}
+
+const FONT_STYLE_ITALIC = 1;
+const FONT_STYLE_BOLD = 2;
+const FONT_STYLE_UNDERLINE = 4;
+
+const tokenStyle = (token: HighlightedToken): CSSProperties => {
+	const style: CSSProperties = {};
+	if (token.color) {
+		style.color = token.color;
+	}
+	if (token.bgColor) {
+		style.backgroundColor = token.bgColor;
+	}
+	if (token.fontStyle) {
+		if ((token.fontStyle & FONT_STYLE_ITALIC) !== 0) {
+			style.fontStyle = 'italic';
+		}
+		if ((token.fontStyle & FONT_STYLE_BOLD) !== 0) {
+			style.fontWeight = 700;
+		}
+		if ((token.fontStyle & FONT_STYLE_UNDERLINE) !== 0) {
+			style.textDecoration = 'underline';
+		}
+	}
+	return style;
+};
+
+interface HighlightedCodeViewProps {
+	className: string;
+	highlighted: HighlightedCode | null;
+	showLineNumbers: boolean;
+}
+
+function HighlightedCodeView({
+	className,
+	highlighted,
+	showLineNumbers,
+}: HighlightedCodeViewProps): React.JSX.Element {
+	return (
+		<div className={className}>
+			<pre className="m-0 bg-background! p-4 text-foreground! text-sm">
+				<code className="font-mono text-sm">
+					{highlighted?.tokens.map((line, lineIndex) => (
+						<span className="block min-h-[1lh]" key={lineIndex}>
+							{showLineNumbers ? (
+								<span className="mr-4 inline-block min-w-10 select-none text-right text-muted-foreground">
+									{lineIndex + 1}
+								</span>
+							) : null}
+							{line.map((token, tokenIndex) => (
+								<span key={tokenIndex} style={tokenStyle(token)}>
+									{token.content}
+								</span>
+							))}
+						</span>
+					))}
+				</code>
+			</pre>
+		</div>
+	);
 }
 
 export const CodeBlock = ({
@@ -84,23 +131,26 @@ export const CodeBlock = ({
 	children,
 	...props
 }: CodeBlockProps) => {
-	const [html, setHtml] = useState<string>('');
-	const [darkHtml, setDarkHtml] = useState<string>('');
-	const mounted = useRef(false);
+	const [highlighted, setHighlighted] = useState<{
+		dark: HighlightedCode | null;
+		light: HighlightedCode | null;
+	}>({
+		dark: null,
+		light: null,
+	});
 
 	useEffect(() => {
-		highlightCode(code, language, showLineNumbers).then(([light, dark]) => {
-			if (!mounted.current) {
-				setHtml(light);
-				setDarkHtml(dark);
-				mounted.current = true;
+		let cancelled = false;
+		highlightCode(code, language).then(([light, dark]) => {
+			if (!cancelled) {
+				setHighlighted({ dark, light });
 			}
 		});
 
 		return () => {
-			mounted.current = false;
+			cancelled = true;
 		};
-	}, [code, language, showLineNumbers]);
+	}, [code, language]);
 
 	return (
 		<CodeBlockContext.Provider value={{ code }}>
@@ -112,15 +162,15 @@ export const CodeBlock = ({
 				{...props}
 			>
 				<div className="relative">
-					<div
-						className="overflow-auto dark:hidden [&>pre]:m-0 [&>pre]:bg-background! [&>pre]:p-4 [&>pre]:text-foreground! [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
-						// biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
-						dangerouslySetInnerHTML={{ __html: html }}
+					<HighlightedCodeView
+						className="overflow-auto dark:hidden"
+						highlighted={highlighted.light}
+						showLineNumbers={showLineNumbers}
 					/>
-					<div
-						className="hidden overflow-auto dark:block [&>pre]:m-0 [&>pre]:bg-background! [&>pre]:p-4 [&>pre]:text-foreground! [&>pre]:text-sm [&_code]:font-mono [&_code]:text-sm"
-						// biome-ignore lint/security/noDangerouslySetInnerHtml: "this is needed."
-						dangerouslySetInnerHTML={{ __html: darkHtml }}
+					<HighlightedCodeView
+						className="hidden overflow-auto dark:block"
+						highlighted={highlighted.dark}
+						showLineNumbers={showLineNumbers}
 					/>
 					{children && (
 						<div className="absolute top-2 right-2 flex items-center gap-2">
