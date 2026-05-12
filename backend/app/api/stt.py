@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.keys import resolve_api_key
 from app.db import User
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def get_stt_router() -> APIRouter:
         file: UploadFile = File(...),
         language: str | None = Form(default=None),
         format: bool = Form(default=True),  # noqa: A002
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
     ) -> JSONResponse:
         """Forward an uploaded audio file to xAI and return the transcript JSON.
 

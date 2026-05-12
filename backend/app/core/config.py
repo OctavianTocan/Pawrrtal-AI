@@ -139,6 +139,23 @@ class Settings(BaseSettings):
     # so the receiving FastAPI route can drop forgeries.
     telegram_webhook_secret: str = ""
 
+    # Comma-separated email allowlist enforced by ``get_allowed_user`` on
+    # every protected route.  Empty (the default) leaves the deployment
+    # open to any authenticated user — fine for local dev, never deploy
+    # publicly without setting this.  Compare case-insensitive.
+    allowed_emails: str = ""
+
+    @property
+    def allowed_emails_set(self) -> frozenset[str]:
+        """Parsed, lowercased view of ``allowed_emails`` for membership tests."""
+        if not self.allowed_emails:
+            return frozenset()
+        return frozenset(
+            addr.strip().lower()
+            for addr in self.allowed_emails.split(",")
+            if addr.strip()
+        )
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:

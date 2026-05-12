@@ -39,7 +39,7 @@ from app.crud.conversation import (
 from app.crud.workspace import get_default_workspace
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def get_chat_router() -> APIRouter:
     @router.post("/")
     async def chat(
         request: ChatRequest,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
         x_nexus_surface: str | None = Header(default=None),
     ) -> StreamingResponse:
