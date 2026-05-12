@@ -9,7 +9,16 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Uuid
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
@@ -310,4 +319,132 @@ class Workspace(Base):
     path: Mapped[str] = mapped_column(String(4096), nullable=False)
     # Exactly one workspace per user should be the default at any given time.
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Lossless Context Management (LCM) — DAG-based conversation summarisation.
+# ---------------------------------------------------------------------------
+#
+# Three tables form the storage layer for our adaptation of the Lossless
+# Context Management approach (originally a TypeScript OpenClaw plugin from
+# Martian-Engineering; we ported the core algorithm to Python so it lives
+# natively in our FastAPI + Postgres stack).  See docs/design/lcm.md and the
+# ``.beans/`` planning notes for the full picture.
+#
+# Schema shape:
+#
+#  - ``LCMSummary``     — a single summary node.  Every node has a ``depth``:
+#                          0 means "leaf summary" (summarised raw messages),
+#                          1+ means "condensed summary" (summarised summaries).
+#  - ``LCMSummarySource`` — link table from a summary to its source items
+#                            (either ChatMessage ids or other LCMSummary ids,
+#                            preserved as a typed pair so a summary can pull
+#                            from a mix of both during condensation).
+#  - ``LCMContextItem`` — the ordered "replacement list" we feed to the model
+#                          each turn.  Each row points at either a ChatMessage
+#                          (raw) or an LCMSummary (compacted).  Assembly walks
+#                          this list in ``ordinal`` order; compaction
+#                          rewrites it by replacing message ranges with a
+#                          summary row.
+
+
+class LCMSummary(Base):
+    """A single LCM summary node — either a leaf or a condensed parent."""
+
+    __tablename__ = "lcm_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # 0 = leaf (summarises raw messages); 1+ = condensed (summarises other
+    # summaries at depth-1).  Used by the condensation pass to decide which
+    # nodes are eligible for the next level up.
+    depth: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # The actual summary prose the model produced.
+    content: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Approximate token count of ``content`` — cached so the assembly + budget
+    # math doesn't have to re-tokenise on every turn.
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Which model produced this summary (e.g. ``gemini-2.5-flash-preview-05-20``).
+    # Stored so future re-compaction can pick a stronger model if needed.
+    model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # "normal" | "aggressive" | "fallback" — mirrors the three-level escalation
+    # used by the upstream plugin: normal prompt first, aggressive if the
+    # output is too large, deterministic truncation if both LLM passes fail.
+    summary_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class LCMSummarySource(Base):
+    """Edge from an :class:`LCMSummary` to one of its source items.
+
+    A source is either a :class:`ChatMessage` (when the parent is a leaf
+    summary) or another :class:`LCMSummary` (when the parent is a condensed
+    summary).  ``source_kind`` discriminates between the two so a single
+    join + filter recovers either flavour.
+    """
+
+    __tablename__ = "lcm_summary_sources"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    summary_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("lcm_summaries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # "message" | "summary" — string discriminator so the FK can target either.
+    source_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
+    # Position in the original ordering so re-assembly is deterministic.
+    source_ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class LCMContextItem(Base):
+    """One entry in the assembled context list for a conversation.
+
+    Walking this table in ``ordinal`` order produces the sequence of items
+    fed to the provider every turn.  Each row points at either a raw
+    :class:`ChatMessage` or a compacted :class:`LCMSummary`; the chat
+    router resolves the actual content at assembly time.
+
+    Compaction rewrites this list in place: a contiguous range of
+    ``item_kind="message"`` rows is replaced by a single
+    ``item_kind="summary"`` row, and the ordinals are renumbered so the
+    list stays dense.
+    """
+
+    __tablename__ = "lcm_context_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "conversation_id",
+            "ordinal",
+            name="uq_lcm_context_items_conv_ordinal",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # Position in the assembled list.  Unique per conversation; renumbered
+    # densely on every compaction so an INSERT at the tail is always the
+    # next sequential integer.
+    ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
+    # "message" | "summary" — the discriminator the assembly step uses to
+    # decide which lookup to perform.
+    item_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    # FK target into either chat_messages or lcm_summaries depending on
+    # ``item_kind``.  We don't enforce the FK at the DB level because it
+    # would need a polymorphic constraint; cascades happen via the parent
+    # ``conversation_id`` FK.
+    item_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
