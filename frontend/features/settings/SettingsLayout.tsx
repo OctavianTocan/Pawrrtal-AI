@@ -17,13 +17,11 @@ import { UsageSection } from './sections/UsageSection';
 import { WorkspacesSection } from './sections/WorkspacesSection';
 
 /**
- * Renders the right-pane body for the currently selected section.
- *
- * Lookup-table-shaped so adding a new section means: register a row in
- * `SETTINGS_SECTIONS`, then add a case here. Anything not yet wired falls
- * through to `PlaceholderSection` automatically.
+ * Right-pane body for the currently selected section. Lookup-table-shaped so
+ * adding a new section means: register a row in `SETTINGS_SECTIONS`, then add a
+ * case here. Anything not yet wired falls through to `PlaceholderSection`.
  */
-function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
+function ActiveSettingsSection({ activeId }: { activeId: SettingsSectionId }): React.JSX.Element {
 	if (activeId === 'general') return <GeneralSection />;
 	if (activeId === 'workspaces') return <WorkspacesSection />;
 	if (activeId === 'appearance') return <AppearanceSection />;
@@ -148,7 +146,7 @@ export function SettingsLayout(): React.JSX.Element {
 				<SettingsWhimsyOverlay />
 				<div className="absolute inset-0 overflow-y-auto p-10">
 					<div className="relative mx-auto w-full max-w-3xl">
-						{renderActiveSection(activeId)}
+						<ActiveSettingsSection activeId={activeId} />
 					</div>
 				</div>
 			</main>
