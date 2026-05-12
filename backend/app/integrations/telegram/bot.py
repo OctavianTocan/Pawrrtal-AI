@@ -29,8 +29,15 @@ from typing import TYPE_CHECKING
 
 from app.channels import ChannelMessage, resolve_channel
 from app.channels.telegram import SURFACE_TELEGRAM
+from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.config import settings
 from app.core.providers import resolve_llm
+from app.crud.chat_message import (
+    append_assistant_placeholder,
+    append_user_message,
+    finalize_assistant_message,
+    get_messages_for_conversation,
+)
 from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
     TelegramSender,
@@ -199,16 +206,86 @@ def build_telegram_service() -> TelegramService:
         provider = resolve_llm(context.model_id)
         channel = resolve_channel(SURFACE_TELEGRAM)
 
-        async def _do_stream() -> None:
-            raw_stream = provider.stream(
-                message.text,
-                context.conversation_id,
-                context.nexus_user_id,
-                history=[],
-                tools=agent_tools or None,
+        # Persist user message + assistant placeholder so this turn is
+        # visible in the web UI when the user switches surfaces, and so
+        # the conversation list re-sorts by last activity.
+        from app.core.tools.agents_md import assemble_workspace_prompt  # noqa: PLC0415
+
+        async with async_session_maker() as persist_session:
+            recent_rows = await get_messages_for_conversation(
+                persist_session, context.conversation_id, limit=20
             )
-            async for _ in channel.deliver(raw_stream, channel_message):
-                pass  # delivery is a side-effect; nothing yielded by TelegramChannel
+            history = [
+                {"role": row.role, "content": row.content or ""}
+                for row in recent_rows
+                if row.role in {"user", "assistant"}
+            ]
+            await append_user_message(
+                persist_session,
+                conversation_id=context.conversation_id,
+                user_id=context.nexus_user_id,
+                content=message.text,
+            )
+            assistant_row = await append_assistant_placeholder(
+                persist_session,
+                conversation_id=context.conversation_id,
+                user_id=context.nexus_user_id,
+            )
+            assistant_message_id = assistant_row.id
+            await persist_session.commit()
+
+        workspace_system_prompt = (
+            assemble_workspace_prompt(Path(workspace.path))
+            if workspace is not None
+            else None
+        )
+
+        async def _do_stream() -> None:
+            aggregator = ChatTurnAggregator()
+
+            async def _guarded_stream():
+                try:
+                    async for event in provider.stream(
+                        message.text,
+                        context.conversation_id,
+                        context.nexus_user_id,
+                        history=history,
+                        tools=agent_tools or None,
+                        system_prompt=workspace_system_prompt,
+                    ):
+                        aggregator.apply(event)
+                        yield event
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception(
+                        "TELEGRAM_STREAM_ERR conversation_id=%s",
+                        context.conversation_id,
+                    )
+                    from app.core.providers.base import StreamEvent  # noqa: PLC0415
+
+                    err_event: StreamEvent = {"type": "error", "content": str(exc)}
+                    aggregator.apply(err_event)
+                    yield err_event
+
+            try:
+                async for _ in channel.deliver(_guarded_stream(), channel_message):
+                    pass  # delivery is a side-effect; nothing yielded by TelegramChannel
+            finally:
+                final_status = "failed" if aggregator.error_text else "complete"
+                snapshot = aggregator.to_persisted_shape(status=final_status)
+                try:
+                    async with async_session_maker() as fin_session:
+                        await finalize_assistant_message(
+                            fin_session,
+                            message_id=assistant_message_id,
+                            **snapshot,
+                        )
+                        await fin_session.commit()
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "TELEGRAM_PERSIST_ERR conversation_id=%s message_id=%s",
+                        context.conversation_id,
+                        assistant_message_id,
+                    )
 
         # Cancel any previous stream for this chat before starting the new one.
         chat_id = message.chat.id
