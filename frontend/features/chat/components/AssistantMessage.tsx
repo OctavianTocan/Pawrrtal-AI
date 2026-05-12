@@ -27,22 +27,27 @@ interface AssistantMessageProps {
 	toolCalls?: ChatToolCall[];
 	/** Arrival-ordered list of thinking bursts and tool invocations. */
 	timeline?: ChatTimelineEntry[];
-	/** Whether the assistant is still streaming this message. */
-	isStreaming: boolean;
-	/** Whether this turn ended in a stream-level error. */
-	isFailed?: boolean;
+	/** Rendering status for this assistant turn. */
+	status: AssistantMessageStatus;
 	/** Total reasoning duration (whole seconds) — only set after streaming. */
 	thinkingDurationSeconds?: number;
-	/** Whether this row's copy button should currently render its "Copied!" state. */
-	isCopied?: boolean;
 	/** Copy the response body to the clipboard. */
 	onCopy?: () => void;
 	/** Re-run the assistant turn for this message. */
 	onRegenerate?: () => void;
-	/** Whether a regeneration request is currently in flight for this row. */
-	isRegenerating?: boolean;
 	/** Artifacts the agent rendered during this turn (preview cards). */
 	artifacts?: ChatArtifactPayload[];
+}
+
+interface AssistantMessageStatus {
+	/** Whether this row's copy button should currently render its "Copied!" state. */
+	isCopied?: boolean;
+	/** Whether this turn ended in a stream-level error. */
+	isFailed?: boolean;
+	/** Whether a regeneration request is currently in flight for this row. */
+	isRegenerating?: boolean;
+	/** Whether the assistant is still streaming this message. */
+	isStreaming: boolean;
 }
 
 /** Default state for messages without any chip data. */
@@ -174,15 +179,13 @@ export function AssistantMessage({
 	thinking,
 	toolCalls,
 	timeline,
-	isStreaming,
-	isFailed,
+	status,
 	thinkingDurationSeconds,
-	isCopied,
 	onCopy,
 	onRegenerate,
-	isRegenerating,
 	artifacts,
 }: AssistantMessageProps): ReactNode {
+	const { isCopied, isFailed, isRegenerating, isStreaming } = status;
 	const hasContent = content.length > 0;
 	const hasThinking = Boolean(thinking && thinking.length > 0);
 	const hasTools = Boolean(toolCalls && toolCalls.length > 0);

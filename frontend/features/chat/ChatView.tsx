@@ -259,12 +259,14 @@ function ConversationRow({
 		return (
 			<AssistantMessage
 				content={chatMessage.content}
-				isCopied={copiedMessageId === messageId}
-				isFailed={chatMessage.assistant_status === 'failed'}
-				isRegenerating={isCurrentlyRegenerating}
-				isStreaming={Boolean(isLoading && isLast)}
 				onCopy={onCopy ? () => onCopy(messageId, chatMessage.content) : undefined}
 				onRegenerate={onRegenerate ? () => onRegenerate(index) : undefined}
+				status={{
+					isCopied: copiedMessageId === messageId,
+					isFailed: chatMessage.assistant_status === 'failed',
+					isRegenerating: isCurrentlyRegenerating,
+					isStreaming: Boolean(isLoading && isLast),
+				}}
 				thinking={chatMessage.thinking}
 				thinkingDurationSeconds={chatMessage.thinking_duration_seconds}
 				timeline={chatMessage.timeline}

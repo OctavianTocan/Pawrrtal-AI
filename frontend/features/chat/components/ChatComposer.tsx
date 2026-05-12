@@ -160,17 +160,21 @@ function AnimatedComposerPlaceholder({
  * model picker's literal-union typing.
  */
 interface ComposerSendClusterProps {
-	isRecording: boolean;
-	isTranscribing: boolean;
-	isLoading: ChatComposerProps['isLoading'];
-	hasContent: boolean;
+	state: ComposerSendClusterState;
 	selectedModelId: ChatComposerProps['selectedModelId'];
 	selectedReasoning: ChatComposerProps['selectedReasoning'];
 	onSelectModel: ChatComposerProps['onSelectModel'];
 	onSelectReasoning: ChatComposerProps['onSelectReasoning'];
 	onStartRecording: () => void;
+}
+
+interface ComposerSendClusterState {
+	isRecording: boolean;
+	isTranscribing: boolean;
+	isLoading: ChatComposerProps['isLoading'];
+	hasContent: boolean;
 	/** When true, both Plan and Send buttons share a yellow accent. */
-	isPlanMode?: boolean;
+	isPlanMode: boolean;
 }
 
 /**
@@ -179,17 +183,14 @@ interface ComposerSendClusterProps {
  * budget. Pure presentation — receives every input as a prop.
  */
 function ComposerSendCluster({
-	isRecording,
-	isTranscribing,
-	isLoading,
-	hasContent,
+	state,
 	selectedModelId,
 	selectedReasoning,
 	onSelectModel,
 	onSelectReasoning,
 	onStartRecording,
-	isPlanMode = false,
 }: ComposerSendClusterProps): React.JSX.Element {
+	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing } = state;
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
 			<ModelSelectorPopover
@@ -379,16 +380,18 @@ export function ChatComposer({
 					</div>
 
 					<ComposerSendCluster
-						isRecording={isRecording}
-						isTranscribing={isTranscribing}
-						isLoading={isLoading}
-						hasContent={hasContent}
+						state={{
+							hasContent,
+							isLoading,
+							isPlanMode: isPlanTagVisible,
+							isRecording,
+							isTranscribing,
+						}}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
 						onSelectModel={onSelectModel}
 						onSelectReasoning={onSelectReasoning}
 						onStartRecording={startRecording}
-						isPlanMode={isPlanTagVisible}
 					/>
 				</PromptInputFooter>
 			</PromptInput>
