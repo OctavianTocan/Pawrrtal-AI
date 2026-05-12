@@ -24,10 +24,10 @@ describe('OnboardingShell', () => {
 
 	it('renders the optional footer slot', () => {
 		const { getByText } = render(
-			<OnboardingShell footer={<button type="button">Continue</button>} title="Step One">
+			<OnboardingShell footer={<button type="button">Save step</button>} title="Step One">
 				body
 			</OnboardingShell>
 		);
-		expect(getByText('Continue')).toBeTruthy();
+		expect(getByText('Save step')).toBeTruthy();
 	});
 });

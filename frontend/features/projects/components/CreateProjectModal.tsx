@@ -105,7 +105,6 @@ export function CreateProjectModal({
 			>
 				<AppFormRow htmlFor={inputId} label="Project name">
 					<Input
-						autoFocus
 						id={inputId}
 						maxLength={255}
 						onChange={(event) => setDraft(event.target.value)}

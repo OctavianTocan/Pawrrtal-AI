@@ -96,7 +96,6 @@ export function ConversationRenameDialog({
 					labelVisibility="sr-only"
 				>
 					<Input
-						autoFocus
 						id={titleInputId}
 						maxLength={255}
 						onChange={(event) => onDraftTitleChange(event.target.value)}

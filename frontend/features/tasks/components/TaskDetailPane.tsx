@@ -150,7 +150,7 @@ function TaskDetailBody({
 					onClick={onClose}
 					className="cursor-pointer rounded-md px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors duration-150 ease-out hover:bg-foreground/[0.06] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
 				>
-					Done
+					Close task details
 				</button>
 			</footer>
 		</>

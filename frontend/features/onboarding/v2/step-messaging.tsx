@@ -97,7 +97,7 @@ export function StepMessaging({
 					size="lg"
 					type="button"
 				>
-					Continue
+					Finish messaging setup
 				</Button>
 			}
 			subtitle="Connect at least one messaging channel to continue."

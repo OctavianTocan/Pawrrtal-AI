@@ -69,6 +69,11 @@ function InputGroupAddon({
 				}
 				e.currentTarget.parentElement?.querySelector('input')?.focus();
 			}}
+			onKeyDown={(event) => {
+				if (event.key !== 'Enter' && event.key !== ' ') return;
+				event.preventDefault();
+				event.currentTarget.parentElement?.querySelector('input')?.focus();
+			}}
 			{...props}
 		/>
 	);

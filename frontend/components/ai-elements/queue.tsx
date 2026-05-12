@@ -7,6 +7,7 @@
 'use client';
 
 import { ChevronDownIcon, PaperclipIcon } from 'lucide-react';
+import Image from 'next/image';
 import type { ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -131,13 +132,16 @@ export const QueueItemAttachment = ({ className, ...props }: QueueItemAttachment
 	<div className={cn('mt-1 flex flex-wrap gap-2', className)} {...props} />
 );
 
-export type QueueItemImageProps = ComponentProps<'img'>;
+export type QueueItemImageProps = Omit<ComponentProps<typeof Image>, 'alt'> & {
+	alt?: string;
+};
 
-export const QueueItemImage = ({ className, ...props }: QueueItemImageProps) => (
-	<img
-		alt=""
+export const QueueItemImage = ({ alt = '', className, ...props }: QueueItemImageProps) => (
+	<Image
+		alt={alt}
 		className={cn('size-8 rounded border object-cover', className)}
 		height={32}
+		unoptimized
 		width={32}
 		{...props}
 	/>

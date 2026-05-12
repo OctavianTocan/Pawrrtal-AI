@@ -8,6 +8,7 @@
 'use client';
 
 import { PaperclipIcon, XIcon } from 'lucide-react';
+import Image from 'next/image';
 import { Fragment, type HTMLAttributes, type ReactNode } from 'react';
 import { Button } from '../ui/Button';
 import {
@@ -64,11 +65,12 @@ export function PromptInputAttachment({
 							<div className="absolute inset-0 flex size-5 items-center justify-center overflow-hidden rounded bg-[var(--color-chat-bg-elevated)] transition-opacity group-hover:opacity-0">
 								{isImage ? (
 									// Decorative thumbnail — no semantic alt because the filename is announced separately.
-									<img
+									<Image
 										alt={filename || 'attachment'}
 										className="size-5 object-cover"
 										height={20}
 										src={data.url}
+										unoptimized
 										width={20}
 									/>
 								) : (

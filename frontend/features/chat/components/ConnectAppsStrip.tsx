@@ -74,8 +74,6 @@ export function ConnectAppsStrip({
 	}
 
 	const handleDismiss = (event: React.MouseEvent<HTMLButtonElement>): void => {
-		// Stop the click from bubbling into the strip's click handler so dismiss
-		// doesn't also trigger an integrations route push.
 		event.stopPropagation();
 		setIsDismissed(true);
 		onDismiss?.();
@@ -93,19 +91,11 @@ export function ConnectAppsStrip({
 		// `rounded-surface-lg` matches the composer's corner radius so the
 		// visible bottom of the strip echoes the composer's geometry.
 		//
-		// Clickable `<div>` without a semantic role is intentional: the
-		// strip contains nested `<button>` elements (the brand chips and
-		// the dismiss X), so `<a>` / `<button>` / `role="link"` would
-		// produce invalid HTML or duplicate keyboard targets. The brand
-		// chips themselves are the keyboard-reachable affordances; the
-		// strip-level click is a mouse-only convenience that triggers the
-		// same `goToIntegrations` route.
 		<div
 			className={cn(
-				'relative z-0 -mt-4 flex cursor-pointer items-center justify-between gap-3 rounded-surface-lg bg-[color:var(--background-elevated-shade)] px-3 pt-5 pb-1 font-normal shadow-minimal transition-colors hover:bg-foreground/[0.04]',
+				'relative z-0 -mt-4 flex items-center justify-between gap-3 rounded-surface-lg bg-[color:var(--background-elevated-shade)] px-3 pt-5 pb-1 font-normal shadow-minimal transition-colors hover:bg-foreground/[0.04]',
 				className
 			)}
-			onClick={goToIntegrations}
 		>
 			<p className="min-w-0 truncate text-xs text-muted-foreground">
 				Connect your apps to get better answers

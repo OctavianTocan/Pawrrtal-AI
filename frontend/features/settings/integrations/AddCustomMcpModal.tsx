@@ -59,7 +59,6 @@ export function AddCustomMcpModal({
 
 				<AppFormRow htmlFor={inputId} label="Server URL">
 					<Input
-						autoFocus
 						id={inputId}
 						onChange={(event) => setServerUrl(event.target.value)}
 						placeholder="https://mcp.example.com/mcp"
@@ -83,7 +82,7 @@ export function AddCustomMcpModal({
 					onClick={handleContinue}
 					type="button"
 				>
-					Continue
+					Add server
 				</Button>
 			</div>
 		</AppDialog>
