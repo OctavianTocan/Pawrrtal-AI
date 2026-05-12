@@ -5,8 +5,8 @@ description: >
   Craft Agents-inspired chat interface with a flat, editorial aesthetic. Six
   semantic colors, neutral interpolation variants, and a 16px-rooted Tailwind v4
   scale. Dual-theme (light + dark, Codex/GitHub-adjacent in dark). Default UI
-  sans is Google Sans Flex, Google Sans, Helvetica Neue, sans-serif (loaded via a
-  Google Fonts stylesheet link in frontend/app/layout.tsx; token --font-sans-stack in
+  sans is Google Sans Flex, Google Sans, Helvetica Neue, sans-serif (loaded via
+  @font-face rules in frontend/app/globals.css; token --font-sans-stack in
   frontend/app/globals.css).
 colors:
   primary: "#FA520F"
@@ -336,11 +336,9 @@ All body UI type (`--font-sans`, `--font-default`, Tailwind `font-sans`, and
 
 `Google Sans Flex, Google Sans, Helvetica Neue, sans-serif`
 
-- **Implementation:** `frontend/app/globals.css` builds `--font-sans-stack` from
-  `var(--font-google-sans-flex-loaded, "Google Sans Flex")` and
-  `var(--font-google-sans-loaded, "Google Sans")` (variables are optional; without
-  `next/font` they stay unset and the string fallbacks match the `@font-face`
-  family names from the Google Fonts `<link>` in `frontend/app/layout.tsx`).
+- **Implementation:** `frontend/app/globals.css` defines the Google Sans Flex /
+  Google Sans `@font-face` rules and builds `--font-sans-stack` from the matching
+  family names.
 - **Front matter below:** tokens labeled `fontFamily: Google Sans Flex` mean "the
   primary face in that stack"; runtime always includes **Google Sans** and
   **Helvetica Neue** before the generic `sans-serif` fallback.
@@ -358,9 +356,8 @@ Three families anchor the system:
   before the web font arrives.
 - **Google Sans Flex / Google Sans** (`--font-sans`) - default UI sans for
   everything from `h2` down through body, captions, and sidebar rows. Loaded
-  via a **Google Fonts** `<link rel="stylesheet">` in `frontend/app/layout.tsx`
-  (same families as the old `next/font/google` path; see `globals.css`
-  `--font-sans-stack` and optional `var(--font-google-sans-*)` fallbacks), with
+  via `@font-face` rules in `frontend/app/globals.css` (same families as the
+  old `next/font/google` path; see `globals.css` `--font-sans-stack`), with
   stack fallbacks **Helvetica Neue** →
   generic `sans-serif`. **Inter** remains an opt-in upgrade via
   `<html data-font="inter">`; with Inter active, OpenType features `cv01`-`cv04`
@@ -1010,5 +1007,5 @@ npx @google/design.md export --format css-tailwind DESIGN.md > theme.css
 
 The canonical token values live in `frontend/app/globals.css`. When tokens
 change there, mirror them here in the same PR. For the **UI sans stack**, also
-update `frontend/app/layout.tsx` (Google Sans stylesheet link) and
+update the matching `@font-face` rules in `frontend/app/globals.css` and
 `frontend/features/settings/sections/appearance-helpers.ts` as needed.
