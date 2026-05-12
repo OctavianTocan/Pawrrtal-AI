@@ -20,7 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	const [errorMessage, setErrorMessage] = useState('');
 	// To disable buttons while submitting.
-	const [isLoading, setIsLoading] = useState(false);
+	const [submissionStatus, setSubmissionStatus] = useState<'idle' | 'submitting'>('idle');
 	// Get the router.
 	const { push } = useRouter();
 	// SSR-stable unique IDs so each Field's label and input pair correctly even
@@ -29,13 +29,14 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	const emailId = useId();
 	const passwordId = useId();
 	const confirmPasswordId = useId();
+	const isSubmitting = submissionStatus === 'submitting';
 
 	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
 		// Stops the page from refreshing.
 		event.preventDefault();
 
 		// Disable the button while submitting.
-		setIsLoading(true);
+		setSubmissionStatus('submitting');
 
 		const formData = new FormData(event.target as HTMLFormElement);
 		const email = formData.get('email')?.toString() ?? '';
@@ -44,7 +45,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 		if (password !== confirmPassword) {
 			setErrorMessage('Passwords do not match');
 			// Enable the button again.
-			setIsLoading(false);
+			setSubmissionStatus('idle');
 			return;
 		}
 
@@ -73,7 +74,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 			const error = await response.json();
 			setErrorMessage(error.detail);
 			// Enable the button again.
-			setIsLoading(false);
+			setSubmissionStatus('idle');
 			return;
 		}
 
@@ -159,7 +160,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 						</Field>
 						<FieldGroup>
 							<Field>
-								<Button type="submit" disabled={isLoading}>
+								<Button type="submit" disabled={isSubmitting}>
 									Create Account
 								</Button>
 								{/* <Button variant="outline" type="button">
