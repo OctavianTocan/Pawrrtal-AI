@@ -150,7 +150,7 @@ function WhimsyOverlay(): React.JSX.Element | null {
 			) : null}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 text-foreground"
+				className="pointer-events-none absolute inset-0 text-foreground [mask-repeat:repeat] [-webkit-mask-repeat:repeat]"
 				style={{
 					backgroundColor: whimsy.tintColor,
 					opacity: whimsy.opacity,
@@ -158,8 +158,6 @@ function WhimsyOverlay(): React.JSX.Element | null {
 					WebkitMaskImage: whimsy.cssUrl,
 					maskSize: whimsy.maskSize,
 					WebkitMaskSize: whimsy.maskSize,
-					maskRepeat: 'repeat',
-					WebkitMaskRepeat: 'repeat',
 				}}
 			/>
 		</>
