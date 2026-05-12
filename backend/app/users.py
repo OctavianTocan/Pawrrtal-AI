@@ -96,3 +96,28 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
 )
 
 current_active_user = fastapi_users.current_user(active=True)
+
+
+async def get_allowed_user(user: "User" = Depends(current_active_user)) -> "User":
+    """Like ``current_active_user`` but also enforces the email allowlist.
+
+    When ``ALLOWED_EMAILS`` is configured in the environment, only users
+    whose email address appears in that list can proceed. All login methods
+    (Google, Apple, password) go through this gate because every auth path
+    ultimately resolves to a ``User`` with a verified ``email`` field.
+
+    When ``ALLOWED_EMAILS`` is empty the allowlist is disabled and all
+    active users are permitted (open / demo mode).
+    """
+    from app.core.config import settings  # local import to avoid circular
+
+    allowed = settings.allowed_emails_set
+    if allowed and user.email.lower() not in allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This Pawrrtal deployment is private. "
+                "Your account is not on the access list."
+            ),
+        )
+    return user

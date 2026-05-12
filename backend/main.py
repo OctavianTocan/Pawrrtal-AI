@@ -25,6 +25,7 @@ from app.api.workspace_env import get_workspace_env_router
 from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.middleware import BackendApiKeyMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
@@ -71,6 +72,10 @@ def create_app() -> FastAPI:
         description="An AI assistant platform",
         version="0.1.0",
     )
+    # BackendApiKeyMiddleware runs first (outermost) — rejects requests
+    # without the correct X-Pawrrtal-Key header before auth or routing.
+    # Only active when BACKEND_API_KEY is set in the environment.
+    fastapi_app.add_middleware(BackendApiKeyMiddleware)
     # Request-logging middleware must be added before any route is registered
     # so it wraps every endpoint. Each request gets a unique ID logged on
     # entry and exit (see app/core/request_logging.py).

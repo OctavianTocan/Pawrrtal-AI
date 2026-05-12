@@ -2,11 +2,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
-import { API_BASE_URL } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 
 /**
- * Returns a memoized `fetch` wrapper that targets {@link API_BASE_URL}, sends cookies, and handles auth failures.
+ * Returns a memoized `fetch` wrapper that targets the configured backend URL,
+ * sends cookies, adds the `X-Pawrrtal-Key` header when configured, and handles auth failures.
  *
+ * - Uses {@link apiFetch} so the backend API key header is included automatically.
  * - Sends `credentials: 'include'` so the HTTP-only session cookie reaches the API.
  * - On `401`, replaces the route with `/login` and throws (callers should treat this as a hard logout signal).
  * - On other non-OK responses, throws with status and body text for debugging.
@@ -19,11 +21,10 @@ export function useAuthedFetch() {
 	// Return a stable function identity between renders so effects depending on it do not loop.
 	return useCallback(
 		async function authedFetch(endpoint: string | (() => string), options?: RequestInit) {
-			// Construct the full URL to fetch from the API.
-			const fetchUrl = `${API_BASE_URL}${typeof endpoint === 'function' ? endpoint() : endpoint}`;
+			const path = typeof endpoint === 'function' ? endpoint() : endpoint;
 
-			// Fetch the URL from the API.
-			const response = await fetch(fetchUrl, {
+			// apiFetch prepends the backend URL and injects X-Pawrrtal-Key when configured.
+			const response = await apiFetch(path, {
 				...options,
 				// Include the session token in the request. (HTTPOnly Cookie)
 				credentials: 'include',
