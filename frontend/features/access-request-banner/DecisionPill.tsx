@@ -1,7 +1,7 @@
 'use client';
 
 import { IconCheck, IconX } from '@tabler/icons-react';
-import { motion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { BOUNCY_SPRING, type Decision } from './types';
 
 /**
@@ -37,7 +37,7 @@ export function DecisionPill({
 		<div className="relative grid w-[160px] shrink-0 grid-cols-2 overflow-hidden rounded-full border border-border">
 			{/* Sliding highlight: animates between left/right halves via layoutId */}
 			{isDecided && (
-				<motion.div
+				<m.div
 					layoutId={`pill-highlight-${pillId}`}
 					className={`absolute inset-y-0 w-1/2 rounded-full bg-muted ${
 						isApproved ? 'left-0' : 'left-1/2'
@@ -47,7 +47,7 @@ export function DecisionPill({
 			)}
 
 			{/* Approve side: always rendered, always same grid cell width */}
-			<motion.button
+			<m.button
 				type="button"
 				onClick={isApproved ? onReset : onApprove}
 				className={`relative z-10 flex cursor-pointer items-center justify-center gap-1 py-1 text-xs font-medium transition-colors ${
@@ -57,10 +57,10 @@ export function DecisionPill({
 			>
 				{isApproved && <IconCheck className="size-3" />}
 				{isApproved ? 'Approved' : 'Approve'}
-			</motion.button>
+			</m.button>
 
 			{/* Reject side: always rendered, always same grid cell width */}
-			<motion.button
+			<m.button
 				type="button"
 				onClick={isRejected ? onReset : onReject}
 				className={`relative z-10 flex cursor-pointer items-center justify-center gap-1 border-l border-border py-1 text-xs font-medium transition-colors ${
@@ -70,7 +70,7 @@ export function DecisionPill({
 			>
 				{isRejected && <IconX className="size-3" />}
 				{isRejected ? 'Rejected' : 'Reject'}
-			</motion.button>
+			</m.button>
 		</div>
 	);
 }

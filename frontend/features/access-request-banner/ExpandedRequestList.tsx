@@ -1,6 +1,7 @@
 'use client';
 
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 import { RequestRow } from './RequestRow';
 import { EXPAND_SPRING, type ExpandedRequestListProps } from './types';
 
@@ -40,7 +41,7 @@ export function ExpandedRequestList({
 			{bannerState.status === 'expanded' && (
 				// expandKey is only accessible here because TypeScript has narrowed
 				// bannerState to the `expanded` variant — the union does the guarding.
-				<motion.div
+				<m.div
 					key={bannerState.expandKey}
 					initial={{ height: 0, opacity: 0 }}
 					animate={{ height: 'auto', opacity: 1 }}
@@ -61,7 +62,7 @@ export function ExpandedRequestList({
 							/>
 						))}
 					</div>
-				</motion.div>
+				</m.div>
 			)}
 		</AnimatePresence>
 	);
