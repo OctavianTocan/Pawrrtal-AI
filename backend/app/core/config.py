@@ -88,6 +88,34 @@ class Settings(BaseSettings):
     admin_email: str | None = None
     admin_password: str | None = None
 
+    # --- Access control ------------------------------------------------------
+    # Optional bearer token all clients must supply in the X-Pawrrtal-Key
+    # request header. When set, any request missing or carrying the wrong
+    # value is rejected with 401 before auth runs. Leave empty to disable
+    # (useful in local dev or for the public demo instance where
+    # ALLOWED_EMAILS is the only gate). Generate with: openssl rand -hex 32
+    backend_api_key: str = ""
+
+    # Comma-separated list of email addresses that are allowed to use this
+    # backend. When non-empty, authenticated users whose email is not on
+    # the list receive a 403 on any authenticated endpoint. Google and Apple
+    # OAuth both deliver verified emails, so this check is reliable across
+    # all login methods (Google, Apple, password).
+    # Example: ALLOWED_EMAILS=you@example.com,partner@example.com
+    # Leave empty to allow all authenticated users (open / demo mode).
+    allowed_emails: str = ""
+
+    @property
+    def allowed_emails_set(self) -> frozenset[str]:
+        """Return the normalised email allowlist as a frozen set."""
+        if not self.allowed_emails:
+            return frozenset()
+        return frozenset(
+            addr.strip().lower()
+            for addr in self.allowed_emails.split(",")
+            if addr.strip()
+        )
+
     # --- OAuth: Google ---
     # Set both to enable the "Continue with Google" button on the login
     # page. When either is empty the start endpoint returns 503 with a

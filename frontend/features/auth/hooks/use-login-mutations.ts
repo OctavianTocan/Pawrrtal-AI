@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 
 /**
  * React Query mutations for JWT login and dev-only admin shortcut.
@@ -42,7 +42,7 @@ export function useLoginMutation() {
 
 	return useMutation<void, Error, LoginArgs>({
 		mutationFn: async ({ email, password }) => {
-			const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.login}`, {
+			const response = await apiFetch(API_ENDPOINTS.auth.login, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/x-www-form-urlencoded',
@@ -74,7 +74,7 @@ export function useDevAdminLoginMutation() {
 
 	return useMutation<void, Error, void>({
 		mutationFn: async () => {
-			const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.devLogin}`, {
+			const response = await apiFetch(API_ENDPOINTS.auth.devLogin, {
 				method: 'POST',
 				credentials: 'include',
 			});

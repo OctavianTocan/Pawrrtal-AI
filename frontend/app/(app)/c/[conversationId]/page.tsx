@@ -3,6 +3,11 @@ import { notFound, unauthorized } from 'next/navigation';
 import ChatContainer from '@/features/chat/ChatContainer';
 import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
 
+// Server components cannot use localStorage, so read the key from the build-time
+// env var. In demo builds it is baked in; for production deployments configure
+// NEXT_PUBLIC_BACKEND_API_KEY in the server's environment.
+const SERVER_API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY ?? '';
+
 /** Route params for `/c/:conversationId`. */
 interface ConversationPageProps {
 	params: Promise<{ conversationId: string }>;
@@ -34,6 +39,7 @@ export default async function ConversationPage({ params }: ConversationPageProps
 			headers: {
 				'content-type': 'application/json',
 				Cookie: `session_token=${sessionToken?.value}`,
+				...(SERVER_API_KEY ? { 'X-Pawrrtal-Key': SERVER_API_KEY } : {}),
 			},
 		}
 	);
