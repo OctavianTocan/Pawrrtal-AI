@@ -69,10 +69,6 @@ export function ConnectAppsStrip({
 	const [isDismissed, setIsDismissed] = useState(false);
 	const { push } = useRouter();
 
-	if (isDismissed) {
-		return null;
-	}
-
 	const handleDismiss = (event: React.MouseEvent<HTMLButtonElement>): void => {
 		event.stopPropagation();
 		setIsDismissed(true);
@@ -94,6 +90,7 @@ export function ConnectAppsStrip({
 		<div
 			className={cn(
 				'relative z-0 -mt-4 flex items-center justify-between gap-3 rounded-surface-lg bg-[color:var(--background-elevated-shade)] px-3 pt-5 pb-1 font-normal shadow-minimal transition-colors hover:bg-foreground/[0.04]',
+				isDismissed && 'hidden',
 				className
 			)}
 		>
