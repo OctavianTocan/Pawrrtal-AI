@@ -21,7 +21,6 @@ import logging
 from pathlib import Path
 
 from app.core.fs import read_capped_utf8
-from app.core.preferences import preferences_to_prompt_section, read_preferences
 
 log = logging.getLogger(__name__)
 
@@ -58,30 +57,25 @@ def read_soul_md(workspace_root: Path) -> str | None:
 
 
 def assemble_workspace_prompt(workspace_root: Path) -> str | None:
-    """Return SOUL.md + AGENTS.md + preferences.toml as a single system prompt.
+    """Return the concatenated SOUL.md + AGENTS.md, or ``None`` if both missing.
 
-    Order (each section is optional):
-      1. ``SOUL.md`` — who you are
-      2. ``AGENTS.md`` — how to operate here
-      3. Rendered ``preferences.toml`` — what the user wants right now
+    Order: SOUL.md first ("who you are"), then a separator, then
+    AGENTS.md ("how to operate here").  Either may be missing
+    independently; the missing section is omitted with no trace in the
+    output so the agent doesn't see "(file missing)" placeholders.
 
-    Each section is separated by a horizontal-rule line.  Returns ``None``
-    only when every section is empty/missing, so the provider falls back
-    to its built-in default.  A missing section is omitted with no trace
-    (no "(file missing)" placeholder text reaches the agent).
+    User preferences live in ``preferences.toml`` at the workspace root
+    but are intentionally NOT injected here — the agent reads that file
+    via ``workspace_files`` only when relevant, so we don't bloat every
+    turn's prompt with settings the model rarely needs.
     """
     soul = read_soul_md(workspace_root)
     agents = read_agents_md(workspace_root)
-    preferences = preferences_to_prompt_section(read_preferences(workspace_root))
-
+    if soul is None and agents is None:
+        return None
     parts: list[str] = []
     if soul is not None:
         parts.append(soul)
     if agents is not None:
         parts.append(agents)
-    if preferences is not None:
-        parts.append(preferences)
-
-    if not parts:
-        return None
     return "\n\n---\n\n".join(parts)

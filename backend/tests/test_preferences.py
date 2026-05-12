@@ -4,7 +4,6 @@ from pathlib import Path
 
 from app.core.preferences import (
     PREFERENCES_FILENAME,
-    preferences_to_prompt_section,
     read_preferences,
     write_preferences,
 )
@@ -46,27 +45,3 @@ def test_read_swallows_malformed_toml(tmp_path: Path) -> None:
     """Malformed TOML degrades to {} so the agent still runs."""
     (tmp_path / PREFERENCES_FILENAME).write_text("not = valid = toml", encoding="utf-8")
     assert read_preferences(tmp_path) == {}
-
-
-def test_prompt_section_returns_none_for_empty_data() -> None:
-    """Empty preferences dict yields None so the prompt skips the section."""
-    assert preferences_to_prompt_section({}) is None
-    assert preferences_to_prompt_section({"identity": {}}) is None
-
-
-def test_prompt_section_renders_identity_and_goals() -> None:
-    """The rendered markdown contains every populated field exactly once."""
-    section = preferences_to_prompt_section(
-        {
-            "identity": {"name": "Tavi", "role": "founder"},
-            "context": {"custom_instructions": "Be terse."},
-            "goals": {"items": ["ship demo", "wire allowed_emails"]},
-        }
-    )
-    assert section is not None
-    assert "## User Preferences" in section
-    assert "**Name:** Tavi" in section
-    assert "**Role:** founder" in section
-    assert "Be terse." in section
-    assert "- ship demo" in section
-    assert "- wire allowed_emails" in section

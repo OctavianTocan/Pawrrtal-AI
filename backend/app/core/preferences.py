@@ -5,6 +5,10 @@ The agent can read AND write `preferences.toml` natively through the
 DB row.  This makes preferences agent-editable from every surface
 (web, Electron, Telegram) without adding any new wiring.
 
+**The file is NOT auto-injected into the system prompt.**  It's a
+standard workspace file; the agent reads it via ``workspace_files``
+when and only when it's relevant.  This keeps every-turn context lean.
+
 File location
 -------------
 ``{workspace_root}/preferences.toml``
@@ -119,98 +123,4 @@ def _strip_none(value: Any) -> Any:
     return value
 
 
-def preferences_to_prompt_section(data: dict[str, Any]) -> str | None:
-    """Render the preferences dict as a markdown system-prompt section.
 
-    Returns ``None`` when *data* is empty so callers can cleanly skip
-    appending the section.  Output shape:
-
-    .. code-block:: markdown
-
-        ## User Preferences
-
-        ### Identity
-        - **Name:** Tavi
-        - **Role:** founder
-        ...
-
-        ### Context
-        ...
-
-    Sections appear in a stable order so the prompt is deterministic.
-    Unknown sections are appended verbatim at the end.
-    """
-    if not data:
-        return None
-
-    lines: list[str] = ["## User Preferences", ""]
-    # Known sections are always claimed so an empty-but-present section
-    # (e.g. ``{"identity": {}}``) doesn't bleed into the "Other" fallback.
-    rendered_keys: set[str] = {"identity", "context", "goals", "channels"}
-
-    # ── Identity ──
-    identity = data.get("identity") or {}
-    if identity:
-        lines.append("### Identity")
-        for label, field in (
-            ("Name", "name"),
-            ("Role", "role"),
-            ("Company / Website", "company_website"),
-            ("LinkedIn", "linkedin"),
-        ):
-            val = identity.get(field)
-            if val:
-                lines.append(f"- **{label}:** {val}")
-        lines.append("")
-
-    # ── Context ──
-    context = data.get("context") or {}
-    if context:
-        lines.append("### Context")
-        chatgpt_context = context.get("chatgpt_context")
-        if chatgpt_context:
-            lines.append("**About the user:**")
-            lines.append("")
-            lines.append(chatgpt_context.strip())
-            lines.append("")
-        custom_instructions = context.get("custom_instructions")
-        if custom_instructions:
-            lines.append("**How to respond:**")
-            lines.append("")
-            lines.append(custom_instructions.strip())
-            lines.append("")
-
-    # ── Goals ──
-    goals = data.get("goals") or {}
-    if goals:
-        items = goals.get("items") or []
-        if items:
-            lines.append("### Goals")
-            for item in items:
-                lines.append(f"- {item}")
-            lines.append("")
-
-    # ── Channels ──
-    channels = data.get("channels") or {}
-    if channels:
-        connected = channels.get("connected") or []
-        if connected:
-            lines.append("### Connected Channels")
-            lines.append(", ".join(connected))
-            lines.append("")
-
-    # ── Unknown sections — appended verbatim so user-defined sections
-    # still surface to the agent even if we haven't formally modelled them.
-    extras = {k: v for k, v in data.items() if k not in rendered_keys}
-    if extras:
-        lines.append("### Other")
-        for key, value in extras.items():
-            lines.append(f"**{key}:** {value}")
-        lines.append("")
-
-    # If nothing got rendered (e.g. all sections were empty dicts) treat
-    # as no preferences.
-    if len(lines) == 2:
-        return None
-
-    return "\n".join(lines).rstrip() + "\n"
