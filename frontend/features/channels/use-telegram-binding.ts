@@ -16,7 +16,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import {
 	type ChannelBinding,
 	ChannelNotConfiguredError,
@@ -28,6 +28,10 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 const PROVIDER = 'telegram';
+
+interface UseTelegramBindingOptions {
+	onConnected?: () => void;
+}
 
 /** Public shape returned by {@link useTelegramBinding}. */
 export interface TelegramBindingState {
@@ -59,13 +63,17 @@ export interface TelegramBindingState {
  * un-cached. If we ever surface the same state in three+ places we'll
  * lift it into a context.
  */
-export function useTelegramBinding(): TelegramBindingState {
+export function useTelegramBinding(options: UseTelegramBindingOptions = {}): TelegramBindingState {
 	const [binding, setBinding] = useState<ChannelBinding | null>(null);
 	const [pendingCode, setPendingCode] = useState<TelegramLinkCode | null>(null);
 	const [isBusy, setIsBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [notConfigured, setNotConfigured] = useState(false);
 	const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const notifiedBindingKeyRef = useRef<string | null>(null);
+	const fireConnected = useEffectEvent((): void => {
+		options.onConnected?.();
+	});
 
 	const stopPolling = useCallback(() => {
 		if (pollTimerRef.current !== null) {
@@ -80,6 +88,15 @@ export function useTelegramBinding(): TelegramBindingState {
 			const next = rows.find((row) => row.provider === PROVIDER) ?? null;
 			setBinding(next);
 			if (next !== null) {
+				const bindingKey = [
+					next.provider,
+					next.external_user_id,
+					next.external_chat_id ?? '',
+				].join(':');
+				if (notifiedBindingKeyRef.current !== bindingKey) {
+					notifiedBindingKeyRef.current = bindingKey;
+					fireConnected();
+				}
 				// Bot finished the bind — close the polling loop and clear
 				// the now-redundant code so the dialog snaps to "Connected".
 				setPendingCode(null);
