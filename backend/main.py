@@ -27,6 +27,7 @@ from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
+from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
 from app.logger_setup import (
@@ -48,6 +49,10 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Run startup tasks (database table creation) before the app begins serving."""
+    # OpenTelemetry tracing bootstrap.  No-op when OTEL_EXPORTER_OTLP_ENDPOINT
+    # is unset, so dev environments are unaffected.  Must run before any
+    # outbound httpx call so the autoinstrumenter wraps the global client.
+    setup_tracing(app)
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
@@ -58,7 +63,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # `app.state` so the webhook route can hand updates to aiogram.
     async with telegram_lifespan() as telegram_service:
         app.state.telegram_service = telegram_service
-        yield
+        try:
+            yield
+        finally:
+            shutdown_tracing()
 
 
 # --- App & Middleware --------------------------------------------------------
