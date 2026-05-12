@@ -25,23 +25,23 @@ export interface ChatPromptSuggestionsProps {
 	suggestions: ChatPromptSuggestion[];
 	/** Callback fired when a suggestion is selected. */
 	onSelectSuggestion: (prompt: string) => void;
-	/** Optional renderer for the leading icon column. */
-	renderIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
+	/** Optional resolver for the leading icon column. */
+	getIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
 	/** Extra classes for the root list container. */
 	className?: string;
 }
 
 function SuggestionIcon({
-	renderIcon,
+	getIcon,
 	suggestion,
 }: {
-	renderIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
+	getIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
 	suggestion: ChatPromptSuggestion;
 }): React.JSX.Element | null {
-	if (!renderIcon) return null;
+	if (!getIcon) return null;
 	return (
 		<span aria-hidden="true" className="shrink-0 text-[var(--color-chat-muted)]">
-			{renderIcon(suggestion)}
+			{getIcon(suggestion)}
 		</span>
 	);
 }
@@ -58,7 +58,7 @@ function SuggestionIcon({
 export function ChatPromptSuggestions({
 	suggestions,
 	onSelectSuggestion,
-	renderIcon,
+	getIcon,
 	className,
 }: ChatPromptSuggestionsProps): React.JSX.Element {
 	const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -79,7 +79,7 @@ export function ChatPromptSuggestions({
 									onClick={() => onSelectSuggestion(suggestion.label)}
 									type="button"
 								>
-									<SuggestionIcon renderIcon={renderIcon} suggestion={suggestion} />
+									<SuggestionIcon getIcon={getIcon} suggestion={suggestion} />
 									<span className="min-w-0 flex-1 truncate text-[var(--color-chat-muted)] transition-colors group-hover/suggestion:text-[var(--color-chat-foreground)]">
 										{suggestion.label}
 									</span>
