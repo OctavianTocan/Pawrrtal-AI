@@ -45,6 +45,8 @@ const onboardingModalReducer = (
 			return { ...state, folderLabel: action.folderLabel };
 		case 'restart':
 			return { open: true, step: 'welcome', folderLabel: null };
+		default:
+			return state;
 	}
 };
 
