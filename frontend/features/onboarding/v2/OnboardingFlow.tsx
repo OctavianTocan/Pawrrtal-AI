@@ -16,7 +16,6 @@ import {
 import { StepContext } from './step-context';
 import { StepIdentity } from './step-identity';
 import { StepMessaging } from './step-messaging';
-import { StepPersonality } from './step-personality';
 import { StepServer } from './step-server';
 
 /** Browser event used by app chrome to open the onboarding flow. */
@@ -58,7 +57,7 @@ export const E2E_SKIP_ONBOARDING_QUERY_PARAM = 'e2e_skip_onboarding';
 export const ONBOARDING_COMPLETE_STORAGE_KEY = 'pawrrtal:onboarding-v2-complete';
 
 /** Wizard step IDs in render order. */
-const STEP_IDS = ['identity', 'server', 'context', 'personality', 'messaging'] as const;
+const STEP_IDS = ['identity', 'server', 'context', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
 
 /**
@@ -250,13 +249,6 @@ export function OnboardingFlow({
 							onContinue={goNext}
 							onPatch={patchProfile}
 							onSkip={goNext}
-							profile={profile}
-						/>
-					) : null}
-					{step === 'personality' ? (
-						<StepPersonality
-							onContinue={goNext}
-							onPatch={patchProfile}
 							profile={profile}
 						/>
 					) : null}

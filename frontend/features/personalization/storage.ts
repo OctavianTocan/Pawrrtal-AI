@@ -1,61 +1,20 @@
 /**
  * Single source of truth for the personalization profile that the
  * onboarding flow collects and the Settings → Personalization section
- * edits. Persisted to localStorage under `nexus:personalization` so both
- * surfaces read/write the same shape.
+ * edits. Persisted to localStorage under `nexus:personalization` as a
+ * draft buffer; on save the same shape is PUT to
+ * `/api/v1/personalization` which writes `preferences.toml` into the
+ * user's workspace (where the agent can read AND write it directly via
+ * the `workspace_files` tool — including from Telegram).
  *
- * Backend wiring is deferred — once the agent factory threads custom
- * instructions through the system prompt, the backend will read the
- * same fields from `user_preferences` and the localStorage cache becomes
- * a draft buffer until save.
+ * The legacy `personality` preset field was removed: agent personality
+ * lives in workspace `SOUL.md`, which the agent itself can edit.
  *
  * @fileoverview Shared personalization profile + load/save helpers.
  */
 
 /** localStorage key — never rename without a migration. */
 export const PERSONALIZATION_STORAGE_KEY = 'nexus:personalization';
-
-/** Personality preset IDs the onboarding flow + settings dropdown share. */
-export const PERSONALITY_OPTIONS = [
-	{
-		id: 'goose',
-		label: 'Goose',
-		summary: 'Direct, opinionated, and genuinely helpful — no corporate fluff.',
-		traits: ['Direct', 'Opinionated', 'Competent'],
-	},
-	{
-		id: 'sharp-coworker',
-		label: 'Sharp Co-worker',
-		summary: 'Direct, decisive, and gets things done. Treats you like a peer.',
-		traits: ['Direct', 'Opinionated', 'Efficient'],
-	},
-	{
-		id: 'honest-coach',
-		label: 'Honest Coach',
-		summary: 'Tells you the truth even when it stings. Pushes you to do better.',
-		traits: ['Candid', 'Challenging', 'High-standards'],
-	},
-	{
-		id: 'thorough-analyst',
-		label: 'Thorough Analyst',
-		summary: 'Methodical and comprehensive. Shows its work, leaves nothing out.',
-		traits: ['Detailed', 'Structured', 'Careful'],
-	},
-	{
-		id: 'relentless-executor',
-		label: 'Relentless Executor',
-		summary: 'Bias to action. Closes loops fast, never leaves work half-done.',
-		traits: ['Action-first', 'Decisive', 'Fast'],
-	},
-] as const satisfies ReadonlyArray<{
-	id: string;
-	label: string;
-	summary: string;
-	traits: readonly string[];
-}>;
-
-/** Union of all valid personality IDs. */
-export type PersonalityId = (typeof PERSONALITY_OPTIONS)[number]['id'];
 
 /** Messaging channels the onboarding flow can connect (visual-only today). */
 export const MESSAGING_CHANNELS = [
@@ -86,8 +45,6 @@ export interface PersonalizationProfile {
 	goals?: string[];
 	/** Pasted ChatGPT context blob from step 2. */
 	chatgptContext?: string;
-	/** Personality preset chosen in step 3. */
-	personality?: PersonalityId;
 	/** Channels the user clicked Connect on in step 4. Visual only. */
 	connectedChannels?: MessagingChannelId[];
 	/** Custom instructions surfaced in the Personalization settings section. */

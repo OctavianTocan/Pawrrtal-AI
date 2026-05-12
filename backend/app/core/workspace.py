@@ -22,6 +22,11 @@ Standard file layout (inspired by the official OpenClaw workspace structure):
 Seeding happens once: when the user completes the onboarding wizard and the
 ``PUT /api/v1/personalization`` endpoint is called for the first time.  The
 service is idempotent — calling it again on an existing workspace is a no-op.
+
+User preferences (name, role, goals, custom_instructions, …) are NOT seeded
+into USER.md.  They live in ``preferences.toml`` at the workspace root and
+are loaded into the system prompt every turn by ``assemble_workspace_prompt``.
+See ``app.core.preferences``.
 """
 
 from __future__ import annotations
@@ -111,38 +116,7 @@ The agent has direct read/write access to this workspace directory.
 - Workspace-scoped skills live in `skills/`.
 """
 
-_PERSONALITY_SOULS: dict[str, str] = {
-    "analytical": """\
-# SOUL.md — Who You Are
-
-You are a precise, analytical assistant.  You think in systems, surface
-trade-offs, and lead with evidence.  Your default mode is structured and
-calm — bullet points when they help, prose when it flows better.
-
-You are direct.  You flag uncertainty clearly.  You do not pad answers
-with enthusiasm or filler.  You are here to help the user think, decide,
-and ship.
-""",
-    "creative": """\
-# SOUL.md — Who You Are
-
-You are an imaginative, generative assistant.  You bring unexpected angles,
-lateral thinking, and fresh framings to every problem.  You are comfortable
-with ambiguity and enjoy exploring the edges.
-
-You are warm and enthusiastic but not sycophantic.  You share genuine
-opinions.  You know when to stop generating and help the user land the idea.
-""",
-    "direct": """\
-# SOUL.md — Who You Are
-
-You are a no-nonsense assistant.  Short sentences.  Strong verbs.  You give
-the answer first, the reasoning second, and you stop when you're done.
-
-You do not hedge.  You do not soften.  When you are uncertain you say so
-plainly.  You treat the user as a capable adult.
-""",
-    "balanced": """\
+_DEFAULT_SOUL = """\
 # SOUL.md — Who You Are
 
 You are a well-rounded assistant — analytical when precision matters, creative
@@ -151,46 +125,17 @@ and match accordingly.
 
 You are reliable, curious, and honest.  You do not perform enthusiasm or
 false confidence.  You are here to be genuinely useful.
-""",
-}
 
-_DEFAULT_SOUL = _PERSONALITY_SOULS["balanced"]
+This file is yours to edit.  Rewrite it to change how you show up.
+"""
 
+_USER_MD_STUB = """\
+# USER.md — About You
 
-def _build_user_md(p: UserPersonalization | None) -> str:
-    if p is None:
-        return "# USER.md — About You\n\n_(Fill in your details here.)_\n"
-
-    lines = ["# USER.md — About You", ""]
-
-    if p.name:
-        lines.append(f"- **Name:** {p.name}")
-    if p.role:
-        lines.append(f"- **Role:** {p.role}")
-    if p.company_website:
-        lines.append(f"- **Company / Website:** {p.company_website}")
-    if p.linkedin:
-        lines.append(f"- **LinkedIn:** {p.linkedin}")
-    if p.goals:
-        goals_str = ", ".join(p.goals) if isinstance(p.goals, list) else str(p.goals)
-        lines.append(f"- **Goals:** {goals_str}")
-    if p.custom_instructions:
-        lines += ["", "## Custom Instructions", "", p.custom_instructions]
-
-    lines += [
-        "",
-        "---",
-        "",
-        "_Update this file as you evolve what you need from your agent._",
-        "",
-    ]
-    return "\n".join(lines)
-
-
-def _build_soul_md(p: UserPersonalization | None) -> str:
-    if p is None or not p.personality:
-        return _DEFAULT_SOUL
-    return _PERSONALITY_SOULS.get(p.personality.lower(), _DEFAULT_SOUL)
+_(The agent fills this in over time from conversation.  Your structured
+preferences live in ``preferences.toml`` and are loaded into the system
+prompt automatically every turn.)_
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -203,16 +148,16 @@ def _workspace_path(workspace_id: uuid.UUID) -> Path:
     return Path(settings.workspace_base_dir) / str(workspace_id)
 
 
-def seed_workspace(
-    workspace_id: uuid.UUID,
-    personalization: UserPersonalization | None = None,
-) -> Path:
+def seed_workspace(workspace_id: uuid.UUID) -> Path:
     """Create the workspace directory tree and write seed files.
 
     Idempotent — existing files are not overwritten, so re-running after a
     partial seed is safe.  New directories are always created.
 
     Returns the workspace root path.
+
+    User preferences are NOT seeded here — they live in
+    ``preferences.toml`` and are written by the personalization endpoint.
     """
     root = _workspace_path(workspace_id)
 
@@ -228,8 +173,8 @@ def seed_workspace(
         "AGENTS.md": _AGENTS_MD,
         "IDENTITY.md": _IDENTITY_MD,
         "TOOLS.md": _TOOLS_MD,
-        "SOUL.md": _build_soul_md(personalization),
-        "USER.md": _build_user_md(personalization),
+        "SOUL.md": _DEFAULT_SOUL,
+        "USER.md": _USER_MD_STUB,
     }
     for filename, content in seed_files.items():
         target = root / filename

@@ -127,13 +127,17 @@ class ProjectUpdate(BaseModel):
 
 
 class PersonalizationProfile(BaseModel):
-    """Home-page personalization wizard profile.
+    """User preferences profile (TOML-backed in the workspace).
 
     Mirrors the frontend `PersonalizationProfile` interface in
-    `frontend/features/personalization/storage.ts`. Every field is
-    optional so a partially-filled wizard round-trips cleanly. Used
+    `frontend/features/personalization/storage.ts`.  Every field is
+    optional so a partially-filled wizard round-trips cleanly.  Used
     as both the GET response and the PUT request body — the endpoint
     treats the request as a full replacement of the persisted profile.
+
+    The ``personality`` preset field was removed in the preferences-toml
+    refactor: agent personality lives in ``SOUL.md`` (workspace-editable
+    by the agent itself) and is not selected from a static preset list.
     """
 
     name: str | None = None
@@ -143,7 +147,6 @@ class PersonalizationProfile(BaseModel):
     goals: list[str] | None = None
     connected_channels: list[str] | None = None
     chatgpt_context: str | None = None
-    personality: str | None = None
     custom_instructions: str | None = None
 
 
