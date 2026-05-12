@@ -86,7 +86,7 @@ export default function ChatContainer({
 	const createConversationMutation = useCreateConversation(conversationId);
 	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
 	const { replace } = useRouter();
-	const { setActiveConversation, clearActiveConversation } = useChatActivity();
+	const { publishActiveConversation, clearActiveConversation } = useChatActivity();
 	const hasNavigated = useRef(false);
 
 	// Composer textarea — controlled string so the container can reset it on
@@ -190,8 +190,8 @@ export default function ChatContainer({
 	// Keep the sidebar's chat-activity context in sync. Fires on every change so
 	// the sidebar can show spinners, unread badges, and content-search matches.
 	useEffect(() => {
-		setActiveConversation({ conversationId, chatHistory, isLoading });
-	}, [chatHistory, conversationId, isLoading, setActiveConversation]);
+		publishActiveConversation({ conversationId, chatHistory, isLoading });
+	}, [chatHistory, conversationId, isLoading, publishActiveConversation]);
 
 	// Clear activity state on unmount, guarded by conversationId so a stale
 	// cleanup doesn't clobber a newly opened conversation.

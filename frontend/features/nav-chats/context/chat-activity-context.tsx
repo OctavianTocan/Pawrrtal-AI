@@ -26,8 +26,8 @@ type ActiveConversationState = {
 
 /** Context value exposed to consumers: current state + mutation helpers. */
 type ChatActivityContextValue = ActiveConversationState & {
-	/** Replace the active conversation state entirely (used when opening a chat). */
-	setActiveConversation: (state: ActiveConversationState) => void;
+	/** Publish the latest active conversation snapshot for sidebar consumers. */
+	publishActiveConversation: (state: ActiveConversationState) => void;
 	/**
 	 * Clear the active conversation, but only if the given ID matches.
 	 * Guards against race conditions where a slow close callback fires
@@ -56,7 +56,7 @@ export function ChatActivityProvider({
 	const value = useMemo<ChatActivityContextValue>(
 		() => ({
 			...state,
-			setActiveConversation: setState,
+			publishActiveConversation: setState,
 			clearActiveConversation: (conversationId) => {
 				setState((current) =>
 					current.conversationId === conversationId
