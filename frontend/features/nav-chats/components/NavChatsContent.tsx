@@ -34,6 +34,10 @@ const GROUP_EXPAND_EXIT_DURATION = 0.1;
 const GROUP_EXPAND_ENTER_EASE = [0.16, 1, 0.3, 1] as const;
 /** ease-in-quint — same curve used by the dropdown exit motion. */
 const GROUP_EXPAND_EXIT_EASE = [0.7, 0, 0.84, 0] as const;
+// Scrolling lives on the parent wrapper in NavChatsView so projects and
+// conversations scroll as one group. This element keeps listbox semantics and
+// the spacing rhythm from the Projects section above.
+const CONVERSATION_LIST_CLASS = 'mt-3 pt-1 outline-none';
 
 /**
  * Slice of the parent `NavChatsView` props that the inner content rendering
@@ -301,13 +305,7 @@ export function NavChatsContent({
 		<LazyMotion features={domAnimation}>
 			<div
 				ref={navigatorRef}
-				// Scrolling lives on the parent wrapper in NavChatsView so the
-				// projects list and the conversation list scroll together as one
-				// group. This element keeps the listbox role + keyboard focus
-				// handling but no longer owns the overflow. `mt-3` gives the
-				// Today/Yesterday/Archived groups breathing room from the Projects
-				// section above, matching the ChatGPT-style section rhythm.
-				className="mt-3 pt-1 outline-none"
+				className={CONVERSATION_LIST_CLASS}
 				role="listbox"
 				aria-label="Sessions"
 				aria-multiselectable="true"
