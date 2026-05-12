@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import {
@@ -61,6 +61,41 @@ export const ONBOARDING_COMPLETE_STORAGE_KEY = 'pawrrtal:onboarding-v2-complete'
 const STEP_IDS = ['identity', 'server', 'context', 'personality', 'messaging'] as const;
 type StepId = (typeof STEP_IDS)[number];
 
+interface OnboardingFlowState {
+	open: boolean;
+	profile: PersonalizationProfile;
+	step: StepId;
+}
+
+type OnboardingFlowAction =
+	| { type: 'hydrate-profile'; profile: PersonalizationProfile }
+	| { type: 'open-at-step'; profile: PersonalizationProfile; step: StepId }
+	| { type: 'patch-profile'; patch: Partial<PersonalizationProfile> }
+	| { type: 'set-open'; open: boolean }
+	| { type: 'set-step'; step: StepId };
+
+function onboardingFlowReducer(
+	state: OnboardingFlowState,
+	action: OnboardingFlowAction
+): OnboardingFlowState {
+	if (action.type === 'hydrate-profile') {
+		return { ...state, profile: action.profile };
+	}
+	if (action.type === 'open-at-step') {
+		return { open: true, profile: action.profile, step: action.step };
+	}
+	if (action.type === 'patch-profile') {
+		return { ...state, profile: { ...state.profile, ...action.patch } };
+	}
+	if (action.type === 'set-open') {
+		return { ...state, open: action.open };
+	}
+	if (action.type === 'set-step') {
+		return { ...state, step: action.step };
+	}
+	return state;
+}
+
 /**
  * Returns true when the current page should suppress the auto-open
  * onboarding wizard (E2E test mode). Safe to call on the server — the
@@ -96,6 +131,13 @@ function hasCompletedOnboarding(): boolean {
 	}
 }
 
+function shouldInitiallyOpenFlow(initialOpen: boolean): boolean {
+	if (!initialOpen) return false;
+	if (shouldSkipOnboardingForE2E()) return false;
+	if (hasCompletedOnboarding()) return false;
+	return true;
+}
+
 /** Props for {@link OnboardingFlow}. */
 export interface OnboardingFlowProps {
 	/** Open on first mount. Defaults to false (event-driven). */
@@ -120,34 +162,34 @@ export function OnboardingFlow({
 	initialOpen = false,
 	listenForOpenEvent = true,
 }: OnboardingFlowProps): React.JSX.Element {
-	// Lazy initializer: read the E2E skip flag exactly once on mount.
+	// The reducer initializer reads the E2E skip flag exactly once on mount.
 	// During SSR `shouldSkipOnboardingForE2E` returns false so the dialog
 	// hydrates closed (no flash); on the client we re-check synchronously
 	// before the first paint so the modal never visibly appears in test
 	// mode. Production users' `initialOpen=true` survives unchanged
 	// because the skip helper short-circuits to false without the flag.
-	const [open, setOpen] = useState<boolean>(() => {
-		if (!initialOpen) return false;
-		if (shouldSkipOnboardingForE2E()) return false;
-		if (hasCompletedOnboarding()) return false;
-		return true;
-	});
-	const [step, setStep] = useState<StepId>('identity');
 	const remotePersonalization = useGetPersonalization();
 	const upsertPersonalization = useUpsertPersonalization();
 	// Seed from localStorage on first render so the form has data to
 	// display before the React Query GET resolves. Once the remote
 	// profile arrives, hydrate over the local copy below in an effect.
-	const [profile, setProfile] = useState<PersonalizationProfile>(() =>
-		loadPersonalizationProfile()
+	const [flowState, dispatchFlowState] = useReducer(
+		onboardingFlowReducer,
+		null,
+		(): OnboardingFlowState => ({
+			open: shouldInitiallyOpenFlow(initialOpen),
+			profile: loadPersonalizationProfile(),
+			step: 'identity',
+		})
 	);
+	const { open, profile, step } = flowState;
 
 	// Hydrate from the backend the first time it arrives + on every
 	// subsequent refetch — keeps local state aligned with persisted state
 	// after the user navigates away and comes back.
 	useEffect(() => {
 		if (remotePersonalization.data) {
-			setProfile(remotePersonalization.data);
+			dispatchFlowState({ type: 'hydrate-profile', profile: remotePersonalization.data });
 		}
 	}, [remotePersonalization.data]);
 
@@ -163,20 +205,18 @@ export function OnboardingFlow({
 	 */
 	const patchProfile = useCallback(
 		(patch: Partial<PersonalizationProfile>): void => {
-			setProfile((current) => {
-				const next = { ...current, ...patch };
-				savePersonalizationProfile(next);
-				upsertPersonalization.mutate(next);
-				return next;
-			});
+			const next = { ...flowState.profile, ...patch };
+			savePersonalizationProfile(next);
+			upsertPersonalization.mutate(next);
+			dispatchFlowState({ type: 'patch-profile', patch });
 		},
-		[upsertPersonalization]
+		[flowState.profile, upsertPersonalization]
 	);
 
 	const goNext = useCallback(() => {
 		const index = STEP_IDS.indexOf(step);
 		const nextStep = STEP_IDS[Math.min(STEP_IDS.length - 1, index + 1)];
-		setStep(nextStep ?? step);
+		dispatchFlowState({ type: 'set-step', step: nextStep ?? step });
 	}, [step]);
 
 	const finish = useCallback(() => {
@@ -185,11 +225,11 @@ export function OnboardingFlow({
 		} catch {
 			/* quota / private browsing — ignore */
 		}
-		setOpen(false);
+		dispatchFlowState({ type: 'set-open', open: false });
 		// Reset to step 1 so re-opening from the workspace selector starts
 		// fresh — without this the user would land on whatever step they
 		// last left off, which is jarring for a "new workspace" intent.
-		setStep('identity');
+		dispatchFlowState({ type: 'set-step', step: 'identity' });
 	}, []);
 
 	// Listen for the generic "open the flow" event — gated by listenForOpenEvent
@@ -202,9 +242,11 @@ export function OnboardingFlow({
 		// in a separate component and is unaffected.
 		if (shouldSkipOnboardingForE2E()) return;
 		const handler = (): void => {
-			setStep('identity');
-			setProfile(loadPersonalizationProfile());
-			setOpen(true);
+			dispatchFlowState({
+				type: 'open-at-step',
+				profile: loadPersonalizationProfile(),
+				step: 'identity',
+			});
 		};
 		window.addEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
 		return () => window.removeEventListener(OPEN_ONBOARDING_FLOW_EVENT, handler);
@@ -216,16 +258,21 @@ export function OnboardingFlow({
 	useEffect(() => {
 		if (shouldSkipOnboardingForE2E()) return;
 		const serverHandler = (): void => {
-			setProfile(loadPersonalizationProfile());
-			setStep('server');
-			setOpen(true);
+			dispatchFlowState({
+				type: 'open-at-step',
+				profile: loadPersonalizationProfile(),
+				step: 'server',
+			});
 		};
 		window.addEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
 		return () => window.removeEventListener(OPEN_ONBOARDING_SERVER_STEP_EVENT, serverHandler);
 	}, []);
 
 	return (
-		<Dialog onOpenChange={setOpen} open={open}>
+		<Dialog
+			onOpenChange={(nextOpen) => dispatchFlowState({ type: 'set-open', open: nextOpen })}
+			open={open}
+		>
 			<DialogContent className="top-0 left-0 h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none border-0 bg-background p-0 text-foreground shadow-none ring-0 sm:max-w-none sm:p-0 [&>button]:top-6 [&>button]:right-6 [&>button]:z-30 [&>button]:rounded-control [&>button]:bg-foreground/[0.035] [&>button]:text-muted-foreground [&>button]:ring-1 [&>button]:ring-border [&>button]:hover:bg-foreground/[0.07] [&>button]:hover:text-foreground">
 				<DialogTitle className="sr-only">Onboarding</DialogTitle>
 				<OnboardingBackdrop />
