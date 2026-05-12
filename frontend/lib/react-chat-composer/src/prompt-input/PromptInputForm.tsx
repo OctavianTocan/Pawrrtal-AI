@@ -17,6 +17,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useEffectEvent,
 	useMemo,
 	useRef,
 	useState,
@@ -217,6 +218,9 @@ export function PromptInputForm({
 		() => ({ files, add, remove, clear, openFileDialog, fileInputRef: inputRef }),
 		[files, add, remove, clear, openFileDialog],
 	);
+	const addDroppedFiles = useEffectEvent((fileList: FileList) => {
+		add(fileList);
+	});
 
 	// Clean up object URLs when the form unmounts.
 	useEffect(() => {
@@ -241,7 +245,7 @@ export function PromptInputForm({
 		const onDocumentDrop = (e: DragEvent): void => {
 			if (e.dataTransfer && hasDraggedFiles(e.dataTransfer)) e.preventDefault();
 			if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-				add(e.dataTransfer.files);
+				addDroppedFiles(e.dataTransfer.files);
 			}
 		};
 		document.addEventListener('dragover', onDocumentDragOver);
@@ -250,7 +254,7 @@ export function PromptInputForm({
 			document.removeEventListener('dragover', onDocumentDragOver);
 			document.removeEventListener('drop', onDocumentDrop);
 		};
-	}, [add, globalDrop]);
+	}, [globalDrop]);
 
 	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
 		if (event.currentTarget.files) add(event.currentTarget.files);

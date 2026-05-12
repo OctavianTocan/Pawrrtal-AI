@@ -31,6 +31,21 @@ export interface ChatPromptSuggestionsProps {
 	className?: string;
 }
 
+function SuggestionIcon({
+	renderIcon,
+	suggestion,
+}: {
+	renderIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
+	suggestion: ChatPromptSuggestion;
+}): React.JSX.Element | null {
+	if (!renderIcon) return null;
+	return (
+		<span aria-hidden="true" className="shrink-0 text-[var(--color-chat-muted)]">
+			{renderIcon(suggestion)}
+		</span>
+	);
+}
+
 /**
  * Compact suggested-prompt rows for an empty conversation.
  *
@@ -64,11 +79,7 @@ export function ChatPromptSuggestions({
 									onClick={() => onSelectSuggestion(suggestion.label)}
 									type="button"
 								>
-									{renderIcon ? (
-										<span aria-hidden="true" className="shrink-0 text-[var(--color-chat-muted)]">
-											{renderIcon(suggestion)}
-										</span>
-									) : null}
+									<SuggestionIcon renderIcon={renderIcon} suggestion={suggestion} />
 									<span className="min-w-0 flex-1 truncate text-[var(--color-chat-muted)] transition-colors group-hover/suggestion:text-[var(--color-chat-foreground)]">
 										{suggestion.label}
 									</span>

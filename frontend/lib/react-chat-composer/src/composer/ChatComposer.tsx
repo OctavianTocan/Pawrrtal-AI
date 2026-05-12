@@ -137,13 +137,14 @@ export function ChatComposer({
 		async (message: PromptInputMessage): Promise<void> => {
 			const trimmed = message.content.trim();
 			if (!trimmed && message.files.length === 0) return;
-			const files = message.files
+			const files = message.files.flatMap((part) => {
 				// Object URLs from the prompt-input form are scoped to the form's
 				// lifetime; consumers that need persistent storage should upload
 				// directly from the `File` payload, which is preserved when the
 				// browser provides it.
-				.map((part) => fileFromPart(part))
-				.filter((file): file is File => file !== null);
+				const file = fileFromPart(part);
+				return file ? [file] : [];
+			});
 			const payload: ChatComposerMessage = { text: trimmed, attachments: files };
 			await Promise.resolve(onSubmit(payload));
 			// Reset uncontrolled text after a successful submit so the next
