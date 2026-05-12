@@ -25,6 +25,7 @@ from app.api.workspace_env import get_workspace_env_router
 from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
@@ -75,6 +76,10 @@ def create_app() -> FastAPI:
     # so it wraps every endpoint. Each request gets a unique ID logged on
     # entry and exit (see app/core/request_logging.py).
     fastapi_app.add_middleware(RequestLoggingMiddleware)
+    # ChatRateLimitMiddleware is a no-op when chat_rate_limit_per_minute=0
+    # (the default), so registering it unconditionally costs nothing in
+    # dev but is wired up for prod just by flipping the env var.
+    fastapi_app.add_middleware(ChatRateLimitMiddleware)
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )
