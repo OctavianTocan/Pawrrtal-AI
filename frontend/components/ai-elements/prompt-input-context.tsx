@@ -16,6 +16,7 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useReducer,
 	useRef,
 	useState,
 } from 'react';
@@ -53,6 +54,7 @@ export type PromptInputProviderProps = PropsWithChildren<{
 export const PromptInputController = createContext<PromptInputControllerProps | null>(null);
 export const ProviderAttachmentsContext = createContext<AttachmentsContext | null>(null);
 export const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
+const replaceTextInput = (_current: string, next: string): string => next;
 
 const revokeFileUrl = (file: { url?: string }) => {
 	if (file.url) {
@@ -117,7 +119,7 @@ export function PromptInputProvider({
 	initialInput: initialTextInput = '',
 	children,
 }: PromptInputProviderProps) {
-	const [textInput, setTextInput] = useState(initialTextInput);
+	const [textInput, setTextInput] = useReducer(replaceTextInput, initialTextInput);
 	const clearInput = useCallback(() => setTextInput(''), []);
 	const [attachmentFiles, setAttachmentFiles] = useState<(FileUIPart & { id: string })[]>([]);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);

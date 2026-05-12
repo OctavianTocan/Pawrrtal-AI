@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useReducer, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import { OnboardingCreateWorkspaceStep } from '@/features/onboarding/onboarding-create-workspace-step';
@@ -13,6 +13,7 @@ type OnboardingStep = 'welcome' | 'create' | 'local';
 
 /** Browser event used by app chrome to reopen the cosmetic onboarding flow. */
 export const OPEN_ONBOARDING_EVENT = 'pawrrtal:open-onboarding';
+const replaceOpenState = (_current: boolean, next: boolean): boolean => next;
 
 /** Props for the onboarding modal host. */
 export interface OnboardingModalProps {
@@ -32,7 +33,7 @@ export function OnboardingModal({
 }: OnboardingModalProps): React.JSX.Element {
 	const folderInputRef = useRef<HTMLInputElement>(null);
 	const folderInputId = useId();
-	const [open, setOpen] = useState(initialOpen);
+	const [open, setOpen] = useReducer(replaceOpenState, initialOpen);
 	const [step, setStep] = useState<OnboardingStep>('welcome');
 	const [folderLabel, setFolderLabel] = useState<string | null>(null);
 
