@@ -77,6 +77,28 @@ export default {
 			//     'Required for avatar and video features',
 			// },
 		},
+
+		// ── Windows platform config ───────────────────────────────────────────
+		win: {
+			// App icon: provide a .ico file (multi-resolution, 16/32/48/256px).
+			// Convert from PNG: magick icon-256.png -define icon:auto-resize=256,48,32,16 icon.ico
+			// Uncomment once the asset exists:
+			// icons: 'icon.ico',
+
+			// CEF gives a consistent Chromium renderer across Windows versions,
+			// avoiding WebView2 availability/version issues on older machines.
+			// Adds ~120MB to the bundle but removes the WebView2 runtime dependency.
+			// bundleCEF: true,
+			// defaultRenderer: 'cef',
+		},
+
+		// ── Linux platform config ─────────────────────────────────────────────
+		linux: {
+			// CEF is strongly recommended on Linux — GTK WebKit versions vary
+			// wildly between distros and can cause rendering or API inconsistencies.
+			// bundleCEF: true,
+			// defaultRenderer: 'cef',
+		},
 	},
 
 	// Runtime values are written into build.json and accessible via BuildConfig.get().
