@@ -22,8 +22,7 @@ export interface EntityRowProps {
 	badges?: React.ReactNode;
 	trailing?: React.ReactNode;
 	children?: React.ReactNode;
-	isSelected?: boolean;
-	showSeparator?: boolean;
+	state?: EntityRowState;
 	className?: string;
 	separatorClassName?: string;
 	onClick?: () => void;
@@ -31,12 +30,8 @@ export interface EntityRowProps {
 	menuContent?: React.ReactNode;
 	/** Override context menu content (defaults to menuContent) */
 	contextMenuContent?: React.ReactNode;
-	/** Multi-select highlight */
-	isInMultiSelect?: boolean;
 	/** Mouse down handler for modifier key detection */
 	onMouseDown?: (e: React.MouseEvent) => void;
-	/** When true, the inner row becomes draggable. */
-	draggable?: boolean;
 	/** Fires on drag start — the row sets up the dataTransfer payload here. */
 	onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
 	/** Fires on drag end — used to clean up local "is dragging" state. */
@@ -47,6 +42,13 @@ export interface EntityRowProps {
 	dataAttributes?: Record<string, string | undefined>;
 	/** Hide the "..." more button */
 	hideMoreButton?: boolean;
+}
+
+export interface EntityRowState {
+	isDraggable?: boolean;
+	isInMultiSelect?: boolean;
+	isSelected?: boolean;
+	showSeparator?: boolean;
 }
 
 /**
@@ -65,22 +67,25 @@ export function EntityRow({
 	badges,
 	trailing,
 	children,
-	isSelected = false,
-	showSeparator = false,
+	state,
 	className,
 	separatorClassName = 'pl-[38px] pr-4',
 	onClick,
 	menuContent,
 	contextMenuContent,
-	isInMultiSelect = false,
 	onMouseDown,
-	draggable: isDraggable,
 	onDragStart,
 	onDragEnd,
 	buttonProps,
 	dataAttributes,
 	hideMoreButton = false,
 }: EntityRowProps): React.JSX.Element {
+	const {
+		isDraggable = false,
+		isInMultiSelect = false,
+		isSelected = false,
+		showSeparator = false,
+	} = state ?? {};
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [contextMenuOpen, setContextMenuOpen] = useState(false);
 	const resolvedContextMenu = contextMenuContent ?? menuContent;

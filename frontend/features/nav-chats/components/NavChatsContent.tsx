@@ -188,8 +188,13 @@ function ConversationRow({
 					<SearchCountBadge count={searchCount} isSelected={isSelected} />
 				) : undefined
 			}
-			isInMultiSelect={multiSelectedIds.size > 1 && isSelected}
-			showSeparator={index > 0}
+			state={{
+				isArchived: conversation.is_archived,
+				isFlagged: conversation.is_flagged,
+				isInMultiSelect: multiSelectedIds.size > 1 && isSelected,
+				isUnread: conversation.is_unread,
+				showSeparator: index > 0,
+			}}
 			onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
 			onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
 			buttonProps={{
@@ -205,9 +210,6 @@ function ConversationRow({
 				onKeyDown: (event: ReactKeyboardEvent) =>
 					onConversationKeyDown(event, conversation, visibleIndex),
 			}}
-			isArchived={conversation.is_archived}
-			isFlagged={conversation.is_flagged}
-			isUnread={conversation.is_unread}
 			status={conversation.status}
 			appliedLabelIds={labels.filter((label): label is string => typeof label === 'string')}
 			onNavigate={onNavigate}

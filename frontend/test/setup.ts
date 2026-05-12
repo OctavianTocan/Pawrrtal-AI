@@ -22,36 +22,34 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 		ResizeObserverPolyfill;
 }
 
-// jsdom under Bun's vitest sometimes exposes `window.localStorage` as
-// a non-functional getter — install a minimal in-memory Storage polyfill
-// so persistence-backed hooks have a working API in tests.
+// jsdom under Bun's vitest can expose `window.localStorage` through Node's
+// warning-emitting Web Storage getter when no localstorage file is configured.
+// Install a deterministic in-memory Storage polyfill without touching the
+// getter first so persistence-backed hooks have a quiet, working API in tests.
 if (typeof window !== 'undefined') {
-	const needsPolyfill = !window.localStorage || typeof window.localStorage.setItem !== 'function';
-	if (needsPolyfill) {
-		const store = new Map<string, string>();
-		const polyfill: Storage = {
-			get length(): number {
-				return store.size;
-			},
-			clear: (): void => {
-				store.clear();
-			},
-			getItem: (key: string): string | null =>
-				store.has(key) ? (store.get(key) as string) : null,
-			setItem: (key: string, value: string): void => {
-				store.set(key, String(value));
-			},
-			removeItem: (key: string): void => {
-				store.delete(key);
-			},
-			key: (index: number): string | null => Array.from(store.keys())[index] ?? null,
-		};
-		Object.defineProperty(window, 'localStorage', {
-			value: polyfill,
-			configurable: true,
-			writable: false,
-		});
-	}
+	const store = new Map<string, string>();
+	const polyfill: Storage = {
+		get length(): number {
+			return store.size;
+		},
+		clear: (): void => {
+			store.clear();
+		},
+		getItem: (key: string): string | null =>
+			store.has(key) ? (store.get(key) as string) : null,
+		setItem: (key: string, value: string): void => {
+			store.set(key, String(value));
+		},
+		removeItem: (key: string): void => {
+			store.delete(key);
+		},
+		key: (index: number): string | null => Array.from(store.keys())[index] ?? null,
+	};
+	Object.defineProperty(window, 'localStorage', {
+		value: polyfill,
+		configurable: true,
+		writable: false,
+	});
 }
 
 // jsdom's `Element.scrollIntoView` is undefined; radix-ui's submenu

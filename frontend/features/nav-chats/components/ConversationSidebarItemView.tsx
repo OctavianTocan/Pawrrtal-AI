@@ -32,22 +32,14 @@ import { ConversationUnreadGlyph } from './ConversationUnreadGlyph';
 export interface ConversationSidebarItemViewProps {
 	/** The conversation title (may include Calligraph or highlight wrapping). */
 	title: ReactNode;
-	/** Whether this row is the active route. */
-	isSelected: boolean;
-	/** Whether to render a separator above this item. */
-	showSeparator: boolean;
+	/** Row and conversation status flags. */
+	state: ConversationSidebarItemViewState;
 	/** Compact relative-time string (e.g. "3h"), or null. */
 	age: string | null;
 	/** The full URL path for this conversation. */
 	href: string;
 	/** Absolute URL for clipboard copy. */
 	absoluteHref: string;
-	/** Whether the conversation is archived. */
-	isArchived: boolean;
-	/** Whether the conversation is flagged. */
-	isFlagged: boolean;
-	/** Whether the conversation has an unread indicator. */
-	isUnread: boolean;
 	/** Current workflow status tag. */
 	status: ConversationStatus;
 	/** String label IDs currently applied (resolved against NAV_CHATS_LABELS). */
@@ -80,8 +72,6 @@ export interface ConversationSidebarItemViewProps {
 	badges?: ReactNode;
 	/** Content shown after the title (e.g. search match count badge). */
 	titleTrailing?: ReactNode;
-	/** True when this item is part of an active multi-select. */
-	isInMultiSelect?: boolean;
 	/** Called on mouse down on the row. */
 	onMouseDown?: (e: React.MouseEvent) => void;
 	/**
@@ -94,6 +84,21 @@ export interface ConversationSidebarItemViewProps {
 	onClickMenuItem?: () => void;
 	/** Extra button props for the row's interactive element. */
 	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
+}
+
+export interface ConversationSidebarItemViewState {
+	/** Whether the conversation is archived. */
+	isArchived: boolean;
+	/** Whether the conversation is flagged. */
+	isFlagged: boolean;
+	/** True when this item is part of an active multi-select. */
+	isInMultiSelect?: boolean;
+	/** Whether this row is the active route. */
+	isSelected: boolean;
+	/** Whether the conversation has an unread indicator. */
+	isUnread: boolean;
+	/** Whether to render a separator above this item. */
+	showSeparator: boolean;
 }
 
 /** Props for the shared menu-content component. */
@@ -317,14 +322,10 @@ function ConversationMenuContent({
  */
 export function ConversationSidebarItemView({
 	title,
-	isSelected,
-	showSeparator,
+	state,
 	age,
 	href,
 	absoluteHref,
-	isArchived,
-	isFlagged,
-	isUnread,
 	status,
 	appliedLabelIds,
 	onClick,
@@ -341,12 +342,12 @@ export function ConversationSidebarItemView({
 	icon,
 	badges,
 	titleTrailing,
-	isInMultiSelect,
 	onMouseDown,
 	onClickMenuItem,
 	buttonProps,
 	conversationId,
 }: ConversationSidebarItemViewProps): React.JSX.Element {
+	const { isArchived, isFlagged, isInMultiSelect, isSelected, isUnread, showSeparator } = state;
 	const handleMenuNavigate = (): void => {
 		if (onClickMenuItem) {
 			onClickMenuItem();
@@ -386,12 +387,14 @@ export function ConversationSidebarItemView({
 		<SidebarMenuItem>
 			<EntityRow
 				icon={icon ?? <ConversationStatusGlyph status={status} />}
-				showSeparator={showSeparator}
-				isSelected={isSelected}
-				isInMultiSelect={isInMultiSelect}
+				state={{
+					isDraggable: Boolean(conversationId),
+					isInMultiSelect,
+					isSelected,
+					showSeparator,
+				}}
 				onClick={onClick}
 				onMouseDown={onMouseDown}
-				draggable={Boolean(conversationId)}
 				onDragStart={(event) => {
 					if (!conversationId) return;
 					event.dataTransfer.effectAllowed = 'move';

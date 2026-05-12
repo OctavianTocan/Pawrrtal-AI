@@ -40,14 +40,8 @@ export interface WorkspacesSectionViewProps {
 	keyMetas: readonly WorkspaceEnvKeyMeta[];
 	/** Current form values (working copy that handles edits). */
 	values: Record<WorkspaceEnvKey, string>;
-	/** Per-key visibility toggle: `true` shows plaintext, `false` masks. */
-	showTokens: Partial<Record<WorkspaceEnvKey, boolean>>;
-	/** True while the initial query is in flight. */
-	isLoading: boolean;
-	/** True when the form has unsaved changes. */
-	isDirty: boolean;
-	/** True while the save mutation is in flight. */
-	isSaving: boolean;
+	/** UI state for the workspace env form. */
+	state: WorkspacesSectionViewState;
 	/** Localised error message to surface above the action buttons; null when none. */
 	errorMessage: string | null;
 	/** Called whenever a single field's value changes. */
@@ -60,6 +54,17 @@ export interface WorkspacesSectionViewProps {
 	onDiscard: () => void;
 }
 
+export interface WorkspacesSectionViewState {
+	/** True when the form has unsaved changes. */
+	isDirty: boolean;
+	/** True while the initial query is in flight. */
+	isLoading: boolean;
+	/** True while the save mutation is in flight. */
+	isSaving: boolean;
+	/** Per-key visibility toggle: `true` shows plaintext, `false` masks. */
+	showTokens: Partial<Record<WorkspaceEnvKey, boolean>>;
+}
+
 /**
  * Settings → Workspaces presentation surface. Renders every key in
  * `keyMetas` as a masked input row plus Save/Discard controls. Has no
@@ -70,16 +75,14 @@ export interface WorkspacesSectionViewProps {
 export function WorkspacesSectionView({
 	keyMetas,
 	values,
-	showTokens,
-	isLoading,
-	isDirty,
-	isSaving,
+	state,
 	errorMessage,
 	onValueChange,
 	onToggleVisibility,
 	onSave,
 	onDiscard,
 }: WorkspacesSectionViewProps): React.JSX.Element {
+	const { isDirty, isLoading, isSaving, showTokens } = state;
 	return (
 		<SettingsPage
 			description="Override gateway environment variables for your workspace. Leave a field blank to use the gateway default."
