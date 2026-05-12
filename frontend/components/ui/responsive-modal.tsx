@@ -24,7 +24,8 @@ import { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const subscribeToHydration = (): (() => void) => () => {};
+const unsubscribeFromHydration = (): void => undefined;
+const subscribeToHydration = (): (() => void) => unsubscribeFromHydration;
 const getClientHydrationSnapshot = (): boolean => true;
 const getServerHydrationSnapshot = (): boolean => false;
 

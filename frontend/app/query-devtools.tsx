@@ -3,7 +3,8 @@
 import { ReactQueryDevtools as RQDevtools } from '@tanstack/react-query-devtools';
 import { useSyncExternalStore } from 'react';
 
-const subscribeToHydration = (): (() => void) => () => {};
+const unsubscribeFromHydration = (): void => undefined;
+const subscribeToHydration = (): (() => void) => unsubscribeFromHydration;
 const getClientHydrationSnapshot = (): boolean => true;
 const getServerHydrationSnapshot = (): boolean => false;
 
