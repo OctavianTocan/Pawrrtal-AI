@@ -1,0 +1,60 @@
+# Demo-mode overlay for `docker-compose.yml`.
+#
+# Usage:
+#
+#     docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
+#
+# Runs the backend in a sandboxed configuration safe for an unattended
+# public "try it out" deployment.  The base compose file is reused
+# unmodified — this overlay only adds env overrides + a separate
+# ephemeral volume so a demo deployment can sit next to a private
+# deployment on the same host without bleeding state.
+#
+# What "demo mode" means today (DEMO_MODE=true):
+#   * Refuses Telegram bot startup (no inbound channel from public).
+#   * Forces a low chat rate limit per user (15 / min).
+#   * Wipes the workspace volume on every container restart so demo
+#     users never see each other's files.
+#   * Hard-disables outbound network for the agent's tools.  Workspace
+#     files + artifact still work; web search + image gen do not.
+#
+# Hard requirements before deploying:
+#   * Set BACKEND_API_KEY to a long random value baked into the
+#     frontend build (NEXT_PUBLIC_BACKEND_API_KEY).  Otherwise anyone
+#     can hit the demo API directly.
+#   * Set ALLOWED_EMAILS="" intentionally (open) — anyone can sign up
+#     to try the demo.
+#   * Set CHAT_RATE_LIMIT_PER_MINUTE=15 (or whatever you can afford).
+#   * Set CLAUDE_CODE_OAUTH_TOKEN and/or GOOGLE_API_KEY to a key
+#     scoped to a demo billing pool you're comfortable losing.
+
+services:
+  postgres:
+    # Override the volume name so demo postgres data lives separately
+    # from the private deployment.
+    volumes:
+      - postgres_demo_data:/var/lib/postgresql/data
+
+  backend:
+    environment:
+      DEMO_MODE: "true"
+      # Hard cap how much one user can cost us per minute.
+      CHAT_RATE_LIMIT_PER_MINUTE: "15"
+      # Open allowlist — anyone can demo.
+      ALLOWED_EMAILS: ""
+      # No Telegram in demo (would expose a public reply surface).
+      TELEGRAM_BOT_TOKEN: ""
+      # Disable web search to keep the demo's cost surface small.
+      EXA_API_KEY: ""
+      # Override the workspace dir so demo volumes are completely
+      # separate from the private deploy.
+      WORKSPACE_BASE_DIR: /data/demo-workspaces
+    volumes:
+      # Ephemeral volume — wiped on container recreation (no `volumes:`
+      # entry at the bottom means it's a Compose-managed anonymous
+      # volume that goes away on `docker compose down`).
+      - demo_workspace_data:/data/demo-workspaces
+
+volumes:
+  postgres_demo_data:
+  demo_workspace_data:

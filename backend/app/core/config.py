@@ -161,6 +161,13 @@ class Settings(BaseSettings):
     # back to ``catalog.default_model().id`` and the row is logged.
     strict_conversation_read_validation: bool = True
 
+    # Demo-mode toggle.  When true, the backend refuses to start the
+    # Telegram channel (which would expose a public reply surface) and
+    # the chat router enforces the demo restrictions documented in
+    # docs/deployment/demo-mode.md.  Default false so production /
+    # private deploys are never accidentally demo-shaped.
+    demo_mode: bool = False
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:
