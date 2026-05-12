@@ -1,223 +1,529 @@
 # Design: OpenAI Codex OAuth provider for GPT text models
 
-**Status:** Proposed
+**Status:** Proposed — research complete, ready for implementation
 **Author:** Tavi + Wretch
 **Last updated:** 2026-05-12
 
 ## Summary
 
-We already use OpenAI's Codex OAuth flow for image generation
-(`backend/app/core/tools/image_gen.py`).  The same endpoint, same
-auth, same wire format also serves chat text completions.  This doc
-plans an `OpenAICodexProvider` that mirrors `ClaudeProvider` /
-`GeminiProvider` and registers a new model prefix in `factory.py`,
-so users can route `gpt-*` (or `openai-codex/*`) conversations
-through the same ChatGPT-paid auth they already have configured.
+We already authenticate to the Codex backend for image generation
+(`backend/app/core/tools/image_gen.py`).  The same auth token, same
+endpoint, and same Responses API protocol also serve text completions.
 
-## Why use Codex OAuth instead of `OPENAI_API_KEY`
+This doc is the **canonical reference** for adding text-model support.
+It's built from a deep read of:
 
-- **ChatGPT subscription billing is cheaper at our usage shape**
-  than per-token API key billing for casual text use.
-- Users already configured Codex OAuth for image generation —
-  reusing it is one less secret to manage.
-- Pulls in fast-mode access on subscription plans without extra
-  config.
+- OpenAI Codex docs (`developers.openai.com/codex`)
+- The official Codex CLI Rust source
+  (`github.com/openai/codex/codex-rs`)
+- Multiple independent OAuth-based Codex clients
+  (`EvanZhouDev/openai-oauth`, `oauth-codex`, `codex-auth`,
+  `codex-open-client`, `codex-backend-sdk`)
+- OpenCode plugins
+  (`pproenca/opencode-openai-codex-auth`,
+  `ndycode/oc-codex-multi-auth`,
+  `withakay/opencode-codex-provider`)
+- The Roo-Code provider
+  (`RooCodeInc/Roo-Code/src/api/providers/openai-codex.ts`)
+- `badlogic/pi-mono` issue #3579 (header gateway compatibility)
+- Reported failures: openai/codex#11743, openai/codex#14743,
+  openai/codex#15502, openclaw/openclaw#64133
 
-## Confirmed wire shape
+If any section conflicts with the live Codex CLI behaviour, **the CLI
+wins** — these endpoints are private to OpenAI and the wire shape can
+change without notice.
 
-From OpenAI's documentation and our own image-gen code:
+## Why use Codex OAuth instead of an API key
+
+- ChatGPT Plus/Pro subscription pricing beats per-token API key
+  pricing at our usage shape.
+- Users (Tavi + Esther) already have Codex OAuth configured for
+  image generation; reusing it is one less secret to manage.
+- Fast-mode + reasoning summaries are gated on subscription auth.
+- `api.openai.com/v1/responses` **rejects** ChatGPT OAuth tokens
+  with `401 Missing scope api.responses.write` — the Codex sub-path
+  bypasses this gate.  That's the entire reason this provider exists.
+
+## Confirmed endpoint + transport
 
 | Property        | Value                                                |
 | --------------- | ---------------------------------------------------- |
 | Endpoint        | `https://chatgpt.com/backend-api/codex/responses`    |
 | Method          | `POST`                                               |
-| Auth header     | `Authorization: Bearer <codex_oauth_token>`          |
-| Token source    | `$CODEX_HOME/auth.json` → `tokens.access_token`      |
-| Wire protocol   | Responses API streaming (SSE-style events)           |
-| Default model   | `gpt-5.5` (matches our image-gen choice; configurable) |
+| Streaming       | **Required.**  `stream: true` in body, `Accept: text/event-stream` header.  Non-streaming returns 400. |
+| Storage         | **`store: false` required.**  `store: true` returns `400 Store must be set to false`. |
+| `previous_response_id` | Not supported (depends on storage).  Multi-turn uses stateless `reasoning.encrypted_content` instead. |
+| Max body size   | ~4 MB (proxy default in `openprx`).                  |
+| Stream idle timeout | 45 s default, 180 s upper bound observed.         |
 
-**Important:** Do NOT use `api.openai.com/v1/responses`.  ChatGPT
-OAuth tokens are rejected there (missing `api.responses.write`
-scope).  The codex sub-path bypasses that gate — it's the same
-endpoint the official Codex CLI uses.
+## Auth flow
 
-## Implementation plan
+### `~/.codex/auth.json` schema
 
-### 1. New provider module
+The Codex CLI writes this file on login.  Our code reads from the same
+file (already done in `image_gen.py`).  Schema:
 
-`backend/app/core/providers/openai_codex_provider.py`
+```json
+{
+  "OPENAI_API_KEY": null,
+  "auth_mode": "chatgpt",
+  "email": "user@example.com",
+  "tokens": {
+    "id_token": "eyJ...",
+    "access_token": "eyJ...",
+    "refresh_token": "...",
+    "account_id": "org-..."
+  },
+  "last_refresh": "2026-05-12T14:00:00.000Z"
+}
+```
 
-Shape mirrors `gemini_provider.py`:
+`OPENAI_API_KEY` is non-null **only** when the user signed in with an
+API key instead of ChatGPT.  When it's non-null, skip the OAuth flow
+entirely — `tokens` will be absent and the access path is a normal
+`api.openai.com/v1` request with that key as bearer.
+
+### OAuth PKCE flow (for our own login)
+
+If we want to support sign-in from inside Pawrrtal (vs. requiring the
+user to run the Codex CLI first):
+
+| Property        | Value                                                |
+| --------------- | ---------------------------------------------------- |
+| Client ID       | `app_EMoamEEZ73f0CkXaXp7hrann`                       |
+| Issuer          | `https://auth.openai.com`                            |
+| Token URL       | `https://auth.openai.com/oauth/token`                |
+| Authorize URL   | `https://auth.openai.com/oauth/authorize`            |
+| Scopes          | `openid profile email`                               |
+| Callback        | `http://localhost:1455/auth/callback`                |
+| PKCE            | S256                                                 |
+| Device code     | Supported (`POST /oauth/device/code`)                |
+
+**Note:** port `1455` is hardcoded by the official CLI.  If the Codex
+CLI is running during our login flow it will steal the callback.
+Tell users to quit it during first auth.
+
+### Refresh
+
+`POST https://auth.openai.com/oauth/token` with:
+
+```json
+{
+  "grant_type": "refresh_token",
+  "refresh_token": "<from auth.json>",
+  "client_id": "app_EMoamEEZ73f0CkXaXp7hrann",
+  "scope": "openid profile email"
+}
+```
+
+Response includes a new `access_token`, optionally a new `id_token`,
+and **optionally a new `refresh_token`** (rotate it if present).
+
+**🚨 Critical gotcha:** Refresh tokens are **single-use**.  If two
+processes (e.g. the Codex CLI and our backend) both try to refresh at
+the same time, one wins and the other invalidates.  See
+openai/codex#15502.  Mitigations:
+
+1. Centralise refresh through one async lock per host process.
+2. After 401 on a stream, re-read `auth.json` from disk (the CLI
+   might have refreshed it concurrently) and retry once before
+   running our own refresh.
+
+### Extracting `chatgpt_account_id`
+
+Two paths:
+
+1. **Cheap:** read `tokens.account_id` from `auth.json` directly.
+2. **Fallback:** decode the JWT `id_token` (base64url payload) and
+   read `claims["https://api.openai.com/auth"].chatgpt_account_id`.
+
+Both should produce the same value; use (1) and fall back to (2)
+when the field is missing in older auth files.
+
+## Required request headers
+
+This is the **exact** header set our provider must send.  Validated
+against three independent reference implementations.
+
+```http
+POST /backend-api/codex/responses HTTP/1.1
+Host: chatgpt.com
+Content-Type: application/json
+Accept: text/event-stream
+Authorization: Bearer <access_token>
+OpenAI-Beta: responses=experimental
+chatgpt-account-id: <account_id>
+originator: pawrrtal
+session_id: <uuid v4 per request>
+```
+
+Optional but recommended:
+- `x-client-request-id: <our conversation_id>` — for log correlation.
+
+**Header gotchas:**
+
+- **`session_id` (with underscore)** is what the backend keys
+  cache-affinity on.  `pi-mono#3579` shows strict HTTP gateways
+  reject underscore headers — irrelevant here because we hit
+  `chatgpt.com` directly, but worth knowing if we ever proxy through
+  one.
+- **`originator`** is critical.  If you set it to `codex_cli_rs`,
+  the backend enters **strict mode**: it validates that the
+  `instructions` text exactly matches the Codex CLI's `prompt.md`
+  AND that the `tools` list is exactly `shell` + `update_plan` with
+  exact schemas, AND that the model is `gpt-5`.  Anything else
+  returns `400 {"detail": "Instructions are not valid"}`.  We do
+  **not** want strict mode — use our own originator string
+  (`pawrrtal`, `pawrrtal/0.1.0`, or whatever).  Strict mode is only
+  for clients that want to impersonate the official CLI.
+- **Do not send `temperature`** — `400 Unsupported parameter:
+  temperature`.
+- **Do not send `User-Agent`** is sometimes reported as problematic
+  but `RooCodeInc/Roo-Code` happily sends a `User-Agent` with their
+  own product/version string and that works.  Probably safe; skip if
+  in doubt.
+- **`OpenAI-Beta: responses=experimental`** — required.  Without it
+  the endpoint may default to an older shape.
+
+## Request payload
+
+```json
+{
+  "model": "gpt-5",
+  "instructions": "You are Pawrrtal's assistant. ...",
+  "input": [
+    {
+      "type": "message",
+      "role": "user",
+      "content": [
+        {"type": "input_text", "text": "What's 2 + 2?"}
+      ]
+    }
+  ],
+  "tools": [],
+  "tool_choice": "auto",
+  "reasoning": {
+    "effort": "medium",
+    "summary": "auto"
+  },
+  "text": {"verbosity": "medium"},
+  "include": ["reasoning.encrypted_content"],
+  "stream": true,
+  "store": false
+}
+```
+
+### Rules
+
+- **`model`** — known-good values: `gpt-5`, `gpt-5-codex`, `gpt-5.4`,
+  `gpt-5.5`, `gpt-5-mini`, `gpt-5-nano`.  Subscription tier determines
+  which models the user can actually access; unknowns return
+  `400 Unsupported model`.  Plan to call `GET
+  /backend-api/codex/models` (when available) or hardcode + let the
+  backend reject.
+- **`instructions`** — system prompt at the top level (NOT inside
+  `input`).  Free-form string when `originator` is your own value.
+- **`input`** — Responses API format (NOT chat completions
+  `messages`).  Each item is `{type: "message", role,
+  content: [{type: "input_text", text}]}` OR
+  `{type: "reasoning", encrypted_content, ...}` (for multi-turn
+  state).  Roles allowed: `user`, `assistant`, `system`,
+  `developer`.
+- **`stream: true`** — required.  Backend rejects `false`.
+- **`store: false`** — required.  Backend rejects `true`.
+- **`reasoning.effort`** — `minimal | low | medium | high`.
+  `gpt-5-codex` rejects `minimal` (silently normalised to `low` by
+  some clients).
+- **`reasoning.summary`** — `auto | detailed`.
+- **`text.verbosity`** — `low | medium | high`.  `gpt-5-codex` only
+  accepts `medium`.
+- **`include: ["reasoning.encrypted_content"]`** — required for
+  multi-turn statelessness (see below).
+- **Forbidden:** `temperature`, `max_output_tokens`,
+  `max_completion_tokens`, `previous_response_id`, `messages`,
+  `background`.
+
+### Tool format (when sending tools)
+
+Responses API tools are flat — properties at the top level, NOT
+nested under `function`:
+
+```json
+{
+  "type": "function",
+  "name": "render_artifact",
+  "description": "...",
+  "parameters": {
+    "type": "object",
+    "properties": { ... },
+    "required": [ ... ]
+  },
+  "strict": true
+}
+```
+
+Our existing Claude/Gemini tool schemas are easy to translate to this.
+
+## Stream event handling
+
+Server-sent events.  Each event is `event: <type>` + `data: <json>`.
+Key types we care about:
+
+| Event type                              | Meaning                                                     |
+| --------------------------------------- | ----------------------------------------------------------- |
+| `response.created`                      | Request accepted.  Capture `response.id`.                   |
+| `response.output_text.delta`            | Text token chunk.  `data.delta` is the new fragment.        |
+| `response.output_text.done`             | Text item finished.                                         |
+| `response.reasoning_summary.delta`      | Reasoning summary text chunk (visible "thinking").          |
+| `response.reasoning_text.delta`         | Raw reasoning text (when enabled).                          |
+| `response.output_item.added`            | A new item started — could be `function_call`, `message`, `reasoning`, etc.  |
+| `response.function_call_arguments.delta` | Streamed JSON for a function call's `arguments`.          |
+| `response.function_call_arguments.done` | Function call args complete; can dispatch the call.         |
+| `response.output_item.done`             | Item closed — full content available in `data.item`.        |
+| `response.completed`                    | Full response finished.  `data.response.output` has the full item list including reasoning items with `encrypted_content`.  |
+| `error`                                 | Stream-level error.                                         |
+| `[DONE]`                                | Plain SSE terminator after `response.completed`.            |
+
+Map to our `StreamEvent` union:
+
+| Codex event                        | Our `StreamEvent`                                 |
+| ---------------------------------- | ------------------------------------------------- |
+| `response.output_text.delta`       | `{type: "delta", content: <delta>}`               |
+| `response.reasoning_summary.delta` | `{type: "thinking", content: <delta>}`            |
+| `response.output_item.added` (function_call) | `{type: "tool_use", name, input: {}, tool_use_id}` (input filled as deltas arrive)  |
+| `response.function_call_arguments.delta` | append to that tool_use's `input` JSON buffer |
+| `response.function_call_arguments.done`  | emit final `tool_use` with parsed input       |
+| error                              | `{type: "error", content: <error.message>}`       |
+| `response.completed`               | end of stream                                     |
+
+Tool **results** are not part of the same response.  After the
+backend yields a `function_call`, the loop owner (us) executes the
+tool, then sends the next request with the call output appended to
+`input`:
+
+```json
+{
+  "type": "function_call_output",
+  "call_id": "<id from function_call>",
+  "output": "<stringified result>"
+}
+```
+
+This pattern is already how our Claude and Gemini loops work; the
+codex provider just speaks Responses-shaped items instead of
+Anthropic/Gemini-shaped tool messages.
+
+## Multi-turn statelessness
+
+Since `store: false` is mandatory and `previous_response_id` is
+rejected, we manage conversation state by sending the entire turn
+history as `input` items every request.  Standard for our codebase
+(we already do this for Claude + Gemini, capped at 20 messages by
+`_HISTORY_WINDOW`).
+
+**The Codex-specific wrinkle:** reasoning models compute internal
+state that's expensive to recompute.  The Responses API exposes this
+as opaque `reasoning` items with an `encrypted_content` blob —
+include them verbatim in subsequent `input` arrays and the model
+picks up where it left off without redoing reasoning.
+
+### How to use it
+
+1. Send `include: ["reasoning.encrypted_content"]` on every request.
+2. On the `response.completed` event, grab every item with
+   `type: "reasoning"` from `data.response.output`.
+3. On the next turn, before the new user message in `input`, append:
+   - the assistant `message` items from the previous turn (so the
+     model sees what it actually said)
+   - the `reasoning` items verbatim (with their `encrypted_content`)
+   - any `function_call` + `function_call_output` items for tools
+     that ran
+
+Order matters: items must appear in the same sequence the model
+produced them.  Skip items at your peril — partial reasoning state
+can confuse the model.
+
+## Implementation plan (code-level)
+
+### 1. Lift the auth helper
+
+`backend/app/core/codex_auth.py` (new):
+
+```python
+"""Codex OAuth token resolution shared by image_gen + text provider."""
+
+import json
+import os
+import time
+from pathlib import Path
+
+import httpx
+
+CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+TOKEN_URL = "https://auth.openai.com/oauth/token"
+
+
+def resolve_codex_auth(override: str | None = None) -> tuple[str, str]:
+    """Return (access_token, account_id).
+
+    Resolution order:
+      1. `OPENAI_CODEX_OAUTH_TOKEN` override (no account_id available).
+      2. `$CODEX_HOME/auth.json` (default `~/.codex/auth.json`).
+
+    Raises RuntimeError when no auth is configured.
+    """
+    if override:
+        return (override, _decode_account_id_from_jwt(override))
+
+    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
+    auth_file = codex_home / "auth.json"
+    if not auth_file.exists():
+        raise RuntimeError("No Codex auth.  Run `codex login` or set OPENAI_CODEX_OAUTH_TOKEN.")
+
+    data = json.loads(auth_file.read_text())
+    tokens = data.get("tokens") or {}
+    access_token = tokens.get("access_token")
+    account_id = tokens.get("account_id") or _decode_account_id_from_jwt(
+        tokens.get("id_token") or access_token
+    )
+    if not access_token or not account_id:
+        raise RuntimeError("auth.json is missing tokens.access_token or account_id.")
+    return (access_token, account_id)
+
+
+async def refresh_codex_token() -> None:
+    """Refresh the access token.  Single-use refresh token — see #15502."""
+    # Reads auth.json, POSTs to TOKEN_URL, writes back.  Use an asyncio.Lock
+    # at module scope to serialise refresh attempts in this process.
+    ...
+```
+
+### 2. New provider
+
+`backend/app/core/providers/openai_codex_provider.py`:
 
 ```python
 class OpenAICodexProvider(LLMProvider):
-    """OpenAI text-model provider routed through ChatGPT OAuth.
+    """Streams via chatgpt.com/backend-api/codex/responses."""
 
-    Uses the Codex-specific responses endpoint
-    (chatgpt.com/backend-api/codex/responses) so requests authenticate
-    with the same ChatGPT OAuth token already used by image_gen.py.
-    """
+    async def stream(self, question, conversation_id, user_id, *,
+                     history, tools, system_prompt) -> AsyncIterator[StreamEvent]:
+        access_token, account_id = resolve_codex_auth(
+            override=os.environ.get("OPENAI_CODEX_OAUTH_TOKEN"),
+        )
 
-    def __init__(self, model_id: str, user_id: uuid.UUID | None = None):
-        self.model_id = model_id  # e.g. "gpt-5.5", "openai-codex/gpt-5.5"
-        self.user_id = user_id
+        body = self._build_request(question, history, tools, system_prompt)
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
+            "Authorization": f"Bearer {access_token}",
+            "OpenAI-Beta": "responses=experimental",
+            "chatgpt-account-id": account_id,
+            "originator": "pawrrtal",
+            "session_id": str(uuid.uuid4()),
+            "x-client-request-id": str(conversation_id),
+        }
 
-    async def stream(
-        self,
-        question: str,
-        conversation_id: uuid.UUID,
-        user_id: uuid.UUID,
-        *,
-        history: list[Message],
-        tools: list[Tool] | None,
-        system_prompt: str | None,
-    ) -> AsyncIterator[StreamEvent]:
-        token = resolve_codex_oauth_token()  # reuse image_gen.py helper
-        async with httpx.AsyncClient() as client:
-            async with client.stream(
-                "POST",
-                "https://chatgpt.com/backend-api/codex/responses",
-                json=_build_request(question, history, tools, system_prompt),
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                    "Accept": "text/event-stream",
-                },
-                timeout=180.0,
-            ) as response:
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            async with client.stream("POST", CODEX_RESPONSES_URL,
+                                     json=body, headers=headers) as response:
+                if response.status_code == 401:
+                    # Try one refresh + retry before giving up.
+                    await refresh_codex_token()
+                    # ... retry ...
                 response.raise_for_status()
-                async for event in _parse_sse(response):
+                async for event in self._parse_sse(response):
                     yield event
 ```
 
-The `resolve_codex_oauth_token()` helper already exists in
-`app/core/tools/image_gen.py`; lift it into `app/core/codex_auth.py`
-so the provider and tool share it.
+`_build_request` and `_parse_sse` follow the contracts above.
 
-### 2. Request payload
-
-Strip `image_generation` from the image-gen request; everything else
-is the same Responses API shape:
-
-```python
-def _build_request(question, history, tools, system_prompt):
-    input_items = []
-    if system_prompt:
-        input_items.append({
-            "type": "message",
-            "role": "system",
-            "content": [{"type": "input_text", "text": system_prompt}],
-        })
-    for msg in history:
-        input_items.append({
-            "type": "message",
-            "role": msg["role"],
-            "content": [{"type": "input_text", "text": msg["content"]}],
-        })
-    input_items.append({
-        "type": "message",
-        "role": "user",
-        "content": [{"type": "input_text", "text": question}],
-    })
-    return {
-        "model": _resolve_underlying_model(self.model_id),
-        "input": input_items,
-        "stream": True,
-        "tools": _convert_tools_to_responses_format(tools or []),
-        "store": False,
-    }
-```
-
-### 3. Stream event mapping
-
-Responses API emits typed events (`response.created`,
-`response.output_text.delta`, `response.output_item.added` for
-tool calls, `response.completed`, ...).  Map to our
-`StreamEvent` union:
-
-| Responses event                        | StreamEvent           |
-| -------------------------------------- | --------------------- |
-| `response.output_text.delta`           | `{type: "delta", content: <delta>}` |
-| `response.reasoning_summary.delta`     | `{type: "thinking", content: <delta>}` |
-| `response.output_item.added` (function_call) | `{type: "tool_use", name, input, tool_use_id}` |
-| function call output back to us        | (no direct mapping — the agent supplies the result and we send it as `function_call_output` on the next request) |
-| `response.completed`                   | end of stream         |
-| `error`                                | `{type: "error", content}` |
-
-Tool execution still happens inside our `agent_loop` because the
-Responses API requires the client to supply tool results in the
-next request.  Our loop already handles this for Claude + Gemini;
-the codex variant just speaks Responses-shaped messages instead.
-
-### 4. Factory wiring
+### 3. Factory wiring
 
 `backend/app/core/providers/factory.py`:
 
 ```python
-def resolve_llm(model_id: str, user_id: uuid.UUID | None = None) -> LLMProvider:
+def resolve_llm(model_id, user_id=None):
     if model_id.startswith("claude-"):
-        return ClaudeProvider(model_id=model_id, user_id=user_id)
+        return ClaudeProvider(model_id, user_id)
     if model_id.startswith(("gpt-", "openai-codex/")):
-        return OpenAICodexProvider(model_id=model_id, user_id=user_id)
-    return GeminiProvider(model_id=model_id, user_id=user_id)
+        return OpenAICodexProvider(model_id, user_id)
+    return GeminiProvider(model_id, user_id)
 ```
 
-Model catalog additions in `/api/v1/models` so the picker shows them:
-`gpt-5.5`, `gpt-5.5-mini` (whatever ChatGPT Plus / Business plan
-unlocks for the user).
+### 4. Model catalog
 
-### 5. Config
+Add to `/api/v1/models` so the frontend picker exposes them.
+Hardcode the user-visible subset and let the backend reject anything
+the user's plan doesn't include.
 
-Per-user override path: workspace `.env` → `OPENAI_CODEX_OAUTH_TOKEN`
-(already supported by `resolve_codex_oauth_token`).  Without an
-override, the provider falls back to `$CODEX_HOME/auth.json`.  This
-keeps the bring-your-own-token story consistent with image-gen.
+### 5. Tests
+
+Replay-style, mirroring `test_claude_provider.py`:
+
+- Recorded `response.output_text.delta` SSE stream → assert
+  `StreamEvent` mapping.
+- Recorded `function_call` flow → assert tool_use shape.
+- 401 → refresh → retry happy path.
+- 401 → refresh → still 401 → bubble error.
+- Multi-turn: previous reasoning items get appended to `input` on
+  turn 2.
+
+## Concrete risks
+
+| Risk                                          | Mitigation |
+| --------------------------------------------- | ---------- |
+| Endpoint deprecation (private OpenAI API).   | Wrap with the same error envelope as other providers.  Document in PR description that we depend on the Codex CLI continuing to work. |
+| Refresh-token rotation conflicts (#15502).   | Single-process asyncio lock around refresh.  Re-read `auth.json` after 401 in case CLI refreshed concurrently. |
+| Instructions-validation strict mode trap.    | Never use `originator: codex_cli_rs`.  Always send our own name. |
+| Subscription rate limits hit mid-stream.     | Catch the specific `rate_limit_exceeded` SSE error event; surface to the user with a clear message. |
+| `gpt-5-codex` rejects `minimal` effort.      | Normalise client side: if model contains `-codex` and effort is `minimal`, send `low`. |
+| `gpt-5-codex` rejects `verbosity != medium`. | Same — silently normalise. |
+| Refresh-token invalidated after auth.json copy.  | Doc users not to copy the file across machines.  Show clear "re-run codex login" error. |
+| Stream idle timeout mid-reasoning.           | Heartbeat: every 30 s with no event, log + keep alive.  If 180 s with no event, abort and surface error. |
 
 ## Out of scope (deferred)
 
-- **API-key path.**  Users with an `OPENAI_API_KEY` can already
-  route through `api.openai.com/v1/responses` via the standard
-  OpenAI SDK; that's a separate provider if we want it.  Codex
-  OAuth is the priority because that's the auth Tavi + Esther
-  already have set up.
-- **Per-message Codex routing fast-mode toggle.**  Add later.
-- **Image-gen-in-text-conversation.**  Our existing
-  `image_gen` tool already covers this — keep them separate.
-
-## Risks
-
-- **Token expiry.**  Codex OAuth tokens refresh; the Codex CLI
-  refreshes them in-process.  We currently just *read* the cached
-  token.  If a long-lived agent stream picks up a stale token we
-  fail mid-stream.  Mitigation: catch 401 from the stream, re-read
-  `auth.json` (Codex CLI might have refreshed it on a parallel
-  invocation), retry once.
-- **Endpoint deprecation.**  This is technically a private OpenAI
-  endpoint.  It's been stable for many months and is what the
-  Codex CLI itself uses, but it could break without warning.
-  Mitigation: wrap with the same error envelope as other providers
-  so a sudden 4xx surfaces as a normal stream error event.
-- **Tool-call shape divergence.**  Responses API tool calls aren't
-  identical to Anthropic's or Gemini's.  The `_claude_tool_bridge`
-  pattern shows we already handle per-provider tool translation;
-  add a codex bridge.
+- API-key path: users with an `OPENAI_API_KEY` can already route
+  through `api.openai.com/v1/responses`.  Add as a fallback provider
+  later if asked.
+- WebRTC voice calls (`/realtime/calls`) — separate concern.
+- Background mode (`background: true`) — requires `store: true`,
+  not supported here.
 
 ## Implementation order
 
 1. Lift `resolve_codex_oauth_token` from `image_gen.py` to
-   `core/codex_auth.py`.  No behaviour change.
-2. New file: `core/providers/openai_codex_provider.py` — bare skeleton
-   that just makes a non-streaming request work end-to-end with a
-   single user message and no tools.
-3. Add streaming + delta event mapping.
-4. Add tool-call support (reuse pattern from Claude bridge).
-5. Wire into `factory.py` with the new prefix.
-6. Add catalog entries to `/api/v1/models`.
-7. Tests: replay-based, mirroring `test_claude_provider.py`.
+   `core/codex_auth.py`.  Refactor `image_gen.py` to use it.  Add
+   `account_id` extraction.  No behaviour change visible to users.
+2. Wire the auth helper into `image_gen.py` to send the full header
+   set (`session_id`, `originator: pawrrtal`,
+   `chatgpt-account-id`).  This validates that header layout works
+   before we touch a new provider.
+3. New file: `core/providers/openai_codex_provider.py` — skeleton
+   that streams a single message with no tools, maps `delta` events.
+4. Add tool-call support (mirror Claude bridge).
+5. Add `reasoning.encrypted_content` multi-turn support.
+6. Add 401 → refresh → retry path.
+7. Wire into `factory.py` with `gpt-*` and `openai-codex/*`
+   prefixes.
+8. Add catalog entries to `/api/v1/models`.
+9. Replay-based tests.
+10. Manual smoke from Tavi's account.
 
-## Test strategy
+## References
 
-- Unit tests with recorded request/response fixtures (vcr.py or
-  hand-rolled httpx mocks).  Don't hit live Codex from CI.
-- Manual smoke: Tavi runs a real conversation with his Codex token
-  and confirms the stream renders correctly on web + Telegram.
+- OpenAI Codex CLI source:
+  - `codex-rs/login/src/token_data.rs` — `auth.json` schema, JWT claim parsing
+  - `codex-rs/backend-client/src/client.rs` — header set, account ID handling
+  - `codex-rs/codex-api/src/endpoint/responses.rs` — Responses endpoint client
+- Reference implementations:
+  - `github.com/EvanZhouDev/openai-oauth` — TypeScript localhost proxy
+  - `github.com/pproenca/opencode-openai-codex-auth` — OpenCode plugin
+  - `github.com/withakay/opencode-codex-provider` — alternative MCP-based approach
+  - `github.com/RooCodeInc/Roo-Code/blob/main/src/api/providers/openai-codex.ts`
+- Failure mode references:
+  - `openai/codex#11743` — stream-disconnect on VPS
+  - `openai/codex#14743` — wrong request body shape
+  - `openai/codex#15502` — refresh-token rotation
+  - `openclaw/openclaw#64133` — wrong endpoint sub-path
