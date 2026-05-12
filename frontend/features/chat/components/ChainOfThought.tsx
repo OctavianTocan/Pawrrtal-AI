@@ -159,7 +159,7 @@ export const ChainOfThought = memo(function ChainOfThought({
 
 	return (
 		<div className="flex flex-col gap-0.5">
-			{items.map((item, index) => {
+			{items.map((item) => {
 				if (item.kind === 'tool') {
 					return (
 						<ToolStep

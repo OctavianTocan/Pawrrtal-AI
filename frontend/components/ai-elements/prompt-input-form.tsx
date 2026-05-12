@@ -85,8 +85,10 @@ const fileMatchesAccept = (file: File, accept?: string): boolean => {
 
 	return accept
 		.split(',')
-		.map((pattern) => pattern.trim())
-		.filter(Boolean)
+		.flatMap((pattern) => {
+			const trimmed = pattern.trim();
+			return trimmed ? [trimmed] : [];
+		})
 		.some((pattern) => {
 			if (pattern.endsWith('/*')) {
 				const prefix = pattern.slice(0, -1);

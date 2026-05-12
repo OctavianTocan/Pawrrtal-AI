@@ -101,8 +101,10 @@ function fileMatchesAccept(file: File, accept?: string): boolean {
 	if (!accept?.trim()) return true;
 	return accept
 		.split(',')
-		.map((pattern) => pattern.trim())
-		.filter(Boolean)
+		.flatMap((pattern) => {
+			const trimmed = pattern.trim();
+			return trimmed ? [trimmed] : [];
+		})
 		.some((pattern) => {
 			if (pattern.endsWith('/*')) {
 				const prefix = pattern.slice(0, -1);
@@ -250,7 +252,7 @@ export function PromptInputForm({
 		};
 	}, [add, globalDrop]);
 
-	const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
 		if (event.currentTarget.files) add(event.currentTarget.files);
 		event.currentTarget.value = '';
 	};
@@ -289,7 +291,7 @@ export function PromptInputForm({
 				aria-label="Upload files"
 				className="hidden"
 				multiple={multiple}
-				onChange={handleChange}
+				onChange={ingestSelectedFiles}
 				ref={inputRef}
 				title="Upload files"
 				type="file"

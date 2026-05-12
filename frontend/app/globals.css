@@ -1625,6 +1625,18 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 }
 
+@keyframes thinking-dot-rise {
+	0%,
+	100% {
+		opacity: 0.45;
+		transform: translateY(0) scale(0.9);
+	}
+	45% {
+		opacity: 1;
+		transform: translateY(-3px) scale(1);
+	}
+}
+
 @keyframes shimmer-loading {
 	0% {
 		transform: translateX(-100%);

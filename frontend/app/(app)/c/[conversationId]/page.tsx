@@ -29,6 +29,7 @@ export default async function ConversationPage({ params }: ConversationPageProps
 	const response = await fetch(
 		API_BASE_URL + API_ENDPOINTS.conversations.getMessages(conversationId),
 		{
+			cache: 'no-store',
 			method: 'GET',
 			headers: {
 				'content-type': 'application/json',
