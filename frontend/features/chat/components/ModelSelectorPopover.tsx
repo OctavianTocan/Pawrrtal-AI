@@ -8,6 +8,7 @@ import {
 	useDropdownContext,
 } from '@octavian-tocan/react-dropdown';
 import { ChevronDownIcon } from 'lucide-react';
+import Image from 'next/image';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -190,11 +191,12 @@ function ProviderLogo({
 	className?: string;
 }): React.JSX.Element {
 	return (
-		<img
+		<Image
 			alt={`${provider} logo`}
 			className={cn('size-3 rounded-full dark:invert', className)}
 			height={12}
 			src={`https://models.dev/logos/${provider}.svg`}
+			unoptimized
 			width={12}
 		/>
 	);
