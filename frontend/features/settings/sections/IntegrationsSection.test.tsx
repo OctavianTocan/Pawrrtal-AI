@@ -3,14 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { IntegrationsSection } from './IntegrationsSection';
 
 describe('IntegrationsSection', () => {
-	it('renders the Integrations page heading + every Your Integrations row', () => {
-		const { getByRole, getAllByText, getByText } = render(<IntegrationsSection />);
-		// Page-level h1 set by SettingsPage
+	it('renders the Integrations page heading, the prototype notice, and the empty state', () => {
+		const { getByRole, getByText } = render(<IntegrationsSection />);
 		expect(getByRole('heading', { name: 'Integrations' })).toBeTruthy();
-		// Section header inside the card (rendered as a span, not heading)
 		expect(getByText('Your integrations')).toBeTruthy();
-		// Apple Calendar appears in YOUR_INTEGRATIONS
-		expect(getAllByText('Apple Calendar').length).toBeGreaterThan(0);
+		expect(getByText('Coming soon')).toBeTruthy();
+		expect(getByText('No integrations connected yet.')).toBeTruthy();
 	});
 
 	it('opens the Add Integration modal when the trigger button is clicked', () => {
