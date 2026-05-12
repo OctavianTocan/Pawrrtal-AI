@@ -12,10 +12,7 @@
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
 import type { PromptInputMessage } from '../prompt-input/PromptInputForm';
-import type {
-	ChatComposerMessage,
-	ChatComposerProps,
-} from '../types';
+import type { ChatComposerMessage, ChatComposerProps } from '../types';
 import { buildTranscriptContent } from './controls/transcript';
 import { ChatComposerView } from './ChatComposerView';
 
@@ -42,10 +39,7 @@ const PLACEHOLDER_ROTATION_INTERVAL_MS = 5200;
  * @param placeholders - Tip list (defaults to {@link DEFAULT_PLACEHOLDERS}).
  * @returns The placeholder string that should appear right now.
  */
-function useRotatingPlaceholder(
-	hasContent: boolean,
-	placeholders: readonly string[],
-): string {
+function useRotatingPlaceholder(hasContent: boolean, placeholders: readonly string[]): string {
 	const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
 	useEffect(() => {
@@ -98,15 +92,13 @@ export function ChatComposer({
 	const text = isControlled ? value : internalText;
 	const hasContent = text.trim().length > 0;
 
-	const placeholders = placeholdersProp && placeholdersProp.length > 0
-		? placeholdersProp
-		: DEFAULT_PLACEHOLDERS;
+	const placeholders =
+		placeholdersProp && placeholdersProp.length > 0 ? placeholdersProp : DEFAULT_PLACEHOLDERS;
 	const rotatingPlaceholder = useRotatingPlaceholder(hasContent, placeholders);
 	const resolvedPlaceholder = placeholderProp ?? rotatingPlaceholder;
 
 	const voice = useVoiceRecording({ onTranscribeAudio });
-	const isRecording =
-		voice.status === 'recording' || voice.status === 'requesting-permission';
+	const isRecording = voice.status === 'recording' || voice.status === 'requesting-permission';
 	const isTranscribing = voice.status === 'transcribing';
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 
@@ -183,7 +175,13 @@ export function ChatComposer({
 	return (
 		<ChatComposerView
 			value={text}
-			isLoading={isLoading}
+			state={{
+				hasContent: text.trim().length > 0,
+				isLoading,
+				isRecording,
+				isTranscribing,
+				isVoiceSupported: voice.isSupported,
+			}}
 			models={models}
 			selectedModelId={selectedModelId}
 			onSelectModel={onSelectModel}
@@ -196,9 +194,6 @@ export function ChatComposer({
 			footerActions={footerActions}
 			onTextChange={handleTextChange}
 			onSubmit={handleSubmit}
-			isVoiceSupported={voice.isSupported}
-			isRecording={isRecording}
-			isTranscribing={isTranscribing}
 			recordingSeconds={recordingSeconds}
 			onStartRecording={startRecording}
 			onStopRecording={onStopRecording}
@@ -212,11 +207,7 @@ export function ChatComposer({
  * a `File`. Returns `null` for parts that cannot be reconstructed (e.g. blob
  * URLs that were already revoked).
  */
-function fileFromPart(part: {
-	url: string;
-	mediaType?: string;
-	filename?: string;
-}): File | null {
+function fileFromPart(part: { url: string; mediaType?: string; filename?: string }): File | null {
 	// The composer's attachment list only stores blob URLs; consumers that
 	// need richer payload preservation should swap the form for their own
 	// pipeline. We synthesize a `File` lazily here so the public API stays a
