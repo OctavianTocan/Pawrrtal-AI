@@ -15,7 +15,7 @@ import {
 	DropdownSubmenuTrigger,
 } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import type { ChatModelOption, ChatReasoningLevel } from '../types/index';
+import type { ChatModelOption, ChatReasoningLevel } from '../types';
 import { Button } from '../ui/Button';
 import {
 	Tooltip,

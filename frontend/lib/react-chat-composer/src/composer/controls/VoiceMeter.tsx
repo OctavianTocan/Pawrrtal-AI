@@ -45,7 +45,7 @@ export function VoiceMeter({
 			<span className="w-9 text-right text-[12px] text-[var(--color-chat-muted)] tabular-nums">
 				{formatRecordingTime(elapsedSeconds)}
 			</span>
-			<ComposerTooltip content={isTranscribing ? 'Transcribing…' : 'Stop and transcribe'}>
+			<ComposerTooltip content={isTranscribing ? 'Transcribing...' : 'Stop and transcribe'}>
 				<Button
 					aria-label={isTranscribing ? 'Transcribing' : 'Stop and transcribe'}
 					className="size-8 rounded-full bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_10%,transparent)] text-[var(--color-chat-foreground)] hover:bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_15%,transparent)] disabled:cursor-not-allowed disabled:opacity-60"

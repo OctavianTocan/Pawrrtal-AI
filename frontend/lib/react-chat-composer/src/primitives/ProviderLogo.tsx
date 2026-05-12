@@ -11,7 +11,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import type { ChatProviderSlug } from '../types/index';
+import type { ChatProviderSlug } from '../types';
 import { cn } from '../utils/cn';
 
 /** Props for a single provider logo SVG. */

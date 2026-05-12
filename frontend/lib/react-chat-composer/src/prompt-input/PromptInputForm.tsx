@@ -37,10 +37,10 @@ export interface PromptInputMessage {
 }
 
 /** Error codes surfaced via the form's optional `onError` callback. */
-export type PromptInputFormErrorCode = 'max_files' | 'max_file_size' | 'accept';
+type PromptInputFormErrorCode = 'max_files' | 'max_file_size' | 'accept';
 
 /** Error payload passed to `onError` on a rejected drop/pick. */
-export interface PromptInputFormError {
+interface PromptInputFormError {
 	/** Discriminator for the error condition. */
 	code: PromptInputFormErrorCode;
 	/** Human-readable message; safe to surface in the UI. */

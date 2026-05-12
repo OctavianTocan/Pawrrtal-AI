@@ -171,7 +171,7 @@ function ConversationMenuContent({
 	return (
 		<>
 			<MenuItem onSelect={onNavigate}>
-				<FolderOpen aria-hidden="true" className="h-3.5 w-3.5" />
+				<FolderOpen aria-hidden="true" className="size-3.5" />
 				<span className="flex-1">Open</span>
 				<DropdownMenuShortcut>↵</DropdownMenuShortcut>
 			</MenuItem>
@@ -193,14 +193,14 @@ function ConversationMenuContent({
 							>
 								<option.Icon
 									aria-hidden="true"
-									className={`h-3.5 w-3.5 ${option.className}`}
+									className={`size-3.5 ${option.className}`}
 									strokeWidth={2}
 								/>
 								<span className="flex-1">{option.label}</span>
 								{isActive ? (
 									<CheckCircle2
 										aria-hidden="true"
-										className="h-3 w-3 text-foreground"
+										className="size-3 text-foreground"
 									/>
 								) : null}
 							</MenuItem>
@@ -211,7 +211,7 @@ function ConversationMenuContent({
 
 			<MenuSub>
 				<MenuSubTrigger>
-					<Tag aria-hidden="true" className="h-3.5 w-3.5" />
+					<Tag aria-hidden="true" className="size-3.5" />
 					<span className="flex-1">Labels</span>
 				</MenuSubTrigger>
 				<MenuSubContent>
@@ -221,14 +221,14 @@ function ConversationMenuContent({
 							<MenuItem key={label.id} onSelect={() => onToggleLabel(label.id)}>
 								<span
 									aria-hidden="true"
-									className="inline-block h-2 w-2 rounded-full"
+									className="inline-block size-2 rounded-full"
 									style={{ backgroundColor: label.color }}
 								/>
 								<span className="flex-1">{label.name}</span>
 								{isApplied ? (
 									<CheckCircle2
 										aria-hidden="true"
-										className="h-3 w-3 text-foreground"
+										className="size-3 text-foreground"
 									/>
 								) : null}
 							</MenuItem>
@@ -240,7 +240,7 @@ function ConversationMenuContent({
 			<MenuItem onSelect={onFlag}>
 				<Flag
 					aria-hidden="true"
-					className="h-3.5 w-3.5 text-info"
+					className="size-3.5 text-info"
 					fill={isFlagged ? 'currentColor' : 'none'}
 				/>
 				<span className="flex-1">{isFlagged ? 'Unflag' : 'Flag'}</span>
@@ -248,7 +248,7 @@ function ConversationMenuContent({
 			</MenuItem>
 
 			<MenuItem onSelect={onMarkUnread}>
-				<MailOpen aria-hidden="true" className="h-3.5 w-3.5" />
+				<MailOpen aria-hidden="true" className="size-3.5" />
 				<span className="flex-1">{isUnread ? 'Mark as Read' : 'Mark as Unread'}</span>
 				<DropdownMenuShortcut>⇧U</DropdownMenuShortcut>
 			</MenuItem>
@@ -256,41 +256,41 @@ function ConversationMenuContent({
 			<MenuSeparator />
 
 			<MenuItem onSelect={onRename}>
-				<Pencil aria-hidden="true" className="h-3.5 w-3.5" />
+				<Pencil aria-hidden="true" className="size-3.5" />
 				<span className="flex-1">Rename</span>
 				<DropdownMenuShortcut>F2</DropdownMenuShortcut>
 			</MenuItem>
 
 			<MenuItem onSelect={onArchive}>
-				<Archive aria-hidden="true" className="h-3.5 w-3.5" />
+				<Archive aria-hidden="true" className="size-3.5" />
 				<span className="flex-1">{isArchived ? 'Unarchive' : 'Archive'}</span>
 				<DropdownMenuShortcut>E</DropdownMenuShortcut>
 			</MenuItem>
 
 			<MenuSub>
 				<MenuSubTrigger>
-					<MoreHorizontal aria-hidden="true" className="h-3.5 w-3.5" />
+					<MoreHorizontal aria-hidden="true" className="size-3.5" />
 					<span className="flex-1">More</span>
 				</MenuSubTrigger>
 				<MenuSubContent>
 					<MenuItem onSelect={onRegenerateTitle}>
-						<RefreshCw aria-hidden="true" className="h-3.5 w-3.5" />
+						<RefreshCw aria-hidden="true" className="size-3.5" />
 						<span className="flex-1">Regenerate Title</span>
 					</MenuItem>
 					<MenuItem onSelect={handleOpenNewWindow}>
-						<AppWindow aria-hidden="true" className="h-3.5 w-3.5" />
+						<AppWindow aria-hidden="true" className="size-3.5" />
 						<span className="flex-1">Open in New Window</span>
 					</MenuItem>
 					<MenuItem onSelect={handleCopyLink}>
-						<Copy aria-hidden="true" className="h-3.5 w-3.5" />
+						<Copy aria-hidden="true" className="size-3.5" />
 						<span className="flex-1">Copy Link</span>
 					</MenuItem>
 					<MenuItem onSelect={onExportMarkdown}>
-						<FileText aria-hidden="true" className="h-3.5 w-3.5" />
+						<FileText aria-hidden="true" className="size-3.5" />
 						<span className="flex-1">Export as Markdown</span>
 					</MenuItem>
 					<MenuItem onSelect={handleDuplicate}>
-						<Files aria-hidden="true" className="h-3.5 w-3.5" />
+						<Files aria-hidden="true" className="size-3.5" />
 						<span className="flex-1">Duplicate</span>
 					</MenuItem>
 				</MenuSubContent>
@@ -299,7 +299,7 @@ function ConversationMenuContent({
 			<MenuSeparator />
 
 			<MenuItem onSelect={onDelete} variant="destructive">
-				<Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+				<Trash2 aria-hidden="true" className="size-3.5" />
 				<span className="flex-1">Delete</span>
 				<DropdownMenuShortcut>⌫</DropdownMenuShortcut>
 			</MenuItem>

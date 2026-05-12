@@ -10,7 +10,7 @@
 
 import { useDropdownContext } from '@octavian-tocan/react-dropdown';
 import { CheckIcon } from 'lucide-react';
-import type { ChatModelOption } from '../types/index';
+import type { ChatModelOption } from '../types';
 
 /** Props for {@link ModelRow}. */
 export interface ModelRowProps {

@@ -17,27 +17,27 @@ export function ConversationStatusGlyph({
 	if (status === 'todo') {
 		return (
 			<div className="flex items-center justify-center text-info">
-				<CircleDashed aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+				<CircleDashed aria-hidden="true" className="size-3.5" strokeWidth={2} />
 			</div>
 		);
 	}
 	if (status === 'in_progress') {
 		return (
 			<div className="flex items-center justify-center text-warning">
-				<CircleDot aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+				<CircleDot aria-hidden="true" className="size-3.5" strokeWidth={2} />
 			</div>
 		);
 	}
 	if (status === 'done') {
 		return (
 			<div className="flex items-center justify-center text-success">
-				<CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
+				<CheckCircle2 aria-hidden="true" className="size-3.5" strokeWidth={2} />
 			</div>
 		);
 	}
 	return (
 		<div className="flex items-center justify-center text-muted-foreground/75">
-			<Circle aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={1.5} />
+			<Circle aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
 		</div>
 	);
 }

@@ -200,7 +200,7 @@ function LandingState({
 	onSelectSuggestion: (prompt: string) => void;
 }): React.JSX.Element {
 	return (
-		<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
+		<div className="relative mx-auto flex size-full max-w-[60rem] min-w-0 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
 				<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
 					What should we build in Pawrrtal?
@@ -315,7 +315,7 @@ function ActiveConversationState({
 	onRegenerate?: (assistantIndex: number) => void;
 }): React.JSX.Element {
 	return (
-		<div className="relative flex h-full w-full min-w-0 flex-col">
+		<div className="relative flex size-full min-w-0 flex-col">
 			<Conversation className="scrollbar-hide min-h-0 flex-1 overflow-y-auto" resize="smooth">
 				<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
 					{chatHistory.map((chatMessage, index) => (

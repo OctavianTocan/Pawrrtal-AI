@@ -10,6 +10,14 @@ import { toast } from '@/lib/toast';
 import type { Conversation } from '@/lib/types';
 import { SettingsPage } from '../primitives';
 
+const ARCHIVED_ROW_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+	month: 'short',
+	day: 'numeric',
+	year: 'numeric',
+	hour: 'numeric',
+	minute: '2-digit',
+});
+
 /**
  * Settings → Archived chats. Lists every conversation with `is_archived=true`
  * (newest-first) and exposes an Unarchive action per row that flips the
@@ -45,7 +53,7 @@ export function ArchivedChatsSection(): React.JSX.Element {
 			title="Archived chats"
 		>
 			{isLoading ? (
-				<p className="text-sm text-muted-foreground">Loading archived chats…</p>
+				<p className="text-sm text-muted-foreground">Loading archived chats&hellip;</p>
 			) : null}
 
 			{!isLoading && archived.length === 0 ? <ArchivedEmptyState /> : null}
@@ -123,13 +131,7 @@ function ArchivedChatRow({
 
 /** Friendly `Mar 27, 2026, 6:30 PM`-style date formatter. */
 function formatRowDate(date: Date): string {
-	return new Intl.DateTimeFormat('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
-	}).format(date);
+	return ARCHIVED_ROW_DATE_FORMATTER.format(date);
 }
 
 /** Empty state shown when the user has no archived conversations. */

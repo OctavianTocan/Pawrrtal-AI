@@ -82,7 +82,7 @@ export function CreateProjectModal({
 				Cancel
 			</Button>
 			<Button className="cursor-pointer" disabled={!canSubmit} form={formId} type="submit">
-				{isPending ? 'Creating…' : 'Create project'}
+				{isPending ? 'Creating...' : 'Create project'}
 			</Button>
 		</AppDialogFooter>
 	);

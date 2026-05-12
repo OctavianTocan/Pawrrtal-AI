@@ -15,15 +15,7 @@
 'use client';
 
 import type React from 'react';
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /** Identifies one of the three focusable regions. */
 export type FocusZoneId = 'sidebar' | 'navigator' | 'chat';
@@ -183,7 +175,7 @@ export function SidebarFocusProvider({
 
 /** Access the focus context. Throws if called outside SidebarFocusProvider. */
 export function useSidebarFocusContext(): FocusContextValue {
-	const context = useContext(FocusContext);
+	const context = use(FocusContext);
 	if (!context) {
 		throw new Error('useSidebarFocusContext must be used within SidebarFocusProvider.');
 	}
@@ -196,7 +188,7 @@ export function useSidebarFocusContext(): FocusContextValue {
  * may render in trees with or without the focus-zone provider mounted.
  */
 export function useOptionalSidebarFocusContext(): FocusContextValue | null {
-	return useContext(FocusContext);
+	return use(FocusContext);
 }
 
 /**

@@ -54,7 +54,7 @@ export function OnboardingCreateWorkspaceStep({
 					className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]"
 					aria-hidden="true"
 				>
-					Add Workspace...
+					Add Workspace&hellip;
 				</div>
 				<DialogDescription className="text-[0.9375rem] leading-relaxed text-muted-foreground">
 					Where your ideas meet the tools to make them happen.

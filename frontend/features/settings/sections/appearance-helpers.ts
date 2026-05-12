@@ -24,7 +24,7 @@ export const COLOR_SLOTS = [
 	'destructive',
 ] as const;
 
-/** Single color slot key (`'background' | 'foreground' | …`). */
+/** Single color slot key (`'background' | 'foreground' | ...`). */
 export type ColorSlot = (typeof COLOR_SLOTS)[number];
 
 /** Tuple of the three font family slots the visual mock displays. */

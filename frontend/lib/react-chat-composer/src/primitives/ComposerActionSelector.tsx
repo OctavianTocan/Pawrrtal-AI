@@ -16,8 +16,6 @@ import {
 	type ComposerActionSelectorItem,
 } from './ComposerActionSelectorView';
 
-export type { ComposerActionSelectorItem };
-
 /** Props for {@link ComposerActionSelector}. */
 export interface ComposerActionSelectorProps<TId extends string = string> {
 	/** Items rendered in the dropdown, in display order. */

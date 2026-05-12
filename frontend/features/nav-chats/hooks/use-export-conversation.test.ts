@@ -64,7 +64,7 @@ describe('useExportConversation', () => {
 		expect(fetcherMock).toHaveBeenCalled();
 		expect(clickSpy).toHaveBeenCalled();
 		expect(toastLoading).toHaveBeenCalledWith(
-			'Preparing export…',
+			'Preparing export...',
 			expect.objectContaining({ id: 'conversation:export' })
 		);
 		expect(toastSuccess).toHaveBeenCalledWith(

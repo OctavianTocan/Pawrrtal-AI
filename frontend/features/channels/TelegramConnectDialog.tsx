@@ -178,7 +178,7 @@ export function TelegramConnectDialog({
 						<span>
 							Code expires in{' '}
 							<span className="font-mono text-foreground">
-								{countdownLabel ?? '…'}
+								{countdownLabel ?? '...'}
 							</span>
 						</span>
 						<button
@@ -220,7 +220,7 @@ export function TelegramConnectDialog({
 					size="lg"
 					type="button"
 				>
-					{state.isBusy ? 'Generating code…' : 'Generate connection code'}
+					{state.isBusy ? 'Generating code...' : 'Generate connection code'}
 				</Button>
 				{state.error && <p className="text-destructive">{state.error}</p>}
 			</div>

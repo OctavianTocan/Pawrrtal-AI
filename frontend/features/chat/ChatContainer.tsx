@@ -85,7 +85,7 @@ export default function ChatContainer({
 	const { streamMessage } = useChat();
 	const createConversationMutation = useCreateConversation(conversationId);
 	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
-	const router = useRouter();
+	const { replace } = useRouter();
 	const { setActiveConversation, clearActiveConversation } = useChatActivity();
 	const hasNavigated = useRef(false);
 
@@ -153,10 +153,10 @@ export default function ChatContainer({
 			} finally {
 				endStream();
 				// Sync the Next.js router after streaming so sidebar router.push works.
-				if (hasNavigated.current) router.replace(`/c/${conversationId}`);
+				if (hasNavigated.current) replace(`/c/${conversationId}`);
 			}
 		},
-		[beginStream, conversationId, endStream, router, send]
+		[beginStream, conversationId, endStream, replace, send]
 	);
 
 	// Read chatHistory through a ref so the callback identity doesn't churn

@@ -199,7 +199,7 @@ function ComposerSendCluster({
 				onSelectReasoning={onSelectReasoning}
 			/>
 			<ComposerTooltip
-				content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+				content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
 			>
 				<Button
 					aria-label="Start voice input"

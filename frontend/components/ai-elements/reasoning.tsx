@@ -9,7 +9,7 @@
 import { useControllableState } from '@radix-ui/react-use-controllable-state';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, memo, useContext, useEffect, useState } from 'react';
+import { createContext, memo, use, useEffect, useState } from 'react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ type ReasoningContextValue = {
 const ReasoningContext = createContext<ReasoningContextValue | null>(null);
 
 export const useReasoning = () => {
-	const context = useContext(ReasoningContext);
+	const context = use(ReasoningContext);
 	if (!context) {
 		throw new Error('Reasoning components must be used within Reasoning');
 	}
@@ -117,7 +117,7 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger> & 
 
 const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
 	if (isStreaming || duration === 0) {
-		return <Shimmer duration={1}>Thinking...</Shimmer>;
+		return <Shimmer duration={1}>Thinking&hellip;</Shimmer>;
 	}
 	if (duration === undefined) {
 		return <p>Thought for a few seconds</p>;

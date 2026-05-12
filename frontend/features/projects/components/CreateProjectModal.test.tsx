@@ -56,7 +56,7 @@ describe('CreateProjectModal', () => {
 		const { getByRole } = render(
 			<CreateProjectModal isPending onDismiss={noop} onSubmit={noop} open />
 		);
-		const button = getByRole('button', { name: 'Creating…' }) as HTMLButtonElement;
+		const button = getByRole('button', { name: 'Creating...' }) as HTMLButtonElement;
 		expect(button.disabled).toBe(true);
 	});
 });

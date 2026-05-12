@@ -152,7 +152,7 @@ export const ChainOfThought = memo(function ChainOfThought({
 				className={cn('flex items-center gap-2 px-1.5 py-1 text-sm text-muted-foreground')}
 			>
 				<ChevronRightIcon aria-hidden="true" className="size-3.5" />
-				<Shimmer duration={1.2}>Thinking...</Shimmer>
+				<Shimmer duration={1.2}>Thinking&hellip;</Shimmer>
 			</div>
 		);
 	}

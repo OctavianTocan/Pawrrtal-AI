@@ -14,7 +14,6 @@
  * @fileoverview Sidebar row surface tokens for AI Nexus.
  */
 
-import { forwardRef } from 'react';
 import type * as React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -43,7 +42,7 @@ export function sidebarNavRowSurfaceClassName({
 	const alignClass = align === 'start' ? 'items-start' : 'items-center';
 	const densityClass =
 		density === 'comfortable'
-			? cn(align === 'start' ? 'py-2 pl-2 pr-4' : 'min-h-9 px-2 py-2', 'text-sm')
+			? cn(align === 'start' ? 'py-2 pl-2 pr-4' : 'min-h-9 p-2', 'text-sm')
 			: cn('h-8 rounded-soft px-2 text-[13px] font-medium');
 
 	return cn(
@@ -62,6 +61,7 @@ export interface SidebarNavRowProps extends React.ButtonHTMLAttributes<HTMLButto
 	isSelected?: boolean;
 	density?: 'comfortable' | 'compact';
 	align?: 'start' | 'center';
+	ref?: React.Ref<HTMLButtonElement>;
 }
 
 /**
@@ -69,28 +69,24 @@ export interface SidebarNavRowProps extends React.ButtonHTMLAttributes<HTMLButto
  *
  * @returns A button element suitable for **`&lt;li&gt;`** children.
  */
-export const SidebarNavRow = forwardRef<HTMLButtonElement, SidebarNavRowProps>(
-	function SidebarNavRow(
-		{
-			isSelected = false,
-			density = 'comfortable',
-			align = 'center',
-			className,
-			type = 'button',
-			...props
-		},
-		ref
-	) {
-		return (
-			<button
-				ref={ref}
-				type={type}
-				className={cn(
-					sidebarNavRowSurfaceClassName({ selected: isSelected, density, align }),
-					className
-				)}
-				{...props}
-			/>
-		);
-	}
-);
+export function SidebarNavRow({
+	isSelected = false,
+	density = 'comfortable',
+	align = 'center',
+	className,
+	type = 'button',
+	ref,
+	...props
+}: SidebarNavRowProps): React.JSX.Element {
+	return (
+		<button
+			ref={ref}
+			type={type}
+			className={cn(
+				sidebarNavRowSurfaceClassName({ selected: isSelected, density, align }),
+				className
+			)}
+			{...props}
+		/>
+	);
+}

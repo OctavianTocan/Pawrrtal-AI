@@ -84,7 +84,7 @@ export interface UseExportConversationResult {
 	/**
 	 * Fetch the conversation's messages and trigger a markdown download.
 	 *
-	 * Toasts "Preparing export…" up-front and either "Exported as Markdown"
+	 * Toasts "Preparing export..." up-front and either "Exported as Markdown"
 	 * or "Could not export conversation" on completion. Failure keeps the
 	 * row state untouched — no destructive side effect.
 	 */
@@ -103,7 +103,7 @@ export function useExportConversation(): UseExportConversationResult {
 
 	const exportAsMarkdown = useCallback(
 		async (conversation: Conversation): Promise<void> => {
-			toast.loading('Preparing export…', { id: TOAST_IDS.conversationExport });
+			toast.loading('Preparing export...', { id: TOAST_IDS.conversationExport });
 			try {
 				const response = await fetcher(
 					API_ENDPOINTS.conversations.getMessages(conversation.id)

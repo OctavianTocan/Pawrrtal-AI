@@ -11,11 +11,11 @@
 
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useVoiceRecording } from '../hooks/useVoiceRecording';
-import type { PromptInputMessage } from '../prompt-input/index';
+import type { PromptInputMessage } from '../prompt-input/PromptInputForm';
 import type {
 	ChatComposerMessage,
 	ChatComposerProps,
-} from '../types/index';
+} from '../types';
 import { buildTranscriptContent } from './controls/transcript';
 import { ChatComposerView } from './ChatComposerView';
 

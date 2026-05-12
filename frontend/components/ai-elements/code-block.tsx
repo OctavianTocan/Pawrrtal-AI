@@ -11,7 +11,7 @@ import {
 	type ComponentProps,
 	createContext,
 	type HTMLAttributes,
-	useContext,
+	use,
 	useEffect,
 	useRef,
 	useState,
@@ -148,7 +148,7 @@ export const CodeBlockCopyButton = ({
 	...props
 }: CodeBlockCopyButtonProps) => {
 	const [isCopied, setIsCopied] = useState(false);
-	const { code } = useContext(CodeBlockContext);
+	const { code } = use(CodeBlockContext);
 	// Spam-resistant timer: ref-stored so the previous setTimeout can be
 	// cleared before scheduling a new one. Without this, rapid clicking
 	// schedules N concurrent revert-to-Copy calls; the earlier ones fire

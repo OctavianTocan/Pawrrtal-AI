@@ -101,7 +101,7 @@ describe('useChat', (): void => {
 	it('yields thinking, tool_use, and tool_result events alongside deltas', async (): Promise<void> => {
 		vi.mocked(fetch).mockResolvedValue(
 			createStreamResponse([
-				'data: {"type":"thinking","content":"Let me search…"}\n\n',
+				'data: {"type":"thinking","content":"Let me search..."}\n\n',
 				'data: {"type":"tool_use","tool_use_id":"t1","name":"web_search","input":{"q":"foo"}}\n\n',
 				'data: {"type":"tool_result","tool_use_id":"t1","content":"result body"}\n\n',
 				'data: {"type":"delta","content":"Done."}\n\n',
@@ -114,7 +114,7 @@ describe('useChat', (): void => {
 		await expect(
 			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
 		).resolves.toEqual([
-			{ type: 'thinking', content: 'Let me search…' },
+			{ type: 'thinking', content: 'Let me search...' },
 			{ type: 'tool_use', tool_use_id: 't1', name: 'web_search', input: { q: 'foo' } },
 			{ type: 'tool_result', tool_use_id: 't1', content: 'result body' },
 			{ type: 'delta', content: 'Done.' },

@@ -81,7 +81,7 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
  * through.
  */
 export function SettingsLayout(): React.JSX.Element {
-	const router = useRouter();
+	const { push } = useRouter();
 	const [activeId, setActiveId] = useState<SettingsSectionId>('general');
 
 	return (
@@ -94,7 +94,7 @@ export function SettingsLayout(): React.JSX.Element {
 			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4 pt-4">
 				<button
 					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground"
-					onClick={() => router.push('/')}
+					onClick={() => push('/')}
 					type="button"
 				>
 					<ArrowLeft aria-hidden="true" className="size-4" />
@@ -148,7 +148,7 @@ export function SettingsLayout(): React.JSX.Element {
 			 */}
 			<main className="relative h-full bg-background">
 				<SettingsWhimsyOverlay />
-				<div className="absolute inset-0 overflow-y-auto px-10 py-10">
+				<div className="absolute inset-0 overflow-y-auto p-10">
 					<div className="relative mx-auto w-full max-w-3xl">
 						{renderActiveSection(activeId)}
 					</div>

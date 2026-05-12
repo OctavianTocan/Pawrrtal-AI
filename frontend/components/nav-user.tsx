@@ -110,7 +110,7 @@ const SUBMENU_TRIGGER_CLASSNAME =
  * @param user - Identity rendered in the trigger and dropdown header.
  */
 export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element {
-	const router = useRouter();
+	const { push, replace } = useRouter();
 	const fetcher = useAuthedFetch();
 	const queryClient = useQueryClient();
 	// Tracks dropdown open state so we can apply the active background on the
@@ -134,14 +134,14 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 			}
 		} finally {
 			queryClient.clear();
-			router.replace('/login');
+			replace('/login');
 		}
-	}, [fetcher, queryClient, router]);
+	}, [fetcher, queryClient, replace]);
 
 	const trigger = (
 		<div
 			className={cn(
-				'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-2 text-left',
+				'group flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] p-2 text-left',
 				'transition-[background-color,color] duration-150',
 				'hover:bg-foreground/[0.07]',
 				isOpen && 'bg-foreground/[0.09]',
@@ -197,10 +197,7 @@ export function NavUser({ user }: { user: NavUserIdentity }): React.JSX.Element 
 				<DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
 					{user.email}
 				</DropdownMenuLabel>
-				<DropdownMenuItem
-					className="justify-between"
-					onSelect={() => router.push('/settings')}
-				>
+				<DropdownMenuItem className="justify-between" onSelect={() => push('/settings')}>
 					<span className="flex items-center gap-2">
 						<SettingsIcon aria-hidden="true" className="size-4" />
 						Settings

@@ -77,9 +77,9 @@ describe('WorkspacesSectionView', () => {
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it('shows "Saving…" label while the mutation is pending', () => {
+	it('shows "Saving..." label while the mutation is pending', () => {
 		render(<WorkspacesSectionView {...baseProps} isDirty isSaving />);
-		expect(screen.getByRole('button', { name: 'Saving…' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Saving...' })).toBeTruthy();
 	});
 
 	it('renders the error region as alert when errorMessage is provided', () => {

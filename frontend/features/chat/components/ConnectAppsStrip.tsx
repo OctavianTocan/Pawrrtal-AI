@@ -67,7 +67,7 @@ export function ConnectAppsStrip({
 	onDismiss,
 }: ConnectAppsStripProps): React.JSX.Element | null {
 	const [isDismissed, setIsDismissed] = useState(false);
-	const router = useRouter();
+	const { push } = useRouter();
 
 	if (isDismissed) {
 		return null;
@@ -82,7 +82,7 @@ export function ConnectAppsStrip({
 	};
 
 	const goToIntegrations = (): void => {
-		router.push(INTEGRATIONS_HREF);
+		push(INTEGRATIONS_HREF);
 	};
 
 	return (

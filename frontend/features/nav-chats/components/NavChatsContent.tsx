@@ -262,7 +262,7 @@ export function NavChatsContent({
 	if (isEmpty) {
 		return (
 			<ConversationsEmptyState
-				icon={<Inbox className="h-4 w-4" />}
+				icon={<Inbox className="size-4" />}
 				title="No sessions yet"
 				description="Sessions with your agent appear here. Start one to get going."
 				buttonLabel="New Session"
@@ -274,7 +274,7 @@ export function NavChatsContent({
 	if (isSearchActive && resultCount === 0) {
 		return (
 			<ConversationsEmptyState
-				icon={<Search className="h-4 w-4" />}
+				icon={<Search className="size-4" />}
 				title="No matching sessions"
 				description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
 			/>

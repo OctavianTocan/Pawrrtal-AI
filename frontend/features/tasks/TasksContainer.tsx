@@ -90,9 +90,10 @@ function useCollapsedSections(storageKey: string): {
 export function TasksContainer(): ReactNode {
 	const router = useRouter();
 	const searchParams = useSearchParams();
+	const { get } = searchParams;
 
 	// ─── URL state ────────────────────────────────────────────────────────
-	const rawView = searchParams.get(TASK_QUERY_KEYS.view);
+	const rawView = get(TASK_QUERY_KEYS.view);
 	const knownView = isTaskViewId(rawView) ? rawView : null;
 	const knownProject = useMemo(
 		() => (rawView ? (TASK_PROJECTS.find((project) => project.id === rawView) ?? null) : null),

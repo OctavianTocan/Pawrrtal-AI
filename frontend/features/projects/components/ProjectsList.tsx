@@ -134,7 +134,7 @@ export function ProjectsList({
 				<div className="flex flex-col gap-0.5 px-2 pb-1">
 					{isLoading && list.length === 0 ? (
 						<span className="px-2 py-1 text-sm text-muted-foreground/70">
-							Loading projects…
+							Loading projects&hellip;
 						</span>
 					) : null}
 					{!isLoading && list.length === 0 ? (
@@ -247,7 +247,7 @@ function RenameProjectModalInner({
 				Cancel
 			</Button>
 			<Button disabled={!draft.trim() || isPending} form={formId} type="submit">
-				{isPending ? 'Saving…' : 'Save'}
+				{isPending ? 'Saving...' : 'Save'}
 			</Button>
 		</AppDialogFooter>
 	);

@@ -76,7 +76,7 @@ function EditActionsRow({
 				) : (
 					<SaveIcon aria-hidden="true" className="size-3.5" />
 				)}
-				{isSaving ? 'Saving…' : 'Save'}
+				{isSaving ? 'Saving...' : 'Save'}
 			</button>
 		</div>
 	);

@@ -12,8 +12,8 @@ import {
 	createContext,
 	type PropsWithChildren,
 	type RefObject,
+	use,
 	useCallback,
-	useContext,
 	useEffect,
 	useMemo,
 	useRef,
@@ -70,7 +70,7 @@ const createFilePart = (file: File): FileUIPart & { id: string } => ({
 
 /** Read the nearest provider-backed prompt input controller. */
 export const usePromptInputController = () => {
-	const ctx = useContext(PromptInputController);
+	const ctx = use(PromptInputController);
 	if (!ctx) {
 		throw new Error(
 			'Wrap your component inside <PromptInputProvider> to use usePromptInputController().'
@@ -80,11 +80,11 @@ export const usePromptInputController = () => {
 };
 
 /** Read the provider-backed prompt input controller when one exists. */
-export const useOptionalPromptInputController = () => useContext(PromptInputController);
+export const useOptionalPromptInputController = () => use(PromptInputController);
 
 /** Read the provider-level attachment controller. */
 export const useProviderAttachments = () => {
-	const ctx = useContext(ProviderAttachmentsContext);
+	const ctx = use(ProviderAttachmentsContext);
 	if (!ctx) {
 		throw new Error(
 			'Wrap your component inside <PromptInputProvider> to use useProviderAttachments().'
@@ -94,12 +94,12 @@ export const useProviderAttachments = () => {
 };
 
 /** Read provider-level attachments when the component is wrapped by a provider. */
-export const useOptionalProviderAttachments = () => useContext(ProviderAttachmentsContext);
+export const useOptionalProviderAttachments = () => use(ProviderAttachmentsContext);
 
 /** Read the attachment controller for the current prompt input. */
 export const usePromptInputAttachments = () => {
 	const provider = useOptionalProviderAttachments();
-	const local = useContext(LocalAttachmentsContext);
+	const local = use(LocalAttachmentsContext);
 	const context = provider ?? local;
 	if (!context) {
 		throw new Error(

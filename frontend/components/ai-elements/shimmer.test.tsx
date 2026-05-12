@@ -4,7 +4,7 @@ import { Shimmer } from './shimmer';
 
 describe('Shimmer', () => {
 	it('renders the supplied text', () => {
-		const { getByText } = render(<Shimmer>Loading…</Shimmer>);
+		const { getByText } = render(<Shimmer>Loading&hellip;</Shimmer>);
 		expect(getByText('Loading…')).toBeTruthy();
 	});
 

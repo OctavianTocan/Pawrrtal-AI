@@ -14,7 +14,7 @@
 'use client';
 
 import type React from 'react';
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, use, useMemo, useState } from 'react';
 import type { AgnoMessage } from '@/lib/types';
 
 /** Snapshot of the conversation currently open in the chat panel. */
@@ -76,7 +76,7 @@ export function ChatActivityProvider({
  * @throws If called outside the provider tree.
  */
 export function useChatActivity(): ChatActivityContextValue {
-	const context = useContext(ChatActivityContext);
+	const context = use(ChatActivityContext);
 	if (!context) {
 		throw new Error('useChatActivity must be used within ChatActivityProvider.');
 	}

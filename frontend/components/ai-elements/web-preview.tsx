@@ -8,7 +8,7 @@
 
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, use, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ export type WebPreviewContextValue = {
 const WebPreviewContext = createContext<WebPreviewContextValue | null>(null);
 
 const useWebPreview = () => {
-	const context = useContext(WebPreviewContext);
+	const context = use(WebPreviewContext);
 	if (!context) {
 		throw new Error('WebPreview components must be used within a WebPreview');
 	}
@@ -98,7 +98,7 @@ export const WebPreviewNavigationButton = ({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
-					className="h-8 w-8 p-0 hover:text-foreground"
+					className="size-8 p-0 hover:text-foreground"
 					disabled={disabled}
 					onClick={onClick}
 					size="sm"
@@ -203,7 +203,7 @@ export const WebPreviewConsole = ({
 					Console
 					<ChevronDownIcon
 						className={cn(
-							'h-4 w-4 transition-transform duration-150',
+							'size-4 transition-transform duration-150',
 							consoleOpen && 'rotate-180'
 						)}
 					/>

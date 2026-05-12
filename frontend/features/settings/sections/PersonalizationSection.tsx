@@ -99,7 +99,7 @@ export function PersonalizationSection(): React.JSX.Element {
 				<Textarea
 					className="min-h-32 resize-y border-0 bg-transparent px-0 text-sm focus-visible:ring-0"
 					onChange={(event) => patchProfile({ customInstructions: event.target.value })}
-					placeholder="Add your custom instructions…"
+					placeholder="Add your custom instructions..."
 					value={profile.customInstructions ?? ''}
 				/>
 				<div className="flex justify-end pt-2">

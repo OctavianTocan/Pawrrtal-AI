@@ -10,9 +10,10 @@
 
 import {
 	type ClipboardEventHandler,
+	type JSX,
 	type KeyboardEventHandler,
+	type Ref,
 	type TextareaHTMLAttributes,
-	forwardRef,
 	useState,
 } from 'react';
 import { cn } from '../utils/cn';
@@ -23,6 +24,8 @@ export interface PromptInputTextareaProps
 	extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'name'> {
 	/** Optional name override — defaults to `message` for the form payload. */
 	name?: string;
+	/** React 19 ref prop forwarded to the textarea. */
+	ref?: Ref<HTMLTextAreaElement>;
 }
 
 /**
@@ -34,17 +37,14 @@ export interface PromptInputTextareaProps
  *
  * @returns A textarea wired into the prompt-input form.
  */
-export const PromptInputTextarea = forwardRef<HTMLTextAreaElement, PromptInputTextareaProps>(
-	function PromptInputTextarea(
-		{
-			onChange,
-			className,
-			placeholder = 'What would you like to know?',
-			name = 'message',
-			...props
-		},
-		ref,
-	) {
+export function PromptInputTextarea({
+	onChange,
+	className,
+	placeholder = 'What would you like to know?',
+	name = 'message',
+	ref,
+	...props
+}: PromptInputTextareaProps): JSX.Element {
 		const attachments = usePromptInputAttachments();
 		const [isComposing, setIsComposing] = useState(false);
 
@@ -101,5 +101,4 @@ export const PromptInputTextarea = forwardRef<HTMLTextAreaElement, PromptInputTe
 				{...props}
 			/>
 		);
-	},
-);
+}

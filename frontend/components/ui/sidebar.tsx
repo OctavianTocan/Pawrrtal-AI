@@ -94,7 +94,7 @@ type SidebarContextProps = {
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
 function useSidebar() {
-	const context = React.useContext(SidebarContext);
+	const context = React.use(SidebarContext);
 	if (!context) {
 		throw new Error('useSidebar must be used within a SidebarProvider.');
 	}
@@ -307,7 +307,7 @@ function Sidebar({
 						<SheetTitle>Sidebar</SheetTitle>
 						<SheetDescription>Displays the mobile sidebar.</SheetDescription>
 					</SheetHeader>
-					<div className="flex h-full w-full flex-col">{children}</div>
+					<div className="flex size-full flex-col">{children}</div>
 				</SheetContent>
 			</Sheet>
 		);

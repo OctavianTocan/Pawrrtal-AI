@@ -12,20 +12,17 @@
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import { ModelSelectorPopover } from '../model-selector/ModelSelectorPopover';
-import { TooltipProvider } from '../ui/Tooltip';
+import { PromptInputAttachment, PromptInputAttachments } from '../prompt-input/PromptInputAttachments';
+import { PromptInputForm, type PromptInputMessage } from '../prompt-input/PromptInputForm';
+import { PromptInputFooter, PromptInputSubmit } from '../prompt-input/PromptInputLayout';
+import { PromptInputTextarea } from '../prompt-input/PromptInputTextarea';
 import {
-	PromptInputAttachment,
-	PromptInputAttachments,
-	PromptInputFooter,
-	PromptInputForm,
-	type PromptInputMessage,
-	PromptInputSubmit,
-	PromptInputTextarea,
-} from '../prompt-input/index';
+	TooltipProvider,
+} from '../ui/Tooltip';
 import type {
 	ChatModelOption,
 	ChatReasoningLevel,
-} from '../types/index';
+} from '../types';
 import { Button } from '../ui/Button';
 import { cn } from '../utils/cn';
 import { AttachButton } from './controls/AttachButton';
@@ -165,7 +162,7 @@ function ComposerSendCluster({
 			) : null}
 			{isVoiceSupported ? (
 				<ComposerTooltip
-					content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+					content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
 				>
 					<Button
 						aria-label="Start voice input"

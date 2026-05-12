@@ -59,7 +59,7 @@ export function ChatPromptSuggestions({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<button
-									className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 bg-transparent px-3 py-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
+									className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 bg-transparent p-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
 									onClick={() => onSelectSuggestion(suggestion.label)}
 									type="button"
 								>

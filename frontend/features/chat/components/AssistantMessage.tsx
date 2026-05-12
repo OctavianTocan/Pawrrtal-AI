@@ -222,7 +222,7 @@ export function AssistantMessage({
 				{showInitialLoader ? (
 					<div className="flex items-center gap-2 text-muted-foreground text-sm">
 						<AgentSpinner size={16} />
-						<Shimmer duration={1.2}>Thinking...</Shimmer>
+						<Shimmer duration={1.2}>Thinking&hellip;</Shimmer>
 					</div>
 				) : null}
 

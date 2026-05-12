@@ -170,7 +170,7 @@ export function WorkspacesSectionView({
 					type="button"
 				>
 					<Save className="size-4" />
-					{isSaving ? 'Saving…' : 'Save'}
+					{isSaving ? 'Saving...' : 'Save'}
 				</Button>
 				<Button
 					className="gap-1.5"

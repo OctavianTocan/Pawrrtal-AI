@@ -21,7 +21,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 	// To disable buttons while submitting.
 	const [isLoading, setIsLoading] = useState(false);
 	// Get the router.
-	const router = useRouter();
+	const { push } = useRouter();
 	// SSR-stable unique IDs so each Field's label and input pair correctly even
 	// if the form is rendered more than once on the same page.
 	const nameId = useId();
@@ -95,7 +95,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 		});
 
 		// Redirect to the homepage.
-		router.push('/');
+		push('/');
 	};
 
 	return (

@@ -46,7 +46,7 @@ export function PromptInputFooter({
 }
 
 /** Chat lifecycle status used by the submit button. */
-export type PromptInputSubmitStatus = 'submitted' | 'streaming' | 'ready' | 'error';
+type PromptInputSubmitStatus = 'submitted' | 'streaming' | 'ready' | 'error';
 
 /** Props for the submit pill. */
 export interface PromptInputSubmitProps

@@ -114,7 +114,7 @@ function TaskDetailBody({
 				</button>
 			</header>
 
-			<div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+			<div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5">
 				<div>
 					<h2 className="font-display text-[22px] leading-tight font-medium tracking-tight text-balance text-foreground">
 						{task.title}
@@ -125,7 +125,7 @@ function TaskDetailBody({
 						</p>
 					) : (
 						<p className="mt-3 text-[13px] text-muted-foreground/70 italic">
-							No description yet — click the row to add one.
+							No description yet. Click the row to add one.
 						</p>
 					)}
 				</div>

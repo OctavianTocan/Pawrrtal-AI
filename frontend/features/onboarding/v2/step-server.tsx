@@ -64,7 +64,7 @@ function ServerModeToggle({ mode, onSelect }: ServerModeToggleProps): React.JSX.
 				type="button"
 				onClick={() => onSelect('hosted')}
 				className={cn(
-					'flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-4 text-left transition-colors duration-150',
+					'flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition-colors duration-150',
 					mode === 'hosted'
 						? 'border-foreground/30 bg-foreground/[0.04]'
 						: 'border-border hover:border-foreground/20 hover:bg-foreground/[0.02]'
@@ -89,7 +89,7 @@ function ServerModeToggle({ mode, onSelect }: ServerModeToggleProps): React.JSX.
 				type="button"
 				onClick={() => onSelect('self-hosted')}
 				className={cn(
-					'flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-4 text-left transition-colors duration-150',
+					'flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition-colors duration-150',
 					mode === 'self-hosted'
 						? 'border-foreground/30 bg-foreground/[0.04]'
 						: 'border-border hover:border-foreground/20 hover:bg-foreground/[0.02]'
@@ -105,7 +105,7 @@ function ServerModeToggle({ mode, onSelect }: ServerModeToggleProps): React.JSX.
 				<div className="flex flex-col gap-0.5">
 					<span className="text-sm font-medium text-foreground">Self-hosted</span>
 					<span className="text-[13px] text-muted-foreground">
-						Connect to your own backend — Railway, VPS, or local Docker.
+						Connect to your own backend: Railway, VPS, or local Docker.
 					</span>
 				</div>
 			</button>
@@ -160,7 +160,7 @@ function ServerUrlField({
 					disabled={verifying || !url.trim()}
 					className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-foreground-5 disabled:pointer-events-none disabled:opacity-50"
 				>
-					{verifying ? 'Checking…' : verified ? 'Re-check' : 'Verify'}
+					{verifying ? 'Checking...' : verified ? 'Re-check' : 'Verify'}
 				</button>
 			</div>
 
@@ -169,7 +169,7 @@ function ServerUrlField({
 			) : verified ? (
 				<p className="flex items-center gap-1 text-[12px] text-emerald-600 dark:text-emerald-400">
 					<CheckCircle2Icon aria-hidden="true" className="size-3.5" />
-					Server reachable — you're good to go.
+					Server reachable. You're good to go.
 				</p>
 			) : null}
 

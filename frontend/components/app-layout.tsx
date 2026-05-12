@@ -172,7 +172,7 @@ function WorkspaceSelector(): React.JSX.Element {
 			<DropdownMenuSeparator />
 			<DropdownMenuItem onSelect={handleOpenOnboarding}>
 				<FolderPlusIcon aria-hidden="true" className="size-3.5" />
-				Add Workspace...
+				Add Workspace&hellip;
 			</DropdownMenuItem>
 		</DropdownPanelMenu>
 	);
@@ -429,7 +429,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<NavUser user={SIDEBAR_USER} />
 					</SidebarFocusShell>
 				</Sidebar>
-				<div className="h-full w-full min-w-0 pt-10">
+				<div className="size-full min-w-0 pt-10">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</>

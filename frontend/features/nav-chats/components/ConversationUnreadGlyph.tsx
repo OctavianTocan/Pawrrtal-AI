@@ -10,7 +10,7 @@ export function ConversationUnreadGlyph(): React.JSX.Element {
 	return (
 		<svg
 			aria-hidden="true"
-			className="h-3 w-3 text-accent"
+			className="size-3 text-accent"
 			fill="currentColor"
 			viewBox="0 0 24 24"
 		>
