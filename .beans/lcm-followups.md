@@ -12,6 +12,11 @@ tables; Alembic migration 012; settings in `app/core/config.py`.
 **Out of scope for this PR (intentionally) — picked up in later PRs:**
 
 - [x] Application code that reads/writes the new tables (PR #2) — `ingest_message` + `assemble_context` in `app/core/lcm.py`; wired into `chat.py` behind `lcm_enabled`
+- [x] Leaf compaction (PR #3) — `compact_leaf_if_needed` + `LCMSummary` creation; three-level escalation; background task in `chat.py`
+- [x] LCM grep tool (PR #4) — `lcm_grep.py`, `lcm_grep_agent.py`; ILIKE across messages + summaries; wired into `build_agent_tools`
+- [x] LCM describe/list tools (PR #5) — `lcm_describe.py`, `lcm_describe_agent.py`; `lcm_list_summaries` + `lcm_describe` per summary UUID
+- [x] LCM expand-query tool (PR #6) — `lcm_expand_query.py`, `lcm_expand_query_agent.py`; full-history LLM call with prompt, bounded to 500 items
+- [x] Condensation pass (PR #7) — `_condense_at_depth` collapses same-depth summaries into depth+1 parents; controlled by `lcm_incremental_max_depth`
 - [ ] FK enforcement for `lcm_context_items.item_id` and
       `lcm_summary_sources.source_id` polymorphic targets — currently
       cascade is driven by the parent `conversation_id` FK only
