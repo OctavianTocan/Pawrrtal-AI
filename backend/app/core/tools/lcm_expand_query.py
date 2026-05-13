@@ -53,6 +53,29 @@ If the answer is not in the history, say so explicitly.
 Be concise and cite specific turns or summary nodes when relevant."""
 
 
+def _item_to_turn(
+    item: LCMContextItem,
+    messages_by_id: dict[uuid.UUID, ChatMessage],
+    summaries_by_id: dict[uuid.UUID, LCMSummary],
+) -> dict[str, str] | None:
+    """Convert one LCMContextItem to a ``{role, content}`` turn dict, or ``None``.
+
+    Extracted to keep ``lcm_expand_query``'s loop body within the nesting budget.
+    """
+    if item.item_kind == "message":
+        msg = messages_by_id.get(item.item_id)
+        if msg and msg.role in {"user", "assistant"} and msg.content:
+            return {"role": msg.role, "content": msg.content}
+    elif item.item_kind == "summary":
+        summ = summaries_by_id.get(item.item_id)
+        if summ and summ.content:
+            return {
+                "role": "user",
+                "content": f"[Compacted summary, depth={summ.depth}]\n{summ.content}",
+            }
+    return None
+
+
 async def lcm_expand_query(
     session: AsyncSession,
     *,
@@ -122,19 +145,9 @@ async def lcm_expand_query(
     # Build the full-history transcript.
     turns: list[dict[str, str]] = []
     for item in items:
-        if item.item_kind == "message":
-            msg = messages_by_id.get(item.item_id)
-            if msg and msg.role in {"user", "assistant"} and msg.content:
-                turns.append({"role": msg.role, "content": msg.content})
-        elif item.item_kind == "summary":
-            summ = summaries_by_id.get(item.item_id)
-            if summ and summ.content:
-                turns.append(
-                    {
-                        "role": "user",
-                        "content": f"[Compacted summary, depth={summ.depth}]\n{summ.content}",
-                    }
-                )
+        turn = _item_to_turn(item, messages_by_id, summaries_by_id)
+        if turn is not None:
+            turns.append(turn)
 
     if not turns:
         return "lcm_expand_query: resolved to an empty history — nothing to answer."

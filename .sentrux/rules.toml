@@ -73,6 +73,15 @@ name = "be-models"
 paths = ["backend/app/models.py", "backend/app/schemas.py"]
 order = 3
 
+# LCM module: cross-cutting concern that needs both be-models (ORM access)
+# and be-core (providers, config).  Placed at order=3 alongside be-models so
+# it may import both be-models (same level) and be-core (higher order = 4).
+# Listed before be-core so more-specific path patterns take precedence.
+[[layers]]
+name = "be-lcm"
+paths = ["backend/app/core/lcm.py"]
+order = 3
+
 [[layers]]
 name = "be-core"
 paths = ["backend/app/core/*", "backend/app/db.py", "backend/app/logger_setup.py"]

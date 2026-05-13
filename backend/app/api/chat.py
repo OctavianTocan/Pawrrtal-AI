@@ -17,12 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels import resolve_channel, surface_from_header
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.config import settings
-from app.core.lcm import assemble_context as lcm_assemble_context
-from app.core.lcm import compact_leaf_if_needed as lcm_compact_leaf
-from app.core.lcm import ingest_message as lcm_ingest_message
-from app.core.providers import resolve_llm
-from app.core.providers.base import StreamEvent
+from app.core.lcm import (
+    assemble_context as lcm_assemble_context,
+    compact_leaf_if_needed as lcm_compact_leaf,
+    fresh_tail_count as lcm_fresh_tail_count,
+    ingest_message as lcm_ingest_message,
+    is_enabled as lcm_is_enabled,
+    leaf_chunk_tokens as lcm_leaf_chunk_tokens,
+)
+from app.core.providers import StreamEvent, resolve_llm
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.artifact_agent import (
     ARTIFACT_TOOL_NAME,
@@ -107,8 +110,8 @@ async def _lcm_compact_bg(
                 conversation_id=conversation_id,
                 user_id=user_id,
                 model_id=model_id,
-                fresh_tail_count=settings.lcm_fresh_tail_count,
-                max_chunk_tokens=settings.lcm_leaf_chunk_tokens,
+                fresh_tail_count=lcm_fresh_tail_count(),
+                max_chunk_tokens=lcm_leaf_chunk_tokens(),
             )
             await compact_session.commit()
     except Exception:
@@ -221,11 +224,11 @@ def get_chat_router() -> APIRouter:
         # ``lcm_context_items`` list so that PR #3 compaction can rewrite
         # ranges in place without touching this call site.  When LCM is off,
         # we fall back to the original ``LIMIT _HISTORY_WINDOW`` query.
-        if settings.lcm_enabled:
+        if lcm_is_enabled():
             history = await lcm_assemble_context(
                 session,
                 conversation_id=request.conversation_id,
-                fresh_tail_count=settings.lcm_fresh_tail_count,
+                fresh_tail_count=lcm_fresh_tail_count(),
             )
         else:
             recent_rows = await get_messages_for_conversation(
@@ -255,7 +258,7 @@ def get_chat_router() -> APIRouter:
         # Wire both new rows into the LCM context list so assembly on the
         # *next* turn sees them.  The ingest is gated on the master switch;
         # existing deployments with LCM off are unaffected.
-        if settings.lcm_enabled:
+        if lcm_is_enabled():
             await lcm_ingest_message(
                 session,
                 conversation_id=request.conversation_id,
@@ -437,7 +440,7 @@ def get_chat_router() -> APIRouter:
                 # decide what to compact.  Errors are swallowed here — a
                 # failed compaction is invisible to the user; the full message
                 # history is always preserved.
-                if settings.lcm_enabled:
+                if lcm_is_enabled():
                     asyncio.create_task(
                         _lcm_compact_bg(
                             conversation_id=request.conversation_id,

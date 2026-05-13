@@ -13,8 +13,18 @@ Public API
 ``compact_leaf_if_needed``   — summarise the oldest non-fresh items into a leaf
                                LCMSummary and rewrite lcm_context_items in place
 
-All functions are always importable; callers gate on ``settings.lcm_enabled``
+All functions are always importable; callers gate on ``is_enabled()``
 (default ``False``) before invoking them.
+
+Configuration helpers
+---------------------
+``is_enabled``           — return ``settings.lcm_enabled``
+``fresh_tail_count``     — return ``settings.lcm_fresh_tail_count``
+``leaf_chunk_tokens``    — return ``settings.lcm_leaf_chunk_tokens``
+
+These thin wrappers allow callers such as ``app.api.chat`` to access
+LCM-specific configuration through this module alone, without a direct
+``app.core.config`` import that would bloat their fan-out.
 """
 
 from __future__ import annotations
@@ -32,6 +42,26 @@ from app.core.providers import resolve_llm
 from app.models import ChatMessage, LCMContextItem, LCMSummary, LCMSummarySource
 
 _log = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Configuration accessors
+# Thin wrappers so callers don't need a direct `app.core.config` import.
+# ---------------------------------------------------------------------------
+
+
+def is_enabled() -> bool:
+    """Return whether the LCM system is enabled."""
+    return _settings.lcm_enabled
+
+
+def fresh_tail_count() -> int:
+    """Return the number of context items kept verbatim (the fresh tail)."""
+    return _settings.lcm_fresh_tail_count
+
+
+def leaf_chunk_tokens() -> int:
+    """Return the maximum token budget for a single leaf compaction chunk."""
+    return _settings.lcm_leaf_chunk_tokens
 
 # ---------------------------------------------------------------------------
 # Summarisation prompts — three-level escalation mirrors the upstream plugin.
@@ -220,20 +250,33 @@ async def assemble_context(
 
     context: list[dict[str, Any]] = []
     for item in items:
-        if item.item_kind == "message":
-            msg = messages_by_id.get(item.item_id)
-            if msg is not None and msg.role in {"user", "assistant"}:
-                context.append({"role": msg.role, "content": msg.content or ""})
-        elif item.item_kind == "summary":
-            summary = summaries_by_id.get(item.item_id)
-            if summary is not None:
-                context.append(
-                    {
-                        "role": "user",
-                        "content": f"[Summary of earlier conversation]\n{summary.content}",
-                    }
-                )
+        entry = _resolve_context_item(item, messages_by_id, summaries_by_id)
+        if entry is not None:
+            context.append(entry)
     return context
+
+
+def _resolve_context_item(
+    item: LCMContextItem,
+    messages_by_id: dict[uuid.UUID, ChatMessage],
+    summaries_by_id: dict[uuid.UUID, LCMSummary],
+) -> dict[str, Any] | None:
+    """Resolve one LCMContextItem to a ``{role, content}`` dict, or ``None``.
+
+    Extracted to keep ``assemble_context``'s loop body within the nesting budget.
+    """
+    if item.item_kind == "message":
+        msg = messages_by_id.get(item.item_id)
+        if msg is not None and msg.role in {"user", "assistant"}:
+            return {"role": msg.role, "content": msg.content or ""}
+    elif item.item_kind == "summary":
+        summary = summaries_by_id.get(item.item_id)
+        if summary is not None:
+            return {
+                "role": "user",
+                "content": f"[Summary of earlier conversation]\n{summary.content}",
+            }
+    return None
 
 
 async def _condense_at_depth(
