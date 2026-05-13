@@ -1,0 +1,20 @@
+# docker-compose.dev.yml — development overlay
+#
+# Publishes host ports for postgres and backend so you can connect with
+# local tools (psql, TablePlus, Postman, curl…) without going through
+# the Docker network.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# The base docker-compose.yml intentionally has no host-published ports,
+# so the production overlay is not contaminated by dev-only bindings.
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"   # connect with any local DB client
+
+  backend:
+    ports:
+      - "8000:8000"   # hit the API directly from the host, bypass Nginx
