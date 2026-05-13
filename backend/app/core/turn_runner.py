@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 EventHook = Callable[["StreamEvent"], list["StreamEvent"]]
 
 
+# TODO: Calling this "TurnPlan" is a really bad idea. It makes it very confusing as to what exactly this is. Especially because we have a "Plan Mode".
 @dataclass
 class TurnPlan:
     """Everything a single chat turn needs to run.
@@ -100,7 +101,7 @@ async def run_turn(
     *,
     event_hooks: list[EventHook] | None = None,
 ) -> AsyncIterator[bytes]:
-    """Run a full LLM turn end-to-end.
+    r"""Run a full LLM turn end-to-end.
 
     Yields whatever ``plan.channel.deliver()`` yields — surface-specific
     bytes for web SSE, nothing useful for Telegram (where the channel
@@ -117,9 +118,7 @@ async def run_turn(
     started_at = time.perf_counter()
     history, assistant_message_id = await _load_history_and_persist(plan)
     system_prompt = (
-        assemble_workspace_prompt(plan.workspace_root)
-        if plan.workspace_root is not None
-        else None
+        assemble_workspace_prompt(plan.workspace_root) if plan.workspace_root is not None else None
     )
 
     aggregator = ChatTurnAggregator()
@@ -145,7 +144,7 @@ async def run_turn(
                         counter.value += 1
                         aggregator.apply(extra)
                         yield extra
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception(
                 "%s_STREAM_ERR conversation_id=%s after %d events",
                 plan.log_tag,
@@ -241,7 +240,7 @@ async def _finalize_turn(
                 **snapshot,
             )
             await session.commit()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception(
             "%s_PERSIST_ERR conversation_id=%s message_id=%s",
             plan.log_tag,

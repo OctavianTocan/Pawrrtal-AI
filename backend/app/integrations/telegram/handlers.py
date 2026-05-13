@@ -85,9 +85,7 @@ _MODEL_MISSING_MESSAGE = (
     "  /model google/gemini-3-flash-preview\n"
     "  /model anthropic/claude-opus-4-5"
 )
-_MODEL_NOT_BOUND_MESSAGE = (
-    "You need to connect your account first before switching models."
-)
+_MODEL_NOT_BOUND_MESSAGE = "You need to connect your account first before switching models."
 _MODEL_UNKNOWN_PREFIX_MESSAGE = (
     "Unknown model prefix. Supported prefixes: google/, anthropic/\n\n"
     "Examples:\n"
@@ -96,9 +94,7 @@ _MODEL_UNKNOWN_PREFIX_MESSAGE = (
 )
 _MODEL_OK_MESSAGE = "Model switched to <code>{model_id}</code> ✅"
 _MODEL_FAIL_MESSAGE = "Couldn't update model — please try again."
-_NEW_NOT_BOUND_MESSAGE = (
-    "Connect your account first before starting a new conversation."
-)
+_NEW_NOT_BOUND_MESSAGE = "Connect your account first before starting a new conversation."
 _NEW_OK_MESSAGE = "✨ New conversation started. What's on your mind?"
 
 
@@ -127,6 +123,7 @@ class TelegramTurnContext:
     channel delivery loop.
     """
 
+    # TODO: This needs to be renamed. Multiple things here, in fact, to Pawrrtal.
     nexus_user_id: uuid.UUID
     """Nexus user UUID resolved from the channel binding."""
 
