@@ -236,6 +236,139 @@ async def assemble_context(
     return context
 
 
+async def _condense_at_depth(
+    session: AsyncSession,
+    *,
+    conversation_id: uuid.UUID,
+    user_id: uuid.UUID,
+    model_id: str,
+    depth: int,
+    max_chunk_tokens: int,
+) -> bool:
+    """Run one condensation pass: merge depth-*d* summaries into a depth-*(d+1)* parent.
+
+    Finds all ``LCMContextItem`` rows whose backing ``LCMSummary`` has the
+    given *depth*.  If at least two such items exist, takes the oldest batch
+    (up to *max_chunk_tokens* source tokens), calls the provider to produce a
+    parent summary, writes ``LCMSummary`` (depth+1) + ``LCMSummarySource``
+    edges, and replaces the compacted context items with a single
+    ``item_kind="summary"`` row pointing at the new parent.
+
+    Returns:
+        ``True`` if a condensation pass ran, ``False`` if nothing to condense
+        (fewer than 2 eligible items).
+    """
+    # Fetch all context items pointing at summaries.
+    all_items_result = await session.execute(
+        select(LCMContextItem)
+        .where(LCMContextItem.conversation_id == conversation_id)
+        .order_by(LCMContextItem.ordinal.asc())
+    )
+    all_items = list(all_items_result.scalars().all())
+
+    summary_item_ids = [i.item_id for i in all_items if i.item_kind == "summary"]
+    if len(summary_item_ids) < 2:
+        return False
+
+    # Fetch the summaries to filter by depth.
+    s_result = await session.execute(
+        select(LCMSummary).where(LCMSummary.id.in_(summary_item_ids))
+    )
+    summaries_by_id: dict[uuid.UUID, LCMSummary] = {
+        s.id: s for s in s_result.scalars().all()
+    }
+
+    # Items eligible for condensation: context items pointing at depth-*d* summaries.
+    eligible: list[tuple[LCMContextItem, LCMSummary]] = [
+        (item, summaries_by_id[item.item_id])
+        for item in all_items
+        if item.item_kind == "summary"
+        and item.item_id in summaries_by_id
+        and summaries_by_id[item.item_id].depth == depth
+    ]
+
+    if len(eligible) < 2:
+        return False
+
+    # Build the batch (token-budget cap).
+    selected_items: list[LCMContextItem] = []
+    selected_messages: list[dict[str, str]] = []
+    running_tokens = 0
+
+    for item, summ in eligible:
+        toks = _approx_tokens(summ.content)
+        if running_tokens + toks > max_chunk_tokens and selected_items:
+            break
+        selected_items.append(item)
+        selected_messages.append(
+            {
+                "role": "user",
+                "content": f"[Summary depth={summ.depth}]\n{summ.content}",
+            }
+        )
+        running_tokens += toks
+
+    if len(selected_items) < 2:
+        return False
+
+    # Summarise the batch.
+    turns_text = _format_turns(selected_messages)
+    summary_text, summary_kind = await _summarize(
+        resolve_llm(_settings.lcm_summary_model or model_id, user_id=user_id),
+        turns_text,
+        user_id,
+    )
+
+    _log.info(
+        "LCM_CONDENSE depth=%d→%d conversation_id=%s sources=%d",
+        depth,
+        depth + 1,
+        conversation_id,
+        len(selected_items),
+    )
+
+    # Write parent LCMSummary.
+    parent = LCMSummary(
+        conversation_id=conversation_id,
+        depth=depth + 1,
+        content=summary_text,
+        token_count=_approx_tokens(summary_text),
+        model_id=_settings.lcm_summary_model or model_id,
+        summary_kind=summary_kind,
+    )
+    session.add(parent)
+    await session.flush()
+
+    # Write source edges.
+    for src_ordinal, item in enumerate(selected_items):
+        session.add(
+            LCMSummarySource(
+                summary_id=parent.id,
+                source_kind="summary",
+                source_id=item.item_id,
+                source_ordinal=src_ordinal,
+            )
+        )
+
+    # Rewrite context items.
+    slot_ordinal = selected_items[0].ordinal
+    for item in selected_items:
+        await session.delete(item)
+    await session.flush()
+
+    session.add(
+        LCMContextItem(
+            conversation_id=conversation_id,
+            ordinal=slot_ordinal,
+            item_kind="summary",
+            item_id=parent.id,
+        )
+    )
+    await session.flush()
+
+    return True
+
+
 async def compact_leaf_if_needed(
     session: AsyncSession,
     *,
@@ -375,5 +508,30 @@ async def compact_leaf_if_needed(
         )
     )
     await session.flush()
+
+    # ------------------------------------------------------------------ Condensation
+    # After leaf compaction, run incremental condensation passes so accumulated
+    # leaf summaries are folded into deeper parent nodes.
+    # ``lcm_incremental_max_depth`` controls how many passes to attempt:
+    #   0  = leaf-only (no condensation)
+    #   1  = one pass (leaf → depth-1)  [default]
+    #  -1  = unlimited cascade
+    if _settings.lcm_incremental_max_depth != 0:
+        passes = (
+            _settings.lcm_incremental_max_depth
+            if _settings.lcm_incremental_max_depth > 0
+            else 999  # unlimited practical cap
+        )
+        for depth in range(passes):
+            ran = await _condense_at_depth(
+                session,
+                conversation_id=conversation_id,
+                user_id=user_id,
+                model_id=model_id,
+                depth=depth,
+                max_chunk_tokens=max_chunk_tokens,
+            )
+            if not ran:
+                break  # nothing more to condense at this depth or beyond
 
     return True
