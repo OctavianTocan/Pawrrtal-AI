@@ -35,6 +35,7 @@ from app.core.keys import resolve_api_key
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.image_gen_agent import make_image_gen_tool
+from app.core.tools.lcm_grep_agent import make_lcm_grep_tool
 from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
@@ -44,6 +45,7 @@ def build_agent_tools(
     workspace_root: Path,
     user_id: uuid.UUID | None = None,
     send_fn: SendFn | None = None,
+    conversation_id: uuid.UUID | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -67,6 +69,9 @@ def build_agent_tools(
             web path (via a per-request asyncio queue drained into the
             SSE stream) and the Telegram path supply one; the distinction
             is purely in how the callback delivers — not whether it exists.
+        conversation_id: Optional conversation UUID.  When ``settings.lcm_enabled``
+            is ``True`` and this is supplied, the ``lcm_grep`` tool is added so
+            the agent can search compacted conversation history on demand.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -120,5 +125,11 @@ def build_agent_tools(
         tools.append(
             make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
         )
+
+    # LCM history search — gives the agent on-demand access to compacted
+    # conversation history.  Gated on both the LCM master switch and a
+    # conversation_id being available (background jobs may omit it).
+    if settings.lcm_enabled and conversation_id is not None:
+        tools.append(make_lcm_grep_tool(conversation_id=conversation_id))
 
     return tools
