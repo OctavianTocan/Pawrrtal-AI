@@ -5,7 +5,7 @@
  *
  *   dev  — spawns `bun run dev` from the monorepo root, which runs dev.ts:
  *           starts Next.js on :3001 AND the FastAPI backend on :8000.
- *           PAWRRTAL_REPO_ROOT env var (set by the `bun start` script)
+ *           PAWRRTAL_REPO_ROOT env var (set by `bun run start` in electrobun/)
  *           tells us where the monorepo root is.
  *
  *   prod — spawns the Next.js standalone server bundled inside the app
@@ -87,18 +87,18 @@ function allocateFreePort(): Promise<number> {
 // ---------------------------------------------------------------------------
 
 /**
- * Spawn `pnpm dev` inside `<repo>/frontend/` and wait for it to accept
- * connections on DEV_FRONTEND_PORT.
+ * Spawn `bun run dev` at `<repo>/` (runs `dev.ts`: Next.js on DEV_FRONTEND_PORT
+ * and FastAPI on :8000) and wait for the frontend port to accept connections.
  *
  * The monorepo root is read from PAWRRTAL_REPO_ROOT (injected by the
- * `bun start` npm script).
+ * `bun run start` script in package.json).
  */
 async function startDevServer(): Promise<StartedServer> {
 	const repoRoot = process.env.PAWRRTAL_REPO_ROOT;
 	if (!repoRoot) {
 		throw new Error(
 			'PAWRRTAL_REPO_ROOT is not set. ' +
-				'Run `bun start` from the electrobun/ directory — the script sets it automatically.'
+				'Run `bun run start` from the electrobun/ directory — the script sets it automatically.'
 		);
 	}
 	// dev.ts starts both:
