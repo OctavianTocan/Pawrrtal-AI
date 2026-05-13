@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.config import settings
 from app.core.lcm import assemble_context as lcm_assemble_context
+from app.core.lcm import compact_leaf_if_needed as lcm_compact_leaf
 from app.core.lcm import ingest_message as lcm_ingest_message
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
@@ -84,6 +86,35 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
             "tool_use_id": event.get("tool_use_id", ""),
         },
     )
+
+
+async def _lcm_compact_bg(
+    *,
+    conversation_id: uuid.UUID,
+    user_id: uuid.UUID,
+    model_id: str,
+) -> None:
+    """Background task: run one LCM leaf-compaction pass for a conversation.
+
+    Opens its own session so it runs completely independently of the request
+    lifecycle.  All exceptions are caught and logged — a failed compaction
+    never surfaces to the user (the full message history is always preserved).
+    """
+    try:
+        async with async_session_maker() as compact_session:
+            await lcm_compact_leaf(
+                compact_session,
+                conversation_id=conversation_id,
+                user_id=user_id,
+                model_id=model_id,
+                fresh_tail_count=settings.lcm_fresh_tail_count,
+                max_chunk_tokens=settings.lcm_leaf_chunk_tokens,
+            )
+            await compact_session.commit()
+    except Exception:
+        logger.exception(
+            "LCM_COMPACT_BG_ERR conversation_id=%s", conversation_id
+        )
 
 
 def get_chat_router() -> APIRouter:
@@ -395,6 +426,18 @@ def get_chat_router() -> APIRouter:
                         "CHAT_PERSIST_ERR rid=%s message_id=%s",
                         rid,
                         assistant_message_id,
+                    )
+                # Fire-and-forget leaf compaction.  Runs after the stream is
+                # fully committed so the assistant row is finalized before we
+                # decide what to compact.  Errors are swallowed — a failed
+                # compaction is invisible to the user; full history preserved.
+                if settings.lcm_enabled:
+                    asyncio.create_task(
+                        _lcm_compact_bg(
+                            conversation_id=request.conversation_id,
+                            user_id=user.id,
+                            model_id=model_id,
+                        )
                     )
                 logger.info(
                     "CHAT_OUT rid=%s conversation_id=%s model_id=%s surface=%s events=%d duration_ms=%.1f",
