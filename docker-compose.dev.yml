@@ -10,11 +10,17 @@
 # The base docker-compose.yml intentionally has no host-published ports,
 # so the production overlay is not contaminated by dev-only bindings.
 
+# Both bindings are localhost-only (127.0.0.1) — the API and DB never
+# need to be reachable on the host's external interfaces in dev, so this
+# avoids accidental exposure on shared / coffee-shop networks. The
+# Docker network itself is untouched, so service-to-service calls inside
+# Compose keep working exactly as before.
+
 services:
   postgres:
     ports:
-      - "5432:5432"   # connect with any local DB client
+      - "127.0.0.1:5432:5432"   # local DB client only (psql, TablePlus…)
 
   backend:
     ports:
-      - "8000:8000"   # hit the API directly from the host, bypass Nginx
+      - "127.0.0.1:8000:8000"   # hit the API directly from the host, bypass Nginx
