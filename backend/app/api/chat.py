@@ -318,7 +318,11 @@ def get_chat_router() -> APIRouter:
             await _web_send_queue.put(event)
 
         agent_tools = build_agent_tools(
-            workspace_root=root, user_id=user.id, send_fn=_web_send_fn
+            workspace_root=root,
+            user_id=user.id,
+            send_fn=_web_send_fn,
+            conversation_id=request.conversation_id,
+            model_id=model_id,
         )
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's

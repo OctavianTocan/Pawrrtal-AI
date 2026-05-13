@@ -35,6 +35,12 @@ from app.core.keys import resolve_api_key
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.image_gen_agent import make_image_gen_tool
+from app.core.tools.lcm_describe_agent import (
+    make_lcm_describe_tool,
+    make_lcm_list_summaries_tool,
+)
+from app.core.tools.lcm_expand_query_agent import make_lcm_expand_query_tool
+from app.core.tools.lcm_grep_agent import make_lcm_grep_tool
 from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
 
@@ -44,6 +50,8 @@ def build_agent_tools(
     workspace_root: Path,
     user_id: uuid.UUID | None = None,
     send_fn: SendFn | None = None,
+    conversation_id: uuid.UUID | None = None,
+    model_id: str | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -120,5 +128,21 @@ def build_agent_tools(
         tools.append(
             make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
         )
+
+    # LCM history tools — give the agent on-demand access to compacted
+    # conversation history.  All four are gated on the LCM master switch
+    # and a conversation_id being present.
+    if settings.lcm_enabled and conversation_id is not None:
+        tools.append(make_lcm_grep_tool(conversation_id=conversation_id))
+        tools.append(make_lcm_list_summaries_tool(conversation_id=conversation_id))
+        tools.append(make_lcm_describe_tool(conversation_id=conversation_id))
+        if user_id is not None:
+            tools.append(
+                make_lcm_expand_query_tool(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    model_id=model_id or "gemini-2.5-flash-preview-05-20",
+                )
+            )
 
     return tools
