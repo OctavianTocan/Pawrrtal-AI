@@ -39,6 +39,7 @@ from app.core.tools.lcm_describe_agent import (
     make_lcm_describe_tool,
     make_lcm_list_summaries_tool,
 )
+from app.core.tools.lcm_expand_query_agent import make_lcm_expand_query_tool
 from app.core.tools.lcm_grep_agent import make_lcm_grep_tool
 from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
@@ -50,6 +51,7 @@ def build_agent_tools(
     user_id: uuid.UUID | None = None,
     send_fn: SendFn | None = None,
     conversation_id: uuid.UUID | None = None,
+    model_id: str | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -74,8 +76,10 @@ def build_agent_tools(
             SSE stream) and the Telegram path supply one; the distinction
             is purely in how the callback delivers — not whether it exists.
         conversation_id: Optional conversation UUID.  When ``settings.lcm_enabled``
-            is ``True`` and this is supplied, the ``lcm_grep`` tool is added so
-            the agent can search compacted conversation history on demand.
+            is ``True`` and this is supplied, the LCM tools are added so
+            the agent can search and expand compacted conversation history.
+        model_id: Optional model identifier used by ``lcm_expand_query`` for
+            its focused sub-call.  Defaults to Gemini flash when omitted.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -131,14 +135,23 @@ def build_agent_tools(
         )
 
     # LCM history tools — give the agent on-demand access to compacted
-    # conversation history.  All three are gated on the LCM master switch
+    # conversation history.  All four are gated on the LCM master switch
     # and a conversation_id being present.
     #   lcm_grep           — substring search across messages + summaries
     #   lcm_list_summaries — enumerate summary nodes (find IDs)
     #   lcm_describe       — read a single summary node in full
+    #   lcm_expand_query   — deep recall via focused LLM sub-call
     if settings.lcm_enabled and conversation_id is not None:
         tools.append(make_lcm_grep_tool(conversation_id=conversation_id))
         tools.append(make_lcm_list_summaries_tool(conversation_id=conversation_id))
         tools.append(make_lcm_describe_tool(conversation_id=conversation_id))
+        if user_id is not None:
+            tools.append(
+                make_lcm_expand_query_tool(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    model_id=model_id or "gemini-2.5-flash-preview-05-20",
+                )
+            )
 
     return tools
