@@ -1,0 +1,65 @@
+# docker-compose.prod.yml — production overlay for VPS / Tailscale deployment
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# What this overlay adds on top of the base docker-compose.yml:
+#   - Next.js frontend Docker service  (frontend:3000)
+#   - Nginx reverse proxy              (/api/* → backend, /* → frontend)
+#   - Production backend command       (no --reload, no source bind-mount)
+#   - Workspace data volume inherited  from base compose
+#
+# The base docker-compose.yml is left unchanged so local development with
+# `docker compose up` continues to work exactly as before.
+
+services:
+  # ── Override backend for production ──────────────────────────────────────
+  # Removes the dev --reload flag and the source bind-mount so the built
+  # image is used as-is. Migrations still run on every start.
+  backend:
+    command: >
+      sh -c '
+        until alembic upgrade head; do
+          echo "[prod] alembic failed, retrying in 2s…" && sleep 2;
+        done &&
+        uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+      '
+    volumes:
+      - workspace_data:/data/workspaces
+    # The source bind-mount from the base compose file is intentionally
+    # NOT listed here — omitting it means Docker uses the image layer,
+    # which is the correct prod behaviour.
+
+  # ── Next.js frontend ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Server-side Next.js API calls use the internal Docker network.
+        # Client-side browser calls hit /api/* via Nginx (same origin),
+        # so no NEXT_PUBLIC_ env is needed at runtime for browser fetches.
+        NEXT_PUBLIC_API_URL: http://backend:8000
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+  # ── Nginx reverse proxy ───────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  workspace_data:
