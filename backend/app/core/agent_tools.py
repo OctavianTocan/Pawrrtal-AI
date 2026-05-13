@@ -35,6 +35,10 @@ from app.core.keys import resolve_api_key
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.image_gen_agent import make_image_gen_tool
+from app.core.tools.lcm_describe_agent import (
+    make_lcm_describe_tool,
+    make_lcm_list_summaries_tool,
+)
 from app.core.tools.lcm_grep_agent import make_lcm_grep_tool
 from app.core.tools.send_message import SendFn, make_send_message_tool
 from app.core.tools.workspace_files import make_workspace_tools
@@ -126,10 +130,15 @@ def build_agent_tools(
             make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
         )
 
-    # LCM history search — gives the agent on-demand access to compacted
-    # conversation history.  Gated on both the LCM master switch and a
-    # conversation_id being available (background jobs may omit it).
+    # LCM history tools — give the agent on-demand access to compacted
+    # conversation history.  All three are gated on the LCM master switch
+    # and a conversation_id being present.
+    #   lcm_grep           — substring search across messages + summaries
+    #   lcm_list_summaries — enumerate summary nodes (find IDs)
+    #   lcm_describe       — read a single summary node in full
     if settings.lcm_enabled and conversation_id is not None:
         tools.append(make_lcm_grep_tool(conversation_id=conversation_id))
+        tools.append(make_lcm_list_summaries_tool(conversation_id=conversation_id))
+        tools.append(make_lcm_describe_tool(conversation_id=conversation_id))
 
     return tools
