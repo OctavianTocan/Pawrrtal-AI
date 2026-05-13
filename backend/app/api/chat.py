@@ -16,6 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels import resolve_channel, surface_from_header
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.config import settings
+from app.core.lcm import assemble_context as lcm_assemble_context
+from app.core.lcm import ingest_message as lcm_ingest_message
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.tools.agents_md import assemble_workspace_prompt
@@ -182,18 +185,30 @@ def get_chat_router() -> APIRouter:
         # Read recent history *before* persisting the current message so the
         # current question is not included in the history slice passed to the
         # provider (the provider receives it separately as ``question``).
-        recent_rows = await get_messages_for_conversation(
-            session, request.conversation_id, limit=_HISTORY_WINDOW
-        )
-        history = [
-            {"role": row.role, "content": row.content or ""}
-            for row in recent_rows
-            if row.role in {"user", "assistant"}
-        ]
+        #
+        # When LCM is enabled, ``lcm_assemble_context`` reads via the ordered
+        # ``lcm_context_items`` list so that PR #3 compaction can rewrite
+        # ranges in place without touching this call site.  When LCM is off,
+        # we fall back to the original ``LIMIT _HISTORY_WINDOW`` query.
+        if settings.lcm_enabled:
+            history = await lcm_assemble_context(
+                session,
+                conversation_id=request.conversation_id,
+                fresh_tail_count=settings.lcm_fresh_tail_count,
+            )
+        else:
+            recent_rows = await get_messages_for_conversation(
+                session, request.conversation_id, limit=_HISTORY_WINDOW
+            )
+            history = [
+                {"role": row.role, "content": row.content or ""}
+                for row in recent_rows
+                if row.role in {"user", "assistant"}
+            ]
 
         # Persist the user prompt + assistant placeholder rows up front so a
         # client that disconnects mid-stream still has a partial record.
-        await append_user_message(
+        user_msg = await append_user_message(
             session,
             conversation_id=request.conversation_id,
             user_id=user.id,
@@ -205,6 +220,22 @@ def get_chat_router() -> APIRouter:
             user_id=user.id,
         )
         assistant_message_id = assistant_row.id
+
+        # Wire both new rows into the LCM context list so assembly on the
+        # *next* turn sees them.  The ingest is gated on the master switch;
+        # existing deployments with LCM off are unaffected.
+        if settings.lcm_enabled:
+            await lcm_ingest_message(
+                session,
+                conversation_id=request.conversation_id,
+                message_id=user_msg.id,
+            )
+            await lcm_ingest_message(
+                session,
+                conversation_id=request.conversation_id,
+                message_id=assistant_row.id,
+            )
+
         # Commit before streaming starts — the request session is closed when
         # the StreamingResponse generator runs in a fresh task, so we open a
         # short-lived session inside the generator for the final UPDATE.
