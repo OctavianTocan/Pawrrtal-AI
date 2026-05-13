@@ -1,8 +1,15 @@
-# Pawrrtal — Electrobun Spike
+# Pawrrtal — Electrobun spike
 
-Proof-of-concept port of `electron/` → [Electrobun](https://electrobun.dev) for evaluating a lighter-weight desktop shell for Pawrrtal.
+**Desktop shell** that wraps the same Next.js frontend as `electron/`, using [Electrobun](https://electrobun.dev) (Bun main process + system webview) instead of Electron. This directory is a proof-of-concept for a lighter native bundle and typed IPC.
 
-## Why
+At a glance:
+
+- **Typed RPC** — `src/shared/rpc-types.ts` replaces preload + `contextBridge` + string `ipcMain` channels.
+- **Small footprint** — system webview instead of shipping Chromium (~14 MB class vs ~150 MB Electron).
+- **Dev ergonomics** — `just electrobun-dev` spawns the monorepo dev stack (Next.js on **:3001**, FastAPI on **:8000**) and opens the shell.
+- **Tests without a display** — Vitest in Node covers store, workspace paths, and permission state.
+
+## Why Electrobun (vs Electron)
 
 | | Electron | Electrobun |
 |---|---|---|
@@ -12,7 +19,7 @@ Proof-of-concept port of `electron/` → [Electrobun](https://electrobun.dev) fo
 | IPC | `ipcMain.handle` + `contextBridge` | Typed `BrowserView.defineRPC<T>` |
 | Store | electron-store | JSON file (`src/bun/store.ts`) |
 
-## Structure
+## Repository layout
 
 ```
 electrobun/
@@ -31,47 +38,77 @@ electrobun/
 │       └── *.test.ts         # Vitest tests (node env, no display needed)
 ```
 
-## Key Architectural Differences
+## Architecture notes (vs `electron/`)
 
-### IPC Bridge
+### IPC bridge
+
 **Electron:** `preload.ts` exposes `contextBridge.exposeInMainWorld('pawrrtal', api)`; handlers registered via `ipcMain.handle('channel', fn)`.
 
-**Electrobun:** Single shared `src/shared/rpc-types.ts` defines `PawrrtalRPCType`. The main process calls `BrowserView.defineRPC<PawrrtalRPCType>({ handlers })`. The webview uses `Electroview.defineRPC<PawrrtalRPCType>({ handlers })`. No preload script needed.
+**Electrobun:** `src/shared/rpc-types.ts` defines `PawrrtalRPCType`. Main: `BrowserView.defineRPC<PawrrtalRPCType>({ handlers })`. Webview: `Electroview.defineRPC<PawrrtalRPCType>({ handlers })`. No preload script.
 
-### Persistent Store
+### Persistent store
+
 **Electron:** `electron-store` (Node-only npm package).
 
-**Electrobun:** `src/bun/store.ts` — thin typed wrapper around `Bun.file` / `Bun.write`. Same `get(key)` / `set(key, value)` API as electron-store for easy port.
+**Electrobun:** `src/bun/store.ts` — typed wrapper around `Bun.file` / `Bun.write` with `get` / `set` shaped like electron-store for an easier port.
 
-### Push Events (webview ← main)
+### Push events (main → webview)
+
 **Electron:** `webContents.send('channel', payload)` + `ipcRenderer.on('channel', handler)`.
 
-**Electrobun:** `win.webview.rpc.send.channelName(payload)` — type-safe, no string channel names.
+**Electrobun:** `win.webview.rpc.send.channelName(payload)` — typed channels instead of string names.
 
-### Permission Prompt
+### Permission prompt
+
 **Electron:** `ipcMain.on('permissions:respond', ...)` + `webContents.send('permissions:prompt', ...)`.
 
-**Electrobun:** `bun.messages.permissionsRespond` RPC message handler + `webview.messages.permissionsPrompt` RPC send.
+**Electrobun:** `bun.messages.permissionsRespond` RPC handler + `webview.messages.permissionsPrompt` RPC send.
 
-## Dev Setup
+## Prerequisites
 
-The Electrobun shell is a **wrapper** around the Next.js frontend — it needs the frontend server running separately.
+- **Bun** (matches repo tooling; Electrobun bundles are Bun-driven).
+- **Monorepo install:** `just install` (or `bun install` at repo root + `cd backend && uv sync` as in the root README) so `bun run dev` at the repo root works.
+- **Electrobun CLI** — pulled via this package’s `electrobun` dependency when you `bun install` inside `electrobun/`.
 
-**Terminal 1 — Next.js frontend** (from the repo root):
+## Development
+
+### Recommended: one command from the repo root
+
 ```bash
-pnpm dev   # starts on http://localhost:3000
+just electrobun-dev
 ```
 
-**Terminal 2 — Electrobun shell** (from `electrobun/`):
+This runs `cd electrobun && bun run start`, which:
+
+1. Sets `PAWRRTAL_REPO_ROOT` to the monorepo root.
+2. Builds the shell (`electrobun build`).
+3. Launches `electrobun dev`; the main process spawns **`bun run dev`** at the repo root (`dev.ts`), starts **Next.js on http://localhost:3001** and **FastAPI on http://localhost:8000**, waits until **:3001** accepts connections, then loads the app.
+
+> First cold build can take on the order of ~30s; later runs are faster. A **white window** usually means the dev server is still starting or failed to bind — check the terminal for `dev.ts` output.
+
+### Already running `just dev`?
+
+If you already started the stack in another terminal (`just dev`), you can still run `just electrobun-dev`: the spawned `bun run dev` may contend for ports; prefer **either** the standalone `just dev` workflow **or** let Electrobun spawn dev, not both unless you know your ports are free.
+
+### From `electrobun/` only
+
 ```bash
-bun start  # builds then launches the native window
+cd electrobun
+bun install
+bun run start
 ```
 
-The native window will load `http://localhost:3000` automatically. A white screen means the Next.js server is not yet running.
+Do not run `electrobun dev` without the `bun run start` script if you expect dev mode — `PAWRRTAL_REPO_ROOT` gates dev vs production server startup in `src/bun/index.ts`.
 
-> **Note:** `bun start` builds the Bun main-process bundle and native wrapper each time. First cold build takes ~30s; subsequent runs are faster.
+### Production-style local run (bundled Next standalone)
 
-## Running Tests
+```bash
+just electrobun-prod
+```
+
+Builds the Next standalone bundle, builds the shell, and runs against the embedded server (see `justfile`).
+
+## Tests
 
 ```bash
 cd electrobun
@@ -79,11 +116,29 @@ bun install
 bun test
 ```
 
-Tests cover `Store`, `workspace` (path validation, root management), and `permissions` (state machine, prompt round-trip). All run in Vitest's node environment — no display, no Electrobun binary needed.
+Coverage: `Store`, `workspace` (path validation, roots), `permissions` (state machine, prompt round-trip). No Electrobun binary or display required.
 
-## Known Gaps vs Electron Shell
+## Documentation map
 
-- `showOpenFolderDialog` is a stub (native dialog API still being evaluated in Electrobun v1.x).
-- Linux: CEF flag should be enabled (`bundleCEF: true`) to get full webview layering.
-- `app.requestSingleInstanceLock()` is handled automatically by Electrobun.
-- Windows: shell spawn uses `Bun.spawn` — verify path escaping on Windows paths.
+| Topic | Where |
+|---|---|
+| Electron parity / IPC naming | `electron/README.md` |
+| Build & identity | `electrobun.config.ts` |
+| RPC contract | `src/shared/rpc-types.ts` |
+| Dev server lifecycle | `src/bun/server.ts` |
+| Electrobun product docs | [electrobun.dev](https://electrobun.dev) |
+
+## Security note
+
+The desktop shell is a **trust boundary**: RPC handlers gate filesystem and shell access (workspace allowlists, permission prompts). Treat new handlers like Electron `ipcMain` handlers — validate inputs and reject path escapes. The Electron shell doc in `electron/README.md` describes the parallel IPC-hardening expectations.
+
+## Known gaps vs `electron/`
+
+- `showOpenFolderDialog` is a stub (native folder dialog still being evaluated in Electrobun v1.x).
+- Linux: enable `bundleCEF: true` if you need full webview layering.
+- `app.requestSingleInstanceLock()` is handled by Electrobun.
+- Windows: `Bun.spawn` paths — verify escaping for user-supplied paths.
+
+## Upstream
+
+Questions about the runtime or packaging belong with **Electrobun** ([electrobun.dev](https://electrobun.dev)), not this app repo.
