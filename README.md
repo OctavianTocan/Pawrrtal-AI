@@ -1,4 +1,4 @@
-# Pawrrtal
+# ![logo](assets/pawrrtal-icon.png "logo") Pawrrtal
 
 <p align="center">
   <a href="docs/assets/header.mp4" title="Click for the full-resolution MP4">
