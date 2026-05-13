@@ -77,10 +77,15 @@ export function clearBackendConfig(): void {
  */
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 	const { url: baseUrl, apiKey } = readBackendConfig();
-	const headers = new Headers(init?.headers);
-	if (apiKey) {
-		headers.set('X-Pawrrtal-Key', apiKey);
+	// Only wrap headers in a Headers object when we actually need to inject
+	// X-Pawrrtal-Key.  When no key is configured (local dev, tests) we pass
+	// init through unchanged so callers that stub `fetch` get back the same
+	// plain-object headers they supplied — keeping test assertions simple.
+	if (!apiKey) {
+		return fetch(`${baseUrl}${path}`, init);
 	}
+	const headers = new Headers(init?.headers);
+	headers.set('X-Pawrrtal-Key', apiKey);
 	return fetch(`${baseUrl}${path}`, { ...init, headers });
 }
 
