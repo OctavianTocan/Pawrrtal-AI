@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
@@ -16,6 +15,7 @@ from app.api.auth import get_auth_router
 from app.api.channels import get_channels_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
+from app.api.health import get_health_router
 from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
@@ -25,7 +25,9 @@ from app.api.workspace_env import get_workspace_env_router
 from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
+from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
 from app.logger_setup import (
@@ -47,6 +49,10 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Run startup tasks (database table creation) before the app begins serving."""
+    # OpenTelemetry tracing bootstrap.  No-op when OTEL_EXPORTER_OTLP_ENDPOINT
+    # is unset, so dev environments are unaffected.  Must run before any
+    # outbound httpx call so the autoinstrumenter wraps the global client.
+    setup_tracing(app)
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
@@ -57,7 +63,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # `app.state` so the webhook route can hand updates to aiogram.
     async with telegram_lifespan() as telegram_service:
         app.state.telegram_service = telegram_service
-        yield
+        try:
+            yield
+        finally:
+            shutdown_tracing()
 
 
 # --- App & Middleware --------------------------------------------------------
@@ -75,6 +84,10 @@ def create_app() -> FastAPI:
     # so it wraps every endpoint. Each request gets a unique ID logged on
     # entry and exit (see app/core/request_logging.py).
     fastapi_app.add_middleware(RequestLoggingMiddleware)
+    # ChatRateLimitMiddleware is a no-op when chat_rate_limit_per_minute=0
+    # (the default), so registering it unconditionally costs nothing in
+    # dev but is wired up for prod just by flipping the env var.
+    fastapi_app.add_middleware(ChatRateLimitMiddleware)
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )
@@ -126,11 +139,9 @@ def create_app() -> FastAPI:
     fastapi_app.include_router(
         get_workspace_env_router(),
     )
-
-    @fastapi_app.get("/api/v1/health", tags=["health"], include_in_schema=False)
-    async def health_check() -> JSONResponse:
-        """Lightweight liveness probe used by the onboarding step-server verify button."""
-        return JSONResponse({"status": "ok"})
+    fastapi_app.include_router(
+        get_health_router(),
+    )
 
     return fastapi_app
 

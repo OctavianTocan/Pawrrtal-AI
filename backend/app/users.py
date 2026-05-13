@@ -96,3 +96,25 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](
 )
 
 current_active_user = fastapi_users.current_user(active=True)
+
+
+async def get_allowed_user(user: User = Depends(current_active_user)) -> User:
+    """Email-allowlist identity gate layered on top of ``current_active_user``.
+
+    When ``settings.allowed_emails`` is empty the deployment is open to any
+    authenticated user (useful for local dev).  When set, only users whose
+    lowercased email appears in the comma-separated list may access the
+    protected route.  Apply this dependency to every route that should be
+    private to the deployment's permitted users.
+
+    Raises ``403 This Pawrrtal deployment is private.`` for unauthorized
+    callers — a deliberately generic message so a stranger probing the
+    endpoint can't enumerate which emails are allowed.
+    """
+    allowed = settings.allowed_emails_set
+    if allowed and user.email.lower() not in allowed:
+        raise HTTPException(
+            status_code=403,
+            detail="This Pawrrtal deployment is private.",
+        )
+    return user

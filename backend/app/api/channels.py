@@ -25,7 +25,7 @@ from app.crud.channel import (
 )
 from app.db import User, get_async_session
 from app.schemas import ChannelBindingRead, ChannelLinkCodeResponse
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 _TELEGRAM = "telegram"
 
@@ -57,7 +57,7 @@ def get_channels_router() -> APIRouter:
 
     @router.get("", response_model=list[ChannelBindingRead])
     async def list_channels(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[ChannelBindingRead]:
         """List every channel the authenticated user has currently bound."""
@@ -77,7 +77,7 @@ def get_channels_router() -> APIRouter:
 
     @router.post("/telegram/link", response_model=ChannelLinkCodeResponse)
     async def link_telegram(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> ChannelLinkCodeResponse:
         """Issue a fresh one-time code the user can redeem in the bot.
@@ -109,7 +109,7 @@ def get_channels_router() -> APIRouter:
 
     @router.delete("/telegram/link", status_code=status.HTTP_204_NO_CONTENT)
     async def unlink_telegram(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Drop the user's Telegram binding (idempotent on already-unbound).

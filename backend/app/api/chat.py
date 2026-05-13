@@ -39,7 +39,7 @@ from app.crud.conversation import (
 from app.crud.workspace import get_default_workspace
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def get_chat_router() -> APIRouter:
     @router.post("/")
     async def chat(
         request: ChatRequest,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
         x_nexus_surface: str | None = Header(default=None),
     ) -> StreamingResponse:
@@ -126,6 +126,27 @@ def get_chat_router() -> APIRouter:
         channel = resolve_channel(surface)
 
         rid = get_request_id()
+
+        # Annotate the FastAPI-instrumentor span with semantic attributes
+        # so a trace search by user / conversation / model / surface lands
+        # the right request immediately.  ``get_current_span()`` returns
+        # a no-op when telemetry is disabled (zero cost).
+        try:
+            from opentelemetry import trace as _otel_trace
+
+            _span = _otel_trace.get_current_span()
+            _span.set_attribute("pawrrtal.user_id", str(user.id))
+            _span.set_attribute(
+                "pawrrtal.conversation_id", str(request.conversation_id)
+            )
+            _span.set_attribute(
+                "pawrrtal.model_id", request.model_id or "<default>"
+            )
+            _span.set_attribute("pawrrtal.surface", surface)
+            _span.set_attribute("pawrrtal.question_len", len(request.question))
+            _span.set_attribute("pawrrtal.request_id", rid)
+        except Exception:  # noqa: BLE001 — telemetry must never break the chat path
+            logger.debug("OTEL_SPAN_ANNOTATE_FAILED", exc_info=True)
         logger.info(
             "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s surface=%s question_len=%d",
             rid,
