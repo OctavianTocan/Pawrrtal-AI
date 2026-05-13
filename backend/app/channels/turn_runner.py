@@ -23,6 +23,8 @@ from app.core.governance.cost_tracker import (
     record_turn_cost,
 )
 from app.core.governance.workspace_context import load_workspace_context
+from app.core.lcm import assemble_context as lcm_assemble_context
+from app.core.lcm import ingest_message as lcm_ingest_message
 from app.core.observability._turn_view import (
     aggregator_stop_reason,
     build_llm_view_messages,
@@ -302,19 +304,35 @@ def _should_deliver_event(event: StreamEvent, verbose_level: int | None) -> bool
 async def _load_history_and_persist(
     turn_input: ChatTurnInput,
 ) -> tuple[list[dict[str, str]], uuid.UUID]:
-    """Read recent history, then persist the current user turn and placeholder."""
+    """Read recent history, then persist the current user turn and placeholder.
+
+    When ``settings.lcm_enabled`` is ``True``, the history slice is
+    assembled from the LCM context list (``lcm_context_items``) so that
+    compacted summaries are visible to the provider, and both the user
+    turn and assistant placeholder are ingested into the LCM context
+    list before the stream starts.  When LCM is off the behaviour is
+    unchanged — a raw ``LIMIT history_window`` query over
+    ``chat_messages``.
+    """
     async with _turn_session(turn_input) as session:
-        recent_rows = await get_messages_for_conversation(
-            session,
-            turn_input.conversation_id,
-            limit=turn_input.history_window,
-        )
-        history = [
-            {"role": row.role, "content": row.content or ""}
-            for row in recent_rows
-            if row.role in {"user", "assistant"}
-        ]
-        await append_user_message(
+        if settings.lcm_enabled:
+            history = await lcm_assemble_context(
+                session,
+                conversation_id=turn_input.conversation_id,
+                fresh_tail_count=settings.lcm_fresh_tail_count,
+            )
+        else:
+            recent_rows = await get_messages_for_conversation(
+                session,
+                turn_input.conversation_id,
+                limit=turn_input.history_window,
+            )
+            history = [
+                {"role": row.role, "content": row.content or ""}
+                for row in recent_rows
+                if row.role in {"user", "assistant"}
+            ]
+        user_msg = await append_user_message(
             session,
             conversation_id=turn_input.conversation_id,
             user_id=turn_input.user_id,
@@ -325,6 +343,17 @@ async def _load_history_and_persist(
             conversation_id=turn_input.conversation_id,
             user_id=turn_input.user_id,
         )
+        if settings.lcm_enabled:
+            await lcm_ingest_message(
+                session,
+                conversation_id=turn_input.conversation_id,
+                message_id=user_msg.id,
+            )
+            await lcm_ingest_message(
+                session,
+                conversation_id=turn_input.conversation_id,
+                message_id=assistant_row.id,
+            )
         await session.commit()
         return history, assistant_row.id
 
