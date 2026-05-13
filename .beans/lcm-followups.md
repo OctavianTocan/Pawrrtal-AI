@@ -11,7 +11,7 @@ tables; Alembic migration 012; settings in `app/core/config.py`.
 
 **Out of scope for this PR (intentionally) — picked up in later PRs:**
 
-- [ ] Application code that reads/writes the new tables (PR #2)
+- [x] Application code that reads/writes the new tables (PR #2) — `ingest_message` + `assemble_context` in `app/core/lcm.py`; wired into `chat.py` behind `lcm_enabled`
 - [ ] FK enforcement for `lcm_context_items.item_id` and
       `lcm_summary_sources.source_id` polymorphic targets — currently
       cascade is driven by the parent `conversation_id` FK only

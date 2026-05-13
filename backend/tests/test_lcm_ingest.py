@@ -258,19 +258,16 @@ async def test_assemble_filters_non_chat_roles(
 
 
 @pytest.mark.anyio
-async def test_assemble_skips_summary_items_without_crashing(
+async def test_assemble_includes_summary_items(
     db_session: AsyncSession, test_user: User
 ) -> None:
-    """item_kind='summary' rows are silently skipped (PR #3 adds real support).
+    """item_kind='summary' rows are resolved and returned as synthetic user messages.
 
-    Manually insert an LCMContextItem with item_kind='summary' pointing at a
-    real LCMSummary row to prove assemble_context doesn't raise; the summary
-    is not returned in the output list.
+    PR #3 added real summary support to assemble_context.  Summaries are
+    injected as {"role": "user", "content": "[Summary of earlier conversation]\\n..."}.
     """
     conv = await _make_conversation(db_session, test_user)
 
-    # Real LCMSummary so the FK target exists (even though FK is not enforced
-    # in SQLite, the row must be addressable for future Postgres runs).
     summary = LCMSummary(
         conversation_id=conv.id,
         depth=0,
@@ -280,7 +277,7 @@ async def test_assemble_skips_summary_items_without_crashing(
     db_session.add(summary)
     await db_session.flush()
 
-    # Manually insert a summary context item at ordinal 0.
+    # Summary at ordinal 0, message at ordinal 1.
     db_session.add(
         LCMContextItem(
             conversation_id=conv.id,
@@ -290,7 +287,6 @@ async def test_assemble_skips_summary_items_without_crashing(
         )
     )
 
-    # A real message at ordinal 1.
     msg = await _make_message(db_session, test_user, conv, "user", "visible", 0)
     db_session.add(
         LCMContextItem(
@@ -306,5 +302,9 @@ async def test_assemble_skips_summary_items_without_crashing(
         db_session, conversation_id=conv.id, fresh_tail_count=64
     )
 
-    # Only the message is returned; the summary row is silently skipped.
-    assert context == [{"role": "user", "content": "visible"}]
+    # Summary comes first (ordinal 0), then the real message.
+    assert len(context) == 2
+    assert context[0]["role"] == "user"
+    assert context[0]["content"].startswith("[Summary of earlier conversation]")
+    assert "some older context" in context[0]["content"]
+    assert context[1] == {"role": "user", "content": "visible"}
