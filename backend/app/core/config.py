@@ -162,6 +162,37 @@ class Settings(BaseSettings):
     # token budget divided by expected request count.
     chat_rate_limit_per_minute: int = 0
 
+    # ----------------------------------------------------------------
+    # Lossless Context Management (LCM)
+    # ----------------------------------------------------------------
+    # Master switch for the LCM compaction system (see app.core.lcm).
+    # Default OFF so the schema can land without changing runtime
+    # behaviour.  Later stack PRs activate ingest → assemble → compact.
+    lcm_enabled: bool = False
+
+    # Last N raw messages that are always kept verbatim, never compacted.
+    # 64 matches the upstream plugin's default; increase for chattier
+    # surfaces (Telegram) where short messages dominate.
+    lcm_fresh_tail_count: int = 64
+
+    # Approximate source-token ceiling per leaf summary.  Raise this on
+    # quota-limited summary providers; lower it for tighter context.
+    lcm_leaf_chunk_tokens: int = 20000
+
+    # Auto-trigger compaction when the conversation context is at or
+    # above this fraction of the model's window.  ``0.75`` is the
+    # upstream default.
+    lcm_context_threshold: float = 0.75
+
+    # How many condensation passes to run after each leaf compaction.
+    # 0 = leaf-only, -1 = unlimited cascade.
+    lcm_incremental_max_depth: int = 1
+
+    # Optional model override for compaction summarisation.  When unset,
+    # falls back to the same model the conversation is using — fine for
+    # cheap models, wasteful for premium ones.
+    lcm_summary_model: str = ""
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:
