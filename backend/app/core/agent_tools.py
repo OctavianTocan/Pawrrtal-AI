@@ -26,8 +26,8 @@ to ``await`` for no benefit.
 
 from __future__ import annotations
 
-from pathlib import Path
 import uuid
+from pathlib import Path
 
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
@@ -56,7 +56,7 @@ def build_agent_tools(
             this is the load-bearing word — *scoped*, not *proven
             unescapable*.  We have unit tests for the resolver, not
             adversarial evals against a real model trying to escape.
-            Until those land (see bean ``ai-nexus-wsiq``), treat the
+            Until those land (see bean ``pawrrtal-wsiq``), treat the
             boundary as a strong invariant we haven't yet proved
             under prompt pressure.
         user_id: Authenticated user UUID, used to resolve per-workspace
@@ -117,8 +117,6 @@ def build_agent_tools(
     # and Telegram (MIME-aware bot API calls).  The mechanism differs;
     # the tool contract is identical.
     if send_fn is not None:
-        tools.append(
-            make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
-        )
+        tools.append(make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn))
 
     return tools

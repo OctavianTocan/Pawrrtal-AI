@@ -17,12 +17,26 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.agent_loop import AgentSafetyConfig
+from app.core.agent_loop import (
+    AgentContext,
+    AgentLoopConfig,
+    AgentSafetyConfig,
+    UserMessage,
+    agent_loop,
+)
+from app.core.agent_loop.types import (
+    LLMDoneEvent,
+    LLMTextDeltaEvent,
+    LLMToolCallEvent,
+    TextContent,
+    ToolCallContent,
+)
 from tests.agent_harness import (
     ScriptedStreamFn,
     echo_tool,
     error_turn,
     failing_tool,
+    identity_convert,
     run_scenario,
     text_turn,
     tool_call_turn,
@@ -307,22 +321,6 @@ async def test_message_context_grows_across_turns() -> None:
     After a tool call, the LLM's next invocation must include the
     tool result in the messages list, proving history accumulation works.
     """
-    from app.core.agent_loop import (
-        AgentContext,
-        AgentLoopConfig,
-        AgentSafetyConfig,
-        UserMessage,
-        agent_loop,
-    )
-    from app.core.agent_loop.types import (
-        LLMDoneEvent,
-        LLMTextDeltaEvent,
-        LLMToolCallEvent,
-        TextContent,
-        ToolCallContent,
-    )
-    from tests.agent_harness import identity_convert
-
     seen_messages: list[list] = []
     turn_counter: list[int] = [0]
 

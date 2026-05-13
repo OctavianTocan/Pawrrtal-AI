@@ -5,7 +5,7 @@ onboarding step-server "Verify" button.  It must be:
 
 1. Publicly accessible — no authentication required.  The verify button
    is clicked *before* the user has a session (they're checking that the
-   remote URL resolves to a real Nexus server).
+   remote URL resolves to a real Pawrrtal server).
 2. Always fast — no database round-trips, no network calls.
 3. Structurally stable — the exact JSON shape ``{"status": "ok"}`` is
    what the frontend pings; changing it is a breaking wire change.
@@ -16,15 +16,11 @@ if the endpoint is accidentally gated, moved, or its response changed.
 
 from __future__ import annotations
 
-import sys
+import os
 from collections.abc import AsyncGenerator
-from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-
-BACKEND_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(BACKEND_ROOT))
 
 from main import create_app
 
@@ -42,8 +38,6 @@ def unauthenticated_app():
     ``current_active_user`` override is applied — this proves the health
     endpoint is truly public.
     """
-    import os
-
     # Point the app at an in-memory SQLite so the lifespan startup doesn't
     # fail on a missing Postgres DSN.
     os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")

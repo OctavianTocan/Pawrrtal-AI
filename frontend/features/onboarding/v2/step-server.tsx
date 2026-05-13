@@ -29,7 +29,7 @@ function validateServerUrl(url: string): string | null {
 	try {
 		parsed = new URL(url.trim());
 	} catch {
-		return "That doesn't look like a valid URL. Include the scheme, e.g. https://nexus.example.com";
+		return "That doesn't look like a valid URL. Include the scheme, e.g. https://pawrrtal.example.com";
 	}
 	if (!['http:', 'https:'].includes(parsed.protocol)) {
 		return 'The URL must start with http:// or https://';
@@ -38,7 +38,7 @@ function validateServerUrl(url: string): string | null {
 }
 
 /**
- * Step — choose between the hosted AI Nexus service and a self-hosted backend.
+ * Step — choose between the hosted Pawrrtal service and a self-hosted backend.
  *
  * When the user selects "Self-hosted" they see a URL field where they can
  * enter the address of their own deployment (e.g. on Railway, a VPS, or the
@@ -78,7 +78,7 @@ function ServerModeToggle({ mode, onSelect }: ServerModeToggleProps): React.JSX.
 					)}
 				/>
 				<div className="flex flex-col gap-0.5">
-					<span className="text-sm font-medium text-foreground">Hosted by AI Nexus</span>
+					<span className="text-sm font-medium text-foreground">Hosted by Pawrrtal</span>
 					<span className="text-[13px] text-muted-foreground">
 						Use the default cloud deployment. No configuration needed.
 					</span>
@@ -146,7 +146,7 @@ function ServerUrlField({
 				<Input
 					id={inputId}
 					type="url"
-					placeholder="https://nexus.mycompany.com"
+					placeholder="https://pawrrtal.mycompany.com"
 					value={url}
 					onChange={(e) => onUrlChange(e.target.value)}
 					className={cn(
@@ -264,8 +264,8 @@ export function StepServer({
 
 	return (
 		<OnboardingShell
-			title="Where is your Nexus?"
-			subtitle="AI Nexus can run hosted or on your own server. Pick what fits your setup."
+			title="Where is your Pawrrtal backend?"
+			subtitle="Pawrrtal can run hosted or on your own server. Pick what fits your setup."
 			footer={
 				<>
 					<Button

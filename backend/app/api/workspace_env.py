@@ -53,20 +53,18 @@ class WorkspaceEnvVars(BaseModel):
     @field_validator("vars")
     @classmethod
     def _reject_newlines(cls, v: dict[str, str]) -> dict[str, str]:
-        """Reject any value containing CR or LF.
+        r"""Reject any value containing CR or LF.
 
         The on-disk format is one ``KEY=value`` per line, so a value
         containing a newline would split into a second key=value pair on
         the next read — letting a user with one writable key inject
-        arbitrary other keys (e.g. ``GEMINI_API_KEY=...\\nEXA_API_KEY=hijack``).
+        arbitrary other keys (e.g. ``GEMINI_API_KEY=...\nEXA_API_KEY=hijack``).
         Rejection at validation time is the only safe enforcement boundary
         because the serialiser does no escaping.
         """
         for key, value in v.items():
             if VALUE_FORBIDDEN_CHARS.search(value):
-                raise ValueError(
-                    f"Value for '{key}' must not contain newline characters."
-                )
+                raise ValueError(f"Value for '{key}' must not contain newline characters.")
         return v
 
 

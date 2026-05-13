@@ -88,7 +88,7 @@ What ships today:
 
 - [x] Package scaffold (tsup, tsconfig, vitest, eslint, prettier,
       semantic-release)
-- [x] Submodule integration with `OctavianTocan/ai-nexus`
+- [x] Submodule integration with the Pawrrtal app monorepo (`OctavianTocan/ai-nexus`)
 - [x] Vendored `prompt-input-*` from Vercel AI Elements (form, textarea,
       attachments, context, footer + submit)
 - [x] Minimal `Button` + Radix `Tooltip` wrapper (shadcn-derived)

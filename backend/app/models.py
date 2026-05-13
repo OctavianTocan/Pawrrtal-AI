@@ -33,21 +33,13 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_flagged: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_unread: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -87,9 +79,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -170,11 +160,11 @@ class UserAppearance(Base):
 
 
 class ChannelBinding(Base):
-    """Persistent map from a third-party messaging identity to a Nexus user.
+    """Persistent map from a third-party messaging identity to a Pawrrtal user.
 
     One row per (provider, external_user_id) — enforced by a unique
     constraint so a Telegram account can never silently move between
-    Nexus users. Created when a user successfully redeems a one-time
+    Pawrrtal users. Created when a user successfully redeems a one-time
     code via the bot's `/start <code>` (or manual paste) flow.
 
     The `provider` column is open-ended on purpose: today only
@@ -257,9 +247,7 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -269,9 +257,7 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # Workspace-relative path to a file the agent delivered via send_message.
@@ -283,8 +269,9 @@ class ChatMessage(Base):
 
 
 class Workspace(Base):
-    """An agent workspace — a named directory on the host filesystem containing
-    the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
+    """An agent workspace — a named directory on the host filesystem.
+
+    Contains the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
     IDENTITY.md, memory/, skills/, artifacts/).
 
     One user can own many workspaces.  The first workspace created for a user

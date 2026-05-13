@@ -21,6 +21,9 @@ from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, text
+from sqlalchemy import select as sa_select
+from sqlalchemy.exc import IntegrityError as SAIntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.workspace import (
@@ -35,7 +38,7 @@ from app.crud.workspace import (
     list_workspaces,
 )
 from app.db import User
-from app.models import UserPersonalization
+from app.models import UserPersonalization, Workspace
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -50,19 +53,19 @@ def _make_personalization(**kwargs: Any) -> UserPersonalization:
     feed it to ``seed_workspace`` / ``_build_*_md`` with full type
     fidelity.
     """
-    defaults: dict[str, Any] = dict(
-        user_id=uuid.uuid4(),
-        name="Tavi",
-        role="Engineer",
-        company_website="https://example.com",
-        linkedin="https://linkedin.com/in/tavi",
-        goals=["Build great products", "Automate toil"],
-        personality="direct",
-        custom_instructions=None,
-        chatgpt_context=None,
-        connected_channels=None,
-        updated_at=datetime.now(UTC),
-    )
+    defaults: dict[str, Any] = {
+        "user_id": uuid.uuid4(),
+        "name": "Tavi",
+        "role": "Engineer",
+        "company_website": "https://example.com",
+        "linkedin": "https://linkedin.com/in/tavi",
+        "goals": ["Build great products", "Automate toil"],
+        "personality": "direct",
+        "custom_instructions": None,
+        "chatgpt_context": None,
+        "connected_channels": None,
+        "updated_at": datetime.now(UTC),
+    }
     return UserPersonalization(**{**defaults, **kwargs})
 
 
@@ -315,9 +318,6 @@ class TestWorkspaceService:
         workspace raises IntegrityError — proving the constraint actually fires
         before the application-level recovery path is even needed.
         """
-        from sqlalchemy import text
-        from sqlalchemy.exc import IntegrityError as SAIntegrityError
-
         # Manually apply migration 009's partial unique index to the test DB.
         # (conftest uses Base.metadata.create_all, not Alembic, so this
         # would not exist otherwise.)
@@ -348,16 +348,9 @@ class TestWorkspaceService:
             except SAIntegrityError:
                 caught = True
 
-        assert caught, (
-            "Expected IntegrityError from unique index — constraint is not applied"
-        )
+        assert caught, "Expected IntegrityError from unique index — constraint is not applied"
 
         # Only the first workspace must remain.
-        from sqlalchemy import func
-        from sqlalchemy import select as sa_select
-
-        from app.models import Workspace
-
         count_result = await db_session.execute(
             sa_select(func.count())
             .select_from(Workspace)
@@ -380,8 +373,6 @@ class TestWorkspaceService:
         seeding the DB row directly, so the subsequent re-fetch in the except
         branch has a real row to return.
         """
-        from sqlalchemy.exc import IntegrityError as SAIntegrityError
-
         # First, create the workspace directly so it already exists in the DB.
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)

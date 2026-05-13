@@ -86,7 +86,9 @@ function abJson(...args) {
 		const parsed = JSON.parse(raw);
 		return Array.isArray(parsed) ? parsed : [];
 	} catch (err) {
-		throw new Error(`agent-browser ${args.join(' ')} returned non-JSON: ${err.message}\n---\n${raw}`);
+		throw new Error(
+			`agent-browser ${args.join(' ')} returned non-JSON: ${err.message}\n---\n${raw}`
+		);
 	}
 }
 
@@ -158,7 +160,7 @@ async function main() {
 	console.error(
 		'\nIf a third-party library is emitting unavoidable dev-only noise, ' +
 			'add a narrow regex to ALLOWLIST in this file with a TODO + reason ' +
-			'— do NOT widen the matcher.',
+			'— do NOT widen the matcher.'
 	);
 	process.exitCode = 1;
 }

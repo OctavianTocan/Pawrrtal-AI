@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.channels import resolve_channel
+from app.channels import registered_surfaces, resolve_channel
 from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
 from app.core.providers.base import StreamEvent
@@ -86,7 +86,6 @@ class TestTelegramRegistry:
         assert isinstance(ch, TelegramChannel)
 
     def test_registered_surface_included(self) -> None:
-        from app.channels import registered_surfaces
 
         assert "telegram" in registered_surfaces()
 
@@ -212,7 +211,7 @@ class TestHandlePlainMessage:
 
     async def test_bound_user_returns_turn_context(self) -> None:
         """A known user must get a TelegramTurnContext with correct fields."""
-        nexus_uid = uuid.uuid4()
+        pawrrtal_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
         sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
@@ -225,7 +224,7 @@ class TestHandlePlainMessage:
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
-                new=AsyncMock(return_value=nexus_uid),
+                new=AsyncMock(return_value=pawrrtal_uid),
             ),
             patch(
                 "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
@@ -235,13 +234,13 @@ class TestHandlePlainMessage:
             result = await handle_plain_message(sender=sender, text="what is RAG?", session=session)
 
         assert isinstance(result, TelegramTurnContext)
-        assert result.nexus_user_id == nexus_uid
+        assert result.pawrrtal_user_id == pawrrtal_uid
         assert result.conversation_id == conv_id
         assert isinstance(result.model_id, str)
 
     async def test_bound_user_uses_conversation_model_override(self) -> None:
         """When conversation.model_id is set it must propagate into the context."""
-        nexus_uid = uuid.uuid4()
+        pawrrtal_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
         sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
@@ -253,7 +252,7 @@ class TestHandlePlainMessage:
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
-                new=AsyncMock(return_value=nexus_uid),
+                new=AsyncMock(return_value=pawrrtal_uid),
             ),
             patch(
                 "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
@@ -334,7 +333,7 @@ class TestHandleModelCommand:
 
     async def test_valid_model_switch_replies_ok(self) -> None:
         """A bound user switching to a valid model gets the success message."""
-        nexus_uid = uuid.uuid4()
+        pawrrtal_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
         sender = TelegramSender(user_id=3, chat_id=3, username="t", full_name="T")
         session = AsyncMock()
@@ -346,7 +345,7 @@ class TestHandleModelCommand:
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
-                new=AsyncMock(return_value=nexus_uid),
+                new=AsyncMock(return_value=pawrrtal_uid),
             ),
             patch(
                 "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
@@ -368,7 +367,7 @@ class TestHandleModelCommand:
 
     async def test_update_failure_returns_error_message(self) -> None:
         """When the DB update fails the user gets an error string, not an exception."""
-        nexus_uid = uuid.uuid4()
+        pawrrtal_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
         sender = TelegramSender(user_id=4, chat_id=4, username="t", full_name="T")
         session = AsyncMock()
@@ -380,7 +379,7 @@ class TestHandleModelCommand:
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
-                new=AsyncMock(return_value=nexus_uid),
+                new=AsyncMock(return_value=pawrrtal_uid),
             ),
             patch(
                 "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
@@ -398,8 +397,4 @@ class TestHandleModelCommand:
             )
 
         assert isinstance(reply, str)
-        assert (
-            "couldn't" in reply.lower()
-            or "fail" in reply.lower()
-            or "try" in reply.lower()
-        )
+        assert "couldn't" in reply.lower() or "fail" in reply.lower() or "try" in reply.lower()

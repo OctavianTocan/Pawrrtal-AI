@@ -1,6 +1,6 @@
 /**
  * Modal that walks a logged-in user through binding their Telegram
- * account to Nexus.
+ * account to Pawrrtal.
  *
  * The dialog has three rendering modes that map to {@link useTelegramBinding}'s
  * state:
@@ -132,7 +132,7 @@ export function TelegramConnectDialog({
 						)}
 					</div>
 					<p className="text-sm text-muted-foreground">
-						You can now message the bot directly and Nexus will respond from your
+						You can now message the bot directly and Pawrrtal will respond from your
 						account. Disconnect anytime from Settings → Channels.
 					</p>
 				</div>
@@ -157,7 +157,7 @@ export function TelegramConnectDialog({
 								@{state.pendingCode.bot_username}
 							</a>
 						) : (
-							<span className="font-medium text-foreground">the Nexus bot</span>
+							<span className="font-medium text-foreground">the Pawrrtal bot</span>
 						)}
 						, and we'll connect this account.
 					</p>
@@ -210,7 +210,7 @@ export function TelegramConnectDialog({
 		return (
 			<div className="space-y-4 text-sm text-muted-foreground">
 				<p>
-					Get Nexus in your pocket: connect your Telegram account and chat with your
+					Get Pawrrtal in your pocket: connect your Telegram account and chat with your
 					assistant from anywhere.
 				</p>
 				<Button

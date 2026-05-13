@@ -76,9 +76,7 @@ def create_history_reader_agent(conversation_id: uuid.UUID) -> list[Message]:
 def create_utility_agent(prompt: str) -> RunOutput:
     """Helps with one-off requests, using an Agno agent."""
     agent = Agent(
-        model=Gemini(
-            id="gemini-3.1-flash-lite-preview", api_key=settings.google_api_key
-        ),
+        model=Gemini(id="gemini-3.1-flash-lite-preview", api_key=settings.google_api_key),
     )
     return agent.run(prompt)
 

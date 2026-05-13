@@ -11,13 +11,16 @@ Coverage:
 
 from __future__ import annotations
 
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.agent_loop.types import AgentTool
+from app.core.agent_loop.types import AgentMessage, AgentTool, LLMDoneEvent, TextContent
+from app.core.providers.gemini_provider import GeminiLLM
 from app.core.tools.exa_search import ExaSearchResult
 from app.core.tools.exa_search_agent import make_exa_search_tool
+from tests.agent_harness import ScriptedStreamFn, text_turn, tool_call_turn
 
 # ---------------------------------------------------------------------------
 # make_exa_search_tool — shape
@@ -154,11 +157,6 @@ class TestGeminiToolPassthrough:
 
     async def test_provider_passes_tools_through_unchanged(self) -> None:
         """Tools supplied by the caller arrive at the StreamFn unmodified."""
-        import uuid
-
-        from app.core.agent_loop.types import AgentMessage
-        from app.core.providers.gemini_provider import GeminiLLM
-
         in_tools = [make_exa_search_tool()]
         captured_tools: list[AgentTool] | None = None
 
@@ -166,8 +164,6 @@ class TestGeminiToolPassthrough:
             nonlocal captured_tools
             captured_tools = list(tools)
             # Yield a clean stop so agent_loop exits immediately.
-            from app.core.agent_loop.types import LLMDoneEvent, TextContent
-
             yield LLMDoneEvent(
                 type="done",
                 stop_reason="stop",
@@ -195,18 +191,11 @@ class TestGeminiToolPassthrough:
         Even if EXA_API_KEY is set in the environment, tool composition is the
         chat router's responsibility — the provider stays tool-agnostic.
         """
-        import uuid
-
-        from app.core.agent_loop.types import AgentMessage
-        from app.core.providers.gemini_provider import GeminiLLM
-
         captured_tools: list[AgentTool] | None = None
 
         async def recording_stream_fn(messages: list[AgentMessage], tools: list[AgentTool]):
             nonlocal captured_tools
             captured_tools = list(tools)
-            from app.core.agent_loop.types import LLMDoneEvent, TextContent
-
             yield LLMDoneEvent(
                 type="done",
                 stop_reason="stop",
@@ -232,11 +221,6 @@ class TestGeminiToolPassthrough:
         LLM can respond gracefully rather than the agent loop seeing an
         unexpected exception.
         """
-        import uuid
-
-        from app.core.providers.gemini_provider import GeminiLLM
-        from tests.agent_harness import ScriptedStreamFn, text_turn, tool_call_turn
-
         exa_tool = make_exa_search_tool()
 
         # Script: LLM calls exa_search, Exa fails (returns error result),
@@ -249,7 +233,6 @@ class TestGeminiToolPassthrough:
         )
 
         provider = GeminiLLM("gemini-test")
-        patch.object(provider, "_stream_fn", script)
 
         error_result = {
             "query": "python",
@@ -257,7 +240,6 @@ class TestGeminiToolPassthrough:
             "error": "Exa API key is not configured on the server.",
         }
 
-        events = []
         with (
             patch(
                 "app.core.tools.exa_search_agent.exa_search",
@@ -265,14 +247,16 @@ class TestGeminiToolPassthrough:
             ),
             patch.object(provider, "_stream_fn", script),
         ):
-            async for event in provider.stream(
-                "Search for python",
-                uuid.uuid4(),
-                uuid.uuid4(),
-                history=[],
-                tools=[exa_tool],
-            ):
-                events.append(event)
+            events = [
+                event
+                async for event in provider.stream(
+                    "Search for python",
+                    uuid.uuid4(),
+                    uuid.uuid4(),
+                    history=[],
+                    tools=[exa_tool],
+                )
+            ]
 
         # The tool error becomes a tool_result event (not an uncaught exception).
         tool_results = [e for e in events if e["type"] == "tool_result"]

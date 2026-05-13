@@ -22,6 +22,7 @@ Usage::
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -36,6 +37,7 @@ log = logging.getLogger(__name__)
 _MAX_READ_BYTES = 128_000  # 128 KB
 # Maximum number of entries list_dir will return.
 _MAX_LIST_ENTRIES = 200
+_BYTES_PER_UNIT = 1024
 
 
 def _resolve_safe(root: Path, rel_path: str) -> Path:
@@ -62,9 +64,9 @@ def _resolve_safe(root: Path, rel_path: str) -> Path:
 
 def _fmt_size(n: int) -> str:
     for unit in ("B", "KB", "MB", "GB"):
-        if n < 1024:
+        if n < _BYTES_PER_UNIT:
             return f"{n}{unit}"
-        n //= 1024
+        n //= _BYTES_PER_UNIT
     return f"{n}TB"
 
 
@@ -122,17 +124,17 @@ def _wrap_workspace_tool(
 
 
 async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
-    if not target.exists():
+    if not await asyncio.to_thread(target.exists):
         raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
-    if not target.is_file():
+    if not await asyncio.to_thread(target.is_file):
         raise ToolError(
             ToolErrorCode.WRONG_KIND,
             f"'{raw_path}' is a directory, not a file.",
         )
-    raw = target.read_bytes()
+    raw = await asyncio.to_thread(target.read_bytes)
     if len(raw) > _MAX_READ_BYTES:
         raw = raw[:_MAX_READ_BYTES]
-        suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // 1024} KB]"
+        suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // _BYTES_PER_UNIT} KB]"
     else:
         suffix = ""
     try:
@@ -145,25 +147,18 @@ async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
 
 
 async def _write_file_body(*, target: Path, raw_path: str, content: str = "", **_: Any) -> str:
-    if target.is_dir():
+    if await asyncio.to_thread(target.is_dir):
         raise ToolError(
             ToolErrorCode.WRONG_KIND,
             f"'{raw_path}' is a directory.",
         )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    await asyncio.to_thread(lambda: target.parent.mkdir(parents=True, exist_ok=True))
+    await asyncio.to_thread(lambda: target.write_text(content, encoding="utf-8"))
     return f"Written {len(content)} characters to '{raw_path}'."
 
 
-async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -> str:
-    if not target.exists():
-        raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
-    if not target.is_dir():
-        raise ToolError(
-            ToolErrorCode.WRONG_KIND,
-            f"'{raw_path}' is a file, not a directory. Use read_file to read it.",
-        )
-    entries = sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name))
+def _format_dir_listing(entries: list[Path], raw_path: str, root: Path) -> str:
+    """Format sorted directory entries for the list_dir tool (sync helper)."""
     if not entries:
         return f"'{raw_path or '.'}' is empty."
 
@@ -179,6 +174,20 @@ async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -
     if len(entries) > _MAX_LIST_ENTRIES:
         lines.append(f"... and {len(entries) - _MAX_LIST_ENTRIES} more entries")
     return "\n".join(lines)
+
+
+async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -> str:
+    if not await asyncio.to_thread(target.exists):
+        raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
+    if not await asyncio.to_thread(target.is_dir):
+        raise ToolError(
+            ToolErrorCode.WRONG_KIND,
+            f"'{raw_path}' is a file, not a directory. Use read_file to read it.",
+        )
+    entries = await asyncio.to_thread(
+        lambda: sorted(target.iterdir(), key=lambda p: (p.is_file(), p.name)),
+    )
+    return await asyncio.to_thread(_format_dir_listing, entries, raw_path, root)
 
 
 # ---------------------------------------------------------------------------

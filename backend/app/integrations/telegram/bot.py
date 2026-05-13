@@ -22,7 +22,7 @@ import asyncio
 import logging
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -32,7 +32,7 @@ from app.channels.telegram import SURFACE_TELEGRAM, make_telegram_sender
 from app.core.agent_tools import build_agent_tools
 from app.core.config import settings
 from app.core.providers import resolve_llm
-from app.core.turn_runner import TurnPlan, run_turn
+from app.core.turn_runner import ChatTurnInput, run_turn
 from app.crud.workspace import get_default_workspace
 from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
@@ -62,6 +62,9 @@ logger = logging.getLogger(__name__)
 # before running multiple uvicorn workers.
 _running_tasks: dict[int, asyncio.Task[None]] = {}
 
+# `/start <payload>` splits into command + argument only when two tokens exist.
+_START_COMMAND_MIN_PARTS = 2
+
 
 @dataclass
 class TelegramService:
@@ -80,7 +83,7 @@ class TelegramService:
         await self.dispatcher.feed_update(self.bot, update)
 
 
-def build_telegram_service() -> TelegramService:
+def build_telegram_service() -> TelegramService:  # noqa: C901, PLR0915
     """Construct the aiogram primitives and register the dispatcher routes.
 
     Raises ``RuntimeError`` if Telegram support is not configured. The
@@ -127,7 +130,7 @@ def build_telegram_service() -> TelegramService:
         await message.answer(reply)
 
     @dispatcher.message(Command("new"))
-    async def _on_new(message: "Message") -> None:
+    async def _on_new(message: Message) -> None:
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
             reply = await handle_new_command(sender=sender, session=session)
@@ -165,7 +168,7 @@ def build_telegram_service() -> TelegramService:
         # access.  If onboarding hasn't completed (no workspace), we fall
         # back to an empty tool list so the turn still works.
         async with async_session_maker() as ws_session:
-            workspace = await get_default_workspace(context.nexus_user_id, ws_session)
+            workspace = await get_default_workspace(context.pawrrtal_user_id, ws_session)
 
         tg_sender = make_telegram_sender(
             message.bot,
@@ -175,7 +178,7 @@ def build_telegram_service() -> TelegramService:
         agent_tools = (
             build_agent_tools(
                 workspace_root=Path(workspace.path),
-                user_id=context.nexus_user_id,
+                user_id=context.pawrrtal_user_id,
                 send_fn=tg_sender,
             )
             if workspace is not None
@@ -183,7 +186,7 @@ def build_telegram_service() -> TelegramService:
         )
 
         channel_message: ChannelMessage = {
-            "user_id": context.nexus_user_id,
+            "user_id": context.pawrrtal_user_id,
             "conversation_id": context.conversation_id,
             "text": message.text,
             "surface": SURFACE_TELEGRAM,
@@ -198,9 +201,9 @@ def build_telegram_service() -> TelegramService:
         # Build the turn plan; all the persistence / streaming / finalize
         # boilerplate lives in app.core.turn_runner so this surface stays
         # tiny.  The web SSE endpoint uses the same plumbing.
-        plan = TurnPlan(
+        turn_input = ChatTurnInput(
             conversation_id=context.conversation_id,
-            user_id=context.nexus_user_id,
+            user_id=context.pawrrtal_user_id,
             question=message.text,
             provider=resolve_llm(context.model_id),
             channel=resolve_channel(SURFACE_TELEGRAM),
@@ -214,7 +217,7 @@ def build_telegram_service() -> TelegramService:
         async def _do_stream() -> None:
             # TelegramChannel.deliver yields nothing useful (delivery is a
             # side-effect of bot.edit_message_text calls) — just exhaust it.
-            async for _ in run_turn(plan):
+            async for _ in run_turn(turn_input):
                 pass
 
         # Cancel any previous stream for this chat before starting the new one.
@@ -244,7 +247,7 @@ def build_telegram_service() -> TelegramService:
                 chat_id=message.chat.id,
                 thread_id=context.thread_id,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning("TELEGRAM_AUTO_TITLE_FAILED", exc_info=True)
 
     return TelegramService(bot=bot, dispatcher=dispatcher)
@@ -271,7 +274,7 @@ def _sender_from_message(message: Message) -> TelegramSender:
 def _extract_start_payload(text: str) -> str | None:
     """Return the argument after ``/start`` (Telegram deep-link payload), if any."""
     parts = text.strip().split(maxsplit=1)
-    if len(parts) < 2:
+    if len(parts) < _START_COMMAND_MIN_PARTS:
         return None
     return parts[1].strip() or None
 
@@ -304,8 +307,8 @@ def _generate_title(text: str, max_len: int = 48) -> str:
 
 async def _maybe_set_auto_title(
     *,
-    bot: "Bot",
-    conversation_id: "uuid.UUID",
+    bot: Bot,
+    conversation_id: uuid.UUID,
     user_text: str,
     chat_id: int,
     thread_id: int | None,
@@ -355,7 +358,7 @@ async def _maybe_set_auto_title(
                 message_thread_id=thread_id,
                 name=title,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "TELEGRAM_EDIT_TOPIC_FAILED chat_id=%s thread_id=%s error=%s",
                 chat_id,
@@ -408,10 +411,8 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
     finally:
         if service.polling_task is not None:
             service.polling_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError, Exception):
                 await service.polling_task
-            except (asyncio.CancelledError, Exception):
-                pass
         try:
             await service.bot.session.close()
         except Exception:

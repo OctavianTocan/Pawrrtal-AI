@@ -7,6 +7,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.agent_loop.types import AgentSafetyConfig
+from app.core.providers.gemini_provider import GeminiLLM
 from app.models import Workspace  # used via fixture type hint
 from tests.agent_harness import ScriptedStreamFn, echo_tool, text_turn, tool_call_turn
 
@@ -74,9 +75,7 @@ async def test_chat_streams_provider_events(
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"})
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
-        lambda _model_id, **kwargs: FakeProvider(
-            [{"type": "delta", "content": "hello"}]
-        ),
+        lambda _model_id, **kwargs: FakeProvider([{"type": "delta", "content": "hello"}]),
     )
 
     response = await client.post(
@@ -140,9 +139,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
 
-    monkeypatch.setattr(
-        "app.api.chat.resolve_llm", lambda _model_id, **kwargs: FailingProvider()
-    )
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **kwargs: FailingProvider())
 
     response = await client.post(
         "/api/v1/chat/",
@@ -175,8 +172,6 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     Only the LLM is replaced.  Every other component (HTTP routing,
     agent_loop, tool execution, SSE serialization) runs as in production.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     echo = echo_tool()
     script = ScriptedStreamFn(
         [
@@ -190,9 +185,7 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
 
     # Inject both the provider and the echo tool into the chat path.
     monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
-    monkeypatch.setattr(
-        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo]
-    )
+    monkeypatch.setattr("app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo])
 
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Tool HTTP Test"})
@@ -239,8 +232,6 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     If the safety layer were disconnected, the loop would consume all 10
     turns and no ``agent_terminated`` frame would appear.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     # 10 tool-call turns — runaway loop the safety must stop.
     turns = [tool_call_turn("ping", {}, turn_id=f"tc-{i}") for i in range(10)]
     script = ScriptedStreamFn(turns)
@@ -260,9 +251,7 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     )
 
     monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
-    monkeypatch.setattr(
-        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")]
-    )
+    monkeypatch.setattr("app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")])
 
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Safety Test"})

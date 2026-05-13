@@ -23,7 +23,7 @@ from app.core.tools.artifact_agent import (
     ArtifactValidationError,
     build_artifact,
 )
-from app.core.turn_runner import EventHook, TurnPlan, run_turn
+from app.core.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.crud.conversation import (
     get_conversation_service,
     update_conversation_model_service,
@@ -75,7 +75,7 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
     )
 
 
-def get_chat_router() -> APIRouter:
+def get_chat_router() -> APIRouter:  # noqa: C901
     """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
 
     Returns:
@@ -89,7 +89,7 @@ def get_chat_router() -> APIRouter:
         request: ChatRequest,
         user: User = Depends(current_active_user),
         session: AsyncSession = Depends(get_async_session),
-        x_nexus_surface: str | None = Header(default=None),
+        x_pawrrtal_surface: str | None = Header(default=None),
     ) -> StreamingResponse:
         """Stream an AI response as Server-Sent Events.
 
@@ -114,7 +114,7 @@ def get_chat_router() -> APIRouter:
         """
         # Entry log — pairs with REQ_IN/REQ_OUT from the request middleware via rid.
         # Question length, not contents, to avoid leaking PII into the log file.
-        surface = surface_from_header(x_nexus_surface)
+        surface = surface_from_header(x_pawrrtal_surface)
         channel = resolve_channel(surface)
 
         rid = get_request_id()
@@ -164,7 +164,7 @@ def get_chat_router() -> APIRouter:
                 detail="Onboarding not completed: no default workspace exists for this user.",
             )
         root = Path(workspace.path)
-        if not root.exists():
+        if not await asyncio.to_thread(root.exists):
             # Workspace row exists but the directory is gone (manually
             # deleted, volume wipe, etc.).  Same outcome — do not run.
             logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
@@ -195,23 +195,26 @@ def get_chat_router() -> APIRouter:
                 event["mime"] = mime
             await _web_send_queue.put(event)
 
-        agent_tools = build_agent_tools(
-            workspace_root=root, user_id=user.id, send_fn=_web_send_fn
-        )
+        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
 
         # ── Per-event hooks: surface-specific event splicing ────────────
         # turn_runner.run_turn handles persistence + aggregation + delivery;
         # the chat surface adds two web-only side channels via event hooks:
 
         def _artifact_hook(event: StreamEvent) -> list[StreamEvent]:
-            """When the agent calls ``render_artifact``, emit a sibling
-            ``artifact`` event so the frontend can render it independently."""
+            """Emit a sibling ``artifact`` event when ``render_artifact`` runs.
+
+            The frontend can render the artifact independently of the tool row.
+            """
             extra = _maybe_artifact_event(event)
             return [extra] if extra is not None else []
 
         def _drain_send_queue(_event: StreamEvent) -> list[StreamEvent]:
-            """Drain events placed on the queue by ``send_message`` tool calls
-            executed during the *previous* event's tool phase."""
+            """Drain queued ``send_message`` events from the prior tool phase.
+
+            Events land on the queue during tool execution and are spliced
+            back into the SSE stream between provider events.
+            """
             out: list[StreamEvent] = []
             while not _web_send_queue.empty():
                 out.append(_web_send_queue.get_nowait())
@@ -226,7 +229,7 @@ def get_chat_router() -> APIRouter:
             "metadata": {},
         }
 
-        plan = TurnPlan(
+        turn_input = ChatTurnInput(
             conversation_id=request.conversation_id,
             user_id=user.id,
             question=request.question,
@@ -247,7 +250,7 @@ def get_chat_router() -> APIRouter:
 
         async def event_stream() -> AsyncGenerator[bytes]:
             """Channel-encoded bytes for each LLM event — thin wrapper around run_turn."""
-            async for chunk in run_turn(plan, event_hooks=hooks):
+            async for chunk in run_turn(turn_input, event_hooks=hooks):
                 yield chunk
 
         return StreamingResponse(

@@ -66,11 +66,30 @@ let docIgnorePatterns: RegExp[] = [];
  * @param pattern - A single gitignore-style glob (e.g. `frontend/components/**`)
  * @returns RegExp anchored with `^...$` that tests repo-relative forward-slash paths
  */
+/** Regex metacharacters that may appear in gitignore-style path segments. */
+const GLOB_REGEX_METACHARS = new Set<string>([
+	'.',
+	'+',
+	'^',
+	'$',
+	'{',
+	'}',
+	'|',
+	'[',
+	'\\',
+	']',
+	'(',
+	')',
+]);
+
 function globToRegex(pattern: string): RegExp {
 	let regexStr = '';
 	let i = 0;
 	while (i < pattern.length) {
-		const ch = pattern[i]!;
+		const ch = pattern[i];
+		if (ch === undefined) {
+			break;
+		}
 		if (ch === '*' && pattern[i + 1] === '*') {
 			// **/ → optional path prefix; ** at end → anything
 			if (pattern[i + 2] === '/') {
@@ -86,7 +105,7 @@ function globToRegex(pattern: string): RegExp {
 		} else if (ch === '?') {
 			regexStr += '[^/]';
 			i++;
-		} else if ('.+^${}|[\\]()'.includes(ch)) {
+		} else if (GLOB_REGEX_METACHARS.has(ch)) {
 			// Escape regex metacharacters that appear in file paths
 			regexStr += `\\${ch}`;
 			i++;
@@ -180,7 +199,8 @@ function hasLeadingJSDoc(node: ts.Node, sourceFile: ts.SourceFile): boolean {
 	const ranges = ts.getLeadingCommentRanges(text, node.getFullStart());
 	if (!ranges || ranges.length === 0) return false;
 	// Only the *last* leading comment matters — JSDoc must immediately precede the node.
-	const last = ranges[ranges.length - 1]!;
+	const last = ranges.at(-1);
+	if (last === undefined) return false;
 	if (last.kind !== ts.SyntaxKind.MultiLineCommentTrivia) return false;
 	return text.slice(last.pos, last.pos + 3) === '/**';
 }
@@ -287,8 +307,33 @@ function auditFile(filePath: string): FileResult {
 		}
 	}
 
+	function exportDeclarationName(node: ts.Node): string | null {
+		if (ts.isFunctionDeclaration(node) && node.name) return node.name.text;
+		if (ts.isClassDeclaration(node) && node.name) return node.name.text;
+		if (ts.isInterfaceDeclaration(node)) return node.name.text;
+		if (ts.isTypeAliasDeclaration(node)) return node.name.text;
+		if (ts.isEnumDeclaration(node)) return node.name.text;
+		return null;
+	}
+
+	function auditExportedDeclaration(node: ts.Node): boolean {
+		const exportName = exportDeclarationName(node);
+		if (exportName !== null) {
+			audit(node, exportName, node);
+			return true;
+		}
+		if (ts.isVariableStatement(node)) {
+			for (const decl of node.declarationList.declarations) {
+				if (!ts.isIdentifier(decl.name)) continue;
+				if (!initNeedsDoc(decl.initializer)) continue;
+				audit(decl.initializer ?? decl, decl.name.text, node);
+			}
+			return true;
+		}
+		return false;
+	}
+
 	function visit(node: ts.Node): void {
-		// Only look at nodes that can carry modifiers.
 		if (!ts.canHaveModifiers(node)) {
 			ts.forEachChild(node, visit);
 			return;
@@ -297,39 +342,8 @@ function auditFile(filePath: string): FileResult {
 		const mods = ts.getModifiers(node);
 		const exported = mods?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
 
-		if (exported) {
-			if (ts.isFunctionDeclaration(node) && node.name) {
-				audit(node, node.name.text, node);
-				// Don't recurse into function bodies — inner functions aren't public API.
-				return;
-			}
-			if (ts.isClassDeclaration(node) && node.name) {
-				audit(node, node.name.text, node);
-				return;
-			}
-			if (ts.isInterfaceDeclaration(node)) {
-				audit(node, node.name.text, node);
-				return;
-			}
-			if (ts.isTypeAliasDeclaration(node)) {
-				audit(node, node.name.text, node);
-				return;
-			}
-			if (ts.isEnumDeclaration(node)) {
-				audit(node, node.name.text, node);
-				return;
-			}
-			if (ts.isVariableStatement(node)) {
-				// export const foo = ..., bar = ...  (multiple declarators are rare but valid)
-				for (const decl of node.declarationList.declarations) {
-					if (!ts.isIdentifier(decl.name)) continue;
-					if (!initNeedsDoc(decl.initializer)) continue;
-					// JSDoc attaches to the VariableStatement (the outer `export const …`),
-					// not to individual VariableDeclarations inside it.
-					audit(decl.initializer ?? decl, decl.name.text, node);
-				}
-				return;
-			}
+		if (exported && auditExportedDeclaration(node)) {
+			return;
 		}
 
 		ts.forEachChild(node, visit);
@@ -366,28 +380,16 @@ function coveragePct(covered: number, total: number): number {
 	return total === 0 ? 100 : (covered / total) * 100;
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+function parseFailUnder(args: string[]): number | null {
+	const raw = args.find((a) => a.startsWith('--fail-under='));
+	if (!raw) return null;
+	const value = raw.slice('--fail-under='.length);
+	if (value === '') return null;
+	const n = Number.parseFloat(value);
+	return Number.isNaN(n) ? null : n;
+}
 
-function main(): void {
-	// Load .docignore exclusions before any file walking
-	docIgnorePatterns = loadDocIgnorePatterns();
-
-	const args = process.argv.slice(2);
-
-	// --fail-under=<number>  exit 1 if overall coverage is below this %
-	const failUnder: number | null = (() => {
-		const a = args.find((a) => a.startsWith('--fail-under='));
-		return a ? Number.parseFloat(a.split('=')[1]!) : null;
-	})();
-
-	// Positional arg: path prefix to scope the scan (e.g. "frontend/lib")
-	const scopeArg = args.find((a) => !a.startsWith('--'));
-
-	// --show-covered  also list files with 100% coverage
-	const showCovered = args.includes('--show-covered');
-
-	// ── Collect files ──────────────────────────────────────────────────────────
-
+function collectScanFiles(scopeArg: string | undefined): string[] {
 	const files: string[] = [];
 	for (const root of SCAN_ROOTS) {
 		const abs = path.join(REPO_ROOT, root);
@@ -397,25 +399,10 @@ function main(): void {
 			}
 		}
 	}
+	return files;
+}
 
-	// ── Audit ──────────────────────────────────────────────────────────────────
-
-	const results: FileResult[] = files
-		.map(auditFile)
-		.filter((r) => r.total > 0)
-		// Sort: most missing first, then alphabetically
-		.sort((a, b) => b.missing.length - a.missing.length || a.file.localeCompare(b.file));
-
-	let totalExports = 0;
-	let totalMissing = 0;
-
-	for (const r of results) {
-		totalExports += r.total;
-		totalMissing += r.missing.length;
-	}
-
-	// ── Per-file output ────────────────────────────────────────────────────────
-
+function printFileResults(results: FileResult[], showCovered: boolean): void {
 	for (const r of results) {
 		const fullyDone = r.missing.length === 0;
 		if (fullyDone && !showCovered) continue;
@@ -440,9 +427,14 @@ function main(): void {
 			);
 		}
 	}
+}
 
-	// ── Summary ────────────────────────────────────────────────────────────────
-
+function printSummary(
+	files: string[],
+	results: FileResult[],
+	totalExports: number,
+	totalMissing: number
+): number {
 	const totalCovered = totalExports - totalMissing;
 	const overallPct = coveragePct(totalCovered, totalExports);
 	const overallColor = overallPct >= 80 ? C.green : overallPct >= 60 ? C.yellow : C.red;
@@ -471,8 +463,42 @@ function main(): void {
 	}
 
 	console.log();
+	return overallPct;
+}
 
-	// ── Exit code ─────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+function main(): void {
+	// Load .docignore exclusions before any file walking
+	docIgnorePatterns = loadDocIgnorePatterns();
+
+	const args = process.argv.slice(2);
+
+	const failUnder = parseFailUnder(args);
+
+	// Positional arg: path prefix to scope the scan (e.g. "frontend/lib")
+	const scopeArg = args.find((a) => !a.startsWith('--'));
+
+	const showCovered = args.includes('--show-covered');
+
+	const files = collectScanFiles(scopeArg);
+
+	const results: FileResult[] = files
+		.map(auditFile)
+		.filter((r) => r.total > 0)
+		.sort((a, b) => b.missing.length - a.missing.length || a.file.localeCompare(b.file));
+
+	let totalExports = 0;
+	let totalMissing = 0;
+
+	for (const r of results) {
+		totalExports += r.total;
+		totalMissing += r.missing.length;
+	}
+
+	printFileResults(results, showCovered);
+
+	const overallPct = printSummary(files, results, totalExports, totalMissing);
 
 	if (failUnder !== null && overallPct < failUnder) {
 		console.error(

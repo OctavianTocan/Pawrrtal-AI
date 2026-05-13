@@ -40,9 +40,7 @@ async def create_project_service(
     return new_project
 
 
-async def list_projects_service(
-    user_id: uuid.UUID, session: AsyncSession
-) -> list[Project]:
+async def list_projects_service(user_id: uuid.UUID, session: AsyncSession) -> list[Project]:
     """List every project owned by the given user, oldest-first.
 
     Args:
@@ -52,11 +50,7 @@ async def list_projects_service(
     Returns:
         List of ``Project`` objects ordered by ``created_at`` ascending.
     """
-    stmt = (
-        select(Project)
-        .where(Project.user_id == user_id)
-        .order_by(Project.created_at.asc())
-    )
+    stmt = select(Project).where(Project.user_id == user_id).order_by(Project.created_at.asc())
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -74,11 +68,7 @@ async def get_project_service(
     Returns:
         The ``Project`` if found and owned by ``user_id``, else ``None``.
     """
-    stmt = (
-        select(Project)
-        .where(Project.id == project_id)
-        .where(Project.user_id == user_id)
-    )
+    stmt = select(Project).where(Project.id == project_id).where(Project.user_id == user_id)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

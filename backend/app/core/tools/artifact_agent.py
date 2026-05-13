@@ -67,8 +67,7 @@ _SPEC_SCHEMA: dict[str, Any] = {
         "elements": {
             "type": "object",
             "description": (
-                "Map of element id → element object. Each element has "
-                "{type, props, children?}."
+                "Map of element id → element object. Each element has {type, props, children?}."
             ),
         },
     },

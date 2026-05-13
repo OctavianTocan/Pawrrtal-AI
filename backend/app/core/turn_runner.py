@@ -60,9 +60,8 @@ logger = logging.getLogger(__name__)
 EventHook = Callable[["StreamEvent"], list["StreamEvent"]]
 
 
-# TODO: Calling this "TurnPlan" is a really bad idea. It makes it very confusing as to what exactly this is. Especially because we have a "Plan Mode".
 @dataclass
-class TurnPlan:
+class ChatTurnInput:
     """Everything a single chat turn needs to run.
 
     A turn = "user sent a message → agent replied", persisted to the
@@ -70,7 +69,7 @@ class TurnPlan:
 
     Attributes:
         conversation_id: Conversation the turn belongs to.
-        user_id: Owner of the conversation.
+        user_id: Owner of the conversation (same UUID as ``User.id``).
         question: User message text.
         provider: Resolved LLM provider (already model-aware).
         channel: Surface channel (web SSE, Telegram, …).
@@ -84,7 +83,7 @@ class TurnPlan:
     """
 
     conversation_id: uuid.UUID
-    user_id: int
+    user_id: uuid.UUID
     question: str
     provider: Provider
     channel: Channel
@@ -97,18 +96,18 @@ class TurnPlan:
 
 
 async def run_turn(
-    plan: TurnPlan,
+    turn_input: ChatTurnInput,
     *,
     event_hooks: list[EventHook] | None = None,
 ) -> AsyncIterator[bytes]:
     r"""Run a full LLM turn end-to-end.
 
-    Yields whatever ``plan.channel.deliver()`` yields — surface-specific
+    Yields whatever ``turn_input.channel.deliver()`` yields — surface-specific
     bytes for web SSE, nothing useful for Telegram (where the channel
     treats delivery as a side-effect and yields ``None``).
 
     Args:
-        plan: Resolved turn inputs (see :class:`TurnPlan`).
+        turn_input: Resolved turn inputs (see :class:`ChatTurnInput`).
         event_hooks: Optional list of synchronous hooks called per
             provider event in order.  Each hook returns zero or more
             extra :class:`StreamEvent`\s to splice into the outbound
@@ -116,9 +115,11 @@ async def run_turn(
             so they land in the persisted snapshot.
     """
     started_at = time.perf_counter()
-    history, assistant_message_id = await _load_history_and_persist(plan)
+    history, assistant_message_id = await _load_history_and_persist(turn_input)
     system_prompt = (
-        assemble_workspace_prompt(plan.workspace_root) if plan.workspace_root is not None else None
+        assemble_workspace_prompt(turn_input.workspace_root)
+        if turn_input.workspace_root is not None
+        else None
     )
 
     aggregator = ChatTurnAggregator()
@@ -128,12 +129,12 @@ async def run_turn(
     async def _guarded_stream() -> AsyncIterator[StreamEvent]:
         """Wrap the provider stream with error capture + aggregation + hooks."""
         try:
-            async for event in plan.provider.stream(
-                plan.question,
-                plan.conversation_id,
-                plan.user_id,
+            async for event in turn_input.provider.stream(
+                turn_input.question,
+                turn_input.conversation_id,
+                turn_input.user_id,
                 history=history,
-                tools=plan.tools or None,
+                tools=turn_input.tools or None,
                 system_prompt=system_prompt,
             ):
                 counter.value += 1
@@ -147,8 +148,8 @@ async def run_turn(
         except Exception as exc:
             logger.exception(
                 "%s_STREAM_ERR conversation_id=%s after %d events",
-                plan.log_tag,
-                plan.conversation_id,
+                turn_input.log_tag,
+                turn_input.conversation_id,
                 counter.value,
             )
             err_event: StreamEvent = {"type": "error", "content": str(exc)}
@@ -156,11 +157,14 @@ async def run_turn(
             yield err_event
 
     try:
-        async for chunk in plan.channel.deliver(_guarded_stream(), plan.channel_message):
+        async for chunk in turn_input.channel.deliver(
+            _guarded_stream(),
+            turn_input.channel_message,
+        ):
             yield chunk
     finally:
         await _finalize_turn(
-            plan=plan,
+            turn_input=turn_input,
             aggregator=aggregator,
             assistant_message_id=assistant_message_id,
             started_at=started_at,
@@ -183,7 +187,7 @@ class _EventCounter:
 
 
 async def _load_history_and_persist(
-    plan: TurnPlan,
+    turn_input: ChatTurnInput,
 ) -> tuple[list[dict[str, str]], uuid.UUID]:
     """Read recent history, persist user msg + assistant placeholder.
 
@@ -193,7 +197,9 @@ async def _load_history_and_persist(
     """
     async with async_session_maker() as session:
         recent_rows = await get_messages_for_conversation(
-            session, plan.conversation_id, limit=plan.history_window
+            session,
+            turn_input.conversation_id,
+            limit=turn_input.history_window,
         )
         history = [
             {"role": row.role, "content": row.content or ""}
@@ -202,14 +208,14 @@ async def _load_history_and_persist(
         ]
         await append_user_message(
             session,
-            conversation_id=plan.conversation_id,
-            user_id=plan.user_id,
-            content=plan.question,
+            conversation_id=turn_input.conversation_id,
+            user_id=turn_input.user_id,
+            content=turn_input.question,
         )
         assistant_row = await append_assistant_placeholder(
             session,
-            conversation_id=plan.conversation_id,
-            user_id=plan.user_id,
+            conversation_id=turn_input.conversation_id,
+            user_id=turn_input.user_id,
         )
         await session.commit()
         return history, assistant_row.id
@@ -217,7 +223,7 @@ async def _load_history_and_persist(
 
 async def _finalize_turn(
     *,
-    plan: TurnPlan,
+    turn_input: ChatTurnInput,
     aggregator: ChatTurnAggregator,
     assistant_message_id: uuid.UUID,
     started_at: float,
@@ -243,16 +249,16 @@ async def _finalize_turn(
     except Exception:
         logger.exception(
             "%s_PERSIST_ERR conversation_id=%s message_id=%s",
-            plan.log_tag,
-            plan.conversation_id,
+            turn_input.log_tag,
+            turn_input.conversation_id,
             assistant_message_id,
         )
 
-    extras = " ".join(f"{k}={v}" for k, v in plan.log_extras.items())
+    extras = " ".join(f"{k}={v}" for k, v in turn_input.log_extras.items())
     logger.info(
         "%s_OUT conversation_id=%s events=%d duration_ms=%.1f %s",
-        plan.log_tag,
-        plan.conversation_id,
+        turn_input.log_tag,
+        turn_input.conversation_id,
         event_count,
         duration_ms,
         extras,

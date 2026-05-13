@@ -7,7 +7,7 @@ Two responsibilities live here:
    (or, in the future, Slack workspace, WhatsApp number, ...).
 2. Reading + writing the persistent `channel_bindings` rows that the
    inbound message path uses to resolve a third-party identity into
-   a Nexus user.
+   a Pawrrtal user.
 
 Codes are stored hashed; the user-facing plaintext is only ever
 returned from `issue_link_code` and never persisted as-is. All lookups
@@ -22,16 +22,12 @@ import hmac
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models import ChannelBinding, ChannelLinkCode
-
-if TYPE_CHECKING:
-    from app.models import Conversation
+from app.models import ChannelBinding, ChannelLinkCode, Conversation
 
 # Code alphabet excludes look-alikes (0/O, 1/I/L) so support tickets
 # don't end up arguing over what the user actually typed. Eight chars
@@ -203,7 +199,7 @@ async def get_user_id_for_external(
     external_user_id: str,
     session: AsyncSession,
 ) -> uuid.UUID | None:
-    """Resolve a third-party identity to its bound Nexus ``user_id``.
+    """Resolve a third-party identity to its bound Pawrrtal ``user_id``.
 
     Returns ``None`` when no binding exists; the inbound bot path uses
     that signal to send the onboarding nudge ("send me your code or
@@ -232,7 +228,7 @@ async def get_or_create_telegram_conversation(
     the web UI would.
 
     Args:
-        user_id: Nexus user who owns the conversation.
+        user_id: Pawrrtal user who owns the conversation.
         session: Async database session.
 
     Returns:
@@ -247,14 +243,14 @@ async def get_or_create_telegram_conversation_full(
     user_id: uuid.UUID,
     session: AsyncSession,
     thread_id: int | None = None,
-) -> "Conversation":
+) -> Conversation:
     """Like :func:`get_or_create_telegram_conversation` but returns the full row.
 
     The extra fields (particularly ``model_id``) let the bot honour per-session
     model overrides set by ``/model`` without a second round-trip.
 
     Args:
-        user_id: Nexus user who owns the conversation.
+        user_id: Pawrrtal user who owns the conversation.
         session: Async database session.
         thread_id: Telegram topic thread ID (Bot API 9.3+).  When set,
             the query scopes to conversations with a matching
@@ -306,7 +302,7 @@ async def _get_or_create_telegram_conv_row(
     user_id: uuid.UUID,
     session: AsyncSession,
     thread_id: int | None = None,
-) -> "Conversation":
+) -> Conversation:
     """Internal helper: find or create the Telegram conversation row.
 
     Routing branches:
@@ -315,10 +311,6 @@ async def _get_or_create_telegram_conv_row(
     - ``thread_id`` None → legacy DM mode; find the most recently updated
       conversation whose title starts with "Telegram" and has no thread ID.
     """
-    from sqlalchemy import select  # already imported at module level; re-import safe
-
-    from app.models import Conversation  # noqa: PLC0415
-
     if thread_id is not None:
         # Topic mode — one conversation per thread.
         stmt = (
@@ -347,8 +339,6 @@ async def _get_or_create_telegram_conv_row(
     existing = result.scalar_one_or_none()
     if existing is not None:
         return existing
-
-    from datetime import datetime  # noqa: PLC0415
 
     conversation = Conversation(
         id=uuid.uuid4(),

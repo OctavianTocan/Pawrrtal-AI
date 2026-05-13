@@ -21,11 +21,15 @@ from typing import Any, Literal, TypedDict
 
 
 class TextContent(TypedDict):
+    """A single text segment inside structured message content."""
+
     type: Literal["text"]
     text: str
 
 
 class ToolCallContent(TypedDict):
+    """A tool invocation requested by the assistant."""
+
     type: Literal["toolCall"]
     tool_call_id: str
     name: str
@@ -33,6 +37,8 @@ class ToolCallContent(TypedDict):
 
 
 class ToolResultContent(TypedDict):
+    """Plain text returned to the model after a tool executes."""
+
     type: Literal["text"]
     text: str
 
@@ -43,17 +49,23 @@ class ToolResultContent(TypedDict):
 
 
 class UserMessage(TypedDict):
+    """End-user utterance in agent history."""
+
     role: Literal["user"]
     content: str
 
 
 class AssistantMessage(TypedDict):
+    """Assistant turn including optional tool calls."""
+
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
 
 
 class ToolResultMessage(TypedDict):
+    """Structured tool output fed back into the conversation."""
+
     role: Literal["toolResult"]
     tool_call_id: str
     content: list[ToolResultContent]
@@ -69,11 +81,15 @@ AgentMessage = UserMessage | AssistantMessage | ToolResultMessage
 
 
 class LLMTextDeltaEvent(TypedDict):
+    """Incremental text chunk from a streaming provider."""
+
     type: Literal["text_delta"]
     text: str
 
 
 class LLMToolCallEvent(TypedDict):
+    """Tool call emitted by the LLM stream."""
+
     type: Literal["tool_call"]
     tool_call_id: str
     name: str
@@ -81,6 +97,8 @@ class LLMToolCallEvent(TypedDict):
 
 
 class LLMDoneEvent(TypedDict):
+    """Final LLM stream frame with assembled content."""
+
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
@@ -95,35 +113,49 @@ LLMEvent = LLMTextDeltaEvent | LLMToolCallEvent | LLMDoneEvent
 
 
 class AgentStartEvent(TypedDict):
+    """Signals the beginning of an agent_loop run."""
+
     type: Literal["agent_start"]
 
 
 class TurnStartEvent(TypedDict):
+    """A new assistant turn is starting."""
+
     type: Literal["turn_start"]
 
 
 class MessageStartEvent(TypedDict):
+    """Assistant began composing a message."""
+
     type: Literal["message_start"]
     message: AgentMessage
 
 
 class MessageEndEvent(TypedDict):
+    """Assistant finished a message (tool calls or final text)."""
+
     type: Literal["message_end"]
     message: AgentMessage
 
 
 class TextDeltaEvent(TypedDict):
+    """Text delta surfaced to channel consumers."""
+
     type: Literal["text_delta"]
     text: str
 
 
 class ToolCallStartEvent(TypedDict):
+    """Tool invocation started (streaming args may follow)."""
+
     type: Literal["tool_call_start"]
     tool_call_id: str
     name: str
 
 
 class ToolCallEndEvent(TypedDict):
+    """Tool invocation fully specified (name + arguments)."""
+
     type: Literal["tool_call_end"]
     tool_call_id: str
     name: str
@@ -131,6 +163,8 @@ class ToolCallEndEvent(TypedDict):
 
 
 class ToolResultEvent(TypedDict):
+    """Result string for a completed tool call."""
+
     type: Literal["tool_result"]
     tool_call_id: str
     content: str
@@ -138,12 +172,16 @@ class ToolResultEvent(TypedDict):
 
 
 class TurnEndEvent(TypedDict):
+    """Assistant turn completed; includes pending tool results."""
+
     type: Literal["turn_end"]
     message: AssistantMessage
     tool_results: list[ToolResultMessage]
 
 
 class AgentEndEvent(TypedDict):
+    """agent_loop finished normally with full message history."""
+
     type: Literal["agent_end"]
     messages: list[AgentMessage]
 

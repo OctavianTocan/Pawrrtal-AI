@@ -1,6 +1,6 @@
 # Reference: source map and port checklist
 
-## Canonical implementation (AI Nexus)
+## Canonical implementation (Pawrrtal)
 
 Use these paths when aligning behavior; rename public APIs to **ambient panel texture** in the host app.
 

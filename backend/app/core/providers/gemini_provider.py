@@ -31,6 +31,7 @@ from app.core.agent_system_prompt import (
 )
 from app.core.config import settings
 from app.core.keys import resolve_api_key
+
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -213,15 +214,15 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         content: list[TextContent | ToolCallContent] = []
         if full_text:
             content.append(TextContent(type="text", text=full_text))
-        for tc in tool_calls:
-            content.append(
-                ToolCallContent(
-                    type="toolCall",
-                    tool_call_id=tc["tool_call_id"],
-                    name=tc["name"],
-                    arguments=tc["arguments"],
-                )
+        content.extend(
+            ToolCallContent(
+                type="toolCall",
+                tool_call_id=tc["tool_call_id"],
+                name=tc["name"],
+                arguments=tc["arguments"],
             )
+            for tc in tool_calls
+        )
 
         yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
 

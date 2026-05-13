@@ -32,6 +32,9 @@ dev = [
     "types-pyyaml>=6.0.12",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
 # --- ruff: linter + formatter ----------------------------------------------
 # Replaces black, isort, flake8, pyupgrade. Config aligned with the project's
 # clean-code rules (type hints, docstrings on exports, no magic numbers, etc).

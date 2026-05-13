@@ -78,7 +78,7 @@ async def agent_loop(
         yield event
 
 
-async def _run_loop(
+async def _run_loop(  # noqa: C901, PLR0912, PLR0915
     messages: list[AgentMessage],
     tools: list[AgentTool],
     new_messages: list[AgentMessage],

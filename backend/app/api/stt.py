@@ -104,12 +104,8 @@ def get_stt_router() -> APIRouter:
                     files=upstream_files,
                 )
         except httpx.TimeoutException as error:
-            logger.warning(
-                "xAI STT timeout after %ss", STT_TIMEOUT_SECONDS, exc_info=error
-            )
-            raise HTTPException(
-                status_code=504, detail="Transcription timed out."
-            ) from error
+            logger.warning("xAI STT timeout after %ss", STT_TIMEOUT_SECONDS, exc_info=error)
+            raise HTTPException(status_code=504, detail="Transcription timed out.") from error
         except httpx.RequestError as error:
             logger.warning("xAI STT request failed: %s", error)
             raise HTTPException(

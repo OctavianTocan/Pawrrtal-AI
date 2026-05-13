@@ -63,9 +63,7 @@ async def get_messages_for_conversation(
 async def _next_ordinal(session: AsyncSession, conversation_id: uuid.UUID) -> int:
     """Return the next free ordinal for a conversation, starting at 0."""
     result = await session.execute(
-        select(func.max(ChatMessage.ordinal)).where(
-            ChatMessage.conversation_id == conversation_id
-        )
+        select(func.max(ChatMessage.ordinal)).where(ChatMessage.conversation_id == conversation_id)
     )
     current_max = result.scalar()
     return 0 if current_max is None else current_max + 1

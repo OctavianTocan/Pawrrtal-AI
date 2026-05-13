@@ -57,10 +57,10 @@ from claude_agent_sdk import (
 )
 
 from app.core.agent_loop.types import AgentTool
-from app.core.keys import resolve_api_key
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
+from app.core.keys import resolve_api_key
 
 from ._claude_tool_bridge import (
     MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
@@ -185,8 +185,9 @@ class ClaudeLLM:
         question: str,
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
-        history: list[dict[str, str]]
-        | None = None,  # ignored: Claude SDK handles session continuity via `resume`
+        history: (
+            list[dict[str, str]] | None
+        ) = None,  # ignored: Claude SDK handles session continuity via `resume`
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
@@ -200,6 +201,9 @@ class ClaudeLLM:
             user_id: App-level user UUID. Currently unused by this
                 provider but kept in the protocol so future per-user
                 cwd / quota logic can wire in without a signature change.
+            history: Ignored; Gemini uses prior turns via app-managed context.
+            tools: Agent tools exposed to the model for this turn.
+            system_prompt: Optional system instructions for this request.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -217,9 +221,7 @@ class ClaudeLLM:
             # so the path is uniform regardless of whether bridged
             # tools are mounted; uniform path means one shape to test
             # and reason about.
-            async for message in query(
-                prompt=_aiter_user_prompt(question), options=options
-            ):
+            async for message in query(prompt=_aiter_user_prompt(question), options=options):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -253,9 +255,7 @@ class ClaudeLLM:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI."
-            )
+            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes
@@ -286,7 +286,7 @@ class ClaudeLLM:
                 MCP server via
                 :mod:`app.core.providers._claude_tool_bridge` and mounted
                 under ``ClaudeAgentOptions.mcp_servers``; the matching
-                ``mcp__ai_nexus__<name>`` IDs are appended to the
+                ``mcp__pawrrtal__<name>`` IDs are appended to the
                 allowed-tools whitelist so the SDK actually permits
                 execution.
         """
@@ -295,9 +295,7 @@ class ClaudeLLM:
         # Local tool whitelist for the Claude SDK's built-in CLI tools
         # (read/write filesystem, etc.).  Distinct from ``agent_tools``
         # — those are app-defined tools we bridge into an MCP server.
-        local_tools = (
-            list(self._config.tools) if self._config.tools is not None else None
-        )
+        local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
 
         # Bridge the cross-provider AgentTool list into a single MCP

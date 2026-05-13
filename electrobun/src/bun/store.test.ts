@@ -6,26 +6,37 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { Store, createStore } from './store';
+import { createStore, Store } from './store';
 
 let testDir: string;
 
 beforeEach(() => {
-	testDir = path.join(tmpdir(), `pawrrtal-store-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	testDir = path.join(
+		tmpdir(),
+		`pawrrtal-store-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+	);
 	mkdirSync(testDir, { recursive: true });
 });
 
 describe('Store', () => {
 	it('returns defaults when the file does not exist', () => {
-		const store = new Store({ name: 'test', defaults: { count: 0, label: 'hello' }, dataDir: testDir });
+		const store = new Store({
+			name: 'test',
+			defaults: { count: 0, label: 'hello' },
+			dataDir: testDir,
+		});
 		expect(store.get('count')).toBe(0);
 		expect(store.get('label')).toBe('hello');
 	});
 
 	it('persists a value and reads it back', () => {
-		const store = new Store({ name: 'persist', defaults: { roots: [] as string[] }, dataDir: testDir });
+		const store = new Store({
+			name: 'persist',
+			defaults: { roots: [] as string[] },
+			dataDir: testDir,
+		});
 		store.set('roots', ['/home/user/work']);
 		expect(store.get('roots')).toEqual(['/home/user/work']);
 	});
@@ -61,8 +72,8 @@ describe('Store', () => {
 			dataDir: testDir,
 		});
 		expect(store2.get('a')).toBe(99); // from disk
-		expect(store2.get('b')).toBe(2);   // default (not in file)
-		expect(store2.get('c')).toBe(3);   // new default
+		expect(store2.get('b')).toBe(2); // default (not in file)
+		expect(store2.get('c')).toBe(3); // new default
 	});
 
 	it('handles malformed JSON by falling back to defaults', () => {

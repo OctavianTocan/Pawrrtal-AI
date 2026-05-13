@@ -144,9 +144,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         try:
             raw_title = await generate_text_once(
                 "Generate a short title (max 8 words) for the conversation based on "
-                "this first message: "
-                + first_message
-                + ". Return only the title, nothing else."
+                "this first message: " + first_message + ". Return only the title, nothing else."
             )
         except Exception:
             # Gemini API errors (invalid key, model unavailable, rate limit) must
@@ -186,9 +184,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         and status. Only fields present in the payload are updated.
         """
         if payload.title is not None and not payload.title.strip():
-            raise HTTPException(
-                status_code=422, detail="Conversation title cannot be empty"
-            )
+            raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
 
         conversation = await update_conversation_service(
             payload=payload,

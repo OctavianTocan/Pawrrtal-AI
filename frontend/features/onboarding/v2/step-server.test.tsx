@@ -36,22 +36,24 @@ describe('StepServer', () => {
 	describe('initial render', () => {
 		it('defaults to hosted mode when profile has no remoteServerUrl', () => {
 			renderStep();
-			// The "Hosted by AI Nexus" option should be visually active — easy to
+			// The "Hosted by Pawrrtal" option should be visually active — easy to
 			// detect by checking the URL input is NOT visible.
 			expect(screen.queryByLabelText('Server URL')).toBeNull();
 		});
 
 		it('defaults to self-hosted mode when profile already has a remoteServerUrl', () => {
-			renderStep({ profile: { remoteServerUrl: 'https://nexus.mycompany.com' } });
+			renderStep({ profile: { remoteServerUrl: 'https://pawrrtal.mycompany.com' } });
 			expect(screen.getByLabelText('Server URL')).toBeTruthy();
 			expect((screen.getByLabelText('Server URL') as HTMLInputElement).value).toBe(
-				'https://nexus.mycompany.com'
+				'https://pawrrtal.mycompany.com'
 			);
 		});
 
 		it('renders the title via OnboardingShell', () => {
 			renderStep();
-			expect(screen.getByRole('heading', { name: /Where is your Nexus\?/i })).toBeTruthy();
+			expect(
+				screen.getByRole('heading', { name: /Where is your Pawrrtal backend\?/i })
+			).toBeTruthy();
 		});
 	});
 
@@ -66,7 +68,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			expect(screen.getByLabelText('Server URL')).toBeTruthy();
-			fireEvent.click(screen.getByText('Hosted by AI Nexus'));
+			fireEvent.click(screen.getByText('Hosted by Pawrrtal'));
 			expect(screen.queryByLabelText('Server URL')).toBeNull();
 		});
 	});
@@ -90,7 +92,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			const btn = screen.getByRole('button', { name: /Continue/i });
 			expect((btn as HTMLButtonElement).disabled).toBe(false);
@@ -100,10 +102,12 @@ describe('StepServer', () => {
 			const { onContinue, onPatch } = renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
-			expect(onPatch).toHaveBeenCalledWith({ remoteServerUrl: 'https://nexus.example.com' });
+			expect(onPatch).toHaveBeenCalledWith({
+				remoteServerUrl: 'https://pawrrtal.example.com',
+			});
 			expect(onContinue).toHaveBeenCalled();
 		});
 
@@ -180,7 +184,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			fireEvent.click(screen.getByRole('button', { name: /Verify/i }));
 
@@ -198,7 +202,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			fireEvent.click(screen.getByRole('button', { name: /Verify/i }));
 
@@ -213,7 +217,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			fireEvent.click(screen.getByRole('button', { name: /Verify/i }));
 
@@ -231,7 +235,7 @@ describe('StepServer', () => {
 			renderStep();
 			fireEvent.click(screen.getByText('Self-hosted'));
 			fireEvent.change(screen.getByLabelText('Server URL'), {
-				target: { value: 'https://nexus.example.com' },
+				target: { value: 'https://pawrrtal.example.com' },
 			});
 			fireEvent.click(screen.getByRole('button', { name: /Verify/i }));
 
@@ -243,7 +247,7 @@ describe('StepServer', () => {
 
 	describe('OPEN_ONBOARDING_SERVER_STEP_EVENT export', () => {
 		it('exports the correct event name constant', () => {
-			expect(OPEN_ONBOARDING_SERVER_STEP_EVENT).toBe('ai-nexus:open-onboarding-server-step');
+			expect(OPEN_ONBOARDING_SERVER_STEP_EVENT).toBe('pawrrtal:open-onboarding-server-step');
 		});
 	});
 });

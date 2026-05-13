@@ -186,7 +186,7 @@ async def _safe_edit(
 
 
 def make_telegram_sender(
-    bot: "Bot",
+    bot: Bot,
     chat_id: int | str,
     *,
     message_thread_id: int | None = None,

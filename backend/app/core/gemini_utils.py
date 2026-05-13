@@ -8,15 +8,23 @@ from google.genai import types
 from app.core.config import settings
 
 _DEFAULT_MODEL = "gemini-2.0-flash"
-_client: genai.Client | None = None
+
+
+class _GeminiClientHolder:
+    """Process-wide lazy Gemini client (avoids a module-level ``global``)."""
+
+    _client: genai.Client | None = None
+
+    @classmethod
+    def get(cls) -> genai.Client:
+        if cls._client is None:
+            cls._client = genai.Client(api_key=settings.google_api_key)
+        return cls._client
 
 
 def _get_client() -> genai.Client:
     """Return a shared Gemini client, creating it on first call."""
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=settings.google_api_key)
-    return _client
+    return _GeminiClientHolder.get()
 
 
 async def generate_text_once(prompt: str, model_id: str = _DEFAULT_MODEL) -> str:
@@ -28,8 +36,6 @@ async def generate_text_once(prompt: str, model_id: str = _DEFAULT_MODEL) -> str
     client = _get_client()
     response = await client.aio.models.generate_content(
         model=model_id,
-        contents=[
-            types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
-        ],
+        contents=[types.Content(role="user", parts=[types.Part.from_text(text=prompt)])],
     )
     return (response.text or "").strip()

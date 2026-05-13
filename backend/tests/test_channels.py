@@ -10,6 +10,7 @@ Covers:
 from __future__ import annotations
 
 import json
+import uuid
 from collections.abc import AsyncIterator
 
 import pytest
@@ -20,6 +21,7 @@ from app.channels import (
     resolve_channel,
     surface_from_header,
 )
+from app.channels.base import ChannelMessage
 from app.channels.sse import SURFACE_ELECTRON, SURFACE_WEB
 
 # ---------------------------------------------------------------------------
@@ -112,9 +114,6 @@ class TestSSEChannelDeliver:
             {"type": "delta", "content": "Hello"},
             {"type": "delta", "content": " world"},
         ]
-        import uuid
-
-        from app.channels.base import ChannelMessage
 
         msg: ChannelMessage = {
             "user_id": uuid.uuid4(),
@@ -125,9 +124,7 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream(events), msg):
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in channel.deliver(_make_stream(events), msg)]
 
         # Two data frames + the [DONE] sentinel
         assert len(chunks) == 3
@@ -142,9 +139,6 @@ class TestSSEChannelDeliver:
     @pytest.mark.anyio
     async def test_done_frame_is_last(self) -> None:
         channel = SSEChannel(surface="electron")
-        import uuid
-
-        from app.channels.base import ChannelMessage
 
         msg: ChannelMessage = {
             "user_id": uuid.uuid4(),
@@ -155,18 +149,18 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream([{"type": "delta", "content": "x"}]), msg):
-            chunks.append(chunk)
+        chunks = [
+            chunk
+            async for chunk in channel.deliver(
+                _make_stream([{"type": "delta", "content": "x"}]), msg
+            )
+        ]
 
         assert chunks[-1] == b"data: [DONE]\n\n"
 
     @pytest.mark.anyio
     async def test_empty_stream_only_yields_done(self) -> None:
         channel = SSEChannel(surface="web")
-        import uuid
-
-        from app.channels.base import ChannelMessage
 
         msg: ChannelMessage = {
             "user_id": uuid.uuid4(),
@@ -177,18 +171,13 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream([]), msg):
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in channel.deliver(_make_stream([]), msg)]
 
         assert chunks == [b"data: [DONE]\n\n"]
 
     @pytest.mark.anyio
     async def test_yields_bytes(self) -> None:
         channel = SSEChannel(surface="web")
-        import uuid
-
-        from app.channels.base import ChannelMessage
 
         msg: ChannelMessage = {
             "user_id": uuid.uuid4(),

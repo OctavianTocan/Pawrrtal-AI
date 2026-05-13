@@ -11,7 +11,7 @@
  *
  * @see DESIGN.md — Components — sidebar-nav-row
  *
- * @fileoverview Sidebar row surface tokens for AI Nexus.
+ * @fileoverview Sidebar row surface tokens for Pawrrtal.
  */
 
 import { forwardRef } from 'react';

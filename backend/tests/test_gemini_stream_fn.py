@@ -13,6 +13,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.core.agent_loop import AgentSafetyConfig
 from app.core.agent_loop.types import (
     AgentMessage,
     AgentTool,
@@ -24,6 +25,7 @@ from app.core.agent_loop.types import (
     ToolCallContent,
 )
 from app.core.providers.base import StreamEvent
+from app.core.providers.gemini_provider import GeminiLLM
 from tests.agent_harness import (
     ScriptedStreamFn,
     echo_tool,
@@ -41,19 +43,18 @@ async def test_gemini_provider_yields_delta_events_from_loop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """GeminiLLM.stream() translates agent_loop text_deltas to StreamEvent deltas."""
-    from app.core.providers.gemini_provider import GeminiLLM
-
     provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("hello")]))
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="Hi",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        e
+        async for e in provider.stream(
+            question="Hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+        )
+    ]
 
     delta_events = [e for e in events if e["type"] == "delta"]
     assert len(delta_events) >= 1
@@ -70,8 +71,6 @@ async def test_gemini_provider_passes_history_to_loop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Prior messages in history are included in what the StreamFn sees."""
-    from app.core.providers.gemini_provider import GeminiLLM
-
     seen_messages: list[list[AgentMessage]] = []
 
     async def recording_stream_fn(
@@ -120,17 +119,13 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     Uses the real GeminiLLM.stream() with a ScriptedStreamFn so we exercise
     the provider's own translation code, not a hand-rolled reimplementation.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     executed: list[str] = []
 
     async def echo_execute(tool_call_id: str, **kwargs: object) -> str:
         executed.append(str(kwargs.get("value", "")))
         return f"echoed: {kwargs.get('value', '')}"
 
-    from app.core.agent_loop.types import AgentTool as AT
-
-    echo = AT(
+    echo = AgentTool(
         name="echo",
         description="Echo",
         parameters={
@@ -153,15 +148,16 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
         ),
     )
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="Echo hi",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-        tools=[echo],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        e
+        async for e in provider.stream(
+            question="Echo hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+            tools=[echo],
+        )
+    ]
 
     # The real tool executed.
     assert executed == ["hi"]
@@ -192,9 +188,6 @@ async def test_gemini_provider_surfaces_agent_terminated_from_safety_config(
         safety_from_settings → AgentLoopConfig.safety → agent_loop →
         AgentTerminatedEvent → GeminiLLM.stream() → StreamEvent("agent_terminated")
     """
-    from app.core.agent_loop import AgentSafetyConfig
-    from app.core.providers.gemini_provider import GeminiLLM
-
     # 10-turn runaway script — much more than the 3-iteration limit.
     turns = [tool_call_turn("ping", {}, turn_id=f"tc-{i}") for i in range(10)]
     script = ScriptedStreamFn(turns)
@@ -213,15 +206,16 @@ async def test_gemini_provider_surfaces_agent_terminated_from_safety_config(
         ),
     )
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="go",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-        tools=[echo_tool("ping")],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        e
+        async for e in provider.stream(
+            question="go",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+            tools=[echo_tool("ping")],
+        )
+    ]
 
     # The termination event surfaces as a StreamEvent.
     terminated = [e for e in events if e["type"] == "agent_terminated"]
@@ -247,8 +241,6 @@ async def test_gemini_provider_accumulates_tool_result_in_context(
     ``toolResult`` role, proving history accumulation flows through
     GeminiLLM.stream() → agent_loop.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     seen_per_call: list[int] = []
     second_call_roles: list[str] = []
     # Use a list as a mutable counter to avoid nonlocal + inline import conflicts.

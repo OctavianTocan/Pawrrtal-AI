@@ -42,7 +42,7 @@ from app.core.agent_loop.types import AgentTool
 # ``mcp__<server>__<tool_name>``; both the server name and that prefix
 # are stable so the allowed-tools whitelist is computable from the
 # AgentTool list alone.
-MCP_SERVER_NAME = "ai_nexus"
+MCP_SERVER_NAME = "pawrrtal"
 
 
 def claude_tool_id(name: str) -> str:
@@ -127,7 +127,7 @@ async def auto_approve_bridge_tools(
     grants on every custom MCP tool call — the integration test on
     PR #131 surfaced this with::
 
-        Claude requested permissions to use mcp__ai_nexus__echo_back,
+        Claude requested permissions to use mcp__pawrrtal__echo_back,
         but you haven't granted it yet.
 
     The ``allowed_tools`` whitelist is necessary but not sufficient:

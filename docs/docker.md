@@ -1,4 +1,4 @@
-# Running AI Nexus with Docker Compose
+# Running Pawrrtal with Docker Compose
 
 The `docker-compose.yml` at the repo root spins up PostgreSQL 16 and the
 FastAPI backend together. The Next.js frontend is left out intentionally —

@@ -13,6 +13,8 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from app.core import keys
+from app.core.config import settings
 from app.core.providers.claude_provider import ClaudeLLM
 from app.core.providers.factory import resolve_llm
 from app.core.providers.gemini_provider import GeminiLLM
@@ -139,9 +141,6 @@ def test_resolve_api_key_workspace_override_beats_settings(
     a user who sets their own GEMINI_API_KEY gets their key used, not
     the gateway-wide key.
     """
-    from app.core import keys
-    from app.core.config import settings
-
     monkeypatch.setattr(settings, "workspace_base_dir", str(tmp_path))
     monkeypatch.setattr(settings, "google_api_key", "gateway-key")
 
@@ -149,9 +148,7 @@ def test_resolve_api_key_workspace_override_beats_settings(
     keys.save_workspace_env(uid, {"GEMINI_API_KEY": "my-personal-gemini-key"})
 
     result = keys.resolve_api_key(uid, "GEMINI_API_KEY")
-    assert result == "my-personal-gemini-key", (
-        f"Expected workspace override to win; got {result!r}"
-    )
+    assert result == "my-personal-gemini-key", f"Expected workspace override to win; got {result!r}"
 
 
 def test_resolve_api_key_falls_back_to_settings_when_no_override(
@@ -162,9 +159,6 @@ def test_resolve_api_key_falls_back_to_settings_when_no_override(
 
     A brand-new user (no workspace env file yet) gets the gateway key.
     """
-    from app.core import keys
-    from app.core.config import settings
-
     monkeypatch.setattr(settings, "workspace_base_dir", str(tmp_path))
     monkeypatch.setattr(settings, "exa_api_key", "gateway-exa")
 
@@ -182,9 +176,6 @@ def test_resolve_api_key_cleared_override_reverts_to_settings(
     The UI sends empty string when a user clears an input. After clear,
     the user should see the same key as everyone else.
     """
-    from app.core import keys
-    from app.core.config import settings
-
     monkeypatch.setattr(settings, "workspace_base_dir", str(tmp_path))
     monkeypatch.setattr(settings, "exa_api_key", "gateway-exa")
 
@@ -207,9 +198,6 @@ def test_resolve_api_key_two_users_are_isolated(
 
     User A's key must never leak into user B's resolution.
     """
-    from app.core import keys
-    from app.core.config import settings
-
     monkeypatch.setattr(settings, "workspace_base_dir", str(tmp_path))
     monkeypatch.setattr(settings, "exa_api_key", "gateway-exa")
 

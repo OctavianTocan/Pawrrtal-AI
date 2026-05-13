@@ -68,7 +68,7 @@ _NOT_BOUND_MESSAGE = (
     "click 'Connect Telegram', and either tap the deep link or send me "
     "the code you'll see there."
 )
-_BIND_OK_MESSAGE = "Connected ✅ — you can now chat with Nexus from here."
+_BIND_OK_MESSAGE = "Connected ✅ — you can now chat with Pawrrtal from here."
 _BIND_BAD_CODE_MESSAGE = (
     "That code didn't work. It may have expired (codes live for 10 minutes) "
     "or already been used. Generate a fresh one from Settings → Channels."
@@ -123,12 +123,11 @@ class TelegramTurnContext:
     channel delivery loop.
     """
 
-    # TODO: This needs to be renamed. Multiple things here, in fact, to Pawrrtal.
-    nexus_user_id: uuid.UUID
-    """Nexus user UUID resolved from the channel binding."""
+    pawrrtal_user_id: uuid.UUID
+    """Pawrrtal user UUID resolved from the channel binding."""
 
     conversation_id: uuid.UUID
-    """Stable Nexus conversation for this Telegram user."""
+    """Stable Pawrrtal conversation for this Telegram user."""
 
     model_id: str
     """Model to use for this turn (default or conversation override)."""
@@ -173,7 +172,7 @@ async def handle_start_command(
         return _BIND_BAD_CODE_MESSAGE
 
     logger.info(
-        "TELEGRAM_BIND_OK external_user_id=%s nexus_user_id=%s",
+        "TELEGRAM_BIND_OK external_user_id=%s pawrrtal_user_id=%s",
         sender.user_id,
         binding.user_id,
     )
@@ -202,12 +201,12 @@ async def handle_plain_message(
     Returns:
         ``str`` for immediate replies, ``TelegramTurnContext`` for LLM routing.
     """
-    nexus_user_id = await get_user_id_for_external(
+    pawrrtal_user_id = await get_user_id_for_external(
         provider=PROVIDER,
         external_user_id=str(sender.user_id),
         session=session,
     )
-    if nexus_user_id is None:
+    if pawrrtal_user_id is None:
         # The not-bound nudge tells the user to "send me the code" — so
         # if a plain message looks like one, try to redeem it here
         # instead of forcing them through the /start deep link. We only
@@ -225,7 +224,7 @@ async def handle_plain_message(
             )
             if binding is not None:
                 logger.info(
-                    "TELEGRAM_BIND_OK_VIA_PLAIN external_user_id=%s nexus_user_id=%s",
+                    "TELEGRAM_BIND_OK_VIA_PLAIN external_user_id=%s pawrrtal_user_id=%s",
                     sender.user_id,
                     binding.user_id,
                 )
@@ -234,7 +233,7 @@ async def handle_plain_message(
         return _NOT_BOUND_MESSAGE
 
     conversation = await get_or_create_telegram_conversation_full(
-        user_id=nexus_user_id,
+        user_id=pawrrtal_user_id,
         session=session,
         thread_id=sender.thread_id,
     )
@@ -243,7 +242,7 @@ async def handle_plain_message(
 
     logger.info(
         "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s thread_id=%s text_len=%d",
-        nexus_user_id,
+        pawrrtal_user_id,
         conversation.id,
         model_id,
         sender.thread_id,
@@ -251,7 +250,7 @@ async def handle_plain_message(
     )
 
     return TelegramTurnContext(
-        nexus_user_id=nexus_user_id,
+        pawrrtal_user_id=pawrrtal_user_id,
         conversation_id=conversation.id,
         model_id=model_id,
         thread_id=sender.thread_id,
@@ -276,12 +275,12 @@ async def handle_new_command(
     Returns:
         Reply string the bot should send immediately.
     """
-    nexus_user_id = await get_user_id_for_external(
+    pawrrtal_user_id = await get_user_id_for_external(
         provider=PROVIDER,
         external_user_id=str(sender.user_id),
         session=session,
     )
-    if nexus_user_id is None:
+    if pawrrtal_user_id is None:
         return _NEW_NOT_BOUND_MESSAGE
 
     from datetime import datetime  # noqa: PLC0415 — already imported by callers
@@ -290,7 +289,7 @@ async def handle_new_command(
 
     conversation = Conversation(
         id=uuid.uuid4(),
-        user_id=nexus_user_id,
+        user_id=pawrrtal_user_id,
         title="Telegram",
         origin_channel="telegram",
         telegram_thread_id=sender.thread_id,
@@ -302,7 +301,7 @@ async def handle_new_command(
 
     logger.info(
         "TELEGRAM_NEW_CONVERSATION user_id=%s conversation_id=%s thread_id=%s",
-        nexus_user_id,
+        pawrrtal_user_id,
         conversation.id,
         sender.thread_id,
     )
@@ -363,16 +362,16 @@ async def handle_model_command(
     if not any(model_id.startswith(p) for p in _VALID_MODEL_PREFIXES):
         return _MODEL_UNKNOWN_PREFIX_MESSAGE
 
-    nexus_user_id = await get_user_id_for_external(
+    pawrrtal_user_id = await get_user_id_for_external(
         provider=PROVIDER,
         external_user_id=str(sender.user_id),
         session=session,
     )
-    if nexus_user_id is None:
+    if pawrrtal_user_id is None:
         return _MODEL_NOT_BOUND_MESSAGE
 
     conversation = await get_or_create_telegram_conversation_full(
-        user_id=nexus_user_id,
+        user_id=pawrrtal_user_id,
         session=session,
         thread_id=sender.thread_id,
     )
@@ -392,7 +391,7 @@ async def handle_model_command(
 
     logger.info(
         "TELEGRAM_MODEL_SET user_id=%s conversation_id=%s model_id=%s",
-        nexus_user_id,
+        pawrrtal_user_id,
         conversation.id,
         model_id,
     )

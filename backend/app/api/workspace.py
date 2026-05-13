@@ -12,10 +12,10 @@ Mounted at: /api/v1/workspaces
 
 from __future__ import annotations
 
+import asyncio
+import mimetypes
 import uuid
 from pathlib import Path
-
-import mimetypes
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -69,7 +69,7 @@ def _safe_child(root: Path, relative: str) -> Path:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Path must be inside the workspace",
-        )
+        ) from None
     return resolved
 
 
@@ -110,7 +110,7 @@ def _build_tree(root: Path, relative_root: Path | None = None) -> list[Workspace
 # ---------------------------------------------------------------------------
 
 
-def get_workspace_router() -> APIRouter:
+def get_workspace_router() -> APIRouter:  # noqa: C901, PLR0915
     """Build the workspace router (mounted at /api/v1/workspaces)."""
     router = APIRouter(prefix="/api/v1/workspaces", tags=["workspaces"])
 
@@ -140,7 +140,7 @@ def get_workspace_router() -> APIRouter:
         """Return the full file tree of a workspace as a flat node list."""
         ws = await _get_owned_workspace(workspace_id, user, session)
         root = Path(ws.path)
-        if not root.exists():
+        if not await asyncio.to_thread(root.exists):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace directory not found on disk",
@@ -165,21 +165,21 @@ def get_workspace_router() -> APIRouter:
         ws = await _get_owned_workspace(workspace_id, user, session)
         target = _safe_child(Path(ws.path), file_path)
 
-        if not target.exists():
+        if not await asyncio.to_thread(target.exists):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-        if target.is_dir():
+        if await asyncio.to_thread(target.is_dir):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Path is a directory, not a file",
             )
 
         try:
-            content = target.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
+            content = await asyncio.to_thread(target.read_text, encoding="utf-8")
+        except UnicodeDecodeError as err:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="File is not valid UTF-8 text",
-            )
+            ) from err
 
         return WorkspaceFileContent(path=file_path, content=content)
 
@@ -203,14 +203,16 @@ def get_workspace_router() -> APIRouter:
         ws = await _get_owned_workspace(workspace_id, user, session)
         target = _safe_child(Path(ws.path), file_path)
 
-        if target.is_dir():
+        if await asyncio.to_thread(target.is_dir):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Path resolves to a directory",
             )
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(payload.content, encoding="utf-8")
+        await asyncio.to_thread(lambda: target.parent.mkdir(parents=True, exist_ok=True))
+        await asyncio.to_thread(
+            lambda: target.write_text(payload.content, encoding="utf-8"),
+        )
 
         return WorkspaceFileContent(path=file_path, content=payload.content)
 
@@ -232,15 +234,15 @@ def get_workspace_router() -> APIRouter:
         ws = await _get_owned_workspace(workspace_id, user, session)
         target = _safe_child(Path(ws.path), file_path)
 
-        if not target.exists():
+        if not await asyncio.to_thread(target.exists):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
-        if target.is_dir():
+        if await asyncio.to_thread(target.is_dir):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Use a dedicated endpoint to delete directories",
             )
 
-        target.unlink()
+        await asyncio.to_thread(target.unlink)
 
     # ------------------------------------------------------------------
     # Serve binary file from the default workspace
@@ -268,6 +270,8 @@ def get_workspace_router() -> APIRouter:
 
         Args:
             file_path: Workspace-relative path (e.g. ``artifacts/chart.png``).
+            user: Authenticated caller (FastAPI dependency).
+            session: Active database session (FastAPI dependency).
 
         Returns:
             The file streamed with the appropriate ``Content-Type`` header.
@@ -279,24 +283,23 @@ def get_workspace_router() -> APIRouter:
                 detail="No default workspace found.  Complete onboarding first.",
             )
 
-        root = Path(ws.path).resolve()
-        target = _safe_child(root, file_path)
+        resolved_root = await asyncio.to_thread(lambda: Path(ws.path).resolve())
+        target = _safe_child(resolved_root, file_path)
 
-        if not target.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
-        if target.is_dir():
+        if not await asyncio.to_thread(target.exists):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+        if await asyncio.to_thread(target.is_dir):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Path is a directory, not a file",
             )
 
         mime, _ = mimetypes.guess_type(str(target))
+        filename = await asyncio.to_thread(lambda: target.name)
         return FileResponse(
             path=str(target),
             media_type=mime or "application/octet-stream",
-            filename=target.name,
+            filename=filename,
         )
 
     return router

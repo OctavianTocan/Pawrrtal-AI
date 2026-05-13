@@ -22,6 +22,8 @@ import asyncio
 
 import pytest
 
+from app.api.chat import _maybe_artifact_event
+from app.core.agent_tools import build_agent_tools
 from app.core.providers.base import StreamEvent
 from app.core.tools.artifact import (
     ArtifactValidationError,
@@ -32,7 +34,14 @@ from app.core.tools.artifact_agent import (
     ARTIFACT_TOOL_NAME,
     make_artifact_tool,
 )
-
+from tests.agent_harness import (
+    ScriptedStreamFn,
+    echo_tool,
+    make_recording_stream_fn,
+    run_scenario,
+    text_turn,
+    tool_call_turn,
+)
 
 _VALID_SPEC = {
     "root": "page",
@@ -135,18 +144,14 @@ def test_agent_tool_metadata() -> None:
 
 def test_agent_tool_execute_returns_summary_on_valid_call() -> None:
     tool = make_artifact_tool()
-    result = asyncio.run(
-        tool.execute(tool_call_id="t1", title="Demo", spec=_VALID_SPEC)
-    )
+    result = asyncio.run(tool.execute(tool_call_id="t1", title="Demo", spec=_VALID_SPEC))
     assert result.startswith("Artifact rendered")
     assert "art_" in result
 
 
 def test_agent_tool_execute_returns_corrective_string_on_bad_spec() -> None:
     tool = make_artifact_tool()
-    result = asyncio.run(
-        tool.execute(tool_call_id="t1", title="Demo", spec="not a dict")
-    )
+    result = asyncio.run(tool.execute(tool_call_id="t1", title="Demo", spec="not a dict"))
     # Should be human-readable so the LLM can self-correct, not raise.
     assert "Error" in result
     assert "render_artifact again" in result
@@ -158,7 +163,6 @@ def test_agent_tool_execute_returns_corrective_string_on_bad_spec() -> None:
 
 
 def test_maybe_artifact_event_emits_for_render_artifact_tool_use() -> None:
-    from app.api.chat import _maybe_artifact_event
 
     event: StreamEvent = {
         "type": "tool_use",
@@ -178,7 +182,6 @@ def test_maybe_artifact_event_emits_for_render_artifact_tool_use() -> None:
 
 
 def test_maybe_artifact_event_returns_none_for_other_tools() -> None:
-    from app.api.chat import _maybe_artifact_event
 
     event: StreamEvent = {
         "type": "tool_use",
@@ -190,7 +193,6 @@ def test_maybe_artifact_event_returns_none_for_other_tools() -> None:
 
 
 def test_maybe_artifact_event_returns_none_for_invalid_spec() -> None:
-    from app.api.chat import _maybe_artifact_event
 
     event: StreamEvent = {
         "type": "tool_use",
@@ -204,7 +206,6 @@ def test_maybe_artifact_event_returns_none_for_invalid_spec() -> None:
 
 
 def test_maybe_artifact_event_returns_none_for_non_tool_events() -> None:
-    from app.api.chat import _maybe_artifact_event
 
     delta: StreamEvent = {"type": "delta", "content": "hello"}
     assert _maybe_artifact_event(delta) is None
@@ -221,9 +222,6 @@ def test_artifact_tool_is_registered_in_build_agent_tools(tmp_path) -> None:
     This test guards against accidental removal from ``build_agent_tools``.
     It also verifies no duplicate tool names are registered.
     """
-    from pathlib import Path
-
-    from app.core.agent_tools import build_agent_tools
 
     tools = build_agent_tools(workspace_root=tmp_path)
     tool_names = [t.name for t in tools]
@@ -260,22 +258,16 @@ class TestArtifactToolScenarios:
         - The LLM sees the confirmation summary on the next turn.
         - The agent finishes cleanly in 2 LLM calls.
         """
-        from tests.agent_harness import (
-            ScriptedStreamFn,
-            make_recording_stream_fn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
+        script = make_recording_stream_fn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Demo Dashboard", "spec": _VALID_SPEC},
+                    turn_id="art-tc-1",
+                ),
+                text_turn("Here's your dashboard!"),
+            ]
         )
-
-        script = make_recording_stream_fn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Demo Dashboard", "spec": _VALID_SPEC},
-                turn_id="art-tc-1",
-            ),
-            text_turn("Here's your dashboard!"),
-        ])
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -305,32 +297,27 @@ class TestArtifactToolScenarios:
         the LLM can self-correct.  This test proves the whole retry cycle works
         end-to-end through the real loop.
         """
-        from tests.agent_harness import (
-            make_recording_stream_fn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
-        )
-
         # Bad spec: root points to an element that doesn't exist in elements.
         bad_spec = {"root": "ghost", "elements": _VALID_SPEC["elements"]}
 
-        script = make_recording_stream_fn([
-            # Turn 1: bad call.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "My Card", "spec": bad_spec},
-                turn_id="art-tc-bad",
-            ),
-            # Turn 2: agent receives corrective string and retries.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "My Card", "spec": _VALID_SPEC},
-                turn_id="art-tc-good",
-            ),
-            # Turn 3: agent says done.
-            text_turn("Artifact is ready!"),
-        ])
+        script = make_recording_stream_fn(
+            [
+                # Turn 1: bad call.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "My Card", "spec": bad_spec},
+                    turn_id="art-tc-bad",
+                ),
+                # Turn 2: agent receives corrective string and retries.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "My Card", "spec": _VALID_SPEC},
+                    turn_id="art-tc-good",
+                ),
+                # Turn 3: agent says done.
+                text_turn("Artifact is ready!"),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -364,26 +351,20 @@ class TestArtifactToolScenarios:
         calls render_artifact to display the result as a card.  Both tools must
         execute correctly and their results must accumulate in LLM context.
         """
-        from tests.agent_harness import (
-            echo_tool,
-            make_recording_stream_fn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
+        script = make_recording_stream_fn(
+            [
+                # Turn 1: agent calls echo (simulating any other tool).
+                tool_call_turn("echo", {"value": "search result"}, turn_id="echo-1"),
+                # Turn 2: agent renders the result as an artifact.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Search Summary", "spec": _VALID_SPEC},
+                    turn_id="art-1",
+                ),
+                # Turn 3: agent is done.
+                text_turn("Done."),
+            ]
         )
-
-        script = make_recording_stream_fn([
-            # Turn 1: agent calls echo (simulating any other tool).
-            tool_call_turn("echo", {"value": "search result"}, turn_id="echo-1"),
-            # Turn 2: agent renders the result as an artifact.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Search Summary", "spec": _VALID_SPEC},
-                turn_id="art-1",
-            ),
-            # Turn 3: agent is done.
-            text_turn("Done."),
-        ])
 
         events = await run_scenario(
             script,
@@ -406,9 +387,7 @@ class TestArtifactToolScenarios:
         assert "Artifact rendered" in art_tr["content"]
 
         # Final LLM call sees both tool results.
-        final_ctx_tool_results = [
-            m for m in script.messages_seen[2] if m["role"] == "toolResult"
-        ]
+        final_ctx_tool_results = [m for m in script.messages_seen[2] if m["role"] == "toolResult"]
         assert len(final_ctx_tool_results) == 2
 
     @pytest.mark.anyio
@@ -418,13 +397,6 @@ class TestArtifactToolScenarios:
         Each artifact call should be independent: different ids, different titles,
         both confirmed to the LLM.
         """
-        from tests.agent_harness import (
-            make_recording_stream_fn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
-        )
-
         spec_b = {
             "root": "stat",
             "elements": {
@@ -436,19 +408,21 @@ class TestArtifactToolScenarios:
             },
         }
 
-        script = make_recording_stream_fn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Overview", "spec": _VALID_SPEC},
-                turn_id="art-first",
-            ),
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Stats", "spec": spec_b},
-                turn_id="art-second",
-            ),
-            text_turn("Both artifacts delivered."),
-        ])
+        script = make_recording_stream_fn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Overview", "spec": _VALID_SPEC},
+                    turn_id="art-first",
+                ),
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Stats", "spec": spec_b},
+                    turn_id="art-second",
+                ),
+                text_turn("Both artifacts delivered."),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -474,21 +448,16 @@ class TestArtifactToolScenarios:
         """The agent_loop emits tool_call_start → tool_call_end → tool_result
         for an artifact call — same sequencing contract as all other tools.
         """
-        from tests.agent_harness import (
-            ScriptedStreamFn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Seq Test", "spec": _VALID_SPEC},
+                    turn_id="seq-tc",
+                ),
+                text_turn("done"),
+            ]
         )
-
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Seq Test", "spec": _VALID_SPEC},
-                turn_id="seq-tc",
-            ),
-            text_turn("done"),
-        ])
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -513,20 +482,15 @@ class TestArtifactToolScenarios:
         is_error=True with a 'not found' message — render_artifact name must be
         spelled exactly as ARTIFACT_TOOL_NAME in the script.
         """
-        from tests.agent_harness import (
-            ScriptedStreamFn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    "render_ARTIFACT",  # wrong capitalisation — not registered
+                    {"title": "X", "spec": _VALID_SPEC},
+                ),
+                text_turn("done"),
+            ]
         )
-
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                "render_ARTIFACT",  # wrong capitalisation — not registered
-                {"title": "X", "spec": _VALID_SPEC},
-            ),
-            text_turn("done"),
-        ])
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -540,20 +504,15 @@ class TestArtifactToolScenarios:
         """Blank title is the most likely LLM mistake.  The agent_loop must NOT
         crash — it must receive the corrective string and continue normally.
         """
-        from tests.agent_harness import (
-            ScriptedStreamFn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "", "spec": _VALID_SPEC},
+                ),
+                text_turn("I see the error, fixed."),
+            ]
         )
-
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "", "spec": _VALID_SPEC},
-            ),
-            text_turn("I see the error, fixed."),
-        ])
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -571,22 +530,17 @@ class TestArtifactToolScenarios:
         """Missing 'elements' key is another common model mistake.  Loop must
         feed the corrective string back cleanly.
         """
-        from tests.agent_harness import (
-            ScriptedStreamFn,
-            run_scenario,
-            text_turn,
-            tool_call_turn,
-        )
-
         bad_spec = {"root": "page"}  # elements key missing entirely
 
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Missing Elements", "spec": bad_spec},
-            ),
-            text_turn("Understood the error."),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Missing Elements", "spec": bad_spec},
+                ),
+                text_turn("Understood the error."),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
