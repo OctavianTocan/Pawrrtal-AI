@@ -29,7 +29,9 @@ describe('StepMessaging', () => {
 				profile={{ connectedChannels: [] }}
 			/>
 		);
-		const continueButton = getByRole('button', { name: 'Finish messaging setup' }) as HTMLButtonElement;
+		const continueButton = getByRole('button', {
+			name: 'Finish messaging setup',
+		}) as HTMLButtonElement;
 		expect(continueButton.disabled).toBe(true);
 
 		rerender(
@@ -39,9 +41,9 @@ describe('StepMessaging', () => {
 				profile={{ connectedChannels: ['slack'] }}
 			/>
 		);
-		expect((getByRole('button', { name: 'Finish messaging setup' }) as HTMLButtonElement).disabled).toBe(
-			false
-		);
+		expect(
+			(getByRole('button', { name: 'Finish messaging setup' }) as HTMLButtonElement).disabled
+		).toBe(false);
 	});
 
 	it('toggles a channel on Connect click and emits the new connectedChannels list', () => {

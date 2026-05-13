@@ -11,6 +11,7 @@
 			"scripts/**",
 			"frontend/lib/react-dropdown/**",
 			"frontend/lib/react-chat-composer/**",
+			"frontend/lib/react-overlay/**",
 			"../.agents/**",
 			"../.claude/**",
 			"../.cline/**",
@@ -20,7 +21,8 @@
 			"../.pi/**",
 			"../scripts/**",
 			"lib/react-dropdown/**",
-			"lib/react-chat-composer/**"
+			"lib/react-chat-composer/**",
+			"lib/react-overlay/**"
 		]
 	}
 }
