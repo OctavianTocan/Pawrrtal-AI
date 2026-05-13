@@ -13,10 +13,10 @@
 # Hardening notes:
 #   - Frontend uses `expose:` not `ports:` so it's reachable only inside
 #     the Docker network. All public traffic must go through Nginx.
-#   - Backend keeps its base-file `ports: ["8000:8000"]` because compose
-#     lists merge (append, not replace). If you don't want :8000 reachable
-#     on the VPS host network, change the base file to drop the publish —
-#     Nginx already talks to it on the Docker network via the service name.
+#   - Backend has NO host-published `ports` in the base compose file.
+#     Host bindings live only in docker-compose.dev.yml, so running the
+#     prod overlay never exposes :8000 or :5432 on the VPS host network.
+#     Nginx is the sole public surface.
 #   - Migrations are capped at 5 attempts to avoid masking real failures
 #     behind an infinite retry loop.
 #
