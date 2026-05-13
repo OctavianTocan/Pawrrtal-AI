@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -24,6 +25,7 @@ from app.core.governance.cost_tracker import (
 )
 from app.core.governance.workspace_context import load_workspace_context
 from app.core.lcm import assemble_context as lcm_assemble_context
+from app.core.lcm import compact_leaf_if_needed as lcm_compact_leaf
 from app.core.lcm import ingest_message as lcm_ingest_message
 from app.core.observability._turn_view import (
     aggregator_stop_reason,
@@ -458,6 +460,49 @@ async def _finalize_turn(
             source=turn_input.log_tag.lower(),
         )
     )
+    # Fire-and-forget LCM leaf compaction.  Runs after the assistant row is
+    # finalized so the just-completed turn is eligible for compaction.
+    # Errors swallowed inside the bg helper — full history is always
+    # preserved in ``chat_messages``.
+    if settings.lcm_enabled:
+        asyncio.create_task(
+            _lcm_compact_bg(
+                conversation_id=turn_input.conversation_id,
+                user_id=turn_input.user_id,
+                model_id=model_id or "",
+            )
+        )
+
+
+async def _lcm_compact_bg(
+    *,
+    conversation_id: uuid.UUID,
+    user_id: uuid.UUID,
+    model_id: str,
+) -> None:
+    """Run one LCM leaf-compaction pass for ``conversation_id``.
+
+    Opens its own session so it runs independently of the request
+    lifecycle.  All exceptions are caught and logged — a failed
+    compaction must never surface to the user; the full message
+    history stays preserved in ``chat_messages``.
+    """
+    try:
+        async with async_session_maker() as compact_session:
+            await lcm_compact_leaf(
+                compact_session,
+                conversation_id=conversation_id,
+                user_id=user_id,
+                model_id=model_id,
+                fresh_tail_count=settings.lcm_fresh_tail_count,
+                max_chunk_tokens=settings.lcm_leaf_chunk_tokens,
+            )
+            await compact_session.commit()
+    except Exception:
+        logger.exception(
+            "LCM_COMPACT_BG_ERR conversation_id=%s",
+            conversation_id,
+        )
 
 
 async def _record_turn_cost(
