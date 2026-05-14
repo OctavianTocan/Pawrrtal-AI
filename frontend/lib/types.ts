@@ -96,7 +96,7 @@ export interface Project {
 }
 
 /**
- * Message shape used by the Agno agent / chat API.
+ * Message shape used by the chat API.
  *
  * The streaming-only fields below (`thinking`, `tool_calls`, `timeline`,
  * `thinking_started_at`, `thinking_duration_seconds`, `assistant_status`) are
@@ -104,7 +104,7 @@ export interface Project {
  * `role` + `content`) hydrates unchanged; they're populated live during
  * streaming by {@link import('@/features/chat/ChatContainer').default}.
  */
-export interface AgnoMessage {
+export interface ChatMessage {
 	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
 	role: Exclude<MessageRole, 'plan'>;
 	/** Plain-text message body. */

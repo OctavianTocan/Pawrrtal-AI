@@ -147,7 +147,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
         reply as a placeholder that is patched on stream end with the full
         chain-of-thought state. This is what powers ``GET /conversations/:id/messages``
         rehydration: the chat UI reads from ``chat_messages``, not from
-        Agno's internal log.
+        provider-native transcript logs.
 
         The provider is resolved from model_id — the endpoint is fully
         provider-agnostic. Changing model_id changes the provider; the
@@ -326,6 +326,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                         history=history,
                         tools=agent_tools or None,
                         system_prompt=workspace_system_prompt,
+                        reasoning_effort=request.reasoning_effort,
                     ):
                         event_count += 1
                         aggregator.apply(event)

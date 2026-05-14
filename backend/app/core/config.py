@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # request resolves to a Claude model. Generate with `claude setup-token`.
     claude_code_oauth_token: str = ""
     # API key for Exa (https://exa.ai). Powers the provider-agnostic
-    # `exa_search` tool wired into both the Claude SDK and Agno agents.
+    # `exa_search` tool wired into chat providers.
     # Leave empty to disable web search; the tool returns a clear
     # "not configured" error rather than crashing the turn.
     exa_api_key: str = ""

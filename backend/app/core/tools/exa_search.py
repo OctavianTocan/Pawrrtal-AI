@@ -2,9 +2,8 @@
 
 Single async core (:func:`exa_search`) that hits Exa's search API
 (`POST https://api.exa.ai/search`) and returns a compact list of
-``ExaSearchHit`` rows. The Claude Agent SDK and Agno wrappers in
-:mod:`app.core.tools.exa_search_claude` / ``exa_search_agno`` both delegate
-here — the network call lives in exactly one place.
+``ExaSearchHit`` rows. The Claude Agent SDK and agent-loop wrappers both
+delegate here; the network call lives in exactly one place.
 
 Design notes
 ------------

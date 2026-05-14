@@ -123,9 +123,8 @@ async def test_generate_conversation_title_persists_usable_title(
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Old"})
 
-    # The conversations route was refactored from `create_utility_agent`
-    # (Agno) to `generate_text_once` (gemini-utils).  Monkeypatch the
-    # actual call site so the test isn't pinned to the old indirection.
+    # Monkeypatch the actual call site so the test isn't pinned to the
+    # provider implementation behind title generation.
     async def _fake_generate_text(_prompt: str) -> str:
         return '"Better   Title"'
 

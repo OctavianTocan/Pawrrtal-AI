@@ -188,7 +188,7 @@ disallow_untyped_defs = false  # test fixtures are fine without explicit types
 
 [[tool.mypy.overrides]]
 # Third-party packages without complete type stubs.
-module = ["sqlalchemy_utils.*", "agno.*", "mcp.*"]
+module = ["sqlalchemy_utils.*", "mcp.*"]
 ignore_missing_imports = true
 
 # --- bandit: security scanner ------------------------------------------------
