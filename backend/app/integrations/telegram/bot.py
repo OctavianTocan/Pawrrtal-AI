@@ -445,6 +445,10 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
     otherwise — and ensures the polling task or webhook registration is
     properly cleaned up on shutdown.
     """
+    if settings.demo_mode:
+        logger.info("TELEGRAM_DISABLED reason=demo_mode")
+        yield None
+        return
     if not settings.telegram_bot_token:
         logger.info("TELEGRAM_DISABLED reason=no_token")
         yield None
