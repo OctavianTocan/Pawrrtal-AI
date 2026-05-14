@@ -1,14 +1,14 @@
 ---
 # pawrrtal-kt0r
 title: 'Task 10: Delete frontend catalog + wire ChatContainer to useChatModels'
-status: in-progress
+status: completed
 type: task
 priority: high
 tags:
     - chat
     - frontend
 created_at: 2026-05-14T07:36:53Z
-updated_at: 2026-05-14T07:36:56Z
+updated_at: 2026-05-14T07:51:28Z
 blocked_by:
     - pawrrtal-k63i
 ---

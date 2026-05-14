@@ -5,7 +5,7 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-05-14T05:15:03Z
-updated_at: 2026-05-14T05:18:33Z
+updated_at: 2026-05-14T06:00:56Z
 ---
 
 Telegram sends model IDs as 'google/gemini-3-flash-preview' (with provider prefix) but resolve_llm() passes them through unchanged. Gemini SDK gets 'google/gemini-3-flash-preview' and returns 404 Not Found. Web app sends bare 'gemini-3-flash-preview' which works. Fix: strip provider prefix in resolve_llm so both forms route correctly.
@@ -24,3 +24,9 @@ Telegram sends model IDs as 'google/gemini-3-flash-preview' (with provider prefi
 Also lifted 8 PLC0415 `import-inside-function` lint errors in the same test file to module-level imports.
 
 All 95 tests across factory / chat-api / claude-provider / telegram-channel passing; ruff clean on touched files.
+
+## Follow-on design
+
+Investigation of the broader issue produced ADR `docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md` (Proposed). The strip helper added here (`_strip_provider_segment`) is vestigial under that design and gets deleted when the ADR ships.
+
+Follow-up bean: pawrrtal-25yy (Telegram proactive catalog validation).

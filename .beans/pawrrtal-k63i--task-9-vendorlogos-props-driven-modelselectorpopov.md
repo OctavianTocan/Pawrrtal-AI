@@ -1,14 +1,14 @@
 ---
 # pawrrtal-k63i
 title: 'Task 9: VendorLogos + props-driven ModelSelectorPopover'
-status: in-progress
+status: completed
 type: task
 priority: high
 tags:
     - chat
     - frontend
 created_at: 2026-05-14T07:26:18Z
-updated_at: 2026-05-14T07:26:18Z
+updated_at: 2026-05-14T07:33:32Z
 blocked_by:
     - pawrrtal-got4
 ---
