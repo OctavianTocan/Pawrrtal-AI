@@ -311,37 +311,10 @@ class ChatMessageRead(BaseModel):
 
 
 # --- Channel schemas ---------------------------------------------------------
-
-
-class ChannelBindingRead(BaseModel):
-    """Public view of a third-party messaging binding.
-
-    Returned by ``GET /api/v1/channels`` so the Settings UI can list which
-    services the user has connected. Sensitive provider IDs are exposed only
-    to their owner via the authenticated route.
-    """
-
-    provider: str
-    external_user_id: str
-    external_chat_id: str | None = None
-    display_handle: str | None = None
-    created_at: datetime
-
-
-class ChannelLinkCodeResponse(BaseModel):
-    """Response shape returned when the web app requests a fresh link code.
-
-    `code` is the plaintext the user types (or the bot reads from a
-    `t.me/<bot>?start=<code>` deep link); the server only persists its
-    HMAC. `expires_at` powers the countdown timer the frontend renders.
-    `bot_username` is included so the frontend can render the deep link
-    without hard-coding the bot identity.
-    """
-
-    code: str
-    expires_at: datetime
-    bot_username: str | None = None
-    deep_link: str | None = None
+# TODO(pawrrtal-1irw): two Pydantic schemas go here — the public view of a
+#   binding row, and the response shape for the link-code endpoint. The
+#   frontend reads both; keep field names stable. Look at what
+#   `frontend/lib/channels.ts` deserializes before naming things.
 
 
 # --- Workspace schemas --------------------------------------------------------

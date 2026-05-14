@@ -33,21 +33,13 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_flagged: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_unread: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -66,13 +58,10 @@ class Conversation(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
     )
-    # Channel that created this conversation (e.g. "telegram", "web").
-    origin_channel: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    # Telegram Bot API 9.3+ topic thread ID.  NULL for non-topic DMs.
-    telegram_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    # Lifecycle marker for the auto-title feature:
-    # NULL = not yet titled, "auto" = generated, "user" = user-edited.
-    title_set_by: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # TODO(pawrrtal-j8o1): re-add three Mapped[...] columns here. The DB
+    #   already has them (migration 011); only the ORM declarations are
+    #   missing. One is a label, one is a topic ID, one is a fire-once
+    #   lifecycle marker the auto-title helper reads.
 
 
 class Project(Base):
@@ -87,9 +76,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -169,74 +156,11 @@ class UserAppearance(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
-class ChannelBinding(Base):
-    """Persistent map from a third-party messaging identity to a Nexus user.
-
-    One row per (provider, external_user_id) — enforced by a unique
-    constraint so a Telegram account can never silently move between
-    Nexus users. Created when a user successfully redeems a one-time
-    code via the bot's `/start <code>` (or manual paste) flow.
-
-    The `provider` column is open-ended on purpose: today only
-    `"telegram"` is wired up, but the same table will host Slack,
-    WhatsApp, iMessage, etc. as those adapters land.
-    """
-
-    __tablename__ = "channel_bindings"
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
-    )
-    provider: Mapped[str] = mapped_column(String(32))
-    # Provider identities can be ints (Telegram user_id) or strings
-    # (Slack user IDs, WhatsApp phone numbers). Normalize to text so
-    # the column shape stays the same across providers.
-    external_user_id: Mapped[str] = mapped_column(String(128))
-    # Default chat to push to. For Telegram direct chats this matches
-    # external_user_id; for groups it's the chat where the bind happened.
-    external_chat_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    # Display handle captured at bind time. Stored for admin/debug only,
-    # never used for authentication.
-    display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    # The conversation that is currently active for non-topic DMs.
-    # NULL until the first message arrives.  ON DELETE SET NULL so
-    # removing the conversation doesn't orphan the binding.
-    active_conversation_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid,
-        ForeignKey("conversations.id", ondelete="SET NULL"),
-        nullable=True,
-    )
-    # True when this Telegram chat has Bot API 9.3+ Topics enabled.
-    # Drives the routing branch in the inbound message handler.
-    has_topics_enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    created_at: Mapped[datetime] = mapped_column(DateTime)
-
-
-class ChannelLinkCode(Base):
-    """Short-lived one-time-use code that brokers a channel bind.
-
-    The web app issues a code (server-side; user only sees the plaintext
-    once), the user sends it to the bot, and the bot consumes the row to
-    create the matching `ChannelBinding`. We persist an HMAC of the code
-    rather than the plaintext so a DB leak cannot be replayed against
-    the bot. Lookups are always by `code_hash`, which is therefore the
-    primary key.
-    """
-
-    __tablename__ = "channel_link_codes"
-
-    code_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE"), index=True
-    )
-    provider: Mapped[str] = mapped_column(String(32))
-    created_at: Mapped[datetime] = mapped_column(DateTime)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
-    # NULL while the code is unredeemed; populated once the bot consumes it.
-    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+# TODO(pawrrtal-j8o1): two ORM classes go here. Tables already exist in
+#   the DB (migrations 007 + 011) — match those column types exactly.
+#   One has a unique constraint that prevents the same external identity
+#   from mapping to two Nexus users; the other uses a hashed column as
+#   its primary key.
 
 
 class ChatMessage(Base):
@@ -257,9 +181,7 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -269,9 +191,7 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # Workspace-relative path to a file the agent delivered via send_message.
@@ -283,8 +203,10 @@ class ChatMessage(Base):
 
 
 class Workspace(Base):
-    """An agent workspace — a named directory on the host filesystem containing
-    the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
+    """An agent workspace.
+
+    A named directory on the host filesystem containing the standard
+    OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
     IDENTITY.md, memory/, skills/, artifacts/).
 
     One user can own many workspaces.  The first workspace created for a user
