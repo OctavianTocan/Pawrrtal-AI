@@ -143,7 +143,10 @@ async def _collect(
     user_id: UUID,
     **stream_kwargs: Any,
 ) -> list[StreamEvent]:
-    return [event async for event in provider.stream(question, conversation_id, user_id, **stream_kwargs)]
+    return [
+        event
+        async for event in provider.stream(question, conversation_id, user_id, **stream_kwargs)
+    ]
 
 
 # ---------------------------------------------------------------------------
