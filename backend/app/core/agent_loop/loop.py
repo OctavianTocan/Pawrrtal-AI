@@ -78,7 +78,7 @@ async def agent_loop(
         yield event
 
 
-async def _run_loop(
+async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — single cohesive turn-lifecycle body; further splitting fragments shared mutable state without clarifying anything
     messages: list[AgentMessage],
     tools: list[AgentTool],
     new_messages: list[AgentMessage],
@@ -193,11 +193,20 @@ async def _run_loop(
                     result_text = f"Tool '{tc['name']}' not found."
                     is_error = True
                 else:
-                    try:
-                        result_text = await tool.execute(tc["tool_call_id"], **tc["arguments"])
-                    except Exception as exc:
-                        result_text = f"Tool error: {exc}"
+                    permission_denial = await _check_permission_or_none(
+                        config=config,
+                        tool_name=tc["name"],
+                        arguments=tc["arguments"],
+                    )
+                    if permission_denial is not None:
+                        result_text = permission_denial
                         is_error = True
+                    else:
+                        try:
+                            result_text = await tool.execute(tc["tool_call_id"], **tc["arguments"])
+                        except Exception as exc:
+                            result_text = f"Tool error: {exc}"
+                            is_error = True
 
                 yield ToolResultEvent(
                     type="tool_result",
@@ -474,3 +483,45 @@ def _make_context_snapshot(
 ) -> AgentContext:
     """Build an AgentContext snapshot for the should_stop_after_turn predicate."""
     return AgentContext(system_prompt="", messages=messages, tools=tools)
+
+
+async def _check_permission_or_none(
+    *,
+    config: AgentLoopConfig,
+    tool_name: str,
+    arguments: dict[str, Any],
+) -> str | None:
+    """Run the configured permission gate, returning a denial message.
+
+    Returns ``None`` when there's no gate or when the gate allows the
+    call. Otherwise returns the denial reason as a string so the
+    caller can surface it as the tool result. Also fires the optional
+    ``permission_audit_sink`` (errors swallowed — audit failures must
+    never break a turn).
+
+    Kept as a module-level helper so the inner loop body in
+    :func:`_run_loop` stays under the project's nesting budget.
+    """
+    if config.permission_check is None:
+        return None
+    try:
+        decision = await config.permission_check(tool_name, arguments)
+    except Exception as exc:
+        # A crashed permission check is a configuration bug, not a
+        # security signal — fail closed (deny) so a broken policy
+        # doesn't silently allow tool use, but include the error so
+        # the operator notices in logs.
+        _log.exception("agent_loop: permission_check crashed; failing closed for %s", tool_name)
+        return f"Tool '{tool_name}' denied: permission check error ({exc})."
+
+    if decision.get("allow", False):
+        return None
+
+    reason = decision.get("reason") or "Tool call denied by permission policy."
+    if config.permission_audit_sink is not None:
+        try:
+            await config.permission_audit_sink(tool_name, arguments, decision)
+        except Exception:
+            # Swallow audit failures — never break a turn over them.
+            _log.exception("agent_loop: permission_audit_sink raised; ignoring")
+    return reason

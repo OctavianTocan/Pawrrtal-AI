@@ -23,6 +23,7 @@ Usage::
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,106 @@ log = logging.getLogger(__name__)
 _MAX_READ_BYTES = 128_000  # 128 KB
 # Maximum number of entries list_dir will return.
 _MAX_LIST_ENTRIES = 200
+
+
+# ---------------------------------------------------------------------------
+# Forbidden filenames + dangerous file patterns (PR 03)
+#
+# Lifted verbatim from claude-code-telegram's ``SecurityValidator``
+# (``src/security/validators.py:92-132``). Even with the workspace
+# sandbox there's no good reason for the agent to read a user's
+# ``.env``, SSH key, or private cert — those are credentials that
+# should never be in a prompt or a chat-message persistence row.
+#
+# The permission gate (``governance.permissions``) consults these
+# lists on every file-shaped tool call; workspaces that legitimately
+# need access to a forbidden filename can opt in via the
+# ``WorkspaceContext`` allowlist (PR 06).
+# ---------------------------------------------------------------------------
+
+FORBIDDEN_FILENAMES: frozenset[str] = frozenset(
+    {
+        ".env",
+        ".env.local",
+        ".env.production",
+        ".env.development",
+        ".ssh",
+        ".aws",
+        ".docker",
+        "id_rsa",
+        "id_dsa",
+        "id_ecdsa",
+        "shadow",
+        "passwd",
+        "hosts",
+        "sudoers",
+        ".bash_history",
+        ".zsh_history",
+        ".mysql_history",
+        ".psql_history",
+    }
+)
+
+DANGEROUS_FILE_PATTERNS: tuple[str, ...] = (
+    r".*\.key$",
+    r".*\.pem$",
+    r".*\.p12$",
+    r".*\.pfx$",
+    r".*\.crt$",
+    r".*\.cer$",
+    r".*_rsa$",
+    r".*_dsa$",
+    r".*_ecdsa$",
+    r".*\.exe$",
+    r".*\.dll$",
+    r".*\.so$",
+    r".*\.dylib$",
+    r".*\.bat$",
+    r".*\.cmd$",
+    r".*\.msi$",
+)
+
+DANGEROUS_FILE_PATTERN_REGEXES: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(pattern, re.IGNORECASE) for pattern in DANGEROUS_FILE_PATTERNS
+)
+
+
+def matches_forbidden_filename(path: str) -> bool:
+    """``True`` when ``path`` ends in a forbidden filename or pattern.
+
+    Comparison is on the basename so a forbidden filename anywhere in
+    the tree is caught (``logs/.env`` is just as bad as ``./.env``).
+    Pattern matching is case-insensitive.
+    """
+    if not path:
+        return False
+    basename = Path(path).name.lower()
+    if basename in {entry.lower() for entry in FORBIDDEN_FILENAMES}:
+        return True
+    return any(pattern.match(basename) for pattern in DANGEROUS_FILE_PATTERN_REGEXES)
+
+
+def is_path_within_workspace(path: str, workspace_root: Path) -> bool:
+    """Resolve ``path`` against ``workspace_root`` and confirm containment.
+
+    Mirrors what :func:`_resolve_safe` does but returns a bool instead
+    of raising so the permission gate can short-circuit cleanly.
+    Treats relative paths as relative to ``workspace_root``; absolute
+    paths are resolved as-is and then containment-checked.
+    """
+    if not path:
+        # Empty path == workspace root, which is in-bounds.
+        return True
+    root_resolved = workspace_root.resolve()
+    candidate = Path(path)
+    try:
+        if candidate.is_absolute():
+            resolved = candidate.resolve()
+        else:
+            resolved = (root_resolved / path.lstrip("/")).resolve()
+    except (OSError, ValueError):
+        return False
+    return str(resolved).startswith(str(root_resolved))
 
 
 def _resolve_safe(root: Path, rel_path: str) -> Path:
