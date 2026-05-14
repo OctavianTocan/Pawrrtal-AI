@@ -67,6 +67,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Generate Fumadocs source files
+        working-directory: frontend
         run: bun run generate:docs
 
       - name: Run check (Biome + TypeScript + file-lines)
