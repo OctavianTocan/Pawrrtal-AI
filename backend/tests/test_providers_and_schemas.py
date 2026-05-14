@@ -18,49 +18,43 @@ from app.core.config import settings
 from app.core.providers.claude_provider import ClaudeLLM
 from app.core.providers.factory import resolve_llm
 from app.core.providers.gemini_provider import GeminiLLM
+from app.core.providers.model_id import InvalidModelId
 from app.schemas import ConversationCreate, ConversationUpdate, UserCreate
 
 
-def test_resolve_llm_routes_claude_models_to_claude_provider() -> None:
-    """Claude model IDs are routed to the Claude provider."""
-    assert isinstance(resolve_llm("claude-sonnet-4-6"), ClaudeLLM)
+def test_resolve_llm_accepts_canonical_anthropic_id() -> None:
+    """A fully-qualified ``host:vendor/model`` ID routes by host."""
+    provider = resolve_llm("agent-sdk:anthropic/claude-sonnet-4-6")
+    assert isinstance(provider, ClaudeLLM)
+    assert provider._model_id == "claude-sonnet-4-6"
 
 
-def test_resolve_llm_routes_default_and_gemini_to_agno_provider() -> None:
-    """Gemini and blank model IDs are routed to Agno."""
-    assert isinstance(resolve_llm("gemini-3-flash-preview"), GeminiLLM)
-    assert isinstance(resolve_llm(None), GeminiLLM)
-    assert isinstance(resolve_llm("  "), GeminiLLM)
-
-
-def test_resolve_llm_strips_google_provider_segment() -> None:
-    """Telegram-style ``google/<model>`` IDs route to Gemini with a clean ID.
-
-    Regression: the Gemini SDK returns 404 when handed the prefixed form
-    (``google/gemini-3-flash-preview``).  The factory must strip the
-    provider segment so the SDK only sees the bare model ID.
-    """
-    provider = resolve_llm("google/gemini-3-flash-preview")
-    assert isinstance(provider, GeminiLLM)
-    assert provider._model_id == "gemini-3-flash-preview"
-
-
-def test_resolve_llm_strips_anthropic_provider_segment() -> None:
-    """Telegram-style ``anthropic/<model>`` IDs route to Claude with a clean ID."""
+def test_resolve_llm_canonicalises_vendor_only_form() -> None:
+    """``vendor/model`` (no host prefix) is canonicalised before routing."""
     provider = resolve_llm("anthropic/claude-sonnet-4-6")
     assert isinstance(provider, ClaudeLLM)
     assert provider._model_id == "claude-sonnet-4-6"
 
 
-def test_resolve_llm_preserves_bare_model_id() -> None:
-    """Bare IDs (no provider segment) reach the provider unchanged."""
-    gemini = resolve_llm("gemini-3-flash-preview")
-    claude = resolve_llm("claude-sonnet-4-6")
+def test_resolve_llm_rejects_bare_model_id() -> None:
+    """Bare vendor slugs (no ``vendor/`` segment) are no longer accepted."""
+    with pytest.raises(InvalidModelId):
+        resolve_llm("claude-sonnet-4-6")
 
-    assert isinstance(gemini, GeminiLLM)
-    assert gemini._model_id == "gemini-3-flash-preview"
-    assert isinstance(claude, ClaudeLLM)
-    assert claude._model_id == "claude-sonnet-4-6"
+
+def test_resolve_llm_routes_google_via_host_table() -> None:
+    """``google/<model>`` routes to Gemini via the HOST_TO_PROVIDER table."""
+    provider = resolve_llm("google/gemini-3-flash-preview")
+    assert isinstance(provider, GeminiLLM)
+    assert provider._model_id == "gemini-3-flash-preview"
+
+
+def test_resolve_llm_none_uses_catalog_default() -> None:
+    """``model_id=None`` falls back to the catalog's default model."""
+    provider = resolve_llm(None)
+    # Default is currently a Google model, so we get GeminiLLM. The
+    # important assertion is that None doesn't raise.
+    assert isinstance(provider, GeminiLLM | ClaudeLLM)
 
 
 def test_conversation_create_accepts_optional_client_uuid() -> None:
@@ -110,13 +104,13 @@ def test_resolve_llm_accepts_user_id_for_gemini() -> None:
     The actual key resolution happens inside GeminiLLM.stream() which is
     tested separately.
     """
-    provider = resolve_llm("gemini-3-flash-preview", user_id=uuid4())
+    provider = resolve_llm("google/gemini-3-flash-preview", user_id=uuid4())
     assert isinstance(provider, GeminiLLM)
 
 
 def test_resolve_llm_accepts_user_id_for_claude() -> None:
     """resolve_llm with a user_id returns a ClaudeLLM instance."""
-    provider = resolve_llm("claude-sonnet-4-6", user_id=uuid4())
+    provider = resolve_llm("anthropic/claude-sonnet-4-6", user_id=uuid4())
     assert isinstance(provider, ClaudeLLM)
 
 
@@ -126,8 +120,8 @@ def test_resolve_llm_user_id_none_is_default() -> None:
     Both paths must route by model-id prefix; user_id only affects key
     resolution inside the provider, not which provider class is returned.
     """
-    without = resolve_llm("gemini-3-flash-preview")
-    with_none = resolve_llm("gemini-3-flash-preview", user_id=None)
+    without = resolve_llm("google/gemini-3-flash-preview")
+    with_none = resolve_llm("google/gemini-3-flash-preview", user_id=None)
 
     assert type(without) is type(with_none)
 
@@ -140,7 +134,7 @@ def test_resolve_llm_gemini_accepts_user_id_without_error() -> None:
     """
     uid = uuid4()
     # Must not raise.
-    provider = resolve_llm("gemini-3-flash-preview", user_id=uid)
+    provider = resolve_llm("google/gemini-3-flash-preview", user_id=uid)
     assert isinstance(provider, GeminiLLM)
 
 
@@ -151,7 +145,7 @@ def test_resolve_llm_claude_provider_stores_user_id() -> None:
     during stream() to resolve per-workspace CLAUDE_CODE_OAUTH_TOKEN.
     """
     uid = uuid4()
-    provider = resolve_llm("claude-sonnet-4-6", user_id=uid)
+    provider = resolve_llm("anthropic/claude-sonnet-4-6", user_id=uid)
     assert isinstance(provider, ClaudeLLM)
     assert provider._user_id == uid
 
