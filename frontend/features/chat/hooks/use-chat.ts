@@ -91,6 +91,24 @@ function safeReleaseLock(reader: { releaseLock: () => void }): void {
 }
 
 /**
+ * Parameters for a single streaming chat turn.
+ *
+ * Grouped into an object so callers can extend the payload (attachments,
+ * abort signals, etc.) without another breaking signature change on the
+ * generator function.
+ */
+export interface StreamMessageParams {
+	/** The user's prompt for this turn. */
+	message: string;
+	/** UUID of the conversation the turn belongs to. */
+	conversationId: string;
+	/** Catalog-canonical or legacy bare model id picked by the composer. */
+	modelId: ChatModelId;
+	/** Reasoning level the user selected; mapped to the backend grammar before sending. */
+	reasoningLevel: ChatReasoningLevel;
+}
+
+/**
  * Hook that exposes a streaming chat API as an async generator of typed events.
  *
  * @returns An object with `streamMessage` — call it to send a user message and
@@ -99,21 +117,16 @@ function safeReleaseLock(reader: { releaseLock: () => void }): void {
  *   failed assistant message.
  */
 export function useChat(): {
-	streamMessage: (
-		message: string,
-		conversationId: string,
-		modelId: ChatModelId,
-		reasoningLevel: ChatReasoningLevel
-	) => AsyncGenerator<ChatStreamEvent>;
+	streamMessage: (params: StreamMessageParams) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
 
-	async function* streamMessage(
-		message: string,
-		conversationId: string,
-		modelId: ChatModelId,
-		reasoningLevel: ChatReasoningLevel
-	): AsyncGenerator<ChatStreamEvent> {
+	async function* streamMessage({
+		message,
+		conversationId,
+		modelId,
+		reasoningLevel,
+	}: StreamMessageParams): AsyncGenerator<ChatStreamEvent> {
 		// Translate the user-facing label ("Extra High") into the backend
 		// grammar ("max"); see ``reasoningLevelToBackendEffort`` for the
 		// mapping table.  The chat router drops the value on non-thinking

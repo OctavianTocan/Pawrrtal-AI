@@ -30,14 +30,17 @@ type SetState<T> = (value: T | ((current: T) => T)) => void;
  * `canonicalise()` falls back to the catalog default.
  */
 function isChatModelId(value: unknown): value is ChatModelId {
-	return typeof value === 'string' && value.length > 0;
+	// Trim defensively so a whitespace-only persisted value ("   ") fails
+	// the guard and falls back to the default rather than being passed
+	// through to the backend as a "valid" id.
+	return typeof value === 'string' && value.trim().length > 0;
 }
 
 /** Runtime guard for persisted reasoning levels — same rationale as {@link isChatModelId}. */
 function isChatReasoningLevel(value: unknown): value is ChatReasoningLevel {
-	return (
-		typeof value === 'string' && (CHAT_REASONING_LEVELS as readonly string[]).includes(value)
-	);
+	if (typeof value !== 'string') return false;
+	const trimmed = value.trim();
+	return (CHAT_REASONING_LEVELS as readonly string[]).includes(trimmed);
 }
 
 /** Result of {@link useChatPickers}. */

@@ -73,12 +73,20 @@ type ReasoningOption = {
 	label: string;
 };
 
-const REASONING_OPTIONS: ReasoningOption[] = [
-	{ id: 'low', label: 'Low' },
-	{ id: 'medium', label: 'Medium' },
-	{ id: 'high', label: 'High' },
-	{ id: 'extra-high', label: 'Extra High' },
-];
+// Mapped by level so adding a `ChatReasoningLevel` member forces an entry
+// here at compile time (the `satisfies Record<...>` constraint fails
+// otherwise).  The flat array consumed by the menu render is derived
+// from `CHAT_REASONING_LEVELS` to preserve declaration order.
+const REASONING_OPTION_BY_LEVEL = {
+	low: { id: 'low', label: 'Low' },
+	medium: { id: 'medium', label: 'Medium' },
+	high: { id: 'high', label: 'High' },
+	'extra-high': { id: 'extra-high', label: 'Extra High' },
+} as const satisfies Record<ChatReasoningLevel, ReasoningOption>;
+
+const REASONING_OPTIONS: readonly ReasoningOption[] = CHAT_REASONING_LEVELS.map(
+	(level) => REASONING_OPTION_BY_LEVEL[level]
+);
 
 /**
  * Fallback catalog rendered while {@link useModels} is loading or after a
@@ -306,7 +314,7 @@ export function ModelSelectorPopover({
 	selectedReasoning,
 	onSelectModel,
 	onSelectReasoning,
-}: ModelSelectorPopoverProps): React.JSX.Element {
+}: ModelSelectorPopoverProps): React.JSX.Element | null {
 	const { data } = useModels();
 	// Fall back to the bundled catalog while the query is pending or has
 	// errored — the picker must remain usable on a cold load, especially

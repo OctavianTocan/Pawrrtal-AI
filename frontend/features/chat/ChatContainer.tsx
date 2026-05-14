@@ -74,11 +74,16 @@ export default function ChatContainer({
 	const { selectedModelId, setSelectedModelId, selectedReasoning, setSelectedReasoning } =
 		useChatPickers();
 
-	// Adapt the multi-arg transport to a (prompt)-only API so
+	// Adapt the params-object transport to a (prompt)-only API so
 	// `useChatTurns` stays decoupled from routing/model concerns.
 	const stream = useCallback(
 		(prompt: string) =>
-			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
+			streamMessage({
+				message: prompt,
+				conversationId,
+				modelId: selectedModelId,
+				reasoningLevel: selectedReasoning,
+			}),
 		[conversationId, selectedModelId, selectedReasoning, streamMessage]
 	);
 

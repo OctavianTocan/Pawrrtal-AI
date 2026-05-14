@@ -11,9 +11,10 @@ import {
 } from './ModelSelectorPopover';
 
 // `useModels` hits `/api/v1/models` via TanStack Query — neither is wired
-// up in this Vitest harness, so stub the hook with a static catalog that
-// matches the backend's published shape.  Using factory-style data keeps
-// each test isolated (no shared mutable mock array).
+// up in this Vitest harness, so stub the hook with a static, immutable
+// catalog matching the backend's published shape.  The mock returns the
+// same object on every call; tests don't mutate it, so module-scope is
+// safe (no need for a factory).
 const CATALOG: ModelsListResponse = {
 	default_canonical_id: 'google/gemini-3-flash-preview',
 	models: [

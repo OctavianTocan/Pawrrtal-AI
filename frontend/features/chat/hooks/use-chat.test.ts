@@ -61,7 +61,14 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
+			collectStream(
+				result.current.streamMessage({
+					message: 'Hi',
+					conversationId: 'conversation-1',
+					modelId: 'gpt-5.5',
+					reasoningLevel: 'medium',
+				})
+			)
 		).resolves.toEqual([
 			{ type: 'delta', content: 'Hel' },
 			{ type: 'delta', content: 'lo' },
@@ -95,7 +102,14 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
+			collectStream(
+				result.current.streamMessage({
+					message: 'Hi',
+					conversationId: 'conversation-1',
+					modelId: 'gpt-5.5',
+					reasoningLevel: 'medium',
+				})
+			)
 		).resolves.toEqual([{ type: 'delta', content: 'Split' }]);
 	});
 
@@ -114,7 +128,12 @@ describe('useChat', (): void => {
 
 		await expect(
 			collectStream(
-				result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6', 'medium')
+				result.current.streamMessage({
+					message: 'Hi',
+					conversationId: 'conversation-1',
+					modelId: 'claude-sonnet-4-6',
+					reasoningLevel: 'medium',
+				})
 			)
 		).resolves.toEqual([
 			{ type: 'thinking', content: 'Let me search…' },
@@ -136,7 +155,12 @@ describe('useChat', (): void => {
 
 		await expect(
 			collectStream(
-				result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6', 'medium')
+				result.current.streamMessage({
+					message: 'Hi',
+					conversationId: 'conversation-1',
+					modelId: 'claude-sonnet-4-6',
+					reasoningLevel: 'medium',
+				})
 			)
 		).rejects.toThrow('Claude CLI failed: missing auth');
 	});
@@ -153,7 +177,14 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
+			collectStream(
+				result.current.streamMessage({
+					message: 'Hi',
+					conversationId: 'conversation-1',
+					modelId: 'gpt-5.5',
+					reasoningLevel: 'medium',
+				})
+			)
 		).resolves.toEqual([{ type: 'delta', content: 'hi' }]);
 	});
 });

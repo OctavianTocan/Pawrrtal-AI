@@ -30,8 +30,7 @@ def get_models_router() -> APIRouter:
     def list_models(
         _user: User = Depends(current_active_user),
     ) -> ModelsListResponse:
-        """Return every model the backend can actually serve, plus the
-        canonical id of the default.
+        """List every model the backend can serve plus the catalog default.
 
         Authenticated so the frontend doesn't expose the catalog to
         unauthenticated visitors; the data isn't sensitive but the
