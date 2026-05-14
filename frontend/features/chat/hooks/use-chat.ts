@@ -8,6 +8,7 @@
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
+import type { ChatReasoningLevel } from '../constants';
 import type { ChatStreamEvent } from '../types';
 
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
@@ -111,7 +112,8 @@ export function useChat(): {
 	streamMessage: (
 		message: string,
 		conversationId: string,
-		modelId: string
+		modelId: string,
+		reasoningEffort: ChatReasoningLevel
 	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
@@ -119,7 +121,8 @@ export function useChat(): {
 	async function* streamMessage(
 		message: string,
 		conversationId: string,
-		modelId: string
+		modelId: string,
+		reasoningEffort: ChatReasoningLevel
 	): AsyncGenerator<ChatStreamEvent> {
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',
@@ -127,6 +130,7 @@ export function useChat(): {
 				question: message,
 				conversation_id: conversationId,
 				model_id: modelId,
+				reasoning_effort: reasoningEffort,
 			}),
 			headers: {
 				'Content-Type': 'application/json',

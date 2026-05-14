@@ -23,7 +23,7 @@ from app.db import async_session_maker
 if TYPE_CHECKING:
     from app.channels.base import Channel, ChannelMessage
     from app.core.agent_loop.types import AgentTool
-    from app.core.providers.base import AILLM, StreamEvent
+    from app.core.providers.base import AILLM, ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class ChatTurnInput:
     channel_message: ChannelMessage
     workspace_root: Path | None = None
     tools: list[AgentTool] | None = None
+    reasoning_effort: ReasoningEffort | None = None
     history_window: int = 20
     log_tag: str = "TURN"
     log_extras: dict[str, Any] = field(default_factory=dict)
@@ -76,6 +77,7 @@ async def run_turn(
                 history=history,
                 tools=turn_input.tools or None,
                 system_prompt=system_prompt,
+                reasoning_effort=turn_input.reasoning_effort,
             ):
                 counter.value += 1
                 aggregator.apply(event)

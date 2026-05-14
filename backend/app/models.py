@@ -26,8 +26,8 @@ class SenderType(Enum):
 class Conversation(Base):
     """Conversation metadata stored in the application database.
 
-    Actual message content is persisted by the Agno library in its own database. The two are linked via ``Conversation.id`` ==
-    Agno's ``session_id``.
+    Renderable message content lives in ``chat_messages``. Provider-native
+    transcript stores are only used as implementation details.
     """
 
     __tablename__ = "conversations"
@@ -245,10 +245,8 @@ class ChatMessage(Base):
     This is the source of truth for what the chat UI renders on a refresh:
     role, plain-text content, thinking/reasoning text, tool invocations and
     their results, the arrival-ordered timeline, and the reasoning duration.
-    Provider-agnostic — both Agno-backed and Claude-backed turns write here.
-
-    Note: Agno also keeps its own message log for context-window plumbing on
-    the next turn. That log is not used for rendering history; this table is.
+    Provider-agnostic turns write here; provider-native transcript stores
+    are not used for rendering history.
     """
 
     __tablename__ = "chat_messages"
@@ -283,9 +281,11 @@ class ChatMessage(Base):
 
 
 class Workspace(Base):
-    """An agent workspace — a named directory on the host filesystem containing
-    the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
-    IDENTITY.md, memory/, skills/, artifacts/).
+    """An agent workspace.
+
+    A named directory on the host filesystem containing the standard
+    OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md, IDENTITY.md,
+    memory/, skills/, artifacts/).
 
     One user can own many workspaces.  The first workspace created for a user
     is flagged ``is_default=True`` and seeded automatically at the end of the

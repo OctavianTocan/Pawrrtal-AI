@@ -27,6 +27,7 @@ class FakeProvider:
         history: object = None,
         tools: object = None,
         system_prompt: object = None,
+        reasoning_effort: object = None,
     ) -> AsyncIterator[dict[str, str]]:
         for event in self.events:
             yield event
@@ -87,6 +88,58 @@ async def test_chat_streams_provider_events(
     assert response.status_code == 200
     assert 'data: {"type": "delta", "content": "hello"}' in response.text
     assert "data: [DONE]" in response.text
+
+
+@pytest.mark.anyio
+async def test_chat_forwards_reasoning_effort(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: Workspace,
+) -> None:
+    """Chat forwards the selected reasoning level to the provider."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Reasoning"})
+    captured: dict[str, object] = {}
+
+    class CapturingProvider(FakeProvider):
+        async def stream(
+            self,
+            question: str,
+            conversation_id: object,
+            user_id: object,
+            history: object = None,
+            tools: object = None,
+            system_prompt: object = None,
+            reasoning_effort: object = None,
+        ) -> AsyncIterator[dict[str, str]]:
+            captured["reasoning_effort"] = reasoning_effort
+            async for event in super().stream(
+                question,
+                conversation_id,
+                user_id,
+                history=history,
+                tools=tools,
+                system_prompt=system_prompt,
+                reasoning_effort=reasoning_effort,
+            ):
+                yield event
+
+    monkeypatch.setattr(
+        "app.api.chat.resolve_llm",
+        lambda _model_id, **_kwargs: CapturingProvider([{"type": "delta", "content": "ok"}]),
+    )
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={
+            "question": "hello",
+            "conversation_id": str(conversation_id),
+            "reasoning_effort": "extra-high",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured["reasoning_effort"] == "extra-high"
 
 
 @pytest.mark.anyio
@@ -179,6 +232,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             history: object = None,
             tools: object = None,
             system_prompt: object = None,
+            reasoning_effort: object = None,
         ) -> AsyncIterator[dict[str, str]]:
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}

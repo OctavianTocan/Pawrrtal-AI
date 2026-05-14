@@ -5,7 +5,7 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import {
 	CHAT_REASONING_LEVELS,
@@ -110,7 +110,7 @@ function useSelectedChatModel(): UseSelectedChatModelResult {
  */
 function useChatActivitySync(
 	conversationId: string,
-	chatHistory: Array<AgnoMessage>,
+	chatHistory: Array<ChatMessage>,
 	isLoading: boolean
 ): void {
 	const { publishActiveConversation, clearActiveConversation } = useChatActivity();
@@ -153,7 +153,7 @@ interface ChatContainerProps {
 	/** The conversation UUID. Always required so messages can be linked to a conversation. */
 	conversationId: string;
 	/** Pre-fetched messages to hydrate the chat on load (e.g. when opening an existing conversation). */
-	initialChatHistory?: Array<AgnoMessage>;
+	initialChatHistory?: Array<ChatMessage>;
 }
 
 /**
@@ -203,8 +203,9 @@ export default function ChatContainer({
 	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
 	// so `useChatTurns` stays decoupled from routing/model concerns.
 	const stream = useCallback(
-		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
-		[conversationId, selectedModelId, streamMessage]
+		(prompt: string) =>
+			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
+		[conversationId, selectedModelId, selectedReasoning, streamMessage]
 	);
 
 	// First-send: persist the conversation, fire title gen, swap URL without
