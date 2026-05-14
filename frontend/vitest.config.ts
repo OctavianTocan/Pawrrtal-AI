@@ -1,12 +1,64 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 
 // Force NODE_ENV=test before vitest's React plugin picks the build to
 // alias.  Without this, Bun's vitest runtime defaults to production for
 // react-dom, which strips `React.act` and breaks @testing-library's
 // `render` helper.  Set as early as possible — the React plugin reads
 // it during module init.
+
+/**
+ * Vite plugin that stubs MDX collection imports used by `.source/server.ts`.
+ *
+ * Fumadocs' code-generated `.source/server.ts` imports every MDX file with
+ * a custom `?collection=<name>` query parameter so the fumadocs-mdx Vite
+ * plugin can process them. In a Vitest run there is no fumadocs-mdx pipeline,
+ * so we intercept those virtual imports and return a minimal ESM stub that
+ * satisfies `fumadocs-mdx/runtime/server`'s expectations: a default export
+ * (the MDX React component) plus the `toc`, `structuredData`, and
+ * `frontmatter` side-car exports.
+ */
+function fumadocsMdxCollectionStub(): Plugin {
+	return {
+		name: 'fumadocs-mdx-collection-stub',
+		enforce: 'pre',
+		resolveId(id: string, importer: string | undefined): string | null {
+			// `.source/server.ts` imports each MDX file as a relative specifier
+			// with a `?collection=<name>` query that the fumadocs-mdx Vite plugin
+			// normally processes.  Vite may strip the query before calling
+			// resolveId, so we match on the file extension alone when the importer
+			// is the generated server file, or match on the full specifier with
+			// the query param as a belt-and-braces fallback.
+			const isFromServer = importer?.includes('.source/server');
+			if (/\.(mdx?)\?collection=/.test(id) || (isFromServer && /\.(mdx?)$/.test(id))) {
+				return `\0fumadocs-stub:${id}`;
+			}
+			return null;
+		},
+		load(id: string): string | null {
+			if (!id.startsWith('\0fumadocs-stub:')) return null;
+			// Return just enough for fumadocs-mdx/runtime/server to build page
+			// objects: a default React component, an empty toc, empty
+			// structuredData, and a minimal frontmatter with a title derived
+			// from the file path so loader.getPages() counts it.
+			const filePath = id.replace('\0fumadocs-stub:', '').replace(/\?collection=\w+$/, '');
+			const title =
+				filePath
+					.split('/')
+					.pop()
+					?.replace(/\.mdx?$/, '') ?? 'page';
+			return [
+				'import { createElement } from "react";',
+				'export default function MDXContent() { return createElement("div", null); }',
+				'export const toc = [];',
+				'export const structuredData = { contents: [], headings: [] };',
+				`export const frontmatter = { title: ${JSON.stringify(title)} };`,
+			].join('\n');
+		},
+	};
+}
+
 if (process.env.NODE_ENV === undefined) {
 	// `process.env.NODE_ENV` is typed `readonly` under @types/node when
 	// strictly resolved, even though the runtime mutation works fine.
@@ -15,10 +67,15 @@ if (process.env.NODE_ENV === undefined) {
 }
 
 export default defineConfig({
-	plugins: [react()],
+	plugins: [react(), fumadocsMdxCollectionStub()],
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname),
+			// Fumadocs' generated `.source/server.ts` is re-exported under the
+			// `collections/*` path alias defined in tsconfig.json. Vitest needs
+			// the same mapping so tests that import `@/lib/source` (which in
+			// turn imports `collections/server`) can resolve the generated file.
+			'collections/server': path.resolve(__dirname, '.source/server.ts'),
 			// Use the local vendored package when it exists; fall back to the
 			// manual __mocks__ stub so tests work in ephemeral checkouts where
 			// the lib/react-dropdown subpackage hasn't been set up.

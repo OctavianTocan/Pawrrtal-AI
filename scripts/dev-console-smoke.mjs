@@ -36,7 +36,7 @@ const DEV_URL = process.env.DEV_URL ?? 'http://localhost:3001';
 
 /** Routes a cold-boot user hits first. Each is checked independently
  *  so a regression in one doesn't mask regressions in another. */
-const COLD_BOOT_ROUTES = ['/login', '/'];
+const COLD_BOOT_ROUTES = ['/login', '/', '/docs', '/docs/handbook', '/docs/product'];
 
 /** How long to keep the page open after navigation before scraping
  *  the console.  React 19 hydration warnings fire on effect schedule,
