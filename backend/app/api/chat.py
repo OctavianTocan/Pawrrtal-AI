@@ -8,24 +8,27 @@ import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
+import anyio
 from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
+from opentelemetry import trace as _otel_trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.channels import resolve_channel, surface_from_header
+from app.channels.base import ChannelMessage
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
+from app.core.providers.catalog import default_model
+from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.artifact_agent import (
     ARTIFACT_TOOL_NAME,
     ArtifactValidationError,
     build_artifact,
 )
-from app.crud.workspace import get_default_workspace
-from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
     append_assistant_placeholder,
     append_user_message,
@@ -47,7 +50,32 @@ logger = logging.getLogger(__name__)
 # Keeps token usage predictable while preserving recent turns.
 _HISTORY_WINDOW = 20
 
-_DEFAULT_MODEL = "gemini-3-flash-preview"
+
+def _annotate_chat_span(
+    *,
+    user_id: object,
+    conversation_id: object,
+    model_id: str | None,
+    surface: str,
+    question_len: int,
+    request_id: str,
+) -> None:
+    """Attach pawrrtal-namespaced attributes to the active OTel span.
+
+    Pure observability — a failure here must never break the chat
+    path, so the whole body is wrapped in a broad ``try / except``.
+    ``get_current_span()`` returns a no-op when telemetry is disabled.
+    """
+    try:
+        span = _otel_trace.get_current_span()
+        span.set_attribute("pawrrtal.user_id", str(user_id))
+        span.set_attribute("pawrrtal.conversation_id", str(conversation_id))
+        span.set_attribute("pawrrtal.model_id", model_id or "<default>")
+        span.set_attribute("pawrrtal.surface", surface)
+        span.set_attribute("pawrrtal.question_len", question_len)
+        span.set_attribute("pawrrtal.request_id", request_id)
+    except Exception:
+        logger.debug("OTEL_SPAN_ANNOTATE_FAILED", exc_info=True)
 
 
 def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
@@ -83,8 +111,15 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
     )
 
 
-def get_chat_router() -> APIRouter:
+def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
     """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
+
+    The complexity warnings are suppressed: this is a closure-based
+    router builder whose body is intentionally a single streaming
+    endpoint owning setup, persistence, the streamed body, and
+    finalization in one async generator. Splitting it across helpers
+    breaks the natural read order of the request lifecycle without
+    actually reducing the shared state surface, so it stays inline.
 
     Returns:
         An ``APIRouter`` exposing a single streaming ``POST /`` endpoint
@@ -93,7 +128,7 @@ def get_chat_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
-    async def chat(
+    async def chat(  # noqa: C901, PLR0915 — single-endpoint stream lifecycle, see builder docstring
         request: ChatRequest,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
@@ -129,24 +164,15 @@ def get_chat_router() -> APIRouter:
 
         # Annotate the FastAPI-instrumentor span with semantic attributes
         # so a trace search by user / conversation / model / surface lands
-        # the right request immediately.  ``get_current_span()`` returns
-        # a no-op when telemetry is disabled (zero cost).
-        try:
-            from opentelemetry import trace as _otel_trace
-
-            _span = _otel_trace.get_current_span()
-            _span.set_attribute("pawrrtal.user_id", str(user.id))
-            _span.set_attribute(
-                "pawrrtal.conversation_id", str(request.conversation_id)
-            )
-            _span.set_attribute(
-                "pawrrtal.model_id", request.model_id or "<default>"
-            )
-            _span.set_attribute("pawrrtal.surface", surface)
-            _span.set_attribute("pawrrtal.question_len", len(request.question))
-            _span.set_attribute("pawrrtal.request_id", rid)
-        except Exception:  # noqa: BLE001 — telemetry must never break the chat path
-            logger.debug("OTEL_SPAN_ANNOTATE_FAILED", exc_info=True)
+        # the right request immediately.
+        _annotate_chat_span(
+            user_id=user.id,
+            conversation_id=request.conversation_id,
+            model_id=request.model_id,
+            surface=surface,
+            question_len=len(request.question),
+            request_id=rid,
+        )
         logger.info(
             "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s surface=%s question_len=%d",
             rid,
@@ -167,8 +193,11 @@ def get_chat_router() -> APIRouter:
             )
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Resolve model: request overrides stored model, stored model overrides default
-        model_id = request.model_id or conversation.model_id or _DEFAULT_MODEL
+        # Resolve model: request overrides stored model, stored model overrides
+        # catalog default.  Request and stored values are already canonical
+        # (validated by Pydantic at the API boundary); ``default_model().id``
+        # is the canonical wire form of the catalog default.
+        model_id = request.model_id or conversation.model_id or default_model().id
 
         # Persist model change if it differs from what is stored
         if model_id != conversation.model_id:
@@ -224,7 +253,10 @@ def get_chat_router() -> APIRouter:
                 detail="Onboarding not completed: no default workspace exists for this user.",
             )
         root = Path(workspace.path)
-        if not root.exists():
+        # Blocking ``Path.exists()`` would stall the event loop on slow
+        # FS / network mounts — route through ``anyio.Path`` so the stat
+        # runs in a worker thread.
+        if not await anyio.Path(root).exists():
             # Workspace row exists but the directory is gone (manually
             # deleted, volume wipe, etc.).  Same outcome — do not run.
             logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
@@ -255,9 +287,7 @@ def get_chat_router() -> APIRouter:
                 event["mime"] = mime
             await _web_send_queue.put(event)
 
-        agent_tools = build_agent_tools(
-            workspace_root=root, user_id=user.id, send_fn=_web_send_fn
-        )
+        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate
@@ -332,8 +362,6 @@ def get_chat_router() -> APIRouter:
                     error_event: StreamEvent = {"type": "error", "content": str(exc)}
                     aggregator.apply(error_event)
                     yield error_event
-
-            from app.channels.base import ChannelMessage  # noqa: PLC0415
 
             channel_message: ChannelMessage = {
                 "user_id": user.id,
