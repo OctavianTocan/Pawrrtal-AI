@@ -8,7 +8,6 @@
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { ChatModelId } from '../constants';
 import type { ChatStreamEvent } from '../types';
 
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
@@ -112,7 +111,7 @@ export function useChat(): {
 	streamMessage: (
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: string
 	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
@@ -120,7 +119,7 @@ export function useChat(): {
 	async function* streamMessage(
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: string
 	): AsyncGenerator<ChatStreamEvent> {
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',

@@ -15,8 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
-import { CHAT_STORAGE_KEYS, type ChatModelId, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
-import { useChatModels } from '../hooks/use-chat-models';
+import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
+import type { ChatModelOption } from '../hooks/use-chat-models';
 import { useVoiceTranscribe } from '../hooks/use-voice-transcribe';
 import {
 	AttachButton,
@@ -35,8 +35,12 @@ export type ChatComposerProps = {
 	message: PromptInputMessage;
 	/** Whether an assistant response is currently streaming. */
 	isLoading?: boolean;
-	/** Selected chat model ID. */
-	selectedModelId: ChatModelId;
+	/** Catalog entries from `useChatModels()` — passed down by the container. */
+	models: readonly ChatModelOption[];
+	/** True while the model catalog request is still in flight. */
+	isCatalogLoading?: boolean;
+	/** Selected chat model ID in canonical wire form (`host:vendor/model`). */
+	selectedModelId: string;
 	/** Selected reasoning level. */
 	selectedReasoning: ChatReasoningLevel;
 	/** Additional classes for the root composer form. */
@@ -53,8 +57,8 @@ export type ChatComposerProps = {
 	onSendMessage: (message: PromptInputMessage) => void;
 	/** Callback fired when voice transcription should replace the draft content. */
 	onReplaceMessageContent: (content: string) => void;
-	/** Callback fired when the selected model changes. */
-	onSelectModel: (modelId: ChatModelId) => void;
+	/** Callback fired when the selected model changes. Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
 	/** Callback fired when the selected reasoning level changes. */
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when the connect-apps footer band is dismissed. */
@@ -158,6 +162,8 @@ function AnimatedComposerPlaceholder({
  */
 interface ComposerSendClusterProps {
 	state: ComposerSendClusterState;
+	models: ChatComposerProps['models'];
+	isCatalogLoading: ChatComposerProps['isCatalogLoading'];
 	selectedModelId: ChatComposerProps['selectedModelId'];
 	selectedReasoning: ChatComposerProps['selectedReasoning'];
 	onSelectModel: ChatComposerProps['onSelectModel'];
@@ -181,6 +187,8 @@ interface ComposerSendClusterState {
  */
 function ComposerSendCluster({
 	state,
+	models,
+	isCatalogLoading,
 	selectedModelId,
 	selectedReasoning,
 	onSelectModel,
@@ -188,24 +196,13 @@ function ComposerSendCluster({
 	onStartRecording,
 }: ComposerSendClusterProps): React.JSX.Element {
 	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing } = state;
-	// Catalog is server-owned via `GET /api/v1/models`. Task 10 will hoist this
-	// hook into `ChatContainer` so the persisted-state validator can also see
-	// the live catalog; for now the picker calls it directly so the popover
-	// stays props-driven.
-	const { models: catalogModels, isLoading: isCatalogLoading } = useChatModels();
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
 			<ModelSelectorPopover
-				models={catalogModels}
+				models={models}
 				selectedModelId={selectedModelId}
 				selectedReasoning={selectedReasoning}
-				// The popover emits the canonical wire form (`host:vendor/model`).
-				// `onSelectModel` is still typed as the legacy `ChatModelId` union
-				// until Task 10 widens the container to plain `string`; this cast
-				// matches the bridge ChatView already uses on the upward path.
-				onSelectModel={(modelId) => {
-					onSelectModel(modelId as ChatModelId);
-				}}
+				onSelectModel={onSelectModel}
 				onSelectReasoning={onSelectReasoning}
 				isLoading={isCatalogLoading}
 			/>
@@ -256,6 +253,8 @@ function ComposerSendCluster({
 export function ChatComposer({
 	message,
 	isLoading,
+	models,
+	isCatalogLoading,
 	selectedModelId,
 	selectedReasoning,
 	className,
@@ -397,6 +396,8 @@ export function ChatComposer({
 							isRecording,
 							isTranscribing,
 						}}
+						models={models}
+						isCatalogLoading={isCatalogLoading}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
 						onSelectModel={onSelectModel}
