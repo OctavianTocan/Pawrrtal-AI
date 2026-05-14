@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+
+# Re-export the canonical ``ReasoningEffort`` union from
+# :mod:`app.core.models_catalog` so the provider protocol and the
+# catalog stay in lock-step.  Importing here (not just under
+# ``TYPE_CHECKING``) lets call sites use the type at runtime without
+# reaching into the catalog module directly.
+from app.core.models_catalog import ReasoningEffort
 
 if TYPE_CHECKING:
     from app.core.agent_loop.types import AgentTool
 
-
-# Discrete reasoning-effort levels carried in :meth:`AILLM.stream`.  Models
-# without extended thinking ignore this argument; thinking-capable models
-# translate it into their SDK's effort knob (Claude SDK ``effort`` field).
-ReasoningEffort = Literal["low", "medium", "high", "max"]
+__all__ = ["AILLM", "ReasoningEffort", "StreamEvent"]
 
 
 class StreamEvent(TypedDict, total=False):

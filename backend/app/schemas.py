@@ -11,6 +11,8 @@ from typing import Annotated, Any, Literal
 from fastapi_users import schemas
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
+from app.core.models_catalog import ReasoningEffort
+
 # --- User schemas (provided by fastapi-users) --------------------------------
 
 
@@ -284,7 +286,7 @@ class ModelEntryRead(BaseModel):
     supports_prompt_cache: bool
     """Whether the provider supports server-side prompt caching."""
 
-    default_reasoning: Literal["off", "low", "medium", "high"]
+    default_reasoning: ReasoningEffort | None
     """Default reasoning effort applied when the request omits one."""
 
 
@@ -329,7 +331,7 @@ class ChatRequest(BaseModel):
     question: str
     conversation_id: uuid.UUID
     model_id: str | None = None
-    reasoning_effort: Literal["low", "medium", "high", "max"] | None = None
+    reasoning_effort: ReasoningEffort | None = None
 
 
 class ChatResponse(BaseModel):

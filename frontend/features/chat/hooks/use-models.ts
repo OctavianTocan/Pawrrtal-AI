@@ -19,8 +19,13 @@ import { API_ENDPOINTS } from '@/lib/api';
 /** Provider IDs the backend ships an implementation for. */
 export type ModelProvider = 'anthropic' | 'google';
 
-/** Discrete reasoning-effort knob — mirrors the backend Literal type. */
-export type ModelReasoningEffort = 'off' | 'low' | 'medium' | 'high';
+/**
+ * Discrete reasoning-effort knob — mirrors the canonical backend type at
+ * `backend.app.core.models_catalog.ReasoningEffort`.  Models without
+ * extended thinking surface `null` (not a sentinel ``"off"`` string) on
+ * `CatalogModel.default_reasoning`.
+ */
+export type ModelReasoningEffort = 'low' | 'medium' | 'high' | 'max';
 
 /**
  * One row of the backend's model catalog.  Mirrors
@@ -49,8 +54,8 @@ export interface CatalogModel {
 	supports_tool_use: boolean;
 	/** Whether the provider supports server-side prompt caching. */
 	supports_prompt_cache: boolean;
-	/** Default reasoning effort the backend applies when the request omits one. */
-	default_reasoning: ModelReasoningEffort;
+	/** Default reasoning effort the backend applies when the request omits one. `null` on models without extended thinking. */
+	default_reasoning: ModelReasoningEffort | null;
 }
 
 /** Envelope returned by `GET /api/v1/models`. */

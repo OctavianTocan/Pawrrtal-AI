@@ -43,10 +43,19 @@ from typing import Literal
 ProviderId = Literal["anthropic", "google"]
 """Closed set of providers with a working backend implementation."""
 
-ReasoningEffort = Literal["off", "low", "medium", "high"]
+ReasoningEffort = Literal["low", "medium", "high", "max"]
 """Discrete reasoning-effort knob carried per request to providers
-that expose extended thinking.  Providers that do not surface
-thinking ignore non-``"off"`` values."""
+with extended thinking.
+
+This is the canonical home for the union — :mod:`app.core.providers.base`
+and :mod:`app.schemas` re-import it so the wire payload, the provider
+protocol, and the per-model default agree on the allowed values.
+
+Models without extended thinking surface this as :data:`None` rather
+than a sentinel ``"off"`` string; centralising the "no thinking" case
+on ``None`` keeps the union narrow and the schema honest (a Pydantic
+field typed ``ReasoningEffort | None = None`` is what the chat router
+serialises to the wire)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,10 +107,12 @@ class ModelEntry:
     system+history prefix.  Anthropic models do; current Google
     Gemini Flash variants do not."""
 
-    default_reasoning: ReasoningEffort
+    default_reasoning: ReasoningEffort | None
     """Default reasoning effort applied when the request does not
-    specify one.  ``"off"`` for models without thinking; ``"medium"``
-    for thinking-capable models is a balanced starting point."""
+    specify one.  ``None`` on models without extended thinking (the
+    catalog's ``supports_thinking`` is the canonical capability flag);
+    one of the union members on thinking-capable models —
+    ``"medium"`` is a balanced starting point."""
 
 
 # --- Catalog ----------------------------------------------------------
@@ -163,7 +174,7 @@ _CATALOG: tuple[ModelEntry, ...] = (
         supports_thinking=False,
         supports_tool_use=True,
         supports_prompt_cache=False,
-        default_reasoning="off",
+        default_reasoning=None,
     ),
     ModelEntry(
         canonical_id="google/gemini-3.1-flash-lite-preview",
@@ -176,7 +187,7 @@ _CATALOG: tuple[ModelEntry, ...] = (
         supports_thinking=False,
         supports_tool_use=True,
         supports_prompt_cache=False,
-        default_reasoning="off",
+        default_reasoning=None,
     ),
 )
 

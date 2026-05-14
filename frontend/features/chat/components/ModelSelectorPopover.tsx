@@ -147,7 +147,7 @@ const FALLBACK_CATALOG: readonly CatalogModel[] = [
 		supports_thinking: false,
 		supports_tool_use: true,
 		supports_prompt_cache: false,
-		default_reasoning: 'off',
+		default_reasoning: null,
 	},
 	{
 		canonical_id: 'google/gemini-3.1-flash-lite-preview',
@@ -160,7 +160,7 @@ const FALLBACK_CATALOG: readonly CatalogModel[] = [
 		supports_thinking: false,
 		supports_tool_use: true,
 		supports_prompt_cache: false,
-		default_reasoning: 'off',
+		default_reasoning: null,
 	},
 ];
 
