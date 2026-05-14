@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels import resolve_channel, surface_from_header
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.models_catalog import canonicalise, default_entry
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.request_logging import get_request_id
@@ -40,7 +41,21 @@ logger = logging.getLogger(__name__)
 # Keeps token usage predictable while preserving recent turns.
 _HISTORY_WINDOW = 20
 
-_DEFAULT_MODEL = "gemini-3-flash-preview"
+
+def _resolve_canonical_model_id(
+    request_model_id: str | None,
+    stored_model_id: str | None,
+) -> str:
+    """Pick the model for this turn and return its canonical id.
+
+    Precedence: request override → conversation's stored value →
+    catalog default.  Whatever spelling the caller used (canonical
+    ``"<provider>/<model>"`` or a legacy bare SDK id) is normalised
+    via :func:`canonicalise` so the conversation row converges on the
+    canonical form on its next write.
+    """
+    requested = request_model_id or stored_model_id
+    return canonicalise(requested) or default_entry().canonical_id
 
 
 def get_chat_router() -> APIRouter:
@@ -106,10 +121,10 @@ def get_chat_router() -> APIRouter:
             )
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Resolve model: request overrides stored model, stored model overrides default
-        model_id = request.model_id or conversation.model_id or _DEFAULT_MODEL
-
-        # Persist model change if it differs from what is stored
+        # Resolve model: request overrides stored model, stored model overrides
+        # the catalog default.  Persist the canonical form so the DB converges
+        # on one grammar — see :func:`_resolve_canonical_model_id`.
+        model_id = _resolve_canonical_model_id(request.model_id, conversation.model_id)
         if model_id != conversation.model_id:
             await update_conversation_model_service(
                 model_id=model_id,

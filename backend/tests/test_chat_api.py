@@ -95,7 +95,13 @@ async def test_chat_persists_requested_model_id(
     monkeypatch: pytest.MonkeyPatch,
     seeded_default_workspace: Workspace,
 ) -> None:
-    """Chat stores the requested model on the conversation."""
+    """Chat stores the canonical model id on the conversation.
+
+    The frontend (and legacy stored rows) may send the bare SDK id
+    ``"gemini-3-flash-preview"``; the chat router normalises it to the
+    catalog's canonical ``"<provider>/<model>"`` form before persistence so
+    the database converges on a single grammar.
+    """
     conversation_id = uuid4()
     await client.post(
         f"/api/v1/conversations/{conversation_id}", json={"title": "Model"}
@@ -116,7 +122,7 @@ async def test_chat_persists_requested_model_id(
     conversation_response = await client.get(f"/api/v1/conversations/{conversation_id}")
 
     assert response.status_code == 200
-    assert conversation_response.json()["model_id"] == "gemini-3-flash-preview"
+    assert conversation_response.json()["model_id"] == "google/gemini-3-flash-preview"
 
 
 @pytest.mark.anyio
