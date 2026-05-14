@@ -94,7 +94,12 @@ async function pickModel(
 	const trigger = screen.getByRole('button', { name: /select model and reasoning/i });
 	await user.click(trigger);
 	const providerRow = await screen.findByText(provider);
-	await user.hover(providerRow);
+	// Click (rather than hover) the provider row so focus moves with the
+	// submenu open — hover alone doesn't move focus, and under React
+	// StrictMode's double-render the focus dance between the menu's
+	// auto-focused first item and the hovered row can leave the wrong
+	// submenu expanded, hiding the model rows the test wants to click.
+	await user.click(providerRow);
 	const modelRow = await screen.findByText(modelLabel);
 	await user.click(modelRow);
 }
