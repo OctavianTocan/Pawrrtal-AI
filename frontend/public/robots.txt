@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /docs/
+Disallow: /api/
+Disallow: /settings
+Disallow: /dev/
+
+Sitemap: /sitemap.xml

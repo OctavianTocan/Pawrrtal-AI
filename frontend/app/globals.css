@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 /* Composer package ships its own keyframes (composer-placeholder-enter,
    waveform-scroll) and the small theme adjustments it needs. Import the

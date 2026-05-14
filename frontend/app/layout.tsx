@@ -5,6 +5,7 @@
  */
 
 import { Agentation } from 'agentation';
+import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
@@ -97,8 +98,20 @@ export default function RootLayout({
 				)}
 			</head>
 			<body>
-				<Providers>{children}</Providers>
-				{process.env.NODE_ENV === 'development' && <Agentation />}
+				<RootProvider
+					theme={{
+						// The blocking script at /theme-detection.js is the FOUC defence
+						// and the source of truth for the `dark` class on <html>.
+						// `attribute="class"` makes next-themes (inside RootProvider)
+						// read from that class on mount rather than write its own.
+						attribute: 'class',
+						defaultTheme: 'system',
+						enableSystem: true,
+					}}
+				>
+					<Providers>{children}</Providers>
+					{process.env.NODE_ENV === 'development' && <Agentation />}
+				</RootProvider>
 			</body>
 		</html>
 	);
