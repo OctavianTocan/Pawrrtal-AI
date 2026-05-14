@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # request resolves to a Claude model. Generate with `claude setup-token`.
     claude_code_oauth_token: str = ""
     # API key for Exa (https://exa.ai). Powers the provider-agnostic
-    # `exa_search` tool wired into both the Claude SDK and Agno agents.
+    # `exa_search` tool wired into chat providers.
     # Leave empty to disable web search; the tool returns a clear
     # "not configured" error rather than crashing the turn.
     exa_api_key: str = ""
@@ -88,6 +88,32 @@ class Settings(BaseSettings):
     admin_email: str | None = None
     admin_password: str | None = None
 
+    # --- Access control ------------------------------------------------------
+    # Optional bearer token all clients must supply in the X-Pawrrtal-Key
+    # request header. When set, any request missing or carrying the wrong
+    # value is rejected with 401 before auth runs. Leave empty to disable
+    # (useful in local dev or for the public demo instance where
+    # ALLOWED_EMAILS is the only gate). Generate with: openssl rand -hex 32
+    backend_api_key: str = ""
+
+    # Comma-separated list of email addresses that are allowed to use this
+    # backend. When non-empty, authenticated users whose email is not on
+    # the list receive a 403 on any authenticated endpoint. Google and Apple
+    # OAuth both deliver verified emails, so this check is reliable across
+    # all login methods (Google, Apple, password).
+    # Example: ALLOWED_EMAILS=you@example.com,partner@example.com
+    # Leave empty to allow all authenticated users (open / demo mode).
+    allowed_emails: str = ""
+
+    @property
+    def allowed_emails_set(self) -> frozenset[str]:
+        """Return the normalised email allowlist as a frozen set."""
+        if not self.allowed_emails:
+            return frozenset()
+        return frozenset(
+            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
+        )
+
     # --- OAuth: Google ---
     # Set both to enable the "Continue with Google" button on the login
     # page. When either is empty the start endpoint returns 503 with a
@@ -134,21 +160,6 @@ class Settings(BaseSettings):
     # `X-Telegram-Bot-Api-Secret-Token` header on every webhook delivery
     # so the receiving FastAPI route can drop forgeries.
     telegram_webhook_secret: str = ""
-
-    # Comma-separated email allowlist enforced by ``get_allowed_user`` on
-    # every protected route.  Empty (the default) leaves the deployment
-    # open to any authenticated user — fine for local dev, never deploy
-    # publicly without setting this.  Compare case-insensitive.
-    allowed_emails: str = ""
-
-    @property
-    def allowed_emails_set(self) -> frozenset[str]:
-        """Parsed, lowercased view of ``allowed_emails`` for membership tests."""
-        if not self.allowed_emails:
-            return frozenset()
-        return frozenset(
-            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
-        )
 
     # Per-user chat rate limit (requests per 60-second rolling window).
     # Zero disables the limit entirely — useful for local dev.  Production

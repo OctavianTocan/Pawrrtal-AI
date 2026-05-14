@@ -18,7 +18,7 @@ mapping is ever extended.
 
 This module lives at ``app.core.keys`` (not ``app.core.providers.keys``)
 because it is a cross-cutting helper imported by HTTP routes, tools, and
-agno-agent factories — none of which are providers.  ``providers/`` is
+agent factories — none of which are providers.  ``providers/`` is
 reserved for SDK-specific bridges (see
 ``.claude/rules/architecture/no-tools-in-providers.md``).
 """

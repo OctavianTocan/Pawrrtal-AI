@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 /** Self-service registration form. */
@@ -50,7 +50,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 		}
 
 		// TODO: This inline fetch needs to be moved to a custom hook.
-		const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.register}`, {
+		const response = await apiFetch(API_ENDPOINTS.auth.register, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
 
 		// We need to log the user in after we've created the account.
 		// Otherwise, it'll feel odd to still need to log in after signing up.
-		await fetch(`${API_BASE_URL}${API_ENDPOINTS.auth.login}`, {
+		await apiFetch(API_ENDPOINTS.auth.login, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded',

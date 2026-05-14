@@ -20,11 +20,12 @@ from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
+from app.api.stt import get_stt_router
 from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
-from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.middleware import BackendApiKeyMiddleware
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.telemetry import setup_tracing, shutdown_tracing
@@ -88,6 +89,9 @@ def create_app() -> FastAPI:
     # (the default), so registering it unconditionally costs nothing in
     # dev but is wired up for prod just by flipping the env var.
     fastapi_app.add_middleware(ChatRateLimitMiddleware)
+    # Added last so Starlette wraps it outermost: invalid deployment API keys
+    # are rejected before route/auth work. Disabled when BACKEND_API_KEY is unset.
+    fastapi_app.add_middleware(BackendApiKeyMiddleware)
     fastapi_app.include_router(
         fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
     )

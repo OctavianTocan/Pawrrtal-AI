@@ -11,7 +11,7 @@
  * @fileoverview Typed helpers for the channel binding flow.
  */
 
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/api';
+import { API_ENDPOINTS, apiFetch } from '@/lib/api';
 
 /** Public shape returned by `GET /api/v1/channels`. */
 export interface ChannelBinding {
@@ -40,7 +40,7 @@ export class ChannelNotConfiguredError extends Error {
 
 /** List the authenticated user's channel bindings. */
 export async function listChannels(signal?: AbortSignal): Promise<ChannelBinding[]> {
-	const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.channels.list}`, {
+	const response = await apiFetch(API_ENDPOINTS.channels.list, {
 		credentials: 'include',
 		signal,
 	});
@@ -53,7 +53,7 @@ export async function listChannels(signal?: AbortSignal): Promise<ChannelBinding
 /** Issue a fresh one-time Telegram link code for the authenticated user. */
 export async function issueTelegramLinkCode(signal?: AbortSignal): Promise<TelegramLinkCode> {
 	//We issue a POST request to the /api/v1/channels/telegram/link endpoint so that the backend can issue a fresh one-time code for the authenticated user.
-	const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.channels.telegramLink}`, {
+	const response = await apiFetch(API_ENDPOINTS.channels.telegramLink, {
 		method: 'POST',
 		credentials: 'include',
 		signal,
@@ -72,7 +72,7 @@ export async function issueTelegramLinkCode(signal?: AbortSignal): Promise<Teleg
 
 /** Drop the authenticated user's Telegram binding. Idempotent. */
 export async function unlinkTelegram(signal?: AbortSignal): Promise<void> {
-	const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.channels.telegramUnlink}`, {
+	const response = await apiFetch(API_ENDPOINTS.channels.telegramUnlink, {
 		method: 'DELETE',
 		credentials: 'include',
 		signal,
