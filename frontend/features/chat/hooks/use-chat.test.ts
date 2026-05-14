@@ -65,7 +65,8 @@ describe('useChat', (): void => {
 				result.current.streamMessage(
 					'Hi',
 					'conversation-1',
-					'google-ai:google/gemini-3-flash-preview'
+					'google-ai:google/gemini-3-flash-preview',
+					'high'
 				)
 			)
 		).resolves.toEqual([
@@ -79,6 +80,7 @@ describe('useChat', (): void => {
 				question: 'Hi',
 				conversation_id: 'conversation-1',
 				model_id: 'google-ai:google/gemini-3-flash-preview',
+				reasoning_effort: 'high',
 			}),
 			headers: {
 				'Content-Type': 'application/json',
@@ -104,7 +106,8 @@ describe('useChat', (): void => {
 				result.current.streamMessage(
 					'Hi',
 					'conversation-1',
-					'google-ai:google/gemini-3-flash-preview'
+					'google-ai:google/gemini-3-flash-preview',
+					'medium'
 				)
 			)
 		).resolves.toEqual([{ type: 'delta', content: 'Split' }]);
@@ -128,7 +131,8 @@ describe('useChat', (): void => {
 				result.current.streamMessage(
 					'Hi',
 					'conversation-1',
-					'agent-sdk:anthropic/claude-sonnet-4-6'
+					'agent-sdk:anthropic/claude-sonnet-4-6',
+					'extra-high'
 				)
 			)
 		).resolves.toEqual([
@@ -154,7 +158,8 @@ describe('useChat', (): void => {
 				result.current.streamMessage(
 					'Hi',
 					'conversation-1',
-					'agent-sdk:anthropic/claude-sonnet-4-6'
+					'agent-sdk:anthropic/claude-sonnet-4-6',
+					'low'
 				)
 			)
 		).rejects.toThrow('Claude CLI failed: missing auth');
@@ -176,7 +181,8 @@ describe('useChat', (): void => {
 				result.current.streamMessage(
 					'Hi',
 					'conversation-1',
-					'google-ai:google/gemini-3-flash-preview'
+					'google-ai:google/gemini-3-flash-preview',
+					'medium'
 				)
 			)
 		).resolves.toEqual([{ type: 'delta', content: 'hi' }]);

@@ -11,7 +11,7 @@ import { useEffect, useMemo } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { useWhimsyTile } from '@/features/whimsy';
 import { usePersistedState } from '@/hooks/use-persisted-state';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import { AssistantMessage } from './components/AssistantMessage';
 import { ConnectAppsStrip } from './components/ConnectAppsStrip';
@@ -50,7 +50,7 @@ type ChatProps = {
 	/** Callback fired when the user submits a composer message. */
 	onSendMessage: (message: ChatComposerMessage) => void;
 	/** The full conversation history to render. */
-	chatHistory: Array<AgnoMessage>;
+	chatHistory: Array<ChatMessage>;
 	/** Live model catalog from `useChatModels()`, hoisted by the container. */
 	models: readonly ChatModelOption[];
 	/** True until the first model-catalog response lands. */
@@ -271,7 +271,7 @@ function ConversationRow({
 	onCopy,
 	onRegenerate,
 }: {
-	chatMessage: AgnoMessage;
+	chatMessage: ChatMessage;
 	index: number;
 	isLast: boolean;
 	isLoading?: boolean;
@@ -336,7 +336,7 @@ function ActiveConversationState({
 	footerActions,
 	transcribeAudio,
 }: ComposerRowProps & {
-	chatHistory: Array<AgnoMessage>;
+	chatHistory: Array<ChatMessage>;
 	regeneratingIndex?: number | null;
 	copiedMessageId?: string | null;
 	onCopy?: (id: string, text: string) => void;

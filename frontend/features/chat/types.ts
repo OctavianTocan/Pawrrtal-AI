@@ -5,7 +5,7 @@
  * over Server-Sent Events: `delta`, `thinking`, `tool_use`, `tool_result`,
  * and `error`. The transport (`useChat`) turns each frame into a
  * {@link ChatStreamEvent}; the container collapses the stream into a
- * {@link import('@/lib/types').AgnoMessage} that the UI can render —
+ * {@link import('@/lib/types').ChatMessage} that the UI can render —
  * reasoning panel above the body, chronologically-ordered tool rows, source
  * chips, and a reply-action toolbar.
  */

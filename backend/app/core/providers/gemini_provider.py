@@ -31,7 +31,8 @@ from app.core.agent_system_prompt import (
 )
 from app.core.config import settings
 from app.core.keys import resolve_api_key
-from .base import StreamEvent
+
+from .base import ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,35 @@ def _build_gemini_contents(
     return contents
 
 
+def _resolve_gemini_api_key(user_id: uuid.UUID | None) -> str:
+    """Resolve the Gemini API key for this request."""
+    if user_id is not None:
+        return resolve_api_key(user_id, "GEMINI_API_KEY") or ""
+    return settings.google_api_key
+
+
+def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]:
+    """Extract Gemini function-call parts from a streaming chunk."""
+    calls: list[dict[str, Any]] = []
+    for candidate in chunk.candidates or []:
+        if not candidate.content or not candidate.content.parts:
+            continue
+        for part in candidate.content.parts:
+            if not part.function_call:
+                continue
+            fc = part.function_call
+            fn_name = fc.name or ""
+            tool_call_id = f"call-{fn_name}-{start_index + len(calls)}"
+            calls.append(
+                {
+                    "tool_call_id": tool_call_id,
+                    "name": fn_name,
+                    "arguments": dict(fc.args) if fc.args else {},
+                }
+            )
+    return calls
+
+
 def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
@@ -124,16 +154,7 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
-        # Per-user override takes precedence; ``resolve_api_key`` falls back
-        # to ``settings.google_api_key`` automatically when no override is
-        # set, so the explicit ``or settings.google_api_key`` is dead code
-        # and has been removed. For unauthenticated calls (no user_id), we
-        # read the gateway global directly.
-        if user_id is not None:
-            api_key = resolve_api_key(user_id, "GEMINI_API_KEY")
-        else:
-            api_key = settings.google_api_key
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=_resolve_gemini_api_key(user_id))
         contents = _build_gemini_contents(messages)
         # ``GenerateContentConfig.tools`` is typed as the wider union
         # ``list[Tool | Callable | mcp.Tool | ClientSession] | None``;
@@ -165,34 +186,14 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
                     yield LLMTextDeltaEvent(type="text_delta", text=chunk.text)
                     full_text += chunk.text
 
-                # Tool / function calls
-                if chunk.candidates:
-                    for candidate in chunk.candidates:
-                        if not candidate.content or not candidate.content.parts:
-                            continue
-                        for part in candidate.content.parts:
-                            if part.function_call:
-                                fc = part.function_call
-                                # ``fc.name`` is typed as ``str | None`` by
-                                # the SDK; the API never returns nameless
-                                # function calls in practice, but we
-                                # default to the empty string for typing.
-                                fn_name = fc.name or ""
-                                tool_call_id = f"call-{fn_name}-{len(tool_calls)}"
-                                args = dict(fc.args) if fc.args else {}
-                                yield LLMToolCallEvent(
-                                    type="tool_call",
-                                    tool_call_id=tool_call_id,
-                                    name=fn_name,
-                                    arguments=args,
-                                )
-                                tool_calls.append(
-                                    {
-                                        "tool_call_id": tool_call_id,
-                                        "name": fn_name,
-                                        "arguments": args,
-                                    }
-                                )
+                for tool_call in _tool_calls_from_chunk(chunk, len(tool_calls)):
+                    yield LLMToolCallEvent(
+                        type="tool_call",
+                        tool_call_id=tool_call["tool_call_id"],
+                        name=tool_call["name"],
+                        arguments=tool_call["arguments"],
+                    )
+                    tool_calls.append(tool_call)
 
         except Exception as exc:
             # Log so the error is visible in app.log — previously swallowed silently.
@@ -213,15 +214,15 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         content: list[TextContent | ToolCallContent] = []
         if full_text:
             content.append(TextContent(type="text", text=full_text))
-        for tc in tool_calls:
-            content.append(
-                ToolCallContent(
-                    type="toolCall",
-                    tool_call_id=tc["tool_call_id"],
-                    name=tc["name"],
-                    arguments=tc["arguments"],
-                )
+        content.extend(
+            ToolCallContent(
+                type="toolCall",
+                tool_call_id=tc["tool_call_id"],
+                name=tc["name"],
+                arguments=tc["arguments"],
             )
+            for tc in tool_calls
+        )
 
         yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
 
@@ -261,6 +262,7 @@ class GeminiLLM:
         history: list[dict[str, str]] | None = None,
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
 
@@ -276,6 +278,8 @@ class GeminiLLM:
                 workspace AGENTS.md per PR #113).  When ``None`` the
                 provider falls back to ``_FALLBACK_SYSTEM_PROMPT`` so a
                 bare unit test or direct script call still works.
+            reasoning_effort: Accepted for protocol parity. Gemini Flash
+                ignores this UI knob for now.
         """
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
