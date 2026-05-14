@@ -1,11 +1,15 @@
 /**
  * Static catalog of integrations the Settings → Integrations section can
- * surface. Visual-only today; the `connected` flags + per-account rows
- * live in localStorage so the page can simulate state without a backend.
+ * surface.
+ *
+ * No real integrations are implemented in the backend yet — this module
+ * exists so the UI shape is in place and ready to wire up. Both lists
+ * are intentionally empty; populate them as real integrations land.
+ *
+ * @fileoverview Integrations catalog types + empty defaults.
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { Calendar, ClipboardList, FileSpreadsheet, FolderOpen, Globe, Mail } from 'lucide-react';
 
 /** Status badge shown next to an integration / account name. */
 export type IntegrationBadge = 'beta' | 'connected' | 'expired' | null;
@@ -40,84 +44,13 @@ export interface IntegrationAccount {
 }
 
 /**
- * Master list rendered in "Your Integrations". Order here is the order
- * shown to the user. Add a new row → it shows up in the list.
+ * Master list rendered in "Your Integrations".
+ *
+ * Empty by default — there are no real integrations implemented in the
+ * backend yet. Add a row here once the corresponding backend endpoint
+ * + OAuth flow is live so the UI faithfully reflects what works.
  */
-export const YOUR_INTEGRATIONS: IntegrationDef[] = [
-	{
-		id: 'apple-calendar',
-		name: 'Apple Calendar',
-		description: 'See your events in Apple Calendar',
-		badge: 'connected',
-		Icon: Calendar,
-		tileBgClass: 'bg-foreground/5',
-		tileTextClass: 'text-foreground',
-	},
-	{
-		id: 'apple-reminders',
-		name: 'Apple Reminders',
-		description: 'See your reminders and tasks in Apple Reminders',
-		badge: 'connected',
-		Icon: ClipboardList,
-		tileBgClass: 'bg-foreground/5',
-		tileTextClass: 'text-foreground',
-	},
-	{
-		id: 'gmail',
-		name: 'Gmail',
-		description: 'Read and send email in Gmail',
-		Icon: Mail,
-		tileBgClass: 'bg-red-500/15',
-		tileTextClass: 'text-red-500',
-		accounts: [
-			{
-				id: 'gmail-personal',
-				email: 'tocanoctavian@gmail.com',
-				subtitle: 'tocanoctavian@gmail.com',
-				status: 'connected',
-			},
-			{
-				id: 'gmail-work',
-				email: 'octavian.tocan@thirdear.ai',
-				subtitle: 'octavian.tocan@thirdear.ai',
-				status: 'expired',
-			},
-		],
-	},
-	{
-		id: 'google-calendar',
-		name: 'Google Calendar',
-		description:
-			'Manage and see your calendar events and appointments through Google Calendar.',
-		Icon: Calendar,
-		tileBgClass: 'bg-blue-500/15',
-		tileTextClass: 'text-blue-500',
-		accounts: [
-			{
-				id: 'gcal-personal',
-				email: 'tocanoctavian@gmail.com',
-				subtitle: 'tocanoctavian@gmail.com',
-				status: 'connected',
-			},
-			{
-				id: 'gcal-work',
-				email: 'octavian.tocan@thirdear.ai',
-				subtitle: 'octavian.tocan@thirdear.ai',
-				status: 'expired',
-				label: 'Work',
-			},
-		],
-	},
-	{
-		id: 'google-drive',
-		name: 'Google Drive',
-		description: 'Access and organize Google Drive files',
-		badge: 'connected',
-		Icon: FolderOpen,
-		tileBgClass: 'bg-green-500/15',
-		tileTextClass: 'text-green-500',
-	},
-];
+export const YOUR_INTEGRATIONS: IntegrationDef[] = [];
 
 /** Catalog rendered inside the "Add integration" modal grid. */
 export interface CatalogIntegration extends IntegrationDef {
@@ -126,57 +59,11 @@ export interface CatalogIntegration extends IntegrationDef {
 }
 
 /**
- * Larger catalog of available integrations the user can browse + connect
- * from the Add Integration modal. Mix of pre-installed (Apple, Gmail,
- * Google Drive, Google Calendar) and connectable third-party tools.
+ * Catalog of integrations the user can browse + connect from the
+ * "Add integration" modal.
+ *
+ * Empty by default — same reason as `YOUR_INTEGRATIONS`. When a real
+ * integration is implemented, add it here as `state: 'connectable'`
+ * (or `'installed'` if it's auto-enabled).
  */
-export const INTEGRATION_CATALOG: CatalogIntegration[] = [
-	...YOUR_INTEGRATIONS.map(
-		(integration): CatalogIntegration => ({ ...integration, state: 'installed' })
-	),
-	{
-		id: 'outlook',
-		name: 'Outlook',
-		description: 'Manage email and calendar in Outlook',
-		Icon: Mail,
-		tileBgClass: 'bg-sky-500/15',
-		tileTextClass: 'text-sky-500',
-		state: 'connectable',
-	},
-	{
-		id: 'adisinsight',
-		name: 'AdisInsight',
-		description: 'Pharmaceutical drug & clinical trial intelligence',
-		Icon: Globe,
-		tileBgClass: 'bg-foreground/5',
-		tileTextClass: 'text-foreground',
-		state: 'connectable',
-	},
-	{
-		id: 'ahrefs',
-		name: 'Ahrefs',
-		description: 'SEO & AI search analytics',
-		Icon: Globe,
-		tileBgClass: 'bg-blue-500/15',
-		tileTextClass: 'text-blue-500',
-		state: 'connectable',
-	},
-	{
-		id: 'airops',
-		name: 'AirOps',
-		description: 'AI workflows + agents',
-		Icon: FileSpreadsheet,
-		tileBgClass: 'bg-purple-500/15',
-		tileTextClass: 'text-purple-500',
-		state: 'connectable',
-	},
-	{
-		id: 'airwallex',
-		name: 'Airwallex Developer',
-		description: 'Global business banking + payments',
-		Icon: FileSpreadsheet,
-		tileBgClass: 'bg-foreground/5',
-		tileTextClass: 'text-foreground',
-		state: 'connectable',
-	},
-];
+export const INTEGRATION_CATALOG: CatalogIntegration[] = [];

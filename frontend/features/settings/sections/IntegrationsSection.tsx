@@ -10,12 +10,12 @@ import { IntegrationRow } from '../integrations/IntegrationRow';
 import { SettingsCard, SettingsPage, SettingsSectionHeader } from '../primitives';
 
 /**
- * Visual-only Integrations settings section.
+ * Integrations settings section.
  *
- * Lists the user's connected integrations (Apple Calendar/Reminders,
- * Gmail with per-account rows, Google Calendar, Google Drive). The
- * "+ Add integration" button opens a catalog modal; the catalog has
- * an "+ Add custom" path that opens the MCP server URL modal.
+ * UI shell is in place but no integrations are implemented yet in the
+ * backend. The notice below makes that explicit so the section doesn't
+ * mislead users into thinking Apple Calendar / Gmail / Drive / etc are
+ * already connected.
  */
 export function IntegrationsSection(): React.JSX.Element {
 	const [showCatalog, setShowCatalog] = useState(false);
@@ -26,6 +26,14 @@ export function IntegrationsSection(): React.JSX.Element {
 			description="Connect Pawrrtal to your tools so it can read context and run actions."
 			title="Integrations"
 		>
+			<div className="rounded-[10px] border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-200">
+				<div className="font-semibold">Coming soon</div>
+				<div className="text-xs text-amber-200/80 mt-0.5">
+					This UI is in place, but no integrations are wired up yet. Connecting Gmail,
+					Calendar, Drive, etc. will arrive in future releases.
+				</div>
+			</div>
+
 			<SettingsCard>
 				<SettingsSectionHeader
 					actions={
@@ -41,11 +49,17 @@ export function IntegrationsSection(): React.JSX.Element {
 					description="Apps and services Pawrrtal is currently connected to."
 					title="Your integrations"
 				/>
-				<div className="flex flex-col gap-2 pt-3">
-					{YOUR_INTEGRATIONS.map((integration) => (
-						<IntegrationRow integration={integration} key={integration.id} />
-					))}
-				</div>
+				{YOUR_INTEGRATIONS.length === 0 ? (
+					<div className="pt-3 text-sm text-muted-foreground">
+						No integrations connected yet.
+					</div>
+				) : (
+					<div className="flex flex-col gap-2 pt-3">
+						{YOUR_INTEGRATIONS.map((integration) => (
+							<IntegrationRow integration={integration} key={integration.id} />
+						))}
+					</div>
+				)}
 			</SettingsCard>
 
 			<AddIntegrationModal
