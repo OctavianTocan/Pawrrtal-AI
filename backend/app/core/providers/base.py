@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
 
 if TYPE_CHECKING:
     from app.core.agent_loop.types import AgentTool
+
+
+# Discrete reasoning-effort levels carried in :meth:`AILLM.stream`.  Models
+# without extended thinking ignore this argument; thinking-capable models
+# translate it into their SDK's effort knob (Claude SDK ``effort`` field).
+ReasoningEffort = Literal["low", "medium", "high", "max"]
 
 
 class StreamEvent(TypedDict, total=False):
@@ -39,8 +45,9 @@ class AILLM(Protocol):
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         history: list[dict[str, str]] | None = None,
-        tools: list["AgentTool"] | None = None,
+        tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -66,5 +73,12 @@ class AILLM(Protocol):
                      this parameter.
             system_prompt: Optional override for the provider's default system
                      prompt.  When ``None`` the provider uses its own default.
+            reasoning_effort: Discrete thinking budget the caller selected.
+                     Providers without extended thinking (Gemini Flash today)
+                     are free to ignore this; thinking-capable providers
+                     translate it into their SDK's effort knob.  ``None``
+                     means "use the provider's own default", which on
+                     adaptive-thinking models is the catalog entry's
+                     ``default_reasoning``.
         """
         ...

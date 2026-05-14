@@ -4,47 +4,16 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
-import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
-import {
-	CHAT_REASONING_LEVELS,
-	type ChatModelId,
-	type ChatReasoningLevel,
-} from './components/ModelSelectorPopover';
-import {
-	CHAT_STORAGE_KEYS,
-	DEFAULT_CHAT_MODEL_ID,
-	DEFAULT_REASONING_LEVEL,
-	FALLBACK_TITLE_MAX_LENGTH,
-} from './constants';
+import { FALLBACK_TITLE_MAX_LENGTH } from './constants';
 import { useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
+import { useChatPickers } from './hooks/use-chat-pickers';
 import { useChatTurns } from './hooks/use-chat-turns';
 import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
-
-/**
- * Runtime guard for the persisted model id.
- *
- * The backend catalog (`GET /api/v1/models`) is the source of truth for
- * which model ids are accepted; the chat router additionally accepts
- * both the canonical `"<provider>/<model>"` form and legacy bare SDK
- * ids.  Validating "any non-empty string" here keeps older persisted
- * values working — if the value is unrecognised the backend's
- * `canonicalise()` falls back to the catalog default.
- */
-function isChatModelId(value: unknown): value is ChatModelId {
-	return typeof value === 'string' && value.length > 0;
-}
-
-/** Runtime guard for persisted reasoning levels — same rationale as {@link isChatModelId}. */
-function isChatReasoningLevel(value: unknown): value is ChatReasoningLevel {
-	return (
-		typeof value === 'string' && (CHAT_REASONING_LEVELS as readonly string[]).includes(value)
-	);
-}
 
 /**
  * Sidebar-safe fallback title before async LLM titling returns: trimmed first line, ellipsized.
@@ -102,22 +71,15 @@ export default function ChatContainer({
 		onReplaceMessageContent: handleReplaceMessageContent,
 		onSelectSuggestion: handleSelectSuggestion,
 	} = useComposerMessage();
-	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
-		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
-		defaultValue: DEFAULT_CHAT_MODEL_ID,
-		validate: isChatModelId,
-	});
-	const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>({
-		storageKey: CHAT_STORAGE_KEYS.selectedReasoning,
-		defaultValue: DEFAULT_REASONING_LEVEL,
-		validate: isChatReasoningLevel,
-	});
+	const { selectedModelId, setSelectedModelId, selectedReasoning, setSelectedReasoning } =
+		useChatPickers();
 
-	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
-	// so `useChatTurns` stays decoupled from routing/model concerns.
+	// Adapt the multi-arg transport to a (prompt)-only API so
+	// `useChatTurns` stays decoupled from routing/model concerns.
 	const stream = useCallback(
-		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
-		[conversationId, selectedModelId, streamMessage]
+		(prompt: string) =>
+			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
+		[conversationId, selectedModelId, selectedReasoning, streamMessage]
 	);
 
 	// First-send: persist the conversation, fire title gen, swap URL without

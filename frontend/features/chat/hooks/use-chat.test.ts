@@ -61,7 +61,7 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
 		).resolves.toEqual([
 			{ type: 'delta', content: 'Hel' },
 			{ type: 'delta', content: 'lo' },
@@ -73,6 +73,7 @@ describe('useChat', (): void => {
 				question: 'Hi',
 				conversation_id: 'conversation-1',
 				model_id: 'gpt-5.5',
+				reasoning_effort: 'medium',
 			}),
 			headers: {
 				'Content-Type': 'application/json',
@@ -94,7 +95,7 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
 		).resolves.toEqual([{ type: 'delta', content: 'Split' }]);
 	});
 
@@ -112,7 +113,9 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
+			collectStream(
+				result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6', 'medium')
+			)
 		).resolves.toEqual([
 			{ type: 'thinking', content: 'Let me search…' },
 			{ type: 'tool_use', tool_use_id: 't1', name: 'web_search', input: { q: 'foo' } },
@@ -132,7 +135,9 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
+			collectStream(
+				result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6', 'medium')
+			)
 		).rejects.toThrow('Claude CLI failed: missing auth');
 	});
 
@@ -148,7 +153,7 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5', 'medium'))
 		).resolves.toEqual([{ type: 'delta', content: 'hi' }]);
 	});
 });

@@ -31,6 +31,32 @@ export const CHAT_REASONING_LEVELS = ['low', 'medium', 'high', 'extra-high'] as 
 /** Reasoning levels displayed next to the selected model. */
 export type ChatReasoningLevel = (typeof CHAT_REASONING_LEVELS)[number];
 
+/** Backend grammar for the discrete reasoning-effort knob. */
+export type BackendReasoningEffort = 'low' | 'medium' | 'high' | 'max';
+
+/**
+ * Translate the user-facing reasoning level into the backend wire grammar.
+ *
+ * The composer labels its top tier "Extra High" (a Pawrrtal-specific
+ * label that pre-dates the backend wire); the backend grammar mirrors
+ * the Claude SDK's `effort` enum, where the top tier is `"max"`.  The
+ * mapping is exhaustive on {@link ChatReasoningLevel} so adding a new
+ * level forces a TypeScript error here.
+ *
+ * @param level - Persisted reasoning level from the composer popover.
+ * @returns The backend's reasoning-effort string for the chat request.
+ */
+const REASONING_TO_BACKEND_EFFORT = {
+	low: 'low',
+	medium: 'medium',
+	high: 'high',
+	'extra-high': 'max',
+} as const satisfies Record<ChatReasoningLevel, BackendReasoningEffort>;
+
+export function reasoningLevelToBackendEffort(level: ChatReasoningLevel): BackendReasoningEffort {
+	return REASONING_TO_BACKEND_EFFORT[level];
+}
+
 /** Stable provider IDs the menu can group rows under. */
 const PROVIDER_ORDER: readonly ModelProvider[] = ['anthropic', 'google'];
 

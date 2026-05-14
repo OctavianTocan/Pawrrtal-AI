@@ -15,10 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels import resolve_channel, surface_from_header
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.models_catalog import canonicalise, default_entry
+from app.core.models_catalog import canonicalise, default_entry, resolve_entry
 from app.core.prompt_cache import compute_prompt_cache_key, log_prompt_cache_key
 from app.core.providers import resolve_llm
-from app.core.providers.base import StreamEvent
+from app.core.providers.base import ReasoningEffort, StreamEvent
 from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.workspace import get_default_workspace
@@ -57,6 +57,26 @@ def _resolve_canonical_model_id(
     """
     requested = request_model_id or stored_model_id
     return canonicalise(requested) or default_entry().canonical_id
+
+
+def _resolve_reasoning_effort(
+    requested: ReasoningEffort | None,
+    model_id: str,
+) -> ReasoningEffort | None:
+    """Pick the reasoning effort for this turn.
+
+    Honours the request value on thinking-capable models; silently drops
+    it on models without extended thinking so the Gemini path never
+    pretends it received a thinking budget.  Returning ``None`` lets
+    the provider's adaptive default apply (Claude SDK adaptive thinking
+    on Opus 4.6+).
+    """
+    if requested is None:
+        return None
+    entry = resolve_entry(model_id)
+    if entry is None or not entry.supports_thinking:
+        return None
+    return requested
 
 
 def get_chat_router() -> APIRouter:
@@ -237,6 +257,8 @@ def get_chat_router() -> APIRouter:
             event_count = 0
             aggregator = ChatTurnAggregator()
 
+            effective_reasoning = _resolve_reasoning_effort(request.reasoning_effort, model_id)
+
             async def _guarded_stream():
                 """Wrap the provider stream with error capture + aggregation."""
                 nonlocal event_count
@@ -248,6 +270,7 @@ def get_chat_router() -> APIRouter:
                         history=history,
                         tools=agent_tools or None,
                         system_prompt=workspace_system_prompt,
+                        reasoning_effort=effective_reasoning,
                     ):
                         event_count += 1
                         aggregator.apply(event)

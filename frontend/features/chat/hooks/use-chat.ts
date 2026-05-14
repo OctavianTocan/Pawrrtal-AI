@@ -8,7 +8,8 @@
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { ChatModelId } from '../components/ModelSelectorPopover';
+import type { ChatModelId, ChatReasoningLevel } from '../components/ModelSelectorPopover';
+import { reasoningLevelToBackendEffort } from '../components/ModelSelectorPopover';
 import type { ChatStreamEvent } from '../types';
 
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
@@ -101,7 +102,8 @@ export function useChat(): {
 	streamMessage: (
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: ChatModelId,
+		reasoningLevel: ChatReasoningLevel
 	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
@@ -109,14 +111,20 @@ export function useChat(): {
 	async function* streamMessage(
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: ChatModelId,
+		reasoningLevel: ChatReasoningLevel
 	): AsyncGenerator<ChatStreamEvent> {
+		// Translate the user-facing label ("Extra High") into the backend
+		// grammar ("max"); see ``reasoningLevelToBackendEffort`` for the
+		// mapping table.  The chat router drops the value on non-thinking
+		// models, so sending it unconditionally is safe.
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',
 			body: JSON.stringify({
 				question: message,
 				conversation_id: conversationId,
 				model_id: modelId,
+				reasoning_effort: reasoningLevelToBackendEffort(reasoningLevel),
 			}),
 			headers: {
 				'Content-Type': 'application/json',

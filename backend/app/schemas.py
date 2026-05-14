@@ -318,11 +318,18 @@ class ChatRequest(BaseModel):
             the chat router falls back to the conversation's stored model,
             then to the default declared in
             :mod:`app.core.providers.factory`.
+        reasoning_effort: Discrete reasoning-effort knob the user picked
+            in the composer.  Honoured on thinking-capable models
+            (Claude); silently ignored on models without extended
+            thinking (Gemini Flash).  ``None`` lets the catalog entry's
+            ``default_reasoning`` apply, so a brand-new conversation
+            picks up the model's natural default instead of "off".
     """
 
     question: str
     conversation_id: uuid.UUID
     model_id: str | None = None
+    reasoning_effort: Literal["low", "medium", "high", "max"] | None = None
 
 
 class ChatResponse(BaseModel):

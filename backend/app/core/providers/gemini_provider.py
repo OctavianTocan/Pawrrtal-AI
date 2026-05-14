@@ -29,7 +29,8 @@ from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
 from app.core.config import settings
-from .base import StreamEvent
+
+from .base import ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -176,9 +177,7 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
 
         except Exception as exc:
             # Log so the error is visible in app.log — previously swallowed silently.
-            logger.error(
-                "Gemini streaming error model=%s: %s", model_id, exc, exc_info=True
-            )
+            logger.error("Gemini streaming error model=%s: %s", model_id, exc, exc_info=True)
             error_text = f"Gemini error: {exc}"
             # Emit a text delta so the frontend shows the error instead of an empty bubble.
             yield LLMTextDeltaEvent(type="text_delta", text=error_text)
@@ -234,6 +233,7 @@ class GeminiLLM:
         history: list[dict[str, str]] | None = None,
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
 
@@ -249,7 +249,13 @@ class GeminiLLM:
                 workspace AGENTS.md per PR #113).  When ``None`` the
                 provider falls back to ``_FALLBACK_SYSTEM_PROMPT`` so a
                 bare unit test or direct script call still works.
+            reasoning_effort: Accepted for protocol parity but ignored —
+                the current Gemini Flash variants in the catalog have
+                no extended-thinking surface.  Adding a thinking-capable
+                Gemini model later means consuming this argument here
+                instead of touching the chat router.
         """
+        del reasoning_effort  # protocol parity; no thinking surface on Gemini Flash today
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
         for m in history or []:

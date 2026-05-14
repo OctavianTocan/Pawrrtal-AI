@@ -69,7 +69,7 @@ from ._claude_tool_bridge import (
     auto_approve_bridge_tools,
     build_mcp_server,
 )
-from .base import StreamEvent
+from .base import ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -160,8 +160,6 @@ class ClaudeLLMConfig:
     """Additional environment variables forwarded to the CLI subprocess."""
 
 
-
-
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
@@ -188,6 +186,7 @@ class ClaudeLLM:
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -199,6 +198,9 @@ class ClaudeLLM:
             user_id: App-level user UUID. Currently unused by this
                 provider but kept in the protocol so future per-user
                 cwd / quota logic can wire in without a signature change.
+            reasoning_effort: Forwarded to the Claude SDK's ``effort``
+                option when set.  ``None`` lets the SDK pick its own
+                default (adaptive thinking on Opus 4.6+).
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -209,6 +211,7 @@ class ClaudeLLM:
             conversation_id,
             system_prompt=system_prompt,
             agent_tools=tools,
+            reasoning_effort=reasoning_effort,
         )
         try:
             # The SDK requires streaming-mode input (an AsyncIterable
@@ -251,9 +254,7 @@ class ClaudeLLM:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI."
-            )
+            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes
@@ -269,6 +270,7 @@ class ClaudeLLM:
         *,
         system_prompt: str | None = None,
         agent_tools: list[AgentTool] | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -287,6 +289,9 @@ class ClaudeLLM:
                 ``mcp__ai_nexus__<name>`` IDs are appended to the
                 allowed-tools whitelist so the SDK actually permits
                 execution.
+            reasoning_effort: Forwarded to the SDK ``effort`` option.
+                ``None`` omits the field entirely so the SDK's adaptive
+                default applies.
         """
         session_id = str(conversation_id)
 
@@ -328,6 +333,11 @@ class ClaudeLLM:
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
+        # Forward the per-turn reasoning knob only when supplied so the
+        # SDK's adaptive default isn't silently overridden by a literal
+        # ``None`` field on older CLI versions.
+        if reasoning_effort is not None:
+            kwargs["effort"] = reasoning_effort
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
             # Auto-approve every tool we bridged in.  The whitelist on
