@@ -17,7 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { AgnoMessage, Conversation } from '@/lib/types';
+import type { ChatHistoryMessage, Conversation } from '@/lib/types';
 
 /**
  * Maximum cached conversation histories. When exceeded, the oldest entry
@@ -60,7 +60,7 @@ function buildSnippet(content: string, query: string): string {
 }
 
 /** Concatenate all message contents into a single searchable string. */
-function extractSearchableText(messages: AgnoMessage[]): string {
+function extractSearchableText(messages: ChatHistoryMessage[]): string {
 	return messages.map((message) => message.content).join('\n');
 }
 
@@ -153,10 +153,10 @@ export function useConversationSearch({
 	conversations: Conversation[];
 	searchQuery: string;
 	activeConversationId?: string | null;
-	activeChatHistory?: AgnoMessage[];
+	activeChatHistory?: ChatHistoryMessage[];
 }) {
 	const fetcher = useAuthedFetch();
-	const cacheRef = useRef(new Map<string, AgnoMessage[]>());
+	const cacheRef = useRef(new Map<string, ChatHistoryMessage[]>());
 	const [contentSearchResults, setContentSearchResults] = useState<
 		Map<string, ContentSearchResult>
 	>(new Map());
@@ -197,7 +197,7 @@ export function useConversationSearch({
 							const response = await fetcher(
 								API_ENDPOINTS.conversations.getMessages(conversationId)
 							);
-							const payload = (await response.json()) as AgnoMessage[];
+							const payload = (await response.json()) as ChatHistoryMessage[];
 							cacheRef.current.set(conversationId, payload);
 
 							// Evict oldest entries if cache exceeds the cap.

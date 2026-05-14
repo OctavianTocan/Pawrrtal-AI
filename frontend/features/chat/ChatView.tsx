@@ -4,7 +4,7 @@ import type * as React from 'react';
 import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { useWhimsyTile } from '@/features/whimsy';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
 import { AssistantMessage } from './components/AssistantMessage';
@@ -28,7 +28,7 @@ type ChatProps = {
 	/** Callback fired when generated text should replace the draft content. */
 	onReplaceMessageContent: (content: string) => void;
 	/** The full conversation history to render. */
-	chatHistory: Array<AgnoMessage>;
+	chatHistory: Array<ChatHistoryMessage>;
 	/** The selected model used for new chat requests. */
 	selectedModelId: ChatModelId;
 	/** The selected reasoning level shown in the composer. */

@@ -25,11 +25,13 @@ import {
  */
 export const KNOWN_TOOL_NAMES = {
 	WEB_SEARCH: 'web_search',
-	// Exa-powered web search wired in both providers. The Agno agent calls
-	// it directly as `exa_search`; the Claude Agent SDK addresses it via
-	// the in-process MCP server prefix `mcp__pawrrtal__exa_search`. Both
-	// names share the same label + icon so the UI is identical regardless
-	// of which provider routed the turn.
+	// Exa-powered web search wired through the chat router's `AgentTool`
+	// list (see `backend/app/core/tools/exa_search_agent.py`).  Gemini's
+	// FunctionDeclaration bridge exposes it as `exa_search`; the Claude
+	// Agent SDK addresses it via the in-process MCP server prefix
+	// `mcp__pawrrtal__exa_search`.  Both names share the same label +
+	// icon so the UI is identical regardless of which provider routed
+	// the turn.
 	EXA_SEARCH: 'exa_search',
 	EXA_SEARCH_CLAUDE: 'mcp__pawrrtal__exa_search',
 	MEMORY_SEARCH: 'memory_search',

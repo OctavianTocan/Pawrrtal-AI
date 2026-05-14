@@ -15,12 +15,12 @@
 
 import type React from 'react';
 import { createContext, useContext, useMemo, useState } from 'react';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 
 /** Snapshot of the conversation currently open in the chat panel. */
 type ActiveConversationState = {
 	conversationId: string | null;
-	chatHistory: AgnoMessage[];
+	chatHistory: ChatHistoryMessage[];
 	isLoading: boolean;
 };
 

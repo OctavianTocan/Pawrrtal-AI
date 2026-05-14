@@ -31,9 +31,7 @@ async def test_create_conversation_returns_created_metadata(
 async def test_create_conversation_is_idempotent(client: AsyncClient) -> None:
     """Repeating POST with the same client UUID returns the existing row."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Original"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Original"})
 
     response = await client.post(
         f"/api/v1/conversations/{conversation_id}",
@@ -50,9 +48,7 @@ async def test_patch_conversation_accepts_status_only_payload(
 ) -> None:
     """PATCH accepts metadata-only updates without requiring a title."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Status"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Status"})
 
     response = await client.patch(
         f"/api/v1/conversations/{conversation_id}",
@@ -68,9 +64,7 @@ async def test_patch_conversation_accepts_status_only_payload(
 async def test_patch_conversation_rejects_blank_title(client: AsyncClient) -> None:
     """PATCH rejects blank titles with a validation error."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Title"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Title"})
 
     response = await client.patch(
         f"/api/v1/conversations/{conversation_id}",
@@ -98,9 +92,7 @@ async def test_list_conversations_returns_newest_first(client: AsyncClient) -> N
 async def test_delete_conversation_removes_conversation(client: AsyncClient) -> None:
     """DELETE removes an owned conversation."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Delete"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Delete"})
 
     delete_response = await client.delete(f"/api/v1/conversations/{conversation_id}")
     get_response = await client.get(f"/api/v1/conversations/{conversation_id}")
@@ -116,9 +108,7 @@ async def test_get_conversation_messages_returns_empty_for_new_conversation(
 ) -> None:
     """A freshly-created conversation has no chat_messages rows yet — empty list."""
     conversation_id = uuid4()
-    await client.post(
-        f"/api/v1/conversations/{conversation_id}", json={"title": "Messages"}
-    )
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Messages"})
 
     response = await client.get(f"/api/v1/conversations/{conversation_id}/messages")
 
@@ -133,9 +123,10 @@ async def test_generate_conversation_title_persists_usable_title(
     """Title generation persists normalized provider output."""
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Old"})
-    # The conversations route was refactored from `create_utility_agent`
-    # (Agno) to `generate_text_once` (gemini-utils).  Monkeypatch the
-    # actual call site so the test isn't pinned to the old indirection.
+
+    # Title generation goes through `generate_text_once` (gemini-utils);
+    # monkeypatch at the call site so the test isn't pinned to the
+    # internal indirection.
     async def _fake_generate_text(_prompt: str) -> str:
         return '"Better   Title"'
 

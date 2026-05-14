@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 import { applyChatEvent, updateLastAssistantMessage } from './chat-reducer';
 import type { ChatStreamEvent } from './types';
 
-function blankAssistant(): AgnoMessage {
+function blankAssistant(): ChatHistoryMessage {
 	return { role: 'assistant', content: '' };
 }
 
@@ -89,13 +89,13 @@ describe('applyChatEvent', () => {
 
 describe('updateLastAssistantMessage', () => {
 	it('returns the same array when the last message is not an assistant turn', () => {
-		const messages: Array<AgnoMessage> = [{ role: 'user', content: 'hi' }];
+		const messages: Array<ChatHistoryMessage> = [{ role: 'user', content: 'hi' }];
 		const next = updateLastAssistantMessage(messages, () => blankAssistant());
 		expect(next).toBe(messages);
 	});
 
 	it('only updates the trailing assistant slot', () => {
-		const messages: Array<AgnoMessage> = [
+		const messages: Array<ChatHistoryMessage> = [
 			{ role: 'user', content: 'hi' },
 			{ role: 'assistant', content: '' },
 		];

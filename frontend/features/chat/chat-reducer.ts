@@ -6,7 +6,7 @@
  * on lifecycle/routing wiring instead of state-shape mechanics.
  */
 
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 import type { ChatStreamEvent, ChatToolCall } from './types';
 
 /**
@@ -15,9 +15,9 @@ import type { ChatStreamEvent, ChatToolCall } from './types';
  * via this helper so React can short-circuit unrelated rows.
  */
 export function updateLastAssistantMessage(
-	messages: Array<AgnoMessage>,
-	update: (current: AgnoMessage) => AgnoMessage
-): Array<AgnoMessage> {
+	messages: Array<ChatHistoryMessage>,
+	update: (current: ChatHistoryMessage) => ChatHistoryMessage
+): Array<ChatHistoryMessage> {
 	const lastIndex = messages.length - 1;
 	const last = messages[lastIndex];
 	if (!last || last.role !== 'assistant') return messages;
@@ -32,7 +32,7 @@ export function updateLastAssistantMessage(
  * event. The reducer uses the wall clock so the UI can show a live "thinking
  * for Xs" affordance even across separate SSE bursts.
  */
-function markStartedAt(message: AgnoMessage): AgnoMessage {
+function markStartedAt(message: ChatHistoryMessage): ChatHistoryMessage {
 	if (message.thinking_started_at !== undefined) return message;
 	return { ...message, thinking_started_at: Date.now() };
 }
@@ -45,11 +45,11 @@ function markStartedAt(message: AgnoMessage): AgnoMessage {
  * SSE frame. A tool invocation inserted between two thinking bursts breaks
  * the merge: the trailing thinking is no longer the last entry.
  */
-function pushThinkingTimelineEntry(message: AgnoMessage, text: string): AgnoMessage {
+function pushThinkingTimelineEntry(message: ChatHistoryMessage, text: string): ChatHistoryMessage {
 	const timeline = message.timeline ?? [];
 	const last = timeline[timeline.length - 1];
 	if (last?.kind === 'thinking') {
-		const merged: AgnoMessage['timeline'] = [
+		const merged: ChatHistoryMessage['timeline'] = [
 			...timeline.slice(0, -1),
 			{ kind: 'thinking', text: last.text + text },
 		];
@@ -65,7 +65,10 @@ function pushThinkingTimelineEntry(message: AgnoMessage, text: string): AgnoMess
  * updater. `error` events never reach here — the transport throws on those and
  * the catch block in `runAssistantTurn` writes the error into `content`.
  */
-export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): AgnoMessage {
+export function applyChatEvent(
+	message: ChatHistoryMessage,
+	event: ChatStreamEvent
+): ChatHistoryMessage {
 	switch (event.type) {
 		case 'delta':
 			return markStartedAt({
@@ -75,7 +78,7 @@ export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): Ag
 			});
 		case 'thinking': {
 			const stamped = markStartedAt(message);
-			const withText: AgnoMessage = {
+			const withText: ChatHistoryMessage = {
 				...stamped,
 				thinking: (stamped.thinking ?? '') + event.content,
 				assistant_status: 'streaming',
@@ -122,7 +125,7 @@ export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): Ag
  * thinking/tool/delta to the call completion. Returns 0 when no events ever
  * arrived (e.g. the stream errored before producing anything).
  */
-export function computeThinkingDuration(message: AgnoMessage): number {
+export function computeThinkingDuration(message: ChatHistoryMessage): number {
 	if (message.thinking_started_at === undefined) return 0;
 	const elapsedMs = Date.now() - message.thinking_started_at;
 	return Math.max(0, Math.round(elapsedMs / 1000));

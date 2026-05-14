@@ -4,7 +4,7 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import { FALLBACK_TITLE_MAX_LENGTH } from './constants';
 import { useChat } from './hooks/use-chat';
@@ -39,7 +39,7 @@ interface ChatContainerProps {
 	/** The conversation UUID. Always required so messages can be linked to a conversation. */
 	conversationId: string;
 	/** Pre-fetched messages to hydrate the chat on load (e.g. when opening an existing conversation). */
-	initialChatHistory?: Array<AgnoMessage>;
+	initialChatHistory?: Array<ChatHistoryMessage>;
 }
 
 /**

@@ -10,7 +10,7 @@
 [![Linted with Biome](https://img.shields.io/badge/Linted_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 [![Checked with Biome](https://img.shields.io/badge/Checked_with-Biome-60a5fa?style=flat&logo=biome)](https://biomejs.dev)
 
-Full-stack AI chatbot with real-time streaming responses, built with **Next.js 16** and **FastAPI**. Uses the **Agno** agentic framework with **Google Gemini** for conversational AI, featuring persistent conversation history, secure authentication, and a modern chat UI.
+Full-stack AI chatbot with real-time streaming responses, built with **Next.js 16** and **FastAPI**. Supports **Anthropic Claude** (via the Claude Agent SDK) and **Google Gemini** for conversational AI, featuring persistent conversation history, secure authentication, and a modern chat UI.
 
 ## Features
 
@@ -20,7 +20,7 @@ Full-stack AI chatbot with real-time streaming responses, built with **Next.js 1
 - **Secure Authentication** - JWT-based auth with httpOnly cookies via FastAPI-Users
 - **User Preferences** - Custom instructions, accent color, and font size settings
 - **API Key Management** - Encrypted storage for provider API keys (Fernet encryption)
-- **Dual Database Architecture** - App metadata in SQLite + Agno-managed message history
+- **SQLite Storage** - Application metadata, chat history, and reasoning state persisted in the same database
 - **Modern UI** - Responsive chat interface with Radix UI, Shadcn, and Tailwind CSS 4
 
 ## Tech Stack
@@ -29,7 +29,7 @@ Full-stack AI chatbot with real-time streaming responses, built with **Next.js 1
 | -------- | ---------------------------------- |
 | Frontend | Next.js 16, React 19, Tailwind 4   |
 | Backend  | FastAPI, Python 3.13, Uvicorn      |
-| AI/LLM   | Agno framework, Google Gemini      |
+| AI/LLM   | Claude Agent SDK, Google Gemini    |
 | Auth     | FastAPI-Users (JWT httpOnly cookies)|
 | Database | SQLite + aiosqlite (async ORM)     |
 | UI       | Radix UI, Shadcn                   |
@@ -151,8 +151,9 @@ just clean     # Remove build caches
                                     ┌──────────┼──────────┐
                                     ▼          ▼          ▼
                               ┌─────────┐ ┌────────┐ ┌────────┐
-                              │  Agno   │ │ App DB │ │Agno DB │
-                              │+ Gemini │ │(SQLite)│ │(SQLite)│
+                              │ Claude  │ │ Gemini │ │  App   │
+                              │ Agent   │ │ direct │ │   DB   │
+                              │  SDK    │ │  loop  │ │(SQLite)│
                               └─────────┘ └────────┘ └────────┘
 ```
 

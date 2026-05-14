@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatHistoryMessage } from '@/lib/types';
 
 /**
  * SessionStorage key prefix used to record which conversations had a
@@ -57,7 +57,7 @@ export function useChatBackgroundRecovery({
 	onRecover,
 }: {
 	conversationId: string;
-	chatHistory: Array<AgnoMessage>;
+	chatHistory: Array<ChatHistoryMessage>;
 	isLoading: boolean;
 	onRecover: (prompt: string) => void;
 }): {
