@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -18,27 +17,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
 from app.core.agent_tools import build_agent_tools
-from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
-from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.artifact_agent import (
     ARTIFACT_TOOL_NAME,
     ArtifactValidationError,
     build_artifact,
 )
-from app.crud.chat_message import (
-    append_assistant_placeholder,
-    append_user_message,
-    finalize_assistant_message,
-    get_messages_for_conversation,
-)
+from app.core.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.crud.conversation import (
     get_conversation_service,
     update_conversation_model_service,
 )
 from app.crud.workspace import get_default_workspace
-from app.db import User, async_session_maker, get_async_session
+from app.db import User, get_async_session
 from app.schemas import ChatRequest
 from app.users import get_allowed_user
 
@@ -206,37 +198,6 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                 session=session,
             )
 
-        # Read recent history *before* persisting the current message so the
-        # current question is not included in the history slice passed to the
-        # provider (the provider receives it separately as ``question``).
-        recent_rows = await get_messages_for_conversation(
-            session, request.conversation_id, limit=_HISTORY_WINDOW
-        )
-        history = [
-            {"role": row.role, "content": row.content or ""}
-            for row in recent_rows
-            if row.role in {"user", "assistant"}
-        ]
-
-        # Persist the user prompt + assistant placeholder rows up front so a
-        # client that disconnects mid-stream still has a partial record.
-        await append_user_message(
-            session,
-            conversation_id=request.conversation_id,
-            user_id=user.id,
-            content=request.question,
-        )
-        assistant_row = await append_assistant_placeholder(
-            session,
-            conversation_id=request.conversation_id,
-            user_id=user.id,
-        )
-        assistant_message_id = assistant_row.id
-        # Commit before streaming starts — the request session is closed when
-        # the StreamingResponse generator runs in a fresh task, so we open a
-        # short-lived session inside the generator for the final UPDATE.
-        await session.commit()
-
         provider = resolve_llm(model_id, user_id=user.id)
 
         # Resolve the user's default workspace.  A workspace is created as
@@ -287,119 +248,47 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
 
         agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
 
-        # Load SOUL.md + AGENTS.md from the workspace as the agent's
-        # system prompt.  The workspace is guaranteed by the 412 gate
-        # above, so this is a single line — no extra nesting and no
-        # duplicated path resolution.  Either file may be missing
-        # independently; ``assemble_workspace_prompt`` returns ``None``
-        # only when both are absent, in which case the provider falls
-        # back to its built-in default.
-        workspace_system_prompt = assemble_workspace_prompt(root)
-        if workspace_system_prompt is not None:
-            logger.debug(
-                "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d",
-                rid,
-                user.id,
-                len(workspace_system_prompt),
-            )
+        def _artifact_hook(event: StreamEvent) -> list[StreamEvent]:
+            extra = _maybe_artifact_event(event)
+            return [extra] if extra is not None else []
+
+        def _drain_send_queue(_event: StreamEvent) -> list[StreamEvent]:
+            out: list[StreamEvent] = []
+            while not _web_send_queue.empty():
+                out.append(_web_send_queue.get_nowait())
+            return out
+
+        channel_message: ChannelMessage = {
+            "user_id": user.id,
+            "conversation_id": request.conversation_id,
+            "text": request.question,
+            "surface": surface,
+            "model_id": model_id,
+            "metadata": {},
+        }
+        turn_input = ChatTurnInput(
+            conversation_id=request.conversation_id,
+            user_id=user.id,
+            question=request.question,
+            provider=provider,
+            channel=channel,
+            channel_message=channel_message,
+            workspace_root=root,
+            tools=agent_tools,
+            history_window=_HISTORY_WINDOW,
+            log_tag="CHAT",
+            log_extras={
+                "rid": rid,
+                "model_id": model_id,
+                "surface": surface,
+            },
+        )
+        hooks: list[EventHook] = [_artifact_hook, _drain_send_queue]
 
         async def event_stream() -> AsyncGenerator[bytes]:
-            """Yield channel-encoded bytes for each LLM event, then done.
-
-            Builds a raw provider stream, wraps it with error handling and
-            aggregation, then hands it to ``channel.deliver()`` which
-            encodes each event for the surface (SSE frames for web/Electron,
-            message edits for Telegram, etc.).
-            """
-            stream_start = time.perf_counter()
-            event_count = 0
-            aggregator = ChatTurnAggregator()
-
-            async def _guarded_stream():
-                """Wrap the provider stream with error capture + aggregation."""
-                nonlocal event_count
-                try:
-                    async for event in provider.stream(
-                        request.question,
-                        request.conversation_id,
-                        user.id,
-                        history=history,
-                        tools=agent_tools or None,
-                        system_prompt=workspace_system_prompt,
-                    ):
-                        event_count += 1
-                        aggregator.apply(event)
-                        yield event
-                        # When the agent invokes ``render_artifact``, lift the
-                        # spec out of the tool's input and emit a sibling
-                        # ``artifact`` event for the frontend.  The tool's
-                        # own result string (returned to the LLM) stays a
-                        # short confirmation — the spec lives on this
-                        # parallel channel so the model doesn't see it
-                        # echoed back on the next turn.
-                        artifact_event = _maybe_artifact_event(event)
-                        if artifact_event is not None:
-                            event_count += 1
-                            aggregator.apply(artifact_event)
-                            yield artifact_event
-                        # Drain side-channel events placed by send_message
-                        # tool during this iteration's tool execution.
-                        while not _web_send_queue.empty():
-                            side = _web_send_queue.get_nowait()
-                            event_count += 1
-                            aggregator.apply(side)
-                            yield side
-                except Exception as exc:
-                    logger.exception(
-                        "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
-                        rid,
-                        request.conversation_id,
-                        model_id,
-                        event_count,
-                    )
-                    error_event: StreamEvent = {"type": "error", "content": str(exc)}
-                    aggregator.apply(error_event)
-                    yield error_event
-
-            channel_message: ChannelMessage = {
-                "user_id": user.id,
-                "conversation_id": request.conversation_id,
-                "text": request.question,
-                "surface": surface,
-                "model_id": model_id,
-                "metadata": {},
-            }
-
-            try:
-                async for chunk in channel.deliver(_guarded_stream(), channel_message):
-                    yield chunk
-            finally:
-                duration_ms = (time.perf_counter() - stream_start) * 1000
-                final_status = "failed" if aggregator.error_text else "complete"
-                snapshot = aggregator.to_persisted_shape(status=final_status)
-                try:
-                    async with async_session_maker() as persist_session:
-                        await finalize_assistant_message(
-                            persist_session,
-                            message_id=assistant_message_id,
-                            **snapshot,
-                        )
-                        await persist_session.commit()
-                except Exception:
-                    logger.exception(
-                        "CHAT_PERSIST_ERR rid=%s message_id=%s",
-                        rid,
-                        assistant_message_id,
-                    )
-                logger.info(
-                    "CHAT_OUT rid=%s conversation_id=%s model_id=%s surface=%s events=%d duration_ms=%.1f",
-                    rid,
-                    request.conversation_id,
-                    model_id,
-                    surface,
-                    event_count,
-                    duration_ms,
-                )
+            """Yield channel-encoded bytes from the shared turn runner."""
+            async for chunk in run_turn(turn_input, event_hooks=hooks):
+                yield chunk
 
         return StreamingResponse(
             event_stream(),
