@@ -16,6 +16,7 @@ from app.channels import resolve_channel, surface_from_header
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.models_catalog import canonicalise, default_entry
+from app.core.prompt_cache import compute_prompt_cache_key, log_prompt_cache_key
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
 from app.core.request_logging import get_request_id
@@ -202,6 +203,20 @@ def get_chat_router() -> APIRouter:
         # only when both are absent, in which case the provider falls
         # back to its built-in default.
         workspace_system_prompt = assemble_workspace_prompt(root)
+        # Per-turn cache-key telemetry: identical inputs produce identical
+        # keys, so a key that flips turn-to-turn flags a non-deterministic
+        # prompt assembler (the kind that silently busts Anthropic prompt
+        # caching).  See ``app.core.prompt_cache`` for the rationale.
+        log_prompt_cache_key(
+            logger,
+            rid=rid,
+            conversation_id=request.conversation_id,
+            cache_key=compute_prompt_cache_key(
+                system_prompt=workspace_system_prompt,
+                model_id=model_id,
+            ),
+            system_prompt_chars=len(workspace_system_prompt or ""),
+        )
         if workspace_system_prompt is not None:
             logger.debug(
                 "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d",
