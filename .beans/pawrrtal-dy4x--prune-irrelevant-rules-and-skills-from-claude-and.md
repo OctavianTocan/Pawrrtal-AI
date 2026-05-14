@@ -1,11 +1,11 @@
 ---
 # pawrrtal-dy4x
 title: Prune irrelevant rules and skills from .claude and .agents
-status: completed
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-05-14T07:17:08Z
-updated_at: 2026-05-14T07:19:40Z
+updated_at: 2026-05-14T07:58:00Z
 ---
 
 Remove rules in .claude/rules/ and skills in .claude/skills + .agents/skills that target stacks Pawrrtal does not use (RN, iOS/Android native, Maestro, Figma, Zustand, Firebase, pnpm, Vercel). Pawrrtal stack: Next.js 16 + React 19 + Bun + Biome + FastAPI + Agno + Electron + self-hosted GH runner + Vitest/Playwright/Stagehand/pytest.
@@ -71,3 +71,21 @@ All other rules (180 .md + 24 .mdc) — covers TypeScript, React, Next.js, FastA
 ### Skills removed (1)
 
 - setup-matt-pocock-skills (.agents/skills/ + .claude/skills/ symlink) — one-time scaffolding skill; the per-repo Matt Pocock setup (Agent skills block in CLAUDE.md, docs/agents/) is already in place. Note: skills-lock.json entry was reverted by an external mechanism after my edit — left as-is per system signal.
+
+## 2026-05-14 follow-up: research on rule loading
+
+Researched how Claude Code loads .claude/rules/ files. Findings:
+
+- Rules with paths: frontmatter inject lazily on Read (per Anthropic issue #23478) — not on Write.
+- Rules WITHOUT paths or with paths: ['**/*'] load on every session.
+- Cursor-vendored .mdc files cost zero context (loader only handles .md).
+- Best-practice articles converge on: CLAUDE.md ≤200 lines for universals only, scope domain rules with paths.
+
+This repo's CLAUDE.md is 456 lines (≈2× recommended ceiling). Largest hidden cost is the always-on CLAUDE.md content, not the rule files themselves.
+
+### Done in follow-up
+- Deleted general/how-we-work-on-pawrrtal.md (pure duplicate of how-we-work-on-ai-nexus.md; ~120 lines saved per session).
+
+### Open follow-ups (pending user decision)
+- Move 'Agent-Loop Testing Philosophy' section (~80 lines in CLAUDE.md) to .claude/rules/testing/ with paths: ['backend/**/*.py'].
+- Move 'Curated Claude rules (Pawrrtal)' citation list (~50 lines) to a docs/ index file.
