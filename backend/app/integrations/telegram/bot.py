@@ -31,13 +31,13 @@ from typing import TYPE_CHECKING
 from app.channels import resolve_channel
 from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, make_telegram_sender
+from app.channels.turn_runner import ChatTurnInput, run_turn
 from app.core.agent_tools import build_agent_tools
 from app.core.config import settings
 from app.core.providers import resolve_llm
 from app.core.providers.base import AILLM
 from app.core.providers.catalog import default_model, require_known
 from app.core.providers.model_id import InvalidModelId, UnknownModelId
-from app.core.turn_runner import ChatTurnInput, run_turn
 from app.crud.channel import update_conversation_model
 from app.crud.workspace import get_default_workspace
 from app.db import async_session_maker

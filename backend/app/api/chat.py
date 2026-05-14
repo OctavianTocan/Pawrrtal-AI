@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
+from app.channels.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.core.agent_tools import build_agent_tools
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
@@ -24,7 +25,6 @@ from app.core.tools.artifact_agent import (
     ArtifactValidationError,
     build_artifact,
 )
-from app.core.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.crud.conversation import (
     get_conversation_service,
     update_conversation_model_service,
