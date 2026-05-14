@@ -22,7 +22,7 @@ updated_at: 2026-05-05T07:05:11Z
 
 **Recommendation.** Start with Path A. Add Path B later if a single tool implementation becomes load-bearing.
 
-**Decision deliverable.** ADR at `docs/decisions/YYYY-MM-DD-electron-privileged-ops.md` documenting which path was picked and why.
+**Decision deliverable.** ADR at `frontend/content/docs/handbook/decisions/YYYY-MM-DD-electron-privileged-ops.md` documenting which path was picked and why.
 
 ## Todo
 - [ ] Read this bean + the Craft research notes in this branch's most recent assistant summary
@@ -32,4 +32,4 @@ updated_at: 2026-05-05T07:05:11Z
 
 ## Outcome
 
-Decision documented in docs/decisions/2026-05-05-electron-privileged-ops-in-main.md (Path A — privileged ops in Electron main + client-tool agent pattern). Implementation landed on branch `feat/electron-privileged-ops`.
+Decision documented in frontend/content/docs/handbook/decisions/2026-05-05-electron-privileged-ops-in-main.md (Path A — privileged ops in Electron main + client-tool agent pattern). Implementation landed on branch `feat/electron-privileged-ops`.

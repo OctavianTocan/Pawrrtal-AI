@@ -27,7 +27,7 @@ All 95 tests across factory / chat-api / claude-provider / telegram-channel pass
 
 ## Follow-on design
 
-Investigation of the broader issue produced ADR `docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md` (Proposed). The strip helper added here (`_strip_provider_segment`) is vestigial under that design and gets deleted when the ADR ships.
+Investigation of the broader issue produced ADR `frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md` (Proposed). The strip helper added here (`_strip_provider_segment`) is vestigial under that design and gets deleted when the ADR ships.
 
 Follow-up bean: pawrrtal-25yy (Telegram proactive catalog validation).
 
@@ -36,7 +36,7 @@ Follow-up bean: pawrrtal-25yy (Telegram proactive catalog validation).
 
 Complete implementation landed via Tasks 1-10 of the implementation plan
 `docs/plans/2026-05-14-model-id-canonical-format-and-catalog.md`
-(driven by ADR `docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md`).
+(driven by ADR `frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md`).
 
 The vestigial `_strip_provider_segment()` helper added in the initial hotfix
 has been deleted (commit `0b0ef0f8 refactor(providers): route on Host enum, delete strip helper`).

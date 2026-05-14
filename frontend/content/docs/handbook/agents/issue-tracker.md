@@ -1,3 +1,8 @@
+---
+title: Issue tracker — Beans (local markdown)
+description: How issues and tasks are tracked in this repo using the beans CLI and .beans/ markdown files.
+---
+
 # Issue tracker: Beans (local markdown)
 
 Issues and tasks for this repo live as markdown files in `.beans/`, managed with the `beans` CLI.

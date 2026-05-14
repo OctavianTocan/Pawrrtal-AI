@@ -40,10 +40,10 @@ cd backend && uv run python /tmp/audit-claude-rules-v2.py
 Options:
 
 - **Keep**: harmless (zero context cost), but adds 26 files of visual noise to the rules tree and risks confusing future contributors who think they are active rules.
-- **Move** to `docs/decisions/2026-05-twinmind-cursor-rules-snapshot/` so it is explicitly a historical reference, not a rule directory.
+- **Move** to `frontend/content/docs/handbook/decisions/2026-05-twinmind-cursor-rules-snapshot/` so it is explicitly a historical reference, not a rule directory.
 - **Delete**: simplest. We already have the canonical tree at `.cursor/rules/` and the upstream repo at `OctavianTocan/claude-rules`.
 
-Recommendation: move to `docs/decisions/` if any of those rules has unique value not present in the canonical `.cursor/rules/`; otherwise delete.
+Recommendation: move to `frontend/content/docs/handbook/decisions/` if any of those rules has unique value not present in the canonical `.cursor/rules/`; otherwise delete.
 
 ## Follow-up 3 (optional): audit always-applied Cursor rules content
 
@@ -53,7 +53,7 @@ Three Cursor rules use `alwaysApply: true` (`check-solutions-first.mdc`, `no-bac
 
 - [ ] Decision recorded for the `ci/` rules (delete-many or rewrite-many).
 - [ ] Decision recorded for `thirdear-cursor/` snapshot.
-- [ ] If applicable, ADR in `docs/decisions/` capturing why we trimmed the vendored set.
+- [ ] If applicable, ADR in `frontend/content/docs/handbook/decisions/` capturing why we trimmed the vendored set.
 
 ## Reasons for Scrapping
 

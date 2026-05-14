@@ -43,7 +43,7 @@ We currently believe our architecture is rule-clean because all checked rules pa
   - (a) Pay for sentrux Pro and unlock full rule check + root-cause diagnostics
   - (b) Restructure `.sentrux/rules.toml` to express the most critical 3-4 invariants in the OSS-checkable subset
   - (c) Implement custom checks for the missing rules outside sentrux (Biome plugin, custom script)
-- [ ] Document the decision in `docs/decisions/` as an addendum to the `2026-05-03-adopt-sentrux-architecture-gating.md` ADR
+- [ ] Document the decision in `frontend/content/docs/handbook/decisions/` as an addendum to the `2026-05-03-adopt-sentrux-architecture-gating.md` ADR
 
 ## Notes
 

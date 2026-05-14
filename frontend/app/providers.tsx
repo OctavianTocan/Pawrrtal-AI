@@ -12,7 +12,7 @@ import { getQueryClient } from './get-query-client';
  *
  * The `<AppearanceProvider>` that used to sit here was removed as part of
  * the 2026-05-06 theming-system rip
- * (see `docs/decisions/2026-05-06-rip-theming-system.md`). The cascade
+ * (see `frontend/content/docs/handbook/decisions/2026-05-06-rip-theming-system.md`). The cascade
  * defaults defined in `frontend/app/globals.css` now drive the entire
  * theme; per-user runtime CSS variable injection is gone.
  *

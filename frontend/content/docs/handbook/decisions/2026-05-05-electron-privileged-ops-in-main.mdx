@@ -1,8 +1,13 @@
+---
+title: Privileged ops live in the Electron main process; agent stays in FastAPI
+description: ADR — desktop-only capabilities (window controls, auto-update, tray) are handled in the Electron main process via IPC.
+---
+
 # Privileged ops live in the Electron main process; agent stays in FastAPI
 
-- **Status:** Accepted
-- **Date:** 2026-05-05
-- **Related work:** branch `feat/electron-privileged-ops`, beans `#pawrrtal-5rwv`, `#pawrrtal-e7mp`
+<Callout type="info" title="Status: Accepted">
+Privileged ops live in the Electron main process. Agent stays in FastAPI. Desktop-only tools use the client-tool pattern. Date: 2026-05-05. Related: branch `feat/electron-privileged-ops`, beans `#pawrrtal-5rwv`, `#pawrrtal-e7mp`.
+</Callout>
 
 ## Context
 
@@ -59,10 +64,9 @@ Concretely, strategy 1 wins on:
   and is what Craft, VS Code, and most other agent-shells use. We don't
   invent.
 
-PyInstaller bundling is preserved as a fallback bean (`#pawrrtal-om7i`)
-should the two-implementation tax ever become load-bearing. As of v1,
-we expect zero duplication because of the client-tool pattern (next
-section).
+<Callout type="warn" title="PyInstaller is NOT the chosen strategy">
+PyInstaller bundling was rejected for v1 due to known fragility with native deps (`numpy`, `tiktoken`, `cryptography`, `sqlalchemy`), 80–150 MB download overhead, subprocess lifecycle risks, and added latency. It is preserved as a fallback bean (`#pawrrtal-om7i`) should the two-implementation tax ever become load-bearing.
+</Callout>
 
 ### Why the client-tool pattern over moving the agent
 

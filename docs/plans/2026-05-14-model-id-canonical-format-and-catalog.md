@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.13 + FastAPI + Pydantic v2 + SQLAlchemy (backend); Next.js 15 + TypeScript + TanStack Query + Zod + Vitest (frontend); pytest + ruff + mypy (backend gates); biome + tsc (frontend gates).
 
-**Spec:** `docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md`
+**Spec:** `frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md`
 
 **Parent / follow-up beans:** pawrrtal-5854 (parent bugfix), pawrrtal-25yy (deferred Telegram proactive catalog validation).
 
@@ -163,7 +163,7 @@ def parse_model_id(raw: str) -> ParsedModelId:
 ```bash
 beans create "Implement model_id canonical-format module" -t task \
   -s in-progress -p high \
-  -d "ADR docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md §2. Pure additive: Vendor/Host enums, ParsedModelId, parse_model_id, InvalidModelId, UnknownModelId. No consumers wired yet." \
+  -d "ADR frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md §2. Pure additive: Vendor/Host enums, ParsedModelId, parse_model_id, InvalidModelId, UnknownModelId. No consumers wired yet." \
   --blocked-by pawrrtal-5854
 ```
 
@@ -307,7 +307,7 @@ the canonical "[host:]vendor/model" wire format. No consumers wired
 yet; subsequent commits replace _strip_provider_segment in the
 factory and apply the parser at every API boundary.
 
-ADR: docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md
+ADR: frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md
 Beans: pawrrtal-5854 (parent bug)
 EOF
 )"
@@ -2001,7 +2001,7 @@ Expected: all green.
 
 ```bash
 beans update pawrrtal-5854 --body-append "## Resolution
-ADR docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md shipped via plan docs/plans/2026-05-14-model-id-canonical-format-and-catalog.md. The morning's _strip_provider_segment workaround is gone; parse_model_id is now the only splitter and the format mismatch is structurally impossible."
+ADR frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md shipped via plan docs/plans/2026-05-14-model-id-canonical-format-and-catalog.md. The morning's _strip_provider_segment workaround is gone; parse_model_id is now the only splitter and the format mismatch is structurally impossible."
 ```
 
 - [ ] **Step 8: Confirm `pawrrtal-25yy` (deferred follow-up)** still has the correct cross-reference.

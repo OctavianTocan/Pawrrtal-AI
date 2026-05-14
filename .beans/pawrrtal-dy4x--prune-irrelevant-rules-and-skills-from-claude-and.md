@@ -70,7 +70,7 @@ All other rules (180 .md + 24 .mdc) — covers TypeScript, React, Next.js, FastA
 
 ### Skills removed (1)
 
-- setup-matt-pocock-skills (.agents/skills/ + .claude/skills/ symlink) — one-time scaffolding skill; the per-repo Matt Pocock setup (Agent skills block in CLAUDE.md, docs/agents/) is already in place. Note: skills-lock.json entry was reverted by an external mechanism after my edit — left as-is per system signal.
+- setup-matt-pocock-skills (.agents/skills/ + .claude/skills/ symlink) — one-time scaffolding skill; the per-repo Matt Pocock setup (Agent skills block in CLAUDE.md, frontend/content/docs/handbook/agents/) is already in place. Note: skills-lock.json entry was reverted by an external mechanism after my edit — left as-is per system signal.
 
 ## 2026-05-14 follow-up: research on rule loading
 

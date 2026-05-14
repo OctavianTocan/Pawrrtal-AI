@@ -60,8 +60,8 @@ const publicSource = path.join(repoRoot, 'frontend', 'public');
 if (!existsSync(standaloneSource)) {
 	console.error(
 		`[post-build] ❌  Next.js standalone output not found at:\n  ${standaloneSource}\n\n` +
-		`Run 'bun run build' inside frontend/ before building the Electrobun bundle.\n` +
-		`The build:stable / build:canary scripts in electrobun/package.json do this automatically.`,
+			`Run 'bun run build' inside frontend/ before building the Electrobun bundle.\n` +
+			`The build:stable / build:canary scripts in electrobun/package.json do this automatically.`
 	);
 	process.exit(1);
 }

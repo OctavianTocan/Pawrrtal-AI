@@ -1,0 +1,58 @@
+---
+title: Models
+description: How to pick a model and what providers Pawrrtal supports.
+---
+
+# Models
+
+## Supported providers
+
+Pawrrtal currently routes requests through two providers:
+
+- **Anthropic** — Claude Opus 4.7, Claude Sonnet 4.6, and Claude Haiku 4.5.
+- **Google** — Gemini 3 Flash Preview (the default) and Gemini Flash Lite.
+
+The full catalog is served from the backend (`GET /api/v1/models`) so the list
+of available models can change without a frontend deploy. The selector shows
+whatever the server reports.
+
+## Using the model selector
+
+The model selector lives in the composer toolbar at the bottom of the chat — it
+is the small button that shows the current model's short name and the active
+reasoning level. Clicking it opens a flyout menu.
+
+The top level of the menu groups models by vendor: an **Anthropic** row and a
+**Google** row. Hovering or pressing the right-arrow key on a vendor row opens a
+submenu listing every model for that vendor. Each model entry shows its short
+name and a one-line description (for example "Balanced for everyday tasks").
+Selecting a model closes the menu and immediately applies the choice.
+
+A **Thinking** row at the bottom of the top-level menu is a peer of the vendor
+rows. It opens a submenu for setting the reasoning level independently of which
+model you are using. See [Modes & Reasoning](/docs/product/modes) for details.
+
+## Model selection scope
+
+The selected model is persisted to `localStorage` (key:
+`chat-composer:selected-model-id`). It applies to new messages until you change
+it — it is not locked per conversation. If you start a conversation with one
+model and then switch, subsequent messages in the same conversation use the new
+model.
+
+When no persisted value exists (first visit, cleared storage), the app uses
+whichever model the backend catalog marks as the default — currently Gemini 3
+Flash Preview.
+
+## Choosing a model
+
+The catalog's own descriptions are the best guide: consult the model selector's
+grouped tiers. In general:
+
+- Use a **Flash** or **Haiku**-tier model for quick lookups, short edits, and
+  high-volume back-and-forth where latency matters.
+- Use a **Sonnet** or **Flash Preview**-tier model for day-to-day coding and
+  writing tasks that need reliable quality without the cost of the largest
+  models.
+- Use an **Opus**-tier model for complex, multi-step reasoning tasks where the
+  extra capability is worth the trade-off in speed.

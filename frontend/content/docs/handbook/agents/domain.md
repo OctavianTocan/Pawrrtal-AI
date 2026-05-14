@@ -1,3 +1,8 @@
+---
+title: Domain Docs
+description: How engineering skills should consume this repo's domain documentation when exploring the codebase.
+---
+
 # Domain Docs
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
@@ -5,7 +10,7 @@ How the engineering skills should consume this repo's domain documentation when 
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root — does not exist yet. When created, it defines the project's domain language and key concepts. Skills should proceed silently if it doesn't exist and create it lazily when terms are actually resolved.
-- **`docs/decisions/`** — architectural decision records. Note: this repo uses `docs/decisions/`, not `docs/adr/`. ADRs in this directory are named `YYYY-MM-DD-<slug>.md` (e.g., `2026-05-03-adopt-sentrux-architecture-gating.md`).
+- **`frontend/content/docs/handbook/decisions/`** — architectural decision records. Note: this repo uses `frontend/content/docs/handbook/decisions/`, not `docs/adr/`. ADRs in this directory are named `YYYY-MM-DD-<slug>.md` (e.g., `2026-05-03-adopt-sentrux-architecture-gating.md`).
 
 ## File structure
 
@@ -30,4 +35,4 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts docs/decisions/2026-05-03-adopt-sentrux-architecture-gating.md — but worth reopening because…_
+> _Contradicts frontend/content/docs/handbook/decisions/2026-05-03-adopt-sentrux-architecture-gating.md — but worth reopening because…_

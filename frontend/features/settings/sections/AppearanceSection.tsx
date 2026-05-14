@@ -4,7 +4,7 @@
  * Settings → Appearance — visual mock.
  *
  * As of the 2026-05-06 theming rip
- * (`docs/decisions/2026-05-06-rip-theming-system.md`) this section is a
+ * (`frontend/content/docs/handbook/decisions/2026-05-06-rip-theming-system.md`) this section is a
  * presentation-only shell. The pickers, sliders, and preset buttons
  * render and accept input, but **none of it persists or affects the
  * runtime UI**. There is no provider, no API call, no CSS variable
@@ -316,7 +316,7 @@ function ThemeModeCard({
  * Holds purely local state — there is no provider, no API call, no
  * CSS-variable mutation, no real preset application beyond updating
  * the local preview state. See
- * `docs/decisions/2026-05-06-rip-theming-system.md` for context.
+ * `frontend/content/docs/handbook/decisions/2026-05-06-rip-theming-system.md` for context.
  */
 export function AppearanceSection(): React.JSX.Element {
 	const [light, setLight] = useState<MockThemeColors>({});
@@ -361,7 +361,7 @@ export function AppearanceSection(): React.JSX.Element {
 
 	return (
 		<SettingsPage
-			description="Customize colors, typography, and behavior. (Currently a visual mock — controls do not persist or change the runtime UI; see docs/decisions/2026-05-06-rip-theming-system.md.)"
+			description="Customize colors, typography, and behavior. (Currently a visual mock — controls do not persist or change the runtime UI; see /docs/handbook/decisions/2026-05-06-rip-theming-system.)"
 			title="Appearance"
 		>
 			<ThemeModeCard

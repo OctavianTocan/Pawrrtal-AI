@@ -4,3 +4,9 @@ test-results/
 playwright-report/
 .playwright/
 e2e/output/
+
+# Fumadocs MDX generated manifest
+.source/
+
+# Fumadocs cache / temp output
+.fumadocs/

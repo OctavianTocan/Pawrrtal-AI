@@ -1,9 +1,15 @@
+---
+title: Rip out the theming / appearance system
+description: ADR — remove the user-customizable theming system; keep a single fixed dark-mode visual identity.
+---
+
 # 2026-05-06 — Rip out the theming / appearance system
 
 ## Status
 
-Accepted. Frontend rip executes in the same commit as this doc; backend
-appearance routes are scheduled to be removed in a follow-up bean.
+<Callout type="info" title="Status: Accepted">
+Frontend rip executes in the same commit as this doc. Backend appearance routes (`/api/v1/appearance`) are scheduled for removal in a follow-up bean.
+</Callout>
 
 ## Decision
 
@@ -84,7 +90,7 @@ left to the cascade.
 The `:root` block (light) and `.dark` block defined every derivative
 token, computed from the 6 base slots:
 
-```
+```css title="frontend/app/globals.css"
 :root {
     --background: oklch(0.985 0.026 92);    ← bare slot
     --foreground: oklch(0.21 0.005 285);
@@ -118,7 +124,7 @@ written independently. Nothing forced them to agree.**
 `@theme inline { ... }` near the bottom of `globals.css` exposed
 selected variables as Tailwind tokens:
 
-```
+```css title="frontend/app/globals.css"
 --color-background: var(--background);
 --color-background-elevated: var(--background-elevated);
 --color-background-elevated-shade: var(--background-elevated-shade);

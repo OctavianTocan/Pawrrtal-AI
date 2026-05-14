@@ -1,0 +1,52 @@
+---
+title: Settings
+description: Tour of the Settings surface — appearance, account, and per-feature preferences.
+---
+
+# Settings
+
+Open Settings by clicking the gear icon at the bottom of the sidebar, or by
+navigating to `/settings`. The page is a two-pane shell: a left rail with
+section navigation and a right pane that shows the active section.
+
+## Sections
+
+| Section | What it covers |
+|---|---|
+| **General** | Profile (avatar, display name, preferred name, role, per-session instructions) and notification preferences. |
+| **Workspaces** | Workspace management. |
+| **Appearance** | Theme mode (light/dark/system), color palette customisation, typography, and behavioral toggles. See the caveat below. |
+| **Configuration** | Agent-level configuration options. |
+| **Personalization** | Persona and style preferences applied across conversations. |
+| **Integrations** | Third-party service connections. |
+| **Channels** | Channel configuration. |
+| **MCP servers** | Model Context Protocol server connections. |
+| **Git** | Git identity and repository settings. |
+| **Environments** | Runtime environment variables. |
+| **Worktrees** | Git worktree management. |
+| **Browser use** | Browser automation settings. |
+| **Archived chats** | View and restore archived conversations. |
+| **Usage** | Token and request usage meters. |
+
+## Appearance caveat
+
+The Appearance section renders controls for theme mode, color slots, typography,
+and behavioral toggles. As of the May 2026 theming rework, **these controls are
+a visual mock** — they accept input and show a local preview, but none of the
+choices persist to the runtime UI or survive a page reload. The Whimsy texture
+card at the bottom of the section is the exception: it does persist and affects
+the chat panel background immediately.
+
+For the full context behind this decision, see the ADR at
+[/docs/handbook/decisions/2026-05-06-rip-theming-system](/docs/handbook/decisions/2026-05-06-rip-theming-system).
+
+## Persistence model
+
+**UI preferences** (such as sidebar collapse state, selected model, reasoning
+level, safety mode, and the whimsy texture) are stored in `localStorage` in the
+browser. They are per-device and per-browser — clearing site data or switching
+browsers resets them to defaults.
+
+**Account-level data** (profile name, instructions, notification preferences, and
+anything requiring a network round-trip) is stored server-side and follows your
+account across devices.

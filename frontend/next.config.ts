@@ -5,10 +5,13 @@
  * `authInterrupts` for `unauthorized()`, and rewrites barrel-style imports
  * from icon / UI libraries into direct imports at build time so the dev
  * server doesn't pay the 200–800 ms cold-start cost of resolving thousands
- * of unused re-exports.
+ * of unused re-exports. The config is wrapped with `createMDX()` from
+ * `fumadocs-mdx/next` to enable build-time MDX processing for the
+ * documentation site.
  */
 
 import path from 'node:path';
+import { createMDX } from 'fumadocs-mdx/next';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
@@ -41,4 +44,6 @@ const nextConfig: NextConfig = {
 	},
 };
 
-export default nextConfig;
+const withMDX = createMDX();
+
+export default withMDX(nextConfig);

@@ -1,9 +1,17 @@
+---
+title: Stagehand v3 (LOCAL) over browser-use for the AI-driven E2E suite
+description: ADR — chose Stagehand v3 over browser-use 0.12.6 for the AI-driven E2E suite after browser-use failed due to LLM structured-output rejection.
+---
+
 # ADR: Stagehand v3 (LOCAL) over browser-use 0.12.6 for the AI-driven E2E suite
 
 - **Date:** 2026-05-05
-- **Status:** Accepted
 - **Owners:** OctavianTocan
 - **Tracking:** none — opportunistic spike turned into a real decision
+
+<Callout type="info" title="Status: Accepted">
+Stagehand v3 (TypeScript, `env: "LOCAL"`) is the AI-driven E2E suite. browser-use 0.12.6 was rejected after exhausting 5 LLMs across 3 providers (~2.5 h). First Stagehand spec ran green in 6.1 s.
+</Callout>
 
 ## Context
 
@@ -33,7 +41,7 @@ every LLM provider we tried:
 | Gemini 3.1 Pro Preview | Google | Hang, TCP `CLOSE_WAIT` |
 | GPT-5.4-mini-2026-03-17 | OpenAI | Hang, TCP `CLOSE_WAIT` |
 
-Smoke-check calls (1-token "Reply OK") returned in <2 seconds against
+Smoke-check calls (1-token "Reply OK") returned in &lt;2 seconds against
 every provider — proves credentials, network, and SDKs were fine.
 
 `lsof -nP -p <pytest-pid>` consistently showed the LLM HTTPS socket
@@ -123,13 +131,13 @@ frontend/
 
 ## Reverse-engineering aid
 
-If a future contributor sees browser-use working in a tutorial and
-wants to retry it for pawrrtal, the diagnostic checklist is:
+<Callout type="warn" title="Do NOT retry browser-use without checking this first">
+If a future contributor sees browser-use working in a tutorial and wants to retry it for pawrrtal, run this diagnostic checklist before investing time:
 
 1. Run the suite with `BROWSER_USE_LOGGING_LEVEL=debug`.
 2. After "Starting a browser-use agent" log line, wait 30s.
-3. `lsof -nP -p $(pgrep -f pytest)` — if the LLM socket is in
-   `CLOSE_WAIT`, it's the same payload bug we hit. Bail.
+3. `lsof -nP -p $(pgrep -f pytest)` — if the LLM socket is in `CLOSE_WAIT`, it's the same structured-output payload bug we hit. Bail immediately.
+</Callout>
 
 ## References
 

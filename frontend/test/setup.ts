@@ -55,7 +55,8 @@ if (typeof window !== 'undefined') {
 // jsdom's `Element.scrollIntoView` is undefined; radix-ui's submenu
 // keyboard navigation calls it. Stub as a no-op so menu interactions
 // don't crash the test runner.
-if (typeof Element.prototype.scrollIntoView !== 'function') {
+// Guard for non-browser environments (e.g. Node-environment tests).
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
 	Element.prototype.scrollIntoView = (): void => {
 		/* noop */
 	};

@@ -6,7 +6,7 @@ LLM-driven end-to-end tests for Pawrrtal, using [Stagehand v3](https://docs.stag
 
 The deterministic suite at `frontend/e2e/*.spec.ts` runs in seconds, costs nothing, and gates `just check`. This AI suite runs in **minutes**, costs real money per LLM call, and is opt-in via `just stagehand-e2e`. Each spec uses `act` / `extract` / `observe` against natural-language descriptions instead of CSS selectors, so checks survive copy and markup changes that would break a Playwright `getByRole`.
 
-For the full design rationale and the (failed) browser-use experiment that preceded this, see the ADR: `docs/decisions/2026-05-05-stagehand-over-browser-use-for-ai-e2e.md`.
+For the full design rationale and the (failed) browser-use experiment that preceded this, see the ADR: `frontend/content/docs/handbook/decisions/2026-05-05-stagehand-over-browser-use-for-ai-e2e.md`.
 
 ## Prerequisites
 

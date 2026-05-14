@@ -1,3 +1,8 @@
+---
+title: Self-hosted GitHub Actions runner
+description: Setup and maintenance guide for the hardened self-hosted CI runner on Octavian's VPS.
+---
+
 # Self-hosted GitHub Actions runner
 
 This repo has a hardened self-hosted runner story so we can run CI

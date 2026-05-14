@@ -1,9 +1,17 @@
+---
+title: Canonical model-ID format and backend-owned model catalog
+description: ADR — standardize on provider/model-name canonical IDs and move the model catalog to the backend.
+---
+
 # ADR: Canonical model-ID format and backend-owned model catalog
 
 - **Date:** 2026-05-14
-- **Status:** Proposed
 - **Owners:** OctavianTocan
 - **Tracking:** beans `pawrrtal-5854` (the prefix-strip bugfix that surfaced this), follow-up bean for backend-side Telegram validation (TBD).
+
+<Callout type="info" title="Status: Proposed">
+Standardize on `[host:]vendor/model` canonical IDs everywhere and move the model catalog to the backend (`GET /api/v1/models`). Removes three parallel model-ID shapes from the codebase.
+</Callout>
 
 ## Context
 
@@ -93,7 +101,7 @@ independent of where it runs.
 
 Single source of truth for parsing, validation, host resolution.
 
-```python
+```python title="backend/app/core/providers/model_id.py"
 from enum import StrEnum
 from dataclasses import dataclass
 import re
@@ -147,8 +155,7 @@ already exist with a `str` field — see §5b.
 
 ### 2a. Canonicalising Pydantic validator
 
-```python
-# schemas.py
+```python title="backend/app/schemas.py"
 from pydantic import AfterValidator
 from typing import Annotated
 
@@ -170,7 +177,7 @@ as 500 (preferable to silently shipping garbage to the frontend).
 
 ### 3. Backend module: `backend/app/core/providers/catalog.py`
 
-```python
+```python title="backend/app/core/providers/catalog.py"
 from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
@@ -323,7 +330,7 @@ Remove from `frontend/features/chat/components/ModelSelectorPopover.tsx`:
 Add:
 - `frontend/features/chat/hooks/use-chat-models.ts`:
 
-  ```ts
+  ```ts title="frontend/features/chat/hooks/use-chat-models.ts"
   /** Result of `useChatModels()`. */
   interface UseChatModelsResult {
     /** Catalog entries returned by `GET /api/v1/models`, empty during initial load. */
@@ -552,7 +559,7 @@ Removed: `backend/app/api/chat.py:_DEFAULT_MODEL`,
 - DB wipe is a hard cut. Acceptable for a dev DB; the deploy-ordering
   + `STRICT_CONVERSATION_READ_VALIDATION` flag in §9 covers the
   future-production case.
-- Telegram users who type a *malformed* `/model <id>` get an
+- Telegram users who type a *malformed* `/model &lt;id&gt;` get an
   immediate error at `/model` time (structural parser fires). Users
   who type a well-formed but *unknown* model only discover the
   error on the next chat turn — at which point the stored value is
