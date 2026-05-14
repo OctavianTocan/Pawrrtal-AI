@@ -1,0 +1,66 @@
+---
+title: Modes & Reasoning
+description: Plan mode, safety mode, and reasoning levels — what each does, when to use it.
+---
+
+# Modes & Reasoning
+
+The composer toolbar exposes three independent controls that influence how
+Pawrrtal handles your next message: plan mode, safety mode, and reasoning level.
+All three are persisted to `localStorage` so your choices survive across page
+loads.
+
+## Plan mode
+
+**Plan mode** adds a planning step to the request. The toggle is labelled
+**Plan** in the toolbar (with a list-checks icon). You can also show or hide
+the Plan button with the keyboard shortcut **Shift+Tab**.
+
+Use plan mode when you want the model to outline its approach before executing.
+This is useful for multi-step tasks — refactoring a module, writing a long
+document, or debugging a complex problem — where seeing the plan first lets you
+redirect before the model commits to a direction.
+
+Plan mode visibility is stored in `localStorage` under the key
+`chat-composer:plan-mode-visible` and defaults to hidden for new sessions.
+
+## Safety mode
+
+**Safety mode** controls what permissions the agent has when executing tools and
+code. The selector is in the composer toolbar, to the right of the Plan button.
+Four modes are available:
+
+- **Default permissions** — the baseline set of capabilities; shown with a blue
+  hand icon.
+- **Auto-review** *(default)* — the model flags changes for human review before
+  applying them; shown with a green shield-check icon.
+- **Full access** — the model can apply changes without review; shown with a red
+  shield-alert icon. This is an advanced mode and is separated from the two
+  above by a divider in the dropdown.
+- **Custom (config.toml)** — loads permissions from your local `config.toml`
+  file; also in the advanced section.
+
+The active mode is stored in `localStorage` under the key
+`chat-composer:safety-mode`. The default is **Auto-review**.
+
+When in doubt, stay on **Auto-review**. Switch to **Default permissions** for
+read-only or exploratory sessions where you just want answers without the model
+touching anything. Reserve **Full access** for tasks where you have already
+reviewed the plan and want uninterrupted execution.
+
+## Reasoning level
+
+**Reasoning level** controls how much extended chain-of-thought the model uses
+before producing its response. The selector lives inside the model selector
+popover — click the composer's model/reasoning button to open it, then choose
+the **Thinking** row at the bottom of the menu.
+
+Four levels are available: **Low**, **Medium**, **High**, and **Extra High**.
+
+The active level is persisted under `chat-composer:selected-reasoning-level`
+and defaults to **Medium**.
+
+Higher reasoning levels produce more considered responses but take longer and
+consume more tokens. Use **Low** for quick factual questions, **Medium** for
+most everyday tasks, **High** for hard problems that benefit from deliberation,
+and **Extra High** for tasks where thoroughness matters more than speed.
