@@ -5,22 +5,21 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pathlib import Path
-
 from app.channels import resolve_channel, surface_from_header
-from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.agent_tools import build_agent_tools
+from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.providers import resolve_llm
 from app.core.providers.base import StreamEvent
+from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.workspace import get_default_workspace
-from app.core.request_logging import get_request_id
 from app.crud.chat_message import (
     append_assistant_placeholder,
     append_user_message,
@@ -75,7 +74,7 @@ def get_chat_router() -> APIRouter:
         reply as a placeholder that is patched on stream end with the full
         chain-of-thought state. This is what powers ``GET /conversations/:id/messages``
         rehydration: the chat UI reads from ``chat_messages``, not from
-        Agno's internal log.
+        any provider's internal log.
 
         The provider is resolved from model_id — the endpoint is fully
         provider-agnostic. Changing model_id changes the provider; the
@@ -97,9 +96,7 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(
-            user.id, session, request.conversation_id
-        )
+        conversation = await get_conversation_service(user.id, session, request.conversation_id)
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -169,9 +166,7 @@ def get_chat_router() -> APIRouter:
         if not root.exists():
             # Workspace row exists but the directory is gone (manually
             # deleted, volume wipe, etc.).  Same outcome — do not run.
-            logger.error(
-                "CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root
-            )
+            logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
             raise HTTPException(
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",

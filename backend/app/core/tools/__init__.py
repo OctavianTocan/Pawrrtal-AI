@@ -1,13 +1,15 @@
-"""Provider-agnostic tools that any chat backend (Claude SDK / Agno / future) can use.
+"""Provider-agnostic tools that any chat provider can use.
 
-Each tool lives in its own module with three layers:
+Each tool lives in its own module with two layers:
 
 * a pure async core function that takes plain Python args and returns a
-  plain Python value — knows nothing about Claude or Agno.
-* a Claude Agent SDK wrapper (``@tool`` decorator + ``create_sdk_mcp_server``)
-  exposed as a builder so the provider can mount it on demand.
-* an Agno wrapper (``Toolkit`` subclass) registered with the agent.
+  plain Python value — knows nothing about Claude or Gemini.
+* an :class:`app.core.agent_loop.types.AgentTool` factory exposing the
+  tool as a provider-neutral record (name, description, JSON-schema
+  parameters, handler).  Providers translate this shape into their SDK
+  format via dedicated bridges under :mod:`app.core.providers`.
 
-Adding a new tool means adding a new module under this package and wiring
-it into both providers — never duplicating the network logic across them.
+Adding a new tool means adding a new module under this package and
+appending its factory to ``build_agent_tools`` in
+:mod:`app.core.agent_tools` — providers never need to change.
 """

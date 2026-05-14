@@ -30,28 +30,23 @@ class SenderType(Enum):
 class Conversation(Base):
     """Conversation metadata stored in the application database.
 
-    Actual message content is persisted by the Agno library in its own database. The two are linked via ``Conversation.id`` ==
-    Agno's ``session_id``.
+    Message content is persisted in the :class:`ChatMessage` table; the two
+    are linked via ``ChatMessage.conversation_id`` → ``Conversation.id``.
+    The Claude Agent SDK additionally maintains a per-session transcript on
+    disk keyed by ``str(conversation_id)`` so multi-turn context survives
+    across requests.
     """
 
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_flagged: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_unread: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -84,9 +79,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -172,9 +165,7 @@ class APIKey(Base):
     __tablename__ = "api_keys"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     provider: Mapped[str] = mapped_column(String(50))
     encrypted_key: Mapped[str] = mapped_column(
         StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
@@ -245,10 +236,12 @@ class ChatMessage(Base):
     This is the source of truth for what the chat UI renders on a refresh:
     role, plain-text content, thinking/reasoning text, tool invocations and
     their results, the arrival-ordered timeline, and the reasoning duration.
-    Provider-agnostic — both Agno-backed and Claude-backed turns write here.
+    Provider-agnostic — both Gemini-backed and Claude-backed turns write
+    here.
 
-    Note: Agno also keeps its own message log for context-window plumbing on
-    the next turn. That log is not used for rendering history; this table is.
+    Note: the Claude Agent SDK keeps its own on-disk transcript for
+    multi-turn context resumption. That transcript is not used for
+    rendering history; this table is.
     """
 
     __tablename__ = "chat_messages"
@@ -257,9 +250,7 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -269,9 +260,7 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)

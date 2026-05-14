@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # request resolves to a Claude model. Generate with `claude setup-token`.
     claude_code_oauth_token: str = ""
     # API key for Exa (https://exa.ai). Powers the provider-agnostic
-    # `exa_search` tool wired into both the Claude SDK and Agno agents.
+    # `exa_search` tool wired into the chat router's `AgentTool` list.
     # Leave empty to disable web search; the tool returns a clear
     # "not configured" error rather than crashing the turn.
     exa_api_key: str = ""
@@ -71,9 +71,7 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     # Where Google redirects back to after auth. Must be an authorized
     # redirect URI on the OAuth client. Default targets local dev.
-    google_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/google/callback"
-    )
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
 
     # --- OAuth: Apple ---
     # Apple Sign In requires four pieces: services ID (acts as client_id),
@@ -83,9 +81,7 @@ class Settings(BaseSettings):
     apple_oauth_team_id: str = ""
     apple_oauth_key_id: str = ""
     apple_oauth_private_key: str = ""
-    apple_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/apple/callback"
-    )
+    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
 
     # Where to send the user after a successful OAuth sign-in. Override in
     # production to point at the deployed frontend (e.g. https://app/...).
@@ -131,9 +127,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
-        secure = (
-            self.cookie_secure if self.cookie_secure is not None else self.is_production
-        )
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."
@@ -197,4 +191,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()  # type: ignore[call-arg]
-

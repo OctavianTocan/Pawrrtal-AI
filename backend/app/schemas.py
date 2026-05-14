@@ -242,9 +242,12 @@ class ChatRequest(BaseModel):
     """Request schema for the ``POST /api/v1/chat`` streaming endpoint.
 
     Attributes:
-        question: The user's message to send to the Agno agent.
+        question: The user's message to send to the AI provider.
         conversation_id: UUID linking this message to a conversation.
-        model_id: The ID of the model to use for the agent. (Just Gemini models right now).
+        model_id: The ID of the model to use for this turn.  When omitted,
+            the chat router falls back to the conversation's stored model,
+            then to the default declared in
+            :mod:`app.core.providers.factory`.
     """
 
     question: str
@@ -268,9 +271,9 @@ class ChatResponse(BaseModel):
 class ChatMessageRead(BaseModel):
     """Single rehydrated chat message returned by ``GET /conversations/:id/messages``.
 
-    Mirrors the `AgnoMessage` shape consumed by the frontend so the chat UI
-    can render past turns with the same chain-of-thought, tool steps, source
-    chips, and reasoning duration as the live stream produced.
+    Mirrors the streamed message shape consumed by the frontend so the chat
+    UI can render past turns with the same chain-of-thought, tool steps,
+    source chips, and reasoning duration as the live stream produced.
     """
 
     role: Literal["user", "assistant"]

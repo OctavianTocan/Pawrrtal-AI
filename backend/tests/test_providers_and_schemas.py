@@ -5,9 +5,9 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.core.providers.gemini_provider import GeminiLLM
 from app.core.providers.claude_provider import ClaudeLLM
 from app.core.providers.factory import resolve_llm
+from app.core.providers.gemini_provider import GeminiLLM
 from app.schemas import ConversationCreate, ConversationUpdate, UserCreate
 
 
@@ -16,8 +16,8 @@ def test_resolve_llm_routes_claude_models_to_claude_provider() -> None:
     assert isinstance(resolve_llm("claude-sonnet-4-6"), ClaudeLLM)
 
 
-def test_resolve_llm_routes_default_and_gemini_to_agno_provider() -> None:
-    """Gemini and blank model IDs are routed to Agno."""
+def test_resolve_llm_routes_default_and_gemini_to_gemini_provider() -> None:
+    """Gemini and blank model IDs are routed to the Gemini provider."""
     assert isinstance(resolve_llm("gemini-3-flash-preview"), GeminiLLM)
     assert isinstance(resolve_llm(None), GeminiLLM)
     assert isinstance(resolve_llm("  "), GeminiLLM)

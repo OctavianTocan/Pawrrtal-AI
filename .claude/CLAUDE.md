@@ -2,7 +2,7 @@
 
 ## Stack
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Biome (linting + formatting), Bun
-- **Backend**: Python, FastAPI, SQLAlchemy (async), Alembic migrations, Agno (AI sessions), FastAPI-Users
+- **Backend**: Python, FastAPI, SQLAlchemy (async), Alembic migrations, FastAPI-Users
 - **Monorepo**: top-level `justfile` for orchestration
 
 ## Commands
