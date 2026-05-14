@@ -16,7 +16,15 @@ import { handbookSource } from '@/lib/source';
  */
 export default function HandbookLayout({ children }: { children: ReactNode }): React.ReactElement {
 	return (
-		<DocsLayout tree={handbookSource.pageTree} {...baseOptions()}>
+		<DocsLayout
+			tree={handbookSource.pageTree}
+			sidebar={{ defaultOpenLevel: 1 }}
+			tabs={[
+				{ title: 'Handbook', url: '/docs/handbook' },
+				{ title: 'Product', url: '/docs/product' },
+			]}
+			{...baseOptions()}
+		>
 			{children}
 		</DocsLayout>
 	);
