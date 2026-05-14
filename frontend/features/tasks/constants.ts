@@ -4,10 +4,12 @@
  * View identifiers, priority enum, project tones, URL parameter keys, and
  * `localStorage` keys live here so the container, view, sub-sidebar, and
  * any future deep-linker share a single source of truth. `as const`
- * preserves literal types for derived unions in `./types.ts`.
+ * preserves literal types for the derived unions defined further down
+ * the file (and re-exported from ``./types.ts``); declaring those
+ * unions here as well — rather than importing them from ``./types.ts``
+ * — keeps the dependency graph one-way, which sentrux's
+ * ``max_cycles=0`` constraint requires.
  */
-
-import type { TaskPriority, TaskProjectTone } from './types';
 
 /**
  * All sub-views of the Tasks surface.
@@ -38,12 +40,18 @@ export const TASK_QUERY_KEYS = {
  */
 export const TASK_PRIORITIES = ['urgent', 'high', 'normal', 'low'] as const;
 
+/** Priority bucket for a task — derived from {@link TASK_PRIORITIES}. */
+export type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
 /**
  * Tint vocabulary for project chips. Each token resolves to a class string
  * inside the chip component; we keep the union narrow so drift across
  * projects stays impossible.
  */
 export const TASK_PROJECT_TONES = ['neutral', 'info', 'success', 'accent', 'destructive'] as const;
+
+/** Tint vocabulary for project chips — derived from {@link TASK_PROJECT_TONES}. */
+export type TaskProjectTone = (typeof TASK_PROJECT_TONES)[number];
 
 /**
  * Tailwind class strings for the priority ring on each task row's

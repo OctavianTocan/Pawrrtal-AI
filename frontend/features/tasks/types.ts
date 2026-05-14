@@ -8,7 +8,14 @@
  * fetcher swaps.
  */
 
-import type { TASK_PRIORITIES, TASK_PROJECT_TONES, TASK_VIEWS } from './constants';
+import type { TASK_VIEWS, TaskPriority, TaskProjectTone } from './constants';
+
+// `TaskPriority` and `TaskProjectTone` live next to the const tuples
+// they derive from in `./constants.ts`; re-exporting them here keeps
+// downstream feature code importing every Tasks type from one module
+// while satisfying sentrux's ``max_cycles=0`` rule (the const file no
+// longer needs a back-import from this module).
+export type { TaskPriority, TaskProjectTone };
 
 /**
  * The active sub-view inside the Tasks surface.
@@ -18,22 +25,6 @@ import type { TASK_PRIORITIES, TASK_PROJECT_TONES, TASK_VIEWS } from './constant
  * `?view=...` so reloading or sharing a URL restores the same view.
  */
 export type TaskViewId = (typeof TASK_VIEWS)[keyof typeof TASK_VIEWS];
-
-/**
- * Priority bucket for a task — controls the checkbox ring tint and its
- * sort weight inside an unsorted section.
- *
- * `urgent` paints destructive, `high` paints info, `normal` and `low` use
- * progressively lighter foreground mixes so untriaged items recede.
- */
-export type TaskPriority = (typeof TASK_PRIORITIES)[number];
-
-/**
- * Tinted background palette for a project chip. Mirrors the limited tint
- * vocabulary in DESIGN.md — we deliberately reuse `info`/`success`/`accent`
- * tokens with low alpha rather than introducing literal colors.
- */
-export type TaskProjectTone = (typeof TASK_PROJECT_TONES)[number];
 
 /**
  * One project the user can file tasks under.
