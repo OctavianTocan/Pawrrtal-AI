@@ -23,7 +23,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.workspace import (
+from app.crud.workspace import (
     _build_soul_md,
     _build_user_md,
     create_workspace,
@@ -73,7 +73,7 @@ def _make_personalization(**kwargs: Any) -> UserPersonalization:
 class TestSeedWorkspace:
     def test_creates_standard_subdirectories(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
@@ -83,7 +83,7 @@ class TestSeedWorkspace:
 
     def test_creates_gitkeep_in_each_subdir(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
@@ -92,7 +92,7 @@ class TestSeedWorkspace:
 
     def test_writes_agents_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
@@ -102,7 +102,7 @@ class TestSeedWorkspace:
 
     def test_writes_identity_and_tools_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
@@ -111,7 +111,7 @@ class TestSeedWorkspace:
 
     def test_does_not_overwrite_existing_files(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
@@ -120,7 +120,7 @@ class TestSeedWorkspace:
         (root / "AGENTS.md").write_text(custom)
 
         # Re-seed — existing file must survive.
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             seed_workspace(ws_id)
 
@@ -129,7 +129,7 @@ class TestSeedWorkspace:
     def test_populates_user_md_from_personalization(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         p = _make_personalization(name="Alice", role="PM")
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id, personalization=p)
 
@@ -140,19 +140,17 @@ class TestSeedWorkspace:
     def test_uses_personality_for_soul_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         p = _make_personalization(personality="analytical")
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id, personalization=p)
 
         soul = (root / "SOUL.md").read_text()
         assert "analytical" in soul.lower()
 
-    def test_falls_back_to_balanced_soul_for_unknown_personality(
-        self, tmp_path: Path
-    ) -> None:
+    def test_falls_back_to_balanced_soul_for_unknown_personality(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         p = _make_personalization(personality="goblin")
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id, personalization=p)
 
@@ -160,11 +158,9 @@ class TestSeedWorkspace:
         # Balanced soul is the fallback.
         assert "SOUL.md" in soul
 
-    def test_seed_without_personalization_writes_placeholder_user_md(
-        self, tmp_path: Path
-    ) -> None:
+    def test_seed_without_personalization_writes_placeholder_user_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id, personalization=None)
 
@@ -179,9 +175,7 @@ class TestSeedWorkspace:
 
 class TestBuildUserMd:
     def test_includes_name_role_company(self) -> None:
-        p = _make_personalization(
-            name="Bob", role="CTO", company_website="https://acme.com"
-        )
+        p = _make_personalization(name="Bob", role="CTO", company_website="https://acme.com")
         md = _build_user_md(p)
         assert "Bob" in md
         assert "CTO" in md
@@ -204,9 +198,7 @@ class TestBuildUserMd:
 
 
 class TestBuildSoulMd:
-    @pytest.mark.parametrize(
-        "personality", ["analytical", "creative", "direct", "balanced"]
-    )
+    @pytest.mark.parametrize("personality", ["analytical", "creative", "direct", "balanced"])
     def test_known_personalities_return_content(self, personality: str) -> None:
         p = _make_personalization(personality=personality)
         md = _build_soul_md(p)
@@ -233,7 +225,7 @@ class TestWorkspaceService:
     async def test_create_workspace_adds_db_row(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -247,7 +239,7 @@ class TestWorkspaceService:
     async def test_create_workspace_seeds_filesystem(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -267,7 +259,7 @@ class TestWorkspaceService:
     async def test_get_default_workspace_returns_existing(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             created = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -280,7 +272,7 @@ class TestWorkspaceService:
     async def test_ensure_default_workspace_is_idempotent(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws1 = await ensure_default_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -300,7 +292,7 @@ class TestWorkspaceService:
     async def test_list_workspaces_returns_all(
         self, db_session: AsyncSession, test_user: User, tmp_path: Path
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             await create_workspace(test_user.id, db_session, name="Main", slug="main")
             await create_workspace(
@@ -339,7 +331,7 @@ class TestWorkspaceService:
         await db_session.commit()
 
         # Create the first default workspace — must succeed.
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws1 = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -347,7 +339,7 @@ class TestWorkspaceService:
         # Attempt a second default workspace via a savepoint so the session
         # stays alive after the expected constraint violation.
         caught = False
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             try:
                 async with db_session.begin_nested():
@@ -388,7 +380,7 @@ class TestWorkspaceService:
         from sqlalchemy.exc import IntegrityError as SAIntegrityError
 
         # First, create the workspace directly so it already exists in the DB.
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             real_ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -397,9 +389,9 @@ class TestWorkspaceService:
         # race where two requests both passed the "no existing workspace" check
         # before either committed.
         with (
-            patch("app.core.workspace.settings") as mock_settings,
+            patch("app.crud.workspace.settings") as mock_settings,
             patch(
-                "app.core.workspace.create_workspace",
+                "app.crud.workspace.create_workspace",
                 side_effect=SAIntegrityError("mock", {}, Exception()),
             ),
         ):
@@ -431,7 +423,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -450,7 +442,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -463,9 +455,7 @@ class TestWorkspaceAPI:
         assert "memory" in names
 
     @pytest.mark.anyio
-    async def test_tree_returns_404_for_unknown_workspace(
-        self, client: AsyncClient
-    ) -> None:
+    async def test_tree_returns_404_for_unknown_workspace(self, client: AsyncClient) -> None:
         resp = await client.get(f"/api/v1/workspaces/{uuid.uuid4()}/tree")
         assert resp.status_code == 404
 
@@ -477,7 +467,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -494,7 +484,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -510,7 +500,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -522,9 +512,7 @@ class TestWorkspaceAPI:
         )
         assert put_resp.status_code == 200
 
-        get_resp = await client.get(
-            f"/api/v1/workspaces/{ws.id}/files/memory/2026-05-06.md"
-        )
+        get_resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/memory/2026-05-06.md")
         assert get_resp.status_code == 200
         assert get_resp.json()["content"] == content
 
@@ -536,7 +524,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()
@@ -546,14 +534,10 @@ class TestWorkspaceAPI:
             f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt",
             json={"content": "some output"},
         )
-        del_resp = await client.delete(
-            f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt"
-        )
+        del_resp = await client.delete(f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt")
         assert del_resp.status_code == 204
 
-        get_resp = await client.get(
-            f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt"
-        )
+        get_resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/artifacts/output.txt")
         assert get_resp.status_code == 404
 
     @pytest.mark.anyio
@@ -564,7 +548,7 @@ class TestWorkspaceAPI:
         test_user: User,
         tmp_path: Path,
     ) -> None:
-        with patch("app.core.workspace.settings") as mock_settings:
+        with patch("app.crud.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             ws = await create_workspace(test_user.id, db_session)
             await db_session.commit()

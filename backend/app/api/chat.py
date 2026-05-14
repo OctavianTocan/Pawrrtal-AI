@@ -1,82 +1,37 @@
-"""Chat API — channel-routed, provider-agnostic streaming endpoint."""
+"""Chat API — channel-routed, provider-agnostic streaming endpoint.
+
+The route stays thin on purpose: it parses the request, hands the
+per-turn setup to :func:`app.api._chat_setup.prepare_chat_turn`, opens
+the provider stream, and pipes events through the surface's
+:class:`Channel` adapter.  Every other concern — model resolution,
+workspace prompt assembly, tool composition, prompt-cache telemetry —
+lives in the setup helper so this file stays under sentrux's
+``no_god_files`` fan-out budget.
+"""
 
 from __future__ import annotations
 
 import logging
 import time
 from collections.abc import AsyncGenerator
-from pathlib import Path
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api._chat_setup import ChatTurnContext, prepare_chat_turn
 from app.channels import resolve_channel, surface_from_header
-from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.models_catalog import canonicalise, default_entry, resolve_entry
-from app.core.prompt_cache import compute_prompt_cache_key, log_prompt_cache_key
 from app.core.providers import resolve_llm
-from app.core.providers.base import ReasoningEffort, StreamEvent
+from app.core.providers.base import StreamEvent
 from app.core.request_logging import get_request_id
-from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.workspace import get_default_workspace
-from app.crud.chat_message import (
-    append_assistant_placeholder,
-    append_user_message,
-    finalize_assistant_message,
-    get_messages_for_conversation,
-)
-from app.crud.conversation import (
-    get_conversation_service,
-    update_conversation_model_service,
-)
+from app.crud.chat_message import finalize_assistant_message
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
 from app.users import current_active_user
 
 logger = logging.getLogger(__name__)
-
-# How many recent messages to send as context to the provider.
-# Keeps token usage predictable while preserving recent turns.
-_HISTORY_WINDOW = 20
-
-
-def _resolve_canonical_model_id(
-    request_model_id: str | None,
-    stored_model_id: str | None,
-) -> str:
-    """Pick the model for this turn and return its canonical id.
-
-    Precedence: request override → conversation's stored value →
-    catalog default.  Whatever spelling the caller used (canonical
-    ``"<provider>/<model>"`` or a legacy bare SDK id) is normalised
-    via :func:`canonicalise` so the conversation row converges on the
-    canonical form on its next write.
-    """
-    requested = request_model_id or stored_model_id
-    return canonicalise(requested) or default_entry().canonical_id
-
-
-def _resolve_reasoning_effort(
-    requested: ReasoningEffort | None,
-    model_id: str,
-) -> ReasoningEffort | None:
-    """Pick the reasoning effort for this turn.
-
-    Honours the request value on thinking-capable models; silently drops
-    it on models without extended thinking so the Gemini path never
-    pretends it received a thinking budget.  Returning ``None`` lets
-    the provider's adaptive default apply (Claude SDK adaptive thinking
-    on Opus 4.6+).
-    """
-    if requested is None:
-        return None
-    entry = resolve_entry(model_id)
-    if entry is None or not entry.supports_thinking:
-        return None
-    return requested
 
 
 def get_chat_router() -> APIRouter:
@@ -108,20 +63,20 @@ def get_chat_router() -> APIRouter:
         While streaming, the endpoint also persists the turn to the
         ``chat_messages`` table — the user prompt as a row, the assistant
         reply as a placeholder that is patched on stream end with the full
-        chain-of-thought state. This is what powers ``GET /conversations/:id/messages``
-        rehydration: the chat UI reads from ``chat_messages``, not from
-        any provider's internal log.
+        chain-of-thought state.  This is what powers
+        ``GET /conversations/:id/messages`` rehydration: the chat UI reads
+        from ``chat_messages``, not from any provider's internal log.
 
         The provider is resolved from model_id — the endpoint is fully
-        provider-agnostic. Changing model_id changes the provider; the
+        provider-agnostic.  Changing model_id changes the provider; the
         stream format never changes.
         """
-        # Entry log — pairs with REQ_IN/REQ_OUT from the request middleware via rid.
-        # Question length, not contents, to avoid leaking PII into the log file.
         surface = surface_from_header(x_nexus_surface)
         channel = resolve_channel(surface)
-
         rid = get_request_id()
+
+        # Entry log — pairs with REQ_IN/REQ_OUT from the request middleware via rid.
+        # Question length, not contents, to avoid leaking PII into the log file.
         logger.info(
             "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s surface=%s question_len=%d",
             rid,
@@ -132,205 +87,24 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(user.id, session, request.conversation_id)
-        if conversation is None:
-            logger.warning(
-                "CHAT_404 rid=%s user_id=%s conversation_id=%s",
-                rid,
-                user.id,
-                request.conversation_id,
-            )
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        # Resolve model: request overrides stored model, stored model overrides
-        # the catalog default.  Persist the canonical form so the DB converges
-        # on one grammar — see :func:`_resolve_canonical_model_id`.
-        model_id = _resolve_canonical_model_id(request.model_id, conversation.model_id)
-        if model_id != conversation.model_id:
-            await update_conversation_model_service(
-                model_id=model_id,
-                user_id=user.id,
-                conversation_id=request.conversation_id,
-                session=session,
-            )
-
-        # Read recent history *before* persisting the current message so the
-        # current question is not included in the history slice passed to the
-        # provider (the provider receives it separately as ``question``).
-        recent_rows = await get_messages_for_conversation(
-            session, request.conversation_id, limit=_HISTORY_WINDOW
-        )
-        history = [
-            {"role": row.role, "content": row.content or ""}
-            for row in recent_rows
-            if row.role in {"user", "assistant"}
-        ]
-
-        # Persist the user prompt + assistant placeholder rows up front so a
-        # client that disconnects mid-stream still has a partial record.
-        await append_user_message(
-            session,
-            conversation_id=request.conversation_id,
-            user_id=user.id,
-            content=request.question,
-        )
-        assistant_row = await append_assistant_placeholder(
-            session,
-            conversation_id=request.conversation_id,
-            user_id=user.id,
-        )
-        assistant_message_id = assistant_row.id
+        ctx = await prepare_chat_turn(request, session=session, user_id=user.id, rid=rid)
         # Commit before streaming starts — the request session is closed when
         # the StreamingResponse generator runs in a fresh task, so we open a
         # short-lived session inside the generator for the final UPDATE.
         await session.commit()
 
-        provider = resolve_llm(model_id)
-
-        # Resolve the user's default workspace.  A workspace is created as
-        # part of onboarding, so its absence means the user hasn't finished
-        # that flow yet — the agent should not run at all in that state.
-        # Refuse with 412 (Precondition Failed) so the frontend can route to
-        # onboarding instead of pretending we shipped a degraded reply.
-        workspace = await get_default_workspace(user.id, session)
-        if workspace is None:
-            raise HTTPException(
-                status_code=412,
-                detail="Onboarding not completed: no default workspace exists for this user.",
-            )
-        root = Path(workspace.path)
-        if not root.exists():
-            # Workspace row exists but the directory is gone (manually
-            # deleted, volume wipe, etc.).  Same outcome — do not run.
-            logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
-            raise HTTPException(
-                status_code=412,
-                detail="Workspace directory is missing on disk.  Re-run onboarding.",
-            )
-        # Per-turn tool composition lives in `app.core.agent_tools` —
-        # the chat router only decides *that* the agent gets tools,
-        # not *which* (that's the builder's job, and where future
-        # per-agent / per-user permission gating will land).  Provider
-        # files stay tool-agnostic; see
-        # `.claude/rules/architecture/no-tools-in-providers.md`.
-        agent_tools = build_agent_tools(workspace_root=root)
-
-        # Load SOUL.md + AGENTS.md from the workspace as the agent's
-        # system prompt.  The workspace is guaranteed by the 412 gate
-        # above, so this is a single line — no extra nesting and no
-        # duplicated path resolution.  Either file may be missing
-        # independently; ``assemble_workspace_prompt`` returns ``None``
-        # only when both are absent, in which case the provider falls
-        # back to its built-in default.
-        workspace_system_prompt = assemble_workspace_prompt(root)
-        # Per-turn cache-key telemetry: identical inputs produce identical
-        # keys, so a key that flips turn-to-turn flags a non-deterministic
-        # prompt assembler (the kind that silently busts Anthropic prompt
-        # caching).  See ``app.core.prompt_cache`` for the rationale.
-        log_prompt_cache_key(
-            logger,
-            rid=rid,
-            conversation_id=request.conversation_id,
-            cache_key=compute_prompt_cache_key(
-                system_prompt=workspace_system_prompt,
-                model_id=model_id,
-            ),
-            system_prompt_chars=len(workspace_system_prompt or ""),
-        )
-        if workspace_system_prompt is not None:
-            logger.debug(
-                "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d",
-                rid,
-                user.id,
-                len(workspace_system_prompt),
-            )
-
-        async def event_stream() -> AsyncGenerator[bytes]:
-            """Yield channel-encoded bytes for each LLM event, then done.
-
-            Builds a raw provider stream, wraps it with error handling and
-            aggregation, then hands it to ``channel.deliver()`` which
-            encodes each event for the surface (SSE frames for web/Electron,
-            message edits for Telegram, etc.).
-            """
-            stream_start = time.perf_counter()
-            event_count = 0
-            aggregator = ChatTurnAggregator()
-
-            effective_reasoning = _resolve_reasoning_effort(request.reasoning_effort, model_id)
-
-            async def _guarded_stream():
-                """Wrap the provider stream with error capture + aggregation."""
-                nonlocal event_count
-                try:
-                    async for event in provider.stream(
-                        request.question,
-                        request.conversation_id,
-                        user.id,
-                        history=history,
-                        tools=agent_tools or None,
-                        system_prompt=workspace_system_prompt,
-                        reasoning_effort=effective_reasoning,
-                    ):
-                        event_count += 1
-                        aggregator.apply(event)
-                        yield event
-                except Exception as exc:
-                    logger.exception(
-                        "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
-                        rid,
-                        request.conversation_id,
-                        model_id,
-                        event_count,
-                    )
-                    error_event: StreamEvent = {"type": "error", "content": str(exc)}
-                    aggregator.apply(error_event)
-                    yield error_event
-
-            from app.channels.base import ChannelMessage  # noqa: PLC0415
-
-            channel_message: ChannelMessage = {
-                "user_id": user.id,
-                "conversation_id": request.conversation_id,
-                "text": request.question,
-                "surface": surface,
-                "model_id": model_id,
-                "metadata": {},
-            }
-
-            try:
-                async for chunk in channel.deliver(_guarded_stream(), channel_message):
-                    yield chunk
-            finally:
-                duration_ms = (time.perf_counter() - stream_start) * 1000
-                final_status = "failed" if aggregator.error_text else "complete"
-                snapshot = aggregator.to_persisted_shape(status=final_status)
-                try:
-                    async with async_session_maker() as persist_session:
-                        await finalize_assistant_message(
-                            persist_session,
-                            message_id=assistant_message_id,
-                            **snapshot,
-                        )
-                        await persist_session.commit()
-                except Exception:
-                    logger.exception(
-                        "CHAT_PERSIST_ERR rid=%s message_id=%s",
-                        rid,
-                        assistant_message_id,
-                    )
-                logger.info(
-                    "CHAT_OUT rid=%s conversation_id=%s model_id=%s surface=%s events=%d duration_ms=%.1f",
-                    rid,
-                    request.conversation_id,
-                    model_id,
-                    surface,
-                    event_count,
-                    duration_ms,
-                )
+        provider = resolve_llm(ctx.model_id)
 
         return StreamingResponse(
-            event_stream(),
+            _build_event_stream(
+                provider=provider,
+                channel=channel,
+                surface=surface,
+                request=request,
+                user_id=user.id,
+                rid=rid,
+                ctx=ctx,
+            ),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -339,3 +113,128 @@ def get_chat_router() -> APIRouter:
         )
 
     return router
+
+
+def _build_event_stream(
+    *,
+    provider,
+    channel,
+    surface: str,
+    request: ChatRequest,
+    user_id,
+    rid: str | None,
+    ctx: ChatTurnContext,
+) -> AsyncGenerator[bytes]:
+    """Return the channel-encoded byte stream for one chat turn.
+
+    Factored out so :func:`get_chat_router.chat` reads as orchestration
+    only — open provider, hand to channel, finalise on close — and the
+    fan-out of the route file stays under sentrux's god-file budget.
+    """
+
+    async def event_stream() -> AsyncGenerator[bytes]:
+        stream_start = time.perf_counter()
+        event_count = 0
+        aggregator = ChatTurnAggregator()
+
+        async def guarded_stream():
+            nonlocal event_count
+            try:
+                async for event in provider.stream(
+                    request.question,
+                    request.conversation_id,
+                    user_id,
+                    history=ctx.history,
+                    tools=ctx.agent_tools or None,
+                    system_prompt=ctx.system_prompt,
+                    reasoning_effort=ctx.reasoning_effort,
+                ):
+                    event_count += 1
+                    aggregator.apply(event)
+                    yield event
+            except Exception as exc:
+                logger.exception(
+                    "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
+                    rid,
+                    request.conversation_id,
+                    ctx.model_id,
+                    event_count,
+                )
+                error_event: StreamEvent = {"type": "error", "content": str(exc)}
+                aggregator.apply(error_event)
+                yield error_event
+
+        from app.channels.base import ChannelMessage  # noqa: PLC0415
+
+        channel_message: ChannelMessage = {
+            "user_id": user_id,
+            "conversation_id": request.conversation_id,
+            "text": request.question,
+            "surface": surface,
+            "model_id": ctx.model_id,
+            "metadata": {},
+        }
+
+        try:
+            async for chunk in channel.deliver(guarded_stream(), channel_message):
+                yield chunk
+        finally:
+            await _finalise_turn(
+                aggregator=aggregator,
+                assistant_message_id=ctx.assistant_message_id,
+                rid=rid,
+                conversation_id=request.conversation_id,
+                model_id=ctx.model_id,
+                surface=surface,
+                event_count=event_count,
+                started_at=stream_start,
+            )
+
+    return event_stream()
+
+
+async def _finalise_turn(
+    *,
+    aggregator: ChatTurnAggregator,
+    assistant_message_id,
+    rid: str | None,
+    conversation_id,
+    model_id: str,
+    surface: str,
+    event_count: int,
+    started_at: float,
+) -> None:
+    """Persist the aggregator snapshot and emit the CHAT_OUT log line.
+
+    Runs in the ``finally`` of the stream loop so the assistant
+    placeholder row gets its final UPDATE on both successful completion
+    and mid-stream errors.  The DB write happens on its own short-lived
+    session because the request-scoped session is closed by the time
+    the streaming generator finalises.
+    """
+    duration_ms = (time.perf_counter() - started_at) * 1000
+    final_status = "failed" if aggregator.error_text else "complete"
+    snapshot = aggregator.to_persisted_shape(status=final_status)
+    try:
+        async with async_session_maker() as persist_session:
+            await finalize_assistant_message(
+                persist_session,
+                message_id=assistant_message_id,
+                **snapshot,
+            )
+            await persist_session.commit()
+    except Exception:
+        logger.exception(
+            "CHAT_PERSIST_ERR rid=%s message_id=%s",
+            rid,
+            assistant_message_id,
+        )
+    logger.info(
+        "CHAT_OUT rid=%s conversation_id=%s model_id=%s surface=%s events=%d duration_ms=%.1f",
+        rid,
+        conversation_id,
+        model_id,
+        surface,
+        event_count,
+        duration_ms,
+    )
