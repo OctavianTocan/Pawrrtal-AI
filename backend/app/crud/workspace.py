@@ -166,7 +166,7 @@ false confidence.  You are here to be genuinely useful.
 _DEFAULT_SOUL = _PERSONALITY_SOULS["balanced"]
 
 
-def _build_user_md(p: "UserPersonalization | None") -> str:
+def _build_user_md(p: UserPersonalization | None) -> str:
     if p is None:
         return "# USER.md — About You\n\n_(Fill in your details here.)_\n"
 
@@ -196,7 +196,7 @@ def _build_user_md(p: "UserPersonalization | None") -> str:
     return "\n".join(lines)
 
 
-def _build_soul_md(p: "UserPersonalization | None") -> str:
+def _build_soul_md(p: UserPersonalization | None) -> str:
     if p is None or not p.personality:
         return _DEFAULT_SOUL
     return _PERSONALITY_SOULS.get(p.personality.lower(), _DEFAULT_SOUL)
@@ -214,7 +214,7 @@ def _workspace_path(workspace_id: uuid.UUID) -> Path:
 
 def seed_workspace(
     workspace_id: uuid.UUID,
-    personalization: "UserPersonalization | None" = None,
+    personalization: UserPersonalization | None = None,
 ) -> Path:
     """Create the workspace directory tree and write seed files.
 
@@ -256,7 +256,7 @@ def seed_workspace(
 async def get_default_workspace(
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> "Workspace | None":
+) -> Workspace | None:
     """Return the user's default workspace row, or None if it doesn't exist."""
     from app.models import Workspace  # local import to avoid circular deps
 
@@ -271,7 +271,7 @@ async def get_default_workspace(
 async def list_workspaces(
     user_id: uuid.UUID,
     session: AsyncSession,
-) -> list["Workspace"]:
+) -> list[Workspace]:
     """Return all workspaces owned by the user, default first."""
     from app.models import Workspace
 
@@ -289,8 +289,8 @@ async def create_workspace(
     name: str = "Main",
     slug: str = "main",
     is_default: bool = True,
-    personalization: "UserPersonalization | None" = None,
-) -> "Workspace":
+    personalization: UserPersonalization | None = None,
+) -> Workspace:
     """Create a new workspace row in the DB and seed its directory.
 
     Does NOT commit — the caller is responsible for committing the session so
@@ -321,8 +321,8 @@ async def create_workspace(
 async def ensure_default_workspace(
     user_id: uuid.UUID,
     session: AsyncSession,
-    personalization: "UserPersonalization | None" = None,
-) -> "Workspace":
+    personalization: UserPersonalization | None = None,
+) -> Workspace:
     """Return the existing default workspace or create one.
 
     Safe to call multiple times — idempotent against both normal duplicate
