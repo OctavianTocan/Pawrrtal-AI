@@ -6,9 +6,12 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.tools.agents_md import assemble_workspace_prompt
@@ -40,6 +43,7 @@ class ChatTurnInput:
     provider: AILLM
     channel: Channel
     channel_message: ChannelMessage
+    db_session: AsyncSession | None = field(default=None, repr=False, compare=False)
     workspace_root: Path | None = None
     tools: list[AgentTool] | None = None
     reasoning_effort: ReasoningEffort | None = None
@@ -118,7 +122,7 @@ async def _load_history_and_persist(
     turn_input: ChatTurnInput,
 ) -> tuple[list[dict[str, str]], uuid.UUID]:
     """Read recent history, then persist the current user turn and placeholder."""
-    async with async_session_maker() as session:
+    async with _turn_session(turn_input) as session:
         recent_rows = await get_messages_for_conversation(
             session,
             turn_input.conversation_id,
@@ -144,6 +148,16 @@ async def _load_history_and_persist(
         return history, assistant_row.id
 
 
+@asynccontextmanager
+async def _turn_session(turn_input: ChatTurnInput) -> AsyncIterator[AsyncSession]:
+    """Yield the request session when provided, otherwise open a runner session."""
+    if turn_input.db_session is not None:
+        yield turn_input.db_session
+        return
+    async with async_session_maker() as session:
+        yield session
+
+
 def _workspace_system_prompt(workspace_root: Path | None) -> str | None:
     """Load workspace prompt files when a workspace root is available."""
     if workspace_root is None:
@@ -164,7 +178,7 @@ async def _finalize_turn(
     final_status = "failed" if aggregator.error_text else "complete"
     snapshot = aggregator.to_persisted_shape(status=final_status)
     try:
-        async with async_session_maker() as session:
+        async with _turn_session(turn_input) as session:
             await finalize_assistant_message(
                 session,
                 message_id=assistant_message_id,

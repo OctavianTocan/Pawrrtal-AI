@@ -277,6 +277,7 @@ def get_chat_router() -> APIRouter:
             provider=provider,
             channel=channel,
             channel_message=channel_message,
+            db_session=session,
             workspace_root=root,
             tools=agent_tools,
             reasoning_effort=request.reasoning_effort,
