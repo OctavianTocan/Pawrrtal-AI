@@ -15,7 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
-import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
+import { CHAT_STORAGE_KEYS, type ChatModelId, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
+import { useChatModels } from '../hooks/use-chat-models';
 import { useVoiceTranscribe } from '../hooks/use-voice-transcribe';
 import {
 	AttachButton,
@@ -26,11 +27,7 @@ import {
 	VoiceMeter,
 } from './ChatComposerControls';
 import { ConnectAppsStrip } from './ConnectAppsStrip';
-import {
-	type ChatModelId,
-	type ChatReasoningLevel,
-	ModelSelectorPopover,
-} from './ModelSelectorPopover';
+import { type ChatReasoningLevel, ModelSelectorPopover } from './ModelSelectorPopover';
 
 /** Props for the Codex-like chat composer island. */
 export type ChatComposerProps = {
@@ -191,13 +188,26 @@ function ComposerSendCluster({
 	onStartRecording,
 }: ComposerSendClusterProps): React.JSX.Element {
 	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing } = state;
+	// Catalog is server-owned via `GET /api/v1/models`. Task 10 will hoist this
+	// hook into `ChatContainer` so the persisted-state validator can also see
+	// the live catalog; for now the picker calls it directly so the popover
+	// stays props-driven.
+	const { models: catalogModels, isLoading: isCatalogLoading } = useChatModels();
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
 			<ModelSelectorPopover
+				models={catalogModels}
 				selectedModelId={selectedModelId}
 				selectedReasoning={selectedReasoning}
-				onSelectModel={onSelectModel}
+				// The popover emits the canonical wire form (`host:vendor/model`).
+				// `onSelectModel` is still typed as the legacy `ChatModelId` union
+				// until Task 10 widens the container to plain `string`; this cast
+				// matches the bridge ChatView already uses on the upward path.
+				onSelectModel={(modelId) => {
+					onSelectModel(modelId as ChatModelId);
+				}}
 				onSelectReasoning={onSelectReasoning}
+				isLoading={isCatalogLoading}
 			/>
 			<ComposerTooltip
 				content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
