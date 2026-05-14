@@ -36,8 +36,9 @@ export default function DocsLanding(): React.ReactElement {
 					Pawrrtal is a model-agnostic chat app.
 				</h1>
 				<p className="text-lg text-fd-muted-foreground">
-					Pick a model each turn — Anthropic, Google, OpenAI, whichever fits the task —
-					and Pawrrtal handles history, streaming, modes, and tools around it.
+					Pick a model each turn &mdash; Anthropic, Google, OpenAI, whichever fits the
+					task &nbsp;&mdash; and Pawrrtal handles history, streaming, modes, and tools
+					around it.
 				</p>
 			</header>
 
