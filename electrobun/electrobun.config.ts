@@ -2,8 +2,9 @@
  * Electrobun build configuration for Pawrrtal.
  *
  * Mirrors the electron/ shell's responsibility: wrap the Next.js frontend
- * (running on localhost:3001 in dev, or spawned as a standalone Next.js
- * server in production) inside a native desktop window.
+ * (running on localhost:3001 in dev — see dev.ts / src/bun/server.ts — or
+ * spawned as a standalone Next.js server in production) inside a native
+ * desktop window.
  *
  * Key differences from the Electron build:
  *   - No separate preload script — IPC is replaced by Electrobun's typed RPC.
