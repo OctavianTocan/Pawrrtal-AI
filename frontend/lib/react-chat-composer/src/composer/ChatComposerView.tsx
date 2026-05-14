@@ -12,20 +12,15 @@
 import { ArrowUpIcon, MicIcon, SquareIcon } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react';
 import { ModelSelectorPopover } from '../model-selector/ModelSelectorPopover';
-import { TooltipProvider } from '../ui/Tooltip';
 import {
 	PromptInputAttachment,
 	PromptInputAttachments,
-	PromptInputFooter,
-	PromptInputForm,
-	type PromptInputMessage,
-	PromptInputSubmit,
-	PromptInputTextarea,
-} from '../prompt-input/index';
-import type {
-	ChatModelOption,
-	ChatReasoningLevel,
-} from '../types/index';
+} from '../prompt-input/PromptInputAttachments';
+import { PromptInputForm, type PromptInputMessage } from '../prompt-input/PromptInputForm';
+import { PromptInputFooter, PromptInputSubmit } from '../prompt-input/PromptInputLayout';
+import { PromptInputTextarea } from '../prompt-input/PromptInputTextarea';
+import { TooltipProvider } from '../ui/Tooltip';
+import type { ChatModelOption, ChatReasoningLevel } from '../types';
 import { Button } from '../ui/Button';
 import { cn } from '../utils/cn';
 import { AttachButton } from './controls/AttachButton';
@@ -42,8 +37,8 @@ import { VoiceMeter } from './controls/VoiceMeter';
 export interface ChatComposerViewProps {
 	/** Resolved textarea value. */
 	value: string;
-	/** Whether an assistant response is currently streaming. */
-	isLoading?: boolean;
+	/** UI state flags owned by the container. */
+	state: ChatComposerViewState;
 	/** Consumer-supplied model list. When omitted, the model picker hides. */
 	models?: ChatModelOption[];
 	/** Currently selected model identifier. */
@@ -71,13 +66,6 @@ export interface ChatComposerViewProps {
 	/** Fired when the form submits — already debounced through the prompt-input form. */
 	onSubmit: (message: PromptInputMessage) => void | Promise<void>;
 
-	// Voice flow — when `isVoiceSupported` is false the mic button is hidden.
-	/** True when an `onTranscribeAudio` callback is wired up. */
-	isVoiceSupported: boolean;
-	/** True while the recorder is requesting permission or actively capturing. */
-	isRecording: boolean;
-	/** True while the captured audio is being transcribed. */
-	isTranscribing: boolean;
 	/** Elapsed recording time in whole seconds. */
 	recordingSeconds: number;
 	/** Fired when the user clicks the mic to start recording. */
@@ -90,6 +78,18 @@ export interface ChatComposerViewProps {
 	// Composer-level keyboard handler (Shift+Tab toggles, escape, etc.).
 	/** Fired on every keydown bubbling out of the form. */
 	onComposerKeyDown?: (event: KeyboardEvent<HTMLFormElement>) => void;
+}
+
+interface ChatComposerViewState {
+	hasContent: boolean;
+	/** Whether an assistant response is currently streaming. */
+	isLoading?: boolean;
+	/** True while the recorder is requesting permission or actively capturing. */
+	isRecording: boolean;
+	/** True while the captured audio is being transcribed. */
+	isTranscribing: boolean;
+	/** True when an `onTranscribeAudio` callback is wired up. */
+	isVoiceSupported: boolean;
 }
 
 /**
@@ -123,11 +123,7 @@ function AnimatedComposerPlaceholder({
  * Right-side toolbar cluster: model picker + mic + submit. Pure presentation.
  */
 function ComposerSendCluster({
-	isRecording,
-	isTranscribing,
-	isLoading,
-	hasContent,
-	isVoiceSupported,
+	state,
 	models,
 	selectedModelId,
 	onSelectModel,
@@ -136,11 +132,7 @@ function ComposerSendCluster({
 	onSelectReasoning,
 	onStartRecording,
 }: {
-	isRecording: boolean;
-	isTranscribing: boolean;
-	isLoading?: boolean;
-	hasContent: boolean;
-	isVoiceSupported: boolean;
+	state: ChatComposerViewState;
 	models?: ChatModelOption[];
 	selectedModelId?: string;
 	onSelectModel?: (modelId: string) => void;
@@ -149,6 +141,7 @@ function ComposerSendCluster({
 	onSelectReasoning?: (level: ChatReasoningLevel) => void;
 	onStartRecording: () => void;
 }): React.JSX.Element {
+	const { hasContent, isLoading, isRecording, isTranscribing, isVoiceSupported } = state;
 	const showModelPicker =
 		(models && models.length > 0) || (reasoningLevels && reasoningLevels.length > 0);
 	return (
@@ -165,7 +158,7 @@ function ComposerSendCluster({
 			) : null}
 			{isVoiceSupported ? (
 				<ComposerTooltip
-					content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+					content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
 				>
 					<Button
 						aria-label="Start voice input"
@@ -208,7 +201,7 @@ function ComposerSendCluster({
  */
 export function ChatComposerView({
 	value,
-	isLoading,
+	state,
 	models,
 	selectedModelId,
 	onSelectModel,
@@ -221,21 +214,18 @@ export function ChatComposerView({
 	footerActions,
 	onTextChange,
 	onSubmit,
-	isVoiceSupported,
-	isRecording,
-	isTranscribing,
 	recordingSeconds,
 	onStartRecording,
 	onStopRecording,
 	onSendRecording,
 	onComposerKeyDown,
 }: ChatComposerViewProps): React.JSX.Element {
-	const hasContent = value.trim().length > 0;
+	const { hasContent, isRecording, isTranscribing } = state;
 	return (
 		// Self-provide the Radix Tooltip context so consumers do not need to wrap
 		// the composer in their own TooltipProvider.
 		<TooltipProvider disableHoverableContent>
-				<div className={cn('relative flex w-full max-w-[48.75rem] flex-col', className)}>
+			<div className={cn('relative flex w-full max-w-[48.75rem] flex-col', className)}>
 				<PromptInputForm
 					className="relative z-10 w-full"
 					inputGroupClassName="rounded-[var(--radius-chat-lg)] border border-[color:color-mix(in_oklch,var(--color-chat-border)_50%,transparent)] bg-[var(--color-chat-bg-elevated)] shadow-[var(--shadow-chat-minimal)]"
@@ -267,15 +257,11 @@ export function ChatComposerView({
 									onStop={onStopRecording}
 								/>
 							) : (
-								footerActions ?? null
+								(footerActions ?? null)
 							)}
 						</div>
 						<ComposerSendCluster
-							isRecording={isRecording}
-							isTranscribing={isTranscribing}
-							isLoading={isLoading}
-							hasContent={hasContent}
-							isVoiceSupported={isVoiceSupported}
+							state={state}
 							models={models}
 							selectedModelId={selectedModelId}
 							onSelectModel={onSelectModel}

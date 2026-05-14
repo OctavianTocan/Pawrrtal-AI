@@ -94,22 +94,20 @@ function allocateFreePort(): Promise<number> {
  * `bun start` npm script).
  */
 async function startDevServer(): Promise<StartedServer> {
-	const repoRoot = process.env['PAWRRTAL_REPO_ROOT'];
+	const repoRoot = process.env.PAWRRTAL_REPO_ROOT;
 	if (!repoRoot) {
 		throw new Error(
 			'PAWRRTAL_REPO_ROOT is not set. ' +
-				'Run `bun start` from the electrobun/ directory — the script sets it automatically.',
+				'Run `bun start` from the electrobun/ directory — the script sets it automatically.'
 		);
 	}
-
-	console.log(`[electrobun] spawning frontend + backend via dev.ts from ${repoRoot} …`);
 	// dev.ts starts both:
 	//   - Next.js frontend  (bun --filter pawrrtal dev) on :3001
 	//   - FastAPI backend   (uvicorn main:app)           on :8000
 	// Use process.execPath (bundled bun) to avoid PATH issues on macOS app bundles.
 	const child = Bun.spawn([process.execPath, 'run', 'dev'], {
 		cwd: repoRoot,
-		env: { ...process.env as Record<string, string> },
+		env: { ...(process.env as Record<string, string>) },
 		stdout: 'inherit',
 		stderr: 'inherit',
 	});
@@ -124,14 +122,13 @@ async function startDevServer(): Promise<StartedServer> {
 	if (exitEarly !== null) {
 		throw new Error(
 			`Next.js dev server process exited immediately with code ${exitEarly}. ` +
-			`Check that 'bun install' has been run from the repo root and that ` +
-			`'bun run dev' works inside frontend/.`,
+				`Check that 'bun install' has been run from the repo root and that ` +
+				`'bun run dev' works inside frontend/.`
 		);
 	}
 
 	// Give Next.js up to 120s to compile and bind the port.
 	await waitForPort(DEV_FRONTEND_PORT, 'localhost', 120_000);
-	console.log(`[electrobun] Next.js dev server ready on :${DEV_FRONTEND_PORT}`);
 
 	return {
 		url: `http://localhost:${DEV_FRONTEND_PORT}`,
@@ -170,12 +167,10 @@ async function startProductionServer(): Promise<StartedServer> {
 	const entry = path.join(standaloneRoot, 'server.js');
 
 	const env: Record<string, string> = {
-		...process.env as Record<string, string>,
+		...(process.env as Record<string, string>),
 		PORT: String(port),
 		HOSTNAME: '127.0.0.1',
 	};
-
-	console.log(`[electrobun] spawning Next.js standalone server on :${port} …`);
 
 	const child = Bun.spawn([process.execPath, entry], {
 		cwd: standaloneRoot,
@@ -185,7 +180,6 @@ async function startProductionServer(): Promise<StartedServer> {
 	});
 
 	await waitForPort(port, '127.0.0.1', 30_000);
-	console.log(`[electrobun] Next.js production server ready on :${port}`);
 
 	return {
 		url: `http://127.0.0.1:${port}`,

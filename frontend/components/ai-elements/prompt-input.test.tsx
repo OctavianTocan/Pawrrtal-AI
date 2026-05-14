@@ -54,11 +54,12 @@ describe('PromptInput', () => {
 			'fetch',
 			vi.fn().mockRejectedValue(new Error('blob urls unavailable in jsdom'))
 		);
-		vi.stubGlobal('URL', {
-			...URL,
-			createObjectURL: vi.fn(() => 'blob:prompt-input-test'),
-			revokeObjectURL: vi.fn(),
-		});
+		// Only override the two URL.* helpers we exercise. Replacing `URL`
+		// wholesale with a plain object breaks `new URL(...)` constructor
+		// calls inside next/image's getImgProps (used by the attachment
+		// preview component this test renders).
+		vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:prompt-input-test');
+		vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
 	});
 
 	it('submits accepted uploaded files with the message text', async () => {

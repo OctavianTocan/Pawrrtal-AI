@@ -142,7 +142,7 @@ export function TasksSubSidebar({
 
 			<div className="mt-auto flex items-center gap-2 px-1 pt-3 text-[11px] text-muted-foreground/70">
 				<CheckSquareIcon aria-hidden="true" className="size-3" strokeWidth={2} />
-				<span>Mock data — no backend yet</span>
+				<span>Mock data, no backend yet</span>
 			</div>
 		</aside>
 	);

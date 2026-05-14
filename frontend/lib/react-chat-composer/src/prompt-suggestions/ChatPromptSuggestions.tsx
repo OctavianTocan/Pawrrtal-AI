@@ -17,7 +17,7 @@ import {
 	TooltipTrigger,
 } from '../ui/Tooltip';
 import { cn } from '../utils/cn';
-import type { ChatPromptSuggestion } from '../types/index';
+import type { ChatPromptSuggestion } from '../types';
 
 /** Props for {@link ChatPromptSuggestions}. */
 export interface ChatPromptSuggestionsProps {
@@ -25,10 +25,25 @@ export interface ChatPromptSuggestionsProps {
 	suggestions: ChatPromptSuggestion[];
 	/** Callback fired when a suggestion is selected. */
 	onSelectSuggestion: (prompt: string) => void;
-	/** Optional renderer for the leading icon column. */
-	renderIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
+	/** Optional resolver for the leading icon column. */
+	getIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
 	/** Extra classes for the root list container. */
 	className?: string;
+}
+
+function SuggestionIcon({
+	getIcon,
+	suggestion,
+}: {
+	getIcon?: (suggestion: ChatPromptSuggestion) => ReactNode;
+	suggestion: ChatPromptSuggestion;
+}): React.JSX.Element | null {
+	if (!getIcon) return null;
+	return (
+		<span aria-hidden="true" className="shrink-0 text-[var(--color-chat-muted)]">
+			{getIcon(suggestion)}
+		</span>
+	);
 }
 
 /**
@@ -43,7 +58,7 @@ export interface ChatPromptSuggestionsProps {
 export function ChatPromptSuggestions({
 	suggestions,
 	onSelectSuggestion,
-	renderIcon,
+	getIcon,
 	className,
 }: ChatPromptSuggestionsProps): React.JSX.Element {
 	const [dismissedIds, setDismissedIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -60,15 +75,11 @@ export function ChatPromptSuggestions({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<button
-									className="flex min-w-0 flex-1 items-center gap-2 bg-transparent px-3 py-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
+									className="flex min-w-0 flex-1 items-center gap-2 bg-transparent p-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
 									onClick={() => onSelectSuggestion(suggestion.label)}
 									type="button"
 								>
-									{renderIcon ? (
-										<span aria-hidden="true" className="shrink-0 text-[var(--color-chat-muted)]">
-											{renderIcon(suggestion)}
-										</span>
-									) : null}
+									<SuggestionIcon getIcon={getIcon} suggestion={suggestion} />
 									<span className="min-w-0 flex-1 truncate text-[var(--color-chat-muted)] transition-colors group-hover/suggestion:text-[var(--color-chat-foreground)]">
 										{suggestion.label}
 									</span>

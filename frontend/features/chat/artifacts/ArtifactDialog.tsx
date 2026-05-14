@@ -56,6 +56,9 @@ export function ArtifactDialog({ artifact, onClose }: ArtifactDialogProps): Reac
 				// closes — same affordance most chat-app modals use.
 				if (e.target === e.currentTarget) onClose();
 			}}
+			onKeyDown={(event) => {
+				if (event.key === 'Escape') onClose();
+			}}
 		>
 			<div className="artifact-dialog">
 				<header className="artifact-dialog-header">

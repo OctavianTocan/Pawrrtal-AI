@@ -36,13 +36,3 @@ export function buildTranscriptContent(options: {
 	if (!trimmedTranscript) return trimmedContent;
 	return `${trimmedContent} ${trimmedTranscript}`;
 }
-
-/**
- * Builds fallback text for browsers without speech recognition support.
- *
- * @param seconds - Elapsed recording time used to label the fallback note.
- * @returns A human-readable line noting how long the recording lasted.
- */
-export function fallbackTranscript(seconds: number): string {
-	return `Voice note recorded for ${formatRecordingTime(seconds)}.`;
-}

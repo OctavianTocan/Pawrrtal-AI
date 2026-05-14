@@ -19,6 +19,7 @@ polling automatically covers webhook.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import uuid
 from collections.abc import AsyncIterator
@@ -31,6 +32,10 @@ from app.channels import ChannelMessage, resolve_channel
 from app.channels.telegram import SURFACE_TELEGRAM
 from app.core.config import settings
 from app.core.providers import resolve_llm
+from app.core.providers.base import AILLM
+from app.core.providers.catalog import default_model, require_known
+from app.core.providers.model_id import InvalidModelId, UnknownModelId
+from app.crud.channel import update_conversation_model
 from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
     TelegramSender,
@@ -58,6 +63,159 @@ logger = logging.getLogger(__name__)
 # single-worker deployment; promote to a shared store (e.g. Redis pub/sub)
 # before running multiple uvicorn workers.
 _running_tasks: dict[int, asyncio.Task[None]] = {}
+
+
+async def _resolve_provider_with_auto_clear(
+    context: TelegramTurnContext,
+) -> tuple[AILLM, str | None]:
+    """Resolve a provider for ``context.model_id`` with an auto-clear safety net.
+
+    On either :class:`InvalidModelId` (string doesn't parse) or
+    :class:`UnknownModelId` (parses but isn't in the catalog), the stored
+    ``conversation.model_id`` is cleared to ``NULL`` so the *next* turn
+    reads :func:`catalog.default_model` cleanly — no per-turn-fails-forever
+    UX trap — and the current turn falls back to the catalog default.
+
+    Telegram is catalog-ignorant on the write side (``/model`` only runs
+    the structural parser, per ADR 2026-05-14 §7), so this is the single
+    place where an unknown-but-well-formed stored ID gets surfaced to the
+    user.  ``pawrrtal-yea3`` tracks the deferred follow-up that moves the
+    catalog check up to ``/model`` time, after which this is a backstop
+    rather than the primary error surface.
+
+    Args:
+        context: Resolved turn context with the stored ``model_id``.
+
+    Returns:
+        A tuple of ``(provider, warning_text_or_None)``.  When the auto-clear
+        path fires, ``warning_text`` is a human-readable string the caller
+        should send to the user before streaming.  When the stored ID is
+        valid, ``warning_text`` is ``None``.
+    """
+    try:
+        require_known(context.model_id)
+        provider = resolve_llm(context.model_id, user_id=context.nexus_user_id)
+    except (InvalidModelId, UnknownModelId) as exc:
+        fallback_id = default_model().id
+        warning = (
+            f"Model <code>{context.model_id}</code> isn't usable: {exc}. "
+            f"Switching you back to the default ({fallback_id})."
+        )
+        async with async_session_maker() as session:
+            await update_conversation_model(
+                conversation_id=context.conversation_id,
+                model_id=None,
+                session=session,
+            )
+        logger.info(
+            "TELEGRAM_MODEL_AUTO_CLEAR conversation_id=%s bad_model=%s",
+            context.conversation_id,
+            context.model_id,
+        )
+        provider = resolve_llm(fallback_id, user_id=context.nexus_user_id)
+        return provider, warning
+    return provider, None
+
+
+async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> None:
+    """Drive the LLM streaming pipeline for one Telegram turn.
+
+    Extracted from ``_on_message`` to keep that dispatcher closure narrow
+    enough to satisfy the project's complexity cap.  Sends a placeholder
+    reply, resolves the provider (with the auto-clear safety net),
+    builds the channel message, streams the response, and finally fires
+    the auto-title pass.
+
+    Args:
+        message: The inbound aiogram ``Message`` (used for ``answer``,
+            ``chat.id``, ``bot``, and ``message_thread_id``).
+        context: Resolved turn context from ``handle_plain_message``.
+    """
+    thinking_msg = await message.answer("⏳")
+
+    # Resolve the user's default workspace so the agent has filesystem
+    # access.  If onboarding hasn't completed (no workspace), we fall
+    # back to an empty tool list so the turn still works.
+    from app.channels.telegram import make_telegram_sender  # noqa: PLC0415
+    from app.core.agent_tools import build_agent_tools  # noqa: PLC0415
+    from app.crud.workspace import get_default_workspace  # noqa: PLC0415
+
+    async with async_session_maker() as ws_session:
+        workspace = await get_default_workspace(context.nexus_user_id, ws_session)
+
+    tg_sender = make_telegram_sender(
+        message.bot,
+        message.chat.id,
+        message_thread_id=context.thread_id,
+    )
+    agent_tools = (
+        build_agent_tools(
+            workspace_root=Path(workspace.path),
+            user_id=context.nexus_user_id,
+            send_fn=tg_sender,
+        )
+        if workspace is not None
+        else []
+    )
+
+    channel_message: ChannelMessage = {
+        "user_id": context.nexus_user_id,
+        "conversation_id": context.conversation_id,
+        "text": message.text or "",
+        "surface": SURFACE_TELEGRAM,
+        "model_id": context.model_id,
+        "metadata": {
+            "bot": message.bot,
+            "chat_id": message.chat.id,
+            "message_id": thinking_msg.message_id,
+        },
+    }
+
+    provider, warning = await _resolve_provider_with_auto_clear(context)
+    if warning is not None:
+        await message.answer(warning)
+    channel = resolve_channel(SURFACE_TELEGRAM)
+
+    async def _do_stream() -> None:
+        raw_stream = provider.stream(
+            message.text or "",
+            context.conversation_id,
+            context.nexus_user_id,
+            history=[],
+            tools=agent_tools or None,
+        )
+        async for _ in channel.deliver(raw_stream, channel_message):
+            pass  # delivery is a side-effect; nothing yielded by TelegramChannel
+
+    # Cancel any previous stream for this chat before starting the new one.
+    chat_id = message.chat.id
+    old_task = _running_tasks.pop(chat_id, None)
+    if old_task is not None and not old_task.done():
+        old_task.cancel()
+
+    task: asyncio.Task[None] = asyncio.create_task(_do_stream())
+    _running_tasks[chat_id] = task
+    try:
+        await task
+    except asyncio.CancelledError:
+        logger.info("TELEGRAM_STREAM_CANCELLED chat_id=%s", chat_id)
+    finally:
+        _running_tasks.pop(chat_id, None)
+
+    # Auto-title: derive a title from the first user message and
+    # rename the Telegram topic thread to match.  Fires once only
+    # (gated by title_set_by IS NULL).  Errors are swallowed so a
+    # topic-rename failure never breaks the conversation.
+    try:
+        await _maybe_set_auto_title(
+            bot=message.bot,
+            conversation_id=context.conversation_id,
+            user_text=message.text or "",
+            chat_id=message.chat.id,
+            thread_id=context.thread_id,
+        )
+    except Exception:
+        logger.warning("TELEGRAM_AUTO_TITLE_FAILED", exc_info=True)
 
 
 @dataclass
@@ -124,7 +282,7 @@ def build_telegram_service() -> TelegramService:
         await message.answer(reply)
 
     @dispatcher.message(Command("new"))
-    async def _on_new(message: "Message") -> None:
+    async def _on_new(message: Message) -> None:
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
             reply = await handle_new_command(sender=sender, session=session)
@@ -154,91 +312,7 @@ def build_telegram_service() -> TelegramService:
             await message.answer(result)
             return
 
-        # LLM turn — send a placeholder, then stream edits into it.
-        context: TelegramTurnContext = result
-        thinking_msg = await message.answer("⏳")
-
-        # Resolve the user's default workspace so the agent has filesystem
-        # access.  If onboarding hasn't completed (no workspace), we fall
-        # back to an empty tool list so the turn still works.
-        from app.core.agent_tools import build_agent_tools  # noqa: PLC0415
-        from app.channels.telegram import make_telegram_sender  # noqa: PLC0415
-        from app.crud.workspace import get_default_workspace  # noqa: PLC0415
-
-        async with async_session_maker() as ws_session:
-            workspace = await get_default_workspace(context.nexus_user_id, ws_session)
-
-        tg_sender = make_telegram_sender(
-            message.bot,
-            message.chat.id,
-            message_thread_id=context.thread_id,
-        )
-        agent_tools = (
-            build_agent_tools(
-                workspace_root=Path(workspace.path),
-                user_id=context.nexus_user_id,
-                send_fn=tg_sender,
-            )
-            if workspace is not None
-            else []
-        )
-
-        channel_message: ChannelMessage = {
-            "user_id": context.nexus_user_id,
-            "conversation_id": context.conversation_id,
-            "text": message.text,
-            "surface": SURFACE_TELEGRAM,
-            "model_id": context.model_id,
-            "metadata": {
-                "bot": message.bot,
-                "chat_id": message.chat.id,
-                "message_id": thinking_msg.message_id,
-            },
-        }
-
-        provider = resolve_llm(context.model_id)
-        channel = resolve_channel(SURFACE_TELEGRAM)
-
-        async def _do_stream() -> None:
-            raw_stream = provider.stream(
-                message.text,
-                context.conversation_id,
-                context.nexus_user_id,
-                history=[],
-                tools=agent_tools or None,
-            )
-            async for _ in channel.deliver(raw_stream, channel_message):
-                pass  # delivery is a side-effect; nothing yielded by TelegramChannel
-
-        # Cancel any previous stream for this chat before starting the new one.
-        chat_id = message.chat.id
-        old_task = _running_tasks.pop(chat_id, None)
-        if old_task is not None and not old_task.done():
-            old_task.cancel()
-
-        task: asyncio.Task[None] = asyncio.create_task(_do_stream())
-        _running_tasks[chat_id] = task
-        try:
-            await task
-        except asyncio.CancelledError:
-            logger.info("TELEGRAM_STREAM_CANCELLED chat_id=%s", chat_id)
-        finally:
-            _running_tasks.pop(chat_id, None)
-
-        # Auto-title: derive a title from the first user message and
-        # rename the Telegram topic thread to match.  Fires once only
-        # (gated by title_set_by IS NULL).  Errors are swallowed so a
-        # topic-rename failure never breaks the conversation.
-        try:
-            await _maybe_set_auto_title(
-                bot=message.bot,
-                conversation_id=context.conversation_id,
-                user_text=message.text,
-                chat_id=message.chat.id,
-                thread_id=context.thread_id,
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning("TELEGRAM_AUTO_TITLE_FAILED", exc_info=True)
+        await _run_llm_turn(message=message, context=result)
 
     return TelegramService(bot=bot, dispatcher=dispatcher)
 
@@ -261,10 +335,14 @@ def _sender_from_message(message: Message) -> TelegramSender:
     )
 
 
+_START_COMMAND_PARTS_WITH_PAYLOAD = 2
+"""``"/start <code>"`` splits into exactly two parts; below this means no payload."""
+
+
 def _extract_start_payload(text: str) -> str | None:
     """Return the argument after ``/start`` (Telegram deep-link payload), if any."""
     parts = text.strip().split(maxsplit=1)
-    if len(parts) < 2:
+    if len(parts) < _START_COMMAND_PARTS_WITH_PAYLOAD:
         return None
     return parts[1].strip() or None
 
@@ -297,8 +375,8 @@ def _generate_title(text: str, max_len: int = 48) -> str:
 
 async def _maybe_set_auto_title(
     *,
-    bot: "Bot",
-    conversation_id: "uuid.UUID",
+    bot: Bot,
+    conversation_id: uuid.UUID,
     user_text: str,
     chat_id: int,
     thread_id: int | None,
@@ -348,7 +426,7 @@ async def _maybe_set_auto_title(
                 message_thread_id=thread_id,
                 name=title,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "TELEGRAM_EDIT_TOPIC_FAILED chat_id=%s thread_id=%s error=%s",
                 chat_id,
@@ -401,10 +479,11 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
     finally:
         if service.polling_task is not None:
             service.polling_task.cancel()
-            try:
+            # The task either finishes cleanly (CancelledError) or surfaces
+            # an unrelated shutdown error.  We swallow both because the
+            # lifespan is already tearing down; there is nothing to recover.
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await service.polling_task
-            except (asyncio.CancelledError, Exception):
-                pass
         try:
             await service.bot.session.close()
         except Exception:

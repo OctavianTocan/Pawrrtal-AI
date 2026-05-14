@@ -96,12 +96,6 @@
 			"skillPath": "plugins/python-development/skills/python-testing-patterns/SKILL.md",
 			"computedHash": "69915bb276b6aec61fe5b283a933f96584f66d14b616ce2060d95757629c6866"
 		},
-		"setup-matt-pocock-skills": {
-			"source": "mattpocock/skills",
-			"sourceType": "github",
-			"skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-			"computedHash": "3a32f8f1ed8160c9d286a2aabe88ee9b884c6f3f88a7a6c47b7d5d552c959587"
-		},
 		"tdd": {
 			"source": "mattpocock/skills",
 			"sourceType": "github",

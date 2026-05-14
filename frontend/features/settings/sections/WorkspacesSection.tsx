@@ -142,15 +142,17 @@ export function WorkspacesSection(): React.JSX.Element {
 	return (
 		<WorkspacesSectionView
 			errorMessage={errorMessage}
-			isDirty={isDirty}
-			isLoading={query.isLoading}
-			isSaving={mutation.isPending}
 			keyMetas={KEY_METAS}
 			onDiscard={handleDiscard}
 			onSave={handleSave}
 			onToggleVisibility={handleToggleVisibility}
 			onValueChange={handleValueChange}
-			showTokens={showTokens}
+			state={{
+				isDirty,
+				isLoading: query.isLoading,
+				isSaving: mutation.isPending,
+				showTokens,
+			}}
 			values={values}
 		/>
 	);

@@ -6,7 +6,8 @@
 
 'use client';
 
-import { motion } from 'motion/react';
+import { domAnimation, LazyMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { type CSSProperties, type ElementType, memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -51,7 +52,7 @@ function resolveMotionComponent(Component: ElementType): MotionWrappedComponent 
 		const cached = motionTagCache.get(Component);
 		if (cached) return cached;
 		// biome-ignore lint/suspicious/noExplicitAny: see top-of-file
-		const created = motion.create(Component as any) as MotionWrappedComponent;
+		const created = m.create(Component as any) as MotionWrappedComponent;
 		motionTagCache.set(Component, created);
 		return created;
 	}
@@ -59,7 +60,7 @@ function resolveMotionComponent(Component: ElementType): MotionWrappedComponent 
 	const cached = motionComponentCache.get(componentKey);
 	if (cached) return cached;
 	// biome-ignore lint/suspicious/noExplicitAny: see top-of-file
-	const created = motion.create(Component as any) as MotionWrappedComponent;
+	const created = m.create(Component as any) as MotionWrappedComponent;
 	motionComponentCache.set(componentKey, created);
 	return created;
 }
@@ -76,29 +77,31 @@ const ShimmerComponent = ({
 	const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);
 
 	return (
-		<MotionComponent
-			animate={{ backgroundPosition: '0% center' }}
-			className={cn(
-				'relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent',
-				'[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]',
-				className
-			)}
-			initial={{ backgroundPosition: '100% center' }}
-			style={
-				{
-					'--spread': `${dynamicSpread}px`,
-					backgroundImage:
-						'var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))',
-				} as CSSProperties
-			}
-			transition={{
-				repeat: Number.POSITIVE_INFINITY,
-				duration,
-				ease: 'linear',
-			}}
-		>
-			{children}
-		</MotionComponent>
+		<LazyMotion features={domAnimation}>
+			<MotionComponent
+				animate={{ backgroundPosition: '0% center' }}
+				className={cn(
+					'relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent',
+					'[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]',
+					className
+				)}
+				initial={{ backgroundPosition: '100% center' }}
+				style={
+					{
+						'--spread': `${dynamicSpread}px`,
+						backgroundImage:
+							'var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))',
+					} as CSSProperties
+				}
+				transition={{
+					repeat: Number.POSITIVE_INFINITY,
+					duration,
+					ease: 'linear',
+				}}
+			>
+				{children}
+			</MotionComponent>
+		</LazyMotion>
 	);
 };
 

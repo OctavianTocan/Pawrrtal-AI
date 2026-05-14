@@ -53,7 +53,7 @@ export function TaskQuickAdd({ onAdd }: TaskQuickAddProps): ReactNode {
 				type="text"
 				value={value}
 				onChange={(event) => setValue(event.target.value)}
-				placeholder="Add a task to today…"
+				placeholder="Add a task to today..."
 				className="h-6 min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
 			/>
 			<span className="hidden text-[11px] font-medium tracking-tight text-muted-foreground/70 sm:inline">

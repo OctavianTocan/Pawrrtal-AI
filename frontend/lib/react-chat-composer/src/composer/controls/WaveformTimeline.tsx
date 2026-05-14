@@ -16,6 +16,10 @@ const WAVEFORM_BARS = [
 	6, 10, 8, 14, 22, 18, 12, 28, 20, 14, 8, 18, 24, 16, 10, 6, 12, 20, 28, 22, 14, 10, 16, 24, 18,
 	12, 8, 14, 20, 26, 18, 12, 8, 16, 22, 28, 20, 14, 10, 6,
 ] as const;
+const WAVEFORM_BAR_FRAMES = WAVEFORM_BARS.flatMap((height, barIndex) => [
+	{ id: `first-${barIndex}`, height },
+	{ id: `second-${barIndex}`, height },
+]);
 
 /** Props for the waveform timeline. */
 export interface WaveformTimelineProps {
@@ -43,16 +47,13 @@ export function WaveformTimeline({ isPaused }: WaveformTimelineProps): React.JSX
 					animation: isPaused ? undefined : 'waveform-scroll 6s linear infinite',
 				}}
 			>
-				{[...WAVEFORM_BARS, ...WAVEFORM_BARS].map((height, index) => (
+				{WAVEFORM_BAR_FRAMES.map((bar) => (
 					<span
 						className="w-[2px] shrink-0 rounded-full bg-[var(--color-chat-foreground)]"
-						// Doubled-array keys are intentionally index-suffixed because the
-						// two halves are identical — the height is part of the key only
-						// to disambiguate the doubled run.
-						key={`bar-${index}-${height}`}
+						key={bar.id}
 						style={{
-							height,
-							opacity: 0.4 + ((index % 5) / 5) * 0.6,
+							height: bar.height,
+							opacity: 0.4 + ((bar.height % 5) / 5) * 0.6,
 						}}
 					/>
 				))}

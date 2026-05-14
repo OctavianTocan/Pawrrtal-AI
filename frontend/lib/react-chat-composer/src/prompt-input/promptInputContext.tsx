@@ -10,11 +10,7 @@
 
 'use client';
 
-import {
-	createContext,
-	type RefObject,
-	useContext,
-} from 'react';
+import { createContext, type RefObject, use } from 'react';
 
 /**
  * Public file attachment shape. The package keeps the structure compatible
@@ -60,7 +56,7 @@ export const LocalAttachmentsContext = createContext<AttachmentsContext | null>(
  * @throws If called outside of a `<PromptInputForm />` subtree.
  */
 export function usePromptInputAttachments(): AttachmentsContext {
-	const context = useContext(LocalAttachmentsContext);
+	const context = use(LocalAttachmentsContext);
 	if (!context) {
 		throw new Error(
 			'usePromptInputAttachments must be used within a <PromptInputForm />',

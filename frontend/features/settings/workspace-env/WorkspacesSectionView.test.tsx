@@ -40,10 +40,12 @@ describe('WorkspacesSectionView', () => {
 	const baseProps = {
 		keyMetas: KEY_METAS,
 		values: EMPTY_VALUES,
-		showTokens: {},
-		isLoading: false,
-		isDirty: false,
-		isSaving: false,
+		state: {
+			showTokens: {},
+			isLoading: false,
+			isDirty: false,
+			isSaving: false,
+		},
 		errorMessage: null,
 		onValueChange: vi.fn(),
 		onToggleVisibility: vi.fn(),
@@ -71,15 +73,26 @@ describe('WorkspacesSectionView', () => {
 
 	it('enables Save when isDirty is true and fires onSave on click', () => {
 		const onSave = vi.fn();
-		render(<WorkspacesSectionView {...baseProps} isDirty onSave={onSave} />);
+		render(
+			<WorkspacesSectionView
+				{...baseProps}
+				onSave={onSave}
+				state={{ ...baseProps.state, isDirty: true }}
+			/>
+		);
 		const saveButton = screen.getByRole('button', { name: 'Save' });
 		fireEvent.click(saveButton);
 		expect(onSave).toHaveBeenCalledTimes(1);
 	});
 
-	it('shows "Saving…" label while the mutation is pending', () => {
-		render(<WorkspacesSectionView {...baseProps} isDirty isSaving />);
-		expect(screen.getByRole('button', { name: 'Saving…' })).toBeTruthy();
+	it('shows "Saving..." label while the mutation is pending', () => {
+		render(
+			<WorkspacesSectionView
+				{...baseProps}
+				state={{ ...baseProps.state, isDirty: true, isSaving: true }}
+			/>
+		);
+		expect(screen.getByRole('button', { name: 'Saving...' })).toBeTruthy();
 	});
 
 	it('renders the error region as alert when errorMessage is provided', () => {
@@ -110,7 +123,12 @@ describe('WorkspacesSectionView', () => {
 	});
 
 	it('renders the input as type="text" when the key is in showTokens', () => {
-		render(<WorkspacesSectionView {...baseProps} showTokens={{ GEMINI_API_KEY: true }} />);
+		render(
+			<WorkspacesSectionView
+				{...baseProps}
+				state={{ ...baseProps.state, showTokens: { GEMINI_API_KEY: true } }}
+			/>
+		);
 		const gemini = screen.getByLabelText('Gemini API Key') as HTMLInputElement;
 		expect(gemini.type).toBe('text');
 	});

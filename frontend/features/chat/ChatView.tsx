@@ -4,9 +4,10 @@ import {
 	ChatComposer,
 	type ChatComposerMessage,
 	ChatPromptSuggestions,
+	type ChatModelOption as PackageChatModelOption,
 } from '@octavian-tocan/react-chat-composer';
 import type * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { useWhimsyTile } from '@/features/whimsy';
 import { usePersistedState } from '@/hooks/use-persisted-state';
@@ -20,11 +21,10 @@ import { UserMessage } from './components/UserMessage';
 import {
 	CHAT_REASONING_LEVELS,
 	CHAT_STORAGE_KEYS,
-	type ChatModelId,
 	type ChatReasoningLevel,
 	DEFAULT_PLAN_MODE_VISIBLE,
-	PAWRRTAL_MODELS,
 } from './constants';
+import type { ChatModelOption } from './hooks/use-chat-models';
 import { useTranscribeAudioCallback } from './hooks/use-transcribe-audio-callback';
 
 /** Empty-state suggestion rows shown when no conversation has begun. */
@@ -51,12 +51,16 @@ type ChatProps = {
 	onSendMessage: (message: ChatComposerMessage) => void;
 	/** The full conversation history to render. */
 	chatHistory: Array<AgnoMessage>;
-	/** The selected model used for new chat requests. */
-	selectedModelId: ChatModelId;
+	/** Live model catalog from `useChatModels()`, hoisted by the container. */
+	models: readonly ChatModelOption[];
+	/** True until the first model-catalog response lands. */
+	isCatalogLoading?: boolean;
+	/** Selected canonical model ID (`host:vendor/model`) used for new chat requests. */
+	selectedModelId: string;
 	/** The selected reasoning level shown in the composer. */
 	selectedReasoning: ChatReasoningLevel;
-	/** Callback fired when the model selector changes. */
-	onSelectModel: (modelId: ChatModelId) => void;
+	/** Callback fired when the model selector changes. Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
 	/** Callback fired when the reasoning selector changes. */
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when an empty-state prompt suggestion is selected. */
@@ -150,7 +154,7 @@ function WhimsyOverlay(): React.JSX.Element | null {
 			) : null}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 text-foreground"
+				className="pointer-events-none absolute inset-0 text-foreground [mask-repeat:repeat] [-webkit-mask-repeat:repeat]"
 				style={{
 					backgroundColor: whimsy.tintColor,
 					opacity: whimsy.opacity,
@@ -158,8 +162,6 @@ function WhimsyOverlay(): React.JSX.Element | null {
 					WebkitMaskImage: whimsy.cssUrl,
 					maskSize: whimsy.maskSize,
 					WebkitMaskSize: whimsy.maskSize,
-					maskRepeat: 'repeat',
-					WebkitMaskRepeat: 'repeat',
 				}}
 			/>
 		</>
@@ -170,14 +172,36 @@ function WhimsyOverlay(): React.JSX.Element | null {
 interface ComposerRowProps {
 	composerText: string;
 	isLoading?: boolean;
-	selectedModelId: ChatModelId;
+	/** Model catalog in the package's `ChatModelOption` shape — pre-mapped by `ChatView`. */
+	models: readonly PackageChatModelOption[];
+	/** Canonical model-ID wire form (`host:vendor/model`). */
+	selectedModelId: string;
 	selectedReasoning: ChatReasoningLevel;
 	onChangeComposerText: (text: string) => void;
 	onSendMessage: (message: ChatComposerMessage) => void;
-	onSelectModel: (modelId: ChatModelId) => void;
+	/** Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	footerActions: React.ReactNode;
 	transcribeAudio: (audio: Blob, mimeType: string) => Promise<string>;
+}
+
+/**
+ * Map a backend catalog entry to the package's `ChatModelOption` shape.
+ *
+ * The backend exposes `display_name` / `short_name` / `vendor`; the package
+ * expects `name` / `shortName` / `provider`. Kept as a pure helper so the
+ * mapping can be tested in isolation and re-used if other surfaces ever
+ * need the package shape too.
+ */
+function toPackageModelOption(entry: ChatModelOption): PackageChatModelOption {
+	return {
+		id: entry.id,
+		shortName: entry.short_name,
+		name: entry.display_name,
+		provider: entry.vendor,
+		description: entry.description,
+	};
 }
 
 /**
@@ -187,6 +211,7 @@ interface ComposerRowProps {
 function LandingState({
 	composerText,
 	isLoading,
+	models,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -200,7 +225,7 @@ function LandingState({
 	onSelectSuggestion: (prompt: string) => void;
 }): React.JSX.Element {
 	return (
-		<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
+		<div className="relative mx-auto flex size-full max-w-[60rem] min-w-0 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
 				<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
 					What should we build in Pawrrtal?
@@ -210,9 +235,9 @@ function LandingState({
 						className="relative z-10"
 						footerActions={footerActions}
 						isLoading={isLoading}
-						models={[...PAWRRTAL_MODELS]}
+						models={[...models]}
 						onChange={onChangeComposerText}
-						onSelectModel={(modelId) => onSelectModel(modelId as ChatModelId)}
+						onSelectModel={onSelectModel}
 						onSelectReasoning={(level) =>
 							onSelectReasoning(level as ChatReasoningLevel)
 						}
@@ -261,12 +286,14 @@ function ConversationRow({
 		return (
 			<AssistantMessage
 				content={chatMessage.content}
-				isCopied={copiedMessageId === messageId}
-				isFailed={chatMessage.assistant_status === 'failed'}
-				isRegenerating={isCurrentlyRegenerating}
-				isStreaming={Boolean(isLoading && isLast)}
 				onCopy={onCopy ? () => onCopy(messageId, chatMessage.content) : undefined}
 				onRegenerate={onRegenerate ? () => onRegenerate(index) : undefined}
+				status={{
+					isCopied: copiedMessageId === messageId,
+					isFailed: chatMessage.assistant_status === 'failed',
+					isRegenerating: isCurrentlyRegenerating,
+					isStreaming: Boolean(isLoading && isLast),
+				}}
 				thinking={chatMessage.thinking}
 				thinkingDurationSeconds={chatMessage.thinking_duration_seconds}
 				timeline={chatMessage.timeline}
@@ -295,6 +322,7 @@ function ActiveConversationState({
 	chatHistory,
 	composerText,
 	isLoading,
+	models,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -315,22 +343,29 @@ function ActiveConversationState({
 	onRegenerate?: (assistantIndex: number) => void;
 }): React.JSX.Element {
 	return (
-		<div className="relative flex h-full w-full min-w-0 flex-col">
+		<div className="relative flex size-full min-w-0 flex-col">
 			<Conversation className="scrollbar-hide min-h-0 flex-1 overflow-y-auto" resize="smooth">
 				<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
-					{chatHistory.map((chatMessage, index) => (
-						<ConversationRow
-							chatMessage={chatMessage}
-							copiedMessageId={copiedMessageId}
-							index={index}
-							isLast={index === chatHistory.length - 1}
-							isLoading={isLoading}
-							key={`${chatMessage.role}-${index}`}
-							onCopy={onCopy}
-							onRegenerate={onRegenerate}
-							regeneratingIndex={regeneratingIndex}
-						/>
-					))}
+					{chatHistory.map((chatMessage, index) => {
+						const messageKey = [
+							chatMessage.role,
+							chatMessage.thinking_started_at ?? 'saved',
+							chatMessage.content.slice(0, 80),
+						].join(':');
+						return (
+							<ConversationRow
+								chatMessage={chatMessage}
+								copiedMessageId={copiedMessageId}
+								index={index}
+								isLast={index === chatHistory.length - 1}
+								isLoading={isLoading}
+								key={messageKey}
+								onCopy={onCopy}
+								onRegenerate={onRegenerate}
+								regeneratingIndex={regeneratingIndex}
+							/>
+						);
+					})}
 				</ConversationContent>
 				<ChatScrollAnchor track={chatHistory.length} />
 			</Conversation>
@@ -339,9 +374,9 @@ function ActiveConversationState({
 					className="w-full max-w-[48.75rem]"
 					footerActions={footerActions}
 					isLoading={isLoading}
-					models={[...PAWRRTAL_MODELS]}
+					models={[...models]}
 					onChange={onChangeComposerText}
-					onSelectModel={(modelId) => onSelectModel(modelId as ChatModelId)}
+					onSelectModel={onSelectModel}
 					onSelectReasoning={(level) => onSelectReasoning(level as ChatReasoningLevel)}
 					onSubmit={onSendMessage}
 					onTranscribeAudio={transcribeAudio}
@@ -371,6 +406,7 @@ function ChatView({
 	composerText,
 	isLoading,
 	chatHistory,
+	models,
 	selectedModelId,
 	selectedReasoning,
 	onSendMessage,
@@ -387,6 +423,15 @@ function ChatView({
 	const [isPlanVisible, setIsPlanVisible] = usePlanModeVisible();
 	useShiftTabPlanToggle(setIsPlanVisible);
 
+	// Map the backend catalog onto the package's `ChatModelOption` shape once
+	// per catalog change. The `useChatModels` hook returns a stable array
+	// reference, so `useMemo` keyed on it avoids re-mapping on unrelated
+	// re-renders (composer text, loading flips, etc.).
+	const packageModels = useMemo<readonly PackageChatModelOption[]>(
+		() => models.map(toPackageModelOption),
+		[models]
+	);
+
 	const footerActions = (
 		<>
 			{isPlanVisible ? <PlanButton /> : null}
@@ -396,6 +441,7 @@ function ChatView({
 	const rowProps = {
 		composerText,
 		isLoading,
+		models: packageModels,
 		selectedModelId,
 		selectedReasoning,
 		onChangeComposerText,

@@ -406,7 +406,7 @@ export function VoiceMeter({
 			<span className="w-9 text-right text-[12px] text-muted-foreground tabular-nums">
 				{formatRecordingTime(elapsedSeconds)}
 			</span>
-			<ComposerTooltip content={isTranscribing ? 'Transcribing…' : 'Stop and transcribe'}>
+			<ComposerTooltip content={isTranscribing ? 'Transcribing...' : 'Stop and transcribe'}>
 				<Button
 					aria-label={isTranscribing ? 'Transcribing' : 'Stop and transcribe'}
 					className="size-8 rounded-full bg-foreground-10 text-foreground hover:bg-foreground-15 disabled:cursor-not-allowed disabled:opacity-60"

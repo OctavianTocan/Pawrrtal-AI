@@ -17,8 +17,6 @@ import {
 	resolvePrompt,
 	setMode,
 	setPromptFn,
-	type PermissionDecision,
-	type PromptDetails,
 } from './permissions';
 
 beforeEach(() => {

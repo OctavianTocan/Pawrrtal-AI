@@ -1,6 +1,7 @@
 'use client';
 
 import { CalendarIcon, FileTextIcon } from 'lucide-react';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { MAX_VISIBLE_RESULTS } from '../thinking-constants';
@@ -30,12 +31,13 @@ function WebChip({ source }: { source: WebSourceInfo }): ReactNode {
 			title={label}
 		>
 			{source.faviconUrl ? (
-				<img
+				<Image
 					alt=""
 					className="size-3.5 shrink-0 rounded-sm"
 					height={14}
 					loading="lazy"
 					src={source.faviconUrl}
+					unoptimized
 					width={14}
 				/>
 			) : null}

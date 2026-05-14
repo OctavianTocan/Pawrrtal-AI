@@ -40,7 +40,7 @@ export type NewSessionButtonProps = {
  * button pattern can appear in the sidebar header, command palette, etc.
  */
 export function NewSessionButton({ layout = 'sidebar' }: NewSessionButtonProps): React.JSX.Element {
-	const router = useRouter();
+	const { push } = useRouter();
 	const { isMobile, setOpenMobile } = useSidebar();
 
 	/** Navigates to the root page, which generates a fresh conversation UUID. */
@@ -48,7 +48,7 @@ export function NewSessionButton({ layout = 'sidebar' }: NewSessionButtonProps):
 		if (isMobile) {
 			setOpenMobile(false);
 		}
-		router.push('/');
+		push('/');
 	};
 
 	const isHeaderCompact = layout === 'headerCompact';
@@ -71,7 +71,7 @@ export function NewSessionButton({ layout = 'sidebar' }: NewSessionButtonProps):
 						>
 							<SquarePenRounded
 								className={
-									isHeaderCompact ? 'size-3.5 shrink-0' : 'h-3.5 w-3.5 shrink-0'
+									isHeaderCompact ? 'size-3.5 shrink-0' : 'size-3.5 shrink-0'
 								}
 							/>
 							{isHeaderCompact ? null : 'New Session'}
@@ -86,7 +86,7 @@ export function NewSessionButton({ layout = 'sidebar' }: NewSessionButtonProps):
 							}
 						}}
 					>
-						<AppWindow className="h-3.5 w-3.5" />
+						<AppWindow className="size-3.5" />
 						<span className="flex-1">Open in New Window</span>
 					</DropdownMenuItem>
 				</DropdownContextMenuContent>

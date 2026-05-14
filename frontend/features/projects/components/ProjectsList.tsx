@@ -3,7 +3,7 @@
 import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
 import { FolderPlus, Pencil } from 'lucide-react';
 import type * as React from 'react';
-import { useId, useState } from 'react';
+import { useId, useReducer, useState } from 'react';
 import { AppDialog } from '@/components/ui/app-dialog';
 import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
 import { AppEmptyState } from '@/components/ui/app-empty-state';
@@ -22,6 +22,8 @@ import {
 } from '../hooks/use-projects';
 import { CreateProjectModal } from './CreateProjectModal';
 import { ProjectRow } from './ProjectRow';
+
+const replaceDraftName = (_current: string, next: string): string => next;
 
 /** Props for {@link ProjectsList}. */
 export interface ProjectsListProps {
@@ -134,7 +136,7 @@ export function ProjectsList({
 				<div className="flex flex-col gap-0.5 px-2 pb-1">
 					{isLoading && list.length === 0 ? (
 						<span className="px-2 py-1 text-sm text-muted-foreground/70">
-							Loading projects…
+							Loading projects&hellip;
 						</span>
 					) : null}
 					{!isLoading && list.length === 0 ? (
@@ -232,7 +234,11 @@ function RenameProjectModalInner({
 }): React.JSX.Element {
 	const formId = useId();
 	const inputId = useId();
-	const [draft, setDraft] = useState(project.name);
+	const [draft, setDraft] = useReducer(replaceDraftName, project.name);
+
+	const handleSubmit = (): void => {
+		onSubmit(draft);
+	};
 
 	const header = (
 		<ModalHeader
@@ -247,7 +253,7 @@ function RenameProjectModalInner({
 				Cancel
 			</Button>
 			<Button disabled={!draft.trim() || isPending} form={formId} type="submit">
-				{isPending ? 'Saving…' : 'Save'}
+				{isPending ? 'Saving...' : 'Save'}
 			</Button>
 		</AppDialogFooter>
 	);
@@ -263,20 +269,12 @@ function RenameProjectModalInner({
 			sheetTitle="Rename project"
 			size="md"
 		>
-			<form
-				className="flex flex-col gap-4 text-foreground"
-				id={formId}
-				onSubmit={(event) => {
-					event.preventDefault();
-					onSubmit(draft);
-				}}
-			>
+			<form action={handleSubmit} className="flex flex-col gap-4 text-foreground" id={formId}>
 				<ModalDescription className="text-muted-foreground">
 					Update the sidebar name for this project.
 				</ModalDescription>
 				<AppFormRow htmlFor={inputId} label="Project name" labelVisibility="sr-only">
 					<Input
-						autoFocus
 						id={inputId}
 						maxLength={255}
 						onChange={(event) => setDraft(event.target.value)}

@@ -17,13 +17,11 @@ import { UsageSection } from './sections/UsageSection';
 import { WorkspacesSection } from './sections/WorkspacesSection';
 
 /**
- * Renders the right-pane body for the currently selected section.
- *
- * Lookup-table-shaped so adding a new section means: register a row in
- * `SETTINGS_SECTIONS`, then add a case here. Anything not yet wired falls
- * through to `PlaceholderSection` automatically.
+ * Right-pane body for the currently selected section. Lookup-table-shaped so
+ * adding a new section means: register a row in `SETTINGS_SECTIONS`, then add a
+ * case here. Anything not yet wired falls through to `PlaceholderSection`.
  */
-function renderActiveSection(activeId: SettingsSectionId): React.ReactNode {
+function ActiveSettingsSection({ activeId }: { activeId: SettingsSectionId }): React.JSX.Element {
 	if (activeId === 'general') return <GeneralSection />;
 	if (activeId === 'workspaces') return <WorkspacesSection />;
 	if (activeId === 'appearance') return <AppearanceSection />;
@@ -56,7 +54,7 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
 			) : null}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 text-foreground"
+				className="pointer-events-none absolute inset-0 text-foreground [mask-repeat:repeat] [-webkit-mask-repeat:repeat]"
 				style={{
 					backgroundColor: whimsy.tintColor,
 					opacity: whimsy.opacity,
@@ -64,8 +62,6 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
 					WebkitMaskImage: whimsy.cssUrl,
 					maskSize: whimsy.maskSize,
 					WebkitMaskSize: whimsy.maskSize,
-					maskRepeat: 'repeat',
-					WebkitMaskRepeat: 'repeat',
 				}}
 			/>
 		</>
@@ -81,7 +77,7 @@ function SettingsWhimsyOverlay(): React.JSX.Element | null {
  * through.
  */
 export function SettingsLayout(): React.JSX.Element {
-	const router = useRouter();
+	const { push } = useRouter();
 	const [activeId, setActiveId] = useState<SettingsSectionId>('general');
 
 	return (
@@ -94,7 +90,7 @@ export function SettingsLayout(): React.JSX.Element {
 			<aside className="flex h-full flex-col gap-4 overflow-y-auto border-r border-border/60 px-3 pb-4 pt-4">
 				<button
 					className="flex w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-1.5 text-sm text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground"
-					onClick={() => router.push('/')}
+					onClick={() => push('/')}
 					type="button"
 				>
 					<ArrowLeft aria-hidden="true" className="size-4" />
@@ -148,9 +144,9 @@ export function SettingsLayout(): React.JSX.Element {
 			 */}
 			<main className="relative h-full bg-background">
 				<SettingsWhimsyOverlay />
-				<div className="absolute inset-0 overflow-y-auto px-10 py-10">
+				<div className="absolute inset-0 overflow-y-auto p-10">
 					<div className="relative mx-auto w-full max-w-3xl">
-						{renderActiveSection(activeId)}
+						<ActiveSettingsSection activeId={activeId} />
 					</div>
 				</div>
 			</main>

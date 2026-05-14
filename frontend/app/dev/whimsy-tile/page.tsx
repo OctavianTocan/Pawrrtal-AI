@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import type React from 'react';
 import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
 import {
@@ -6,6 +7,11 @@ import {
 	WHIMSY_THEMES,
 	type WhimsyThemeName,
 } from '@/lib/whimsy-tile';
+
+export const metadata: Metadata = {
+	title: 'Whimsy Tile Dev',
+	description: 'Dev-only preview page for generated whimsy tile variants.',
+};
 
 /**
  * Tile dimension in pixels. Same value is used for the SVG `viewBox`, the CSS
@@ -151,7 +157,7 @@ export default function WhimsyTilePage(): React.JSX.Element {
 					<header className="space-y-1">
 						<h2 className="text-xl font-semibold">Density &amp; seed variants</h2>
 						<p className="text-sm text-muted-foreground">
-							All three use the default <code>kawaii</code> theme — only{' '}
+							All three use the default <code>kawaii</code> theme. Only{' '}
 							<code>seed</code> and <code>grid</code> change. Same surface (light +
 							dark) for each.
 						</p>

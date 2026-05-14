@@ -60,7 +60,7 @@ export function KnowledgeFileListColumn({
 								onClick={() => onOpenFile(file.name)}
 								aria-current={isActive ? 'page' : undefined}
 								className={cn(
-									'flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors duration-150 ease-out',
+									'flex w-full cursor-pointer items-center gap-2.5 rounded-md p-2 text-left transition-colors duration-150 ease-out',
 									isActive
 										? 'bg-foreground-5 text-foreground'
 										: 'text-foreground hover:bg-foreground-5'

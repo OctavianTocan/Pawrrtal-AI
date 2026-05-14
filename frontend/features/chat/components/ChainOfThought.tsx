@@ -152,14 +152,14 @@ export const ChainOfThought = memo(function ChainOfThought({
 				className={cn('flex items-center gap-2 px-1.5 py-1 text-sm text-muted-foreground')}
 			>
 				<ChevronRightIcon aria-hidden="true" className="size-3.5" />
-				<Shimmer duration={1.2}>Thinking...</Shimmer>
+				<Shimmer duration={1.2}>Thinking&hellip;</Shimmer>
 			</div>
 		);
 	}
 
 	return (
 		<div className="flex flex-col gap-0.5">
-			{items.map((item, index) => {
+			{items.map((item) => {
 				if (item.kind === 'tool') {
 					return (
 						<ToolStep
@@ -172,7 +172,7 @@ export const ChainOfThought = memo(function ChainOfThought({
 				return (
 					<ThinkingStep
 						content={item.content}
-						key={`thinking-${index}-${item.title}`}
+						key={`thinking-${item.title}-${item.content.slice(0, 80)}`}
 						title={item.title}
 					/>
 				);

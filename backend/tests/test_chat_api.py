@@ -7,6 +7,8 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.agent_loop.types import AgentSafetyConfig
+from app.core.providers.catalog import default_model
+from app.core.providers.gemini_provider import GeminiLLM
 from app.models import Workspace  # used via fixture type hint
 from tests.agent_harness import ScriptedStreamFn, echo_tool, text_turn, tool_call_turn
 
@@ -74,9 +76,7 @@ async def test_chat_streams_provider_events(
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Chat"})
     monkeypatch.setattr(
         "app.api.chat.resolve_llm",
-        lambda _model_id, **kwargs: FakeProvider(
-            [{"type": "delta", "content": "hello"}]
-        ),
+        lambda _model_id, **kwargs: FakeProvider([{"type": "delta", "content": "hello"}]),
     )
 
     response = await client.post(
@@ -108,13 +108,56 @@ async def test_chat_persists_requested_model_id(
         json={
             "question": "hello",
             "conversation_id": str(conversation_id),
-            "model_id": "gemini-3-flash-preview",
+            "model_id": "google/gemini-3-flash-preview",
         },
     )
     conversation_response = await client.get(f"/api/v1/conversations/{conversation_id}")
 
     assert response.status_code == 200
-    assert conversation_response.json()["model_id"] == "gemini-3-flash-preview"
+    # Pydantic canonicalises the request's bare ``vendor/model`` form into
+    # the fully-qualified ``host:vendor/model`` wire shape before it
+    # reaches the chat handler; the same canonical value is what gets
+    # persisted onto the conversation row.
+    assert conversation_response.json()["model_id"] == "google-ai:google/gemini-3-flash-preview"
+
+
+@pytest.mark.anyio
+async def test_chat_falls_back_to_catalog_default_when_no_model_id_given(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: Workspace,
+) -> None:
+    """When neither the request nor the conversation supplies a ``model_id``,
+    the chat handler resolves to ``catalog.default_model().id``.
+
+    The catalog is the only place that names "the default model"; this
+    guards against a regression where a hardcoded ``_DEFAULT_MODEL``
+    constant in the router silently overrides the catalog.
+    """
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Default"})
+
+    captured: dict[str, object] = {}
+
+    def _capturing_resolve_llm(model_id: object, **_kwargs: object) -> FakeProvider:
+        captured["model_id"] = model_id
+        return FakeProvider([{"type": "delta", "content": "ok"}])
+
+    monkeypatch.setattr("app.api.chat.resolve_llm", _capturing_resolve_llm)
+
+    # No model_id in the body, and the conversation row has none either,
+    # so the handler must fall through to the catalog default.
+    response = await client.post(
+        "/api/v1/chat/",
+        json={"question": "hello", "conversation_id": str(conversation_id)},
+    )
+    conversation_response = await client.get(f"/api/v1/conversations/{conversation_id}")
+
+    assert response.status_code == 200
+    # The resolver received the catalog default's canonical wire form.
+    assert captured["model_id"] == default_model().id
+    # The conversation persisted that same value.
+    assert conversation_response.json()["model_id"] == default_model().id
 
 
 @pytest.mark.anyio
@@ -140,9 +183,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
 
-    monkeypatch.setattr(
-        "app.api.chat.resolve_llm", lambda _model_id, **kwargs: FailingProvider()
-    )
+    monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **kwargs: FailingProvider())
 
     response = await client.post(
         "/api/v1/chat/",
@@ -175,8 +216,6 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
     Only the LLM is replaced.  Every other component (HTTP routing,
     agent_loop, tool execution, SSE serialization) runs as in production.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     echo = echo_tool()
     script = ScriptedStreamFn(
         [
@@ -190,9 +229,7 @@ async def test_chat_multi_turn_tool_call_flows_through_full_http_path(
 
     # Inject both the provider and the echo tool into the chat path.
     monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
-    monkeypatch.setattr(
-        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo]
-    )
+    monkeypatch.setattr("app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo])
 
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Tool HTTP Test"})
@@ -239,8 +276,6 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     If the safety layer were disconnected, the loop would consume all 10
     turns and no ``agent_terminated`` frame would appear.
     """
-    from app.core.providers.gemini_provider import GeminiLLM
-
     # 10 tool-call turns — runaway loop the safety must stop.
     turns = [tool_call_turn("ping", {}, turn_id=f"tc-{i}") for i in range(10)]
     script = ScriptedStreamFn(turns)
@@ -260,9 +295,7 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     )
 
     monkeypatch.setattr("app.api.chat.resolve_llm", lambda _model_id, **_kw: provider)
-    monkeypatch.setattr(
-        "app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")]
-    )
+    monkeypatch.setattr("app.api.chat.build_agent_tools", lambda *_args, **_kw: [echo_tool("ping")])
 
     conversation_id = uuid4()
     await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Safety Test"})

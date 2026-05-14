@@ -63,7 +63,7 @@ describe('PersonalizationSection', () => {
 
 	it('updates the custom instructions textarea when typed into', () => {
 		const { getByPlaceholderText } = render(<PersonalizationSection />);
-		const textarea = getByPlaceholderText('Add your custom instructions…');
+		const textarea = getByPlaceholderText('Add your custom instructions...');
 		fireEvent.change(textarea, { target: { value: 'be terse' } });
 		expect((textarea as HTMLTextAreaElement).value).toBe('be terse');
 	});

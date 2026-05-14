@@ -41,7 +41,7 @@ export function StepPersonality({
 					size="lg"
 					type="button"
 				>
-					Continue
+					Save personality
 				</Button>
 			}
 			subtitle="Pick a personality."

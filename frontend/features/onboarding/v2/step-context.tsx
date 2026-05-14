@@ -69,7 +69,7 @@ export function StepContext({
 				value={profile.chatgptContext ?? ''}
 			/>
 			<p className="text-center text-sm text-muted-foreground">
-				Don't have ChatGPT? Skip this step — you can always add context later.
+				Don't have ChatGPT? Skip this step. You can always add context later.
 			</p>
 		</OnboardingShell>
 	);

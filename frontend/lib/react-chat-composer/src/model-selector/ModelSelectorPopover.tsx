@@ -9,7 +9,7 @@
 'use client';
 
 import { useTooltipDropdown } from '../hooks/useTooltipDropdown';
-import type { ChatModelOption, ChatReasoningLevel } from '../types/index';
+import type { ChatModelOption, ChatReasoningLevel } from '../types';
 import {
 	buildRootRows,
 	getModelOption,

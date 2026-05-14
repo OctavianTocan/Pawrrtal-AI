@@ -54,7 +54,7 @@ export function OnboardingCreateWorkspaceStep({
 					className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-[1.35rem]"
 					aria-hidden="true"
 				>
-					Add Workspace...
+					Add Workspace&hellip;
 				</div>
 				<DialogDescription className="text-[0.9375rem] leading-relaxed text-muted-foreground">
 					Where your ideas meet the tools to make them happen.
@@ -67,7 +67,7 @@ export function OnboardingCreateWorkspaceStep({
 					const isEnabled = option.status === 'enabled';
 					const isRemote = option.title === 'Connect to remote server';
 
-					const handleClick = isEnabled
+					const chooseWorkspaceOption = isEnabled
 						? isRemote
 							? handleRemoteServer
 							: onPickLocal
@@ -84,7 +84,7 @@ export function OnboardingCreateWorkspaceStep({
 										? 'cursor-pointer hover:bg-foreground/[0.045] hover:shadow-minimal active:bg-foreground/[0.035] focus-visible:ring-2 focus-visible:ring-ring/45'
 										: 'cursor-not-allowed bg-foreground/[0.012] text-muted-foreground/55'
 								)}
-								onClick={handleClick}
+								onClick={chooseWorkspaceOption}
 								aria-disabled={!isEnabled}
 								disabled={!isEnabled}
 								tabIndex={isEnabled ? 0 : -1}

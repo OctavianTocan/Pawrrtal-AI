@@ -57,10 +57,10 @@ from claude_agent_sdk import (
 )
 
 from app.core.agent_loop.types import AgentTool
-from app.core.keys import resolve_api_key
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
+from app.core.keys import resolve_api_key
 
 from ._claude_tool_bridge import (
     MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
@@ -176,6 +176,20 @@ class ClaudeLLM:
         config: ClaudeLLMConfig | None = None,
         user_id: uuid.UUID | None = None,
     ) -> None:
+        """Construct a Claude provider bound to a specific model slug.
+
+        Args:
+            model_id: The bare vendor slug (e.g. ``"claude-sonnet-4-6"``),
+                **not** the canonical wire form. The factory calls
+                :func:`parse_model_id` first and hands the unwrapped
+                ``parsed.model`` slug here; ``_MODEL_MAP`` is keyed on
+                bare slugs by design.
+            config: Optional Claude-specific config (OAuth token,
+                ``max_turns``, extra env). Defaults are read by the
+                factory from ``settings``.
+            user_id: App-level user UUID. When set, ``stream()`` resolves
+                per-workspace API-key overrides for this user.
+        """
         self._model_id = model_id
         self._config = config or ClaudeLLMConfig()
         self._user_id = user_id
@@ -200,6 +214,15 @@ class ClaudeLLM:
             user_id: App-level user UUID. Currently unused by this
                 provider but kept in the protocol so future per-user
                 cwd / quota logic can wire in without a signature change.
+            history: Ignored — the Claude SDK manages session continuity
+                natively via ``resume``. Accepted for protocol parity
+                with other providers (e.g. ``GeminiLLM``).
+            tools: Optional list of cross-provider :class:`AgentTool`
+                instances. Bridged into a single in-process MCP server
+                by ``_claude_tool_bridge`` so the SDK can call them.
+            system_prompt: Optional system prompt to override the
+                provider-default chat-scoped prompt. Falls back to
+                :data:`DEFAULT_AGENT_SYSTEM_PROMPT` when ``None``.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -217,9 +240,7 @@ class ClaudeLLM:
             # so the path is uniform regardless of whether bridged
             # tools are mounted; uniform path means one shape to test
             # and reason about.
-            async for message in query(
-                prompt=_aiter_user_prompt(question), options=options
-            ):
+            async for message in query(prompt=_aiter_user_prompt(question), options=options):
                 for event in _events_from_message(message):
                     yield event
         except CLINotFoundError as error:
@@ -253,9 +274,7 @@ class ClaudeLLM:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI."
-            )
+            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes
@@ -295,9 +314,7 @@ class ClaudeLLM:
         # Local tool whitelist for the Claude SDK's built-in CLI tools
         # (read/write filesystem, etc.).  Distinct from ``agent_tools``
         # — those are app-defined tools we bridge into an MCP server.
-        local_tools = (
-            list(self._config.tools) if self._config.tools is not None else None
-        )
+        local_tools = list(self._config.tools) if self._config.tools is not None else None
         mcp_servers: dict[str, Any] = {}
 
         # Bridge the cross-provider AgentTool list into a single MCP

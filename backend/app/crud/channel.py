@@ -247,7 +247,7 @@ async def get_or_create_telegram_conversation_full(
     user_id: uuid.UUID,
     session: AsyncSession,
     thread_id: int | None = None,
-) -> "Conversation":
+) -> Conversation:
     """Like :func:`get_or_create_telegram_conversation` but returns the full row.
 
     The extra fields (particularly ``model_id``) let the bot honour per-session
@@ -272,19 +272,22 @@ async def get_or_create_telegram_conversation_full(
 async def update_conversation_model(
     *,
     conversation_id: uuid.UUID,
-    model_id: str,
+    model_id: str | None,
     session: AsyncSession,
 ) -> bool:
     """Persist a model-ID override on an existing ``Conversation`` row.
 
-    Used by the ``/model`` Telegram command so the choice survives across turns.
+    Used by the ``/model`` Telegram command so the choice survives across
+    turns, and by the bot adapter's auto-clear path which writes ``None`` to
+    reset the conversation back to the catalog default after an
+    ``UnknownModelId`` is encountered at chat time.
 
     Args:
         conversation_id: The conversation to update.
-        model_id: Provider-prefixed model identifier string
-            (e.g. ``"google/gemini-3-flash-preview"`` or
-            ``"anthropic/claude-opus-4-5"``).  The value is stored as-is
-            and resolved by the provider factory at runtime.
+        model_id: Canonical model identifier string
+            (e.g. ``"agent-sdk:anthropic/claude-sonnet-4-6"``).  Pass
+            ``None`` to clear the override so the next turn falls back to
+            ``catalog.default_model()``.
         session: Async database session.
 
     Returns:
@@ -306,7 +309,7 @@ async def _get_or_create_telegram_conv_row(
     user_id: uuid.UUID,
     session: AsyncSession,
     thread_id: int | None = None,
-) -> "Conversation":
+) -> Conversation:
     """Internal helper: find or create the Telegram conversation row.
 
     Routing branches:
@@ -315,8 +318,6 @@ async def _get_or_create_telegram_conv_row(
     - ``thread_id`` None → legacy DM mode; find the most recently updated
       conversation whose title starts with "Telegram" and has no thread ID.
     """
-    from sqlalchemy import select  # already imported at module level; re-import safe
-
     from app.models import Conversation  # noqa: PLC0415
 
     if thread_id is not None:

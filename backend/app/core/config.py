@@ -97,9 +97,7 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     # Where Google redirects back to after auth. Must be an authorized
     # redirect URI on the OAuth client. Default targets local dev.
-    google_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/google/callback"
-    )
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
 
     # --- OAuth: Apple ---
     # Apple Sign In requires four pieces: services ID (acts as client_id),
@@ -109,9 +107,7 @@ class Settings(BaseSettings):
     apple_oauth_team_id: str = ""
     apple_oauth_key_id: str = ""
     apple_oauth_private_key: str = ""
-    apple_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/apple/callback"
-    )
+    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
 
     # Where to send the user after a successful OAuth sign-in. Override in
     # production to point at the deployed frontend (e.g. https://app/...).
@@ -151,9 +147,7 @@ class Settings(BaseSettings):
         if not self.allowed_emails:
             return frozenset()
         return frozenset(
-            addr.strip().lower()
-            for addr in self.allowed_emails.split(",")
-            if addr.strip()
+            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
         )
 
     # Per-user chat rate limit (requests per 60-second rolling window).
@@ -161,6 +155,11 @@ class Settings(BaseSettings):
     # deployments should pick a value that matches the operator's monthly
     # token budget divided by expected request count.
     chat_rate_limit_per_minute: int = 0
+
+    # When True, ConversationResponse 422s on a non-canonical stored
+    # model_id. When False (operator escape hatch), the bad value falls
+    # back to ``catalog.default_model().id`` and the row is logged.
+    strict_conversation_read_validation: bool = True
 
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
@@ -180,9 +179,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
-        secure = (
-            self.cookie_secure if self.cookie_secure is not None else self.is_production
-        )
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."

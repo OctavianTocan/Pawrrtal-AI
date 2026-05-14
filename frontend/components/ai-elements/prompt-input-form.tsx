@@ -72,7 +72,7 @@ type PromptInputAttachmentState = {
 	usingProvider: boolean;
 	files: LocalFilePart[];
 	contextValue: AttachmentsContext;
-	handleChange: ChangeEventHandler<HTMLInputElement>;
+	ingestSelectedFiles: ChangeEventHandler<HTMLInputElement>;
 	handleFormDragOver: DragEventHandler<HTMLFormElement>;
 	handleFormDrop: DragEventHandler<HTMLFormElement>;
 	clear: () => void;
@@ -85,8 +85,10 @@ const fileMatchesAccept = (file: File, accept?: string): boolean => {
 
 	return accept
 		.split(',')
-		.map((pattern) => pattern.trim())
-		.filter(Boolean)
+		.flatMap((pattern) => {
+			const trimmed = pattern.trim();
+			return trimmed ? [trimmed] : [];
+		})
 		.some((pattern) => {
 			if (pattern.endsWith('/*')) {
 				const prefix = pattern.slice(0, -1);
@@ -261,18 +263,25 @@ const usePromptInputAttachmentState = ({
 	const openFileDialog = usingProvider
 		? controller.attachments.openFileDialog
 		: () => inputRef.current?.click();
-
-	useEffect(() => {
-		if (usingProvider) {
-			controller.__registerFileInput(inputRef, () => inputRef.current?.click());
-		}
-	}, [usingProvider, controller, inputRef]);
-
-	useEffect(() => {
-		if (syncHiddenInput && inputRef.current && files.length === 0) {
+	const clearHiddenInput = useCallback((): void => {
+		if (syncHiddenInput && inputRef.current) {
 			inputRef.current.value = '';
 		}
-	}, [files, inputRef, syncHiddenInput]);
+	}, [inputRef, syncHiddenInput]);
+	const removeAndSyncInput = useCallback(
+		(id: string): void => {
+			const removesLastFile = filesRef.current.length === 1 && filesRef.current[0]?.id === id;
+			remove(id);
+			if (removesLastFile) {
+				clearHiddenInput();
+			}
+		},
+		[clearHiddenInput, remove]
+	);
+	const clearAndSyncInput = useCallback((): void => {
+		clear();
+		clearHiddenInput();
+	}, [clear, clearHiddenInput]);
 
 	useDocumentDropTarget({ add, globalDrop });
 	useEffect(() => {
@@ -287,15 +296,15 @@ const usePromptInputAttachmentState = ({
 		() => ({
 			files: files.map((item) => ({ ...item, id: item.id })),
 			add,
-			remove,
-			clear,
+			remove: removeAndSyncInput,
+			clear: clearAndSyncInput,
 			openFileDialog,
 			fileInputRef: inputRef,
 		}),
-		[files, add, remove, clear, openFileDialog, inputRef]
+		[files, add, removeAndSyncInput, clearAndSyncInput, openFileDialog, inputRef]
 	);
 
-	const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
 		if (event.currentTarget.files) {
 			add(event.currentTarget.files);
 		}
@@ -323,10 +332,10 @@ const usePromptInputAttachmentState = ({
 		usingProvider,
 		files,
 		contextValue,
-		handleChange,
+		ingestSelectedFiles,
 		handleFormDragOver,
 		handleFormDrop,
-		clear,
+		clear: clearAndSyncInput,
 	};
 };
 
@@ -394,7 +403,7 @@ export const PromptInput = ({
 		contextValue,
 		controller,
 		files,
-		handleChange,
+		ingestSelectedFiles,
 		handleFormDragOver,
 		handleFormDrop,
 		usingProvider,
@@ -414,6 +423,15 @@ export const PromptInput = ({
 		onSubmit,
 		usingProvider,
 	});
+	const setInputNode = useCallback(
+		(node: HTMLInputElement | null): void => {
+			inputRef.current = node;
+			if (usingProvider) {
+				controller?.__registerFileInput(inputRef, () => inputRef.current?.click());
+			}
+		},
+		[controller, usingProvider]
+	);
 
 	const inner = (
 		<>
@@ -422,8 +440,8 @@ export const PromptInput = ({
 				aria-label="Upload files"
 				className="hidden"
 				multiple={multiple}
-				onChange={handleChange}
-				ref={inputRef}
+				onChange={ingestSelectedFiles}
+				ref={setInputNode}
 				title="Upload files"
 				type="file"
 			/>

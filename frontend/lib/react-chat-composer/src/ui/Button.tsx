@@ -1,13 +1,13 @@
 'use client';
 
-import { type ButtonHTMLAttributes, forwardRef } from 'react';
+import type { ButtonHTMLAttributes, JSX, Ref } from 'react';
 import { cn } from '../utils/cn';
 
 /** Visual style variants used by composer-side buttons. Derived from shadcn/ui. */
-export type ButtonVariant = 'default' | 'ghost' | 'outline' | 'destructive';
+type ButtonVariant = 'default' | 'ghost' | 'outline' | 'destructive';
 
 /** Size tokens — match the heights the composer toolbar wants (8 = 32px, etc.). */
-export type ButtonSize = 'default' | 'sm' | 'icon-sm' | 'icon-xs' | 'xs';
+type ButtonSize = 'default' | 'sm' | 'icon-sm' | 'icon-xs' | 'xs';
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 	default:
@@ -23,8 +23,8 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
 	default: 'h-9 px-4 text-sm',
 	sm: 'h-8 px-3 text-sm',
 	xs: 'h-7 px-2 text-[12px]',
-	'icon-sm': 'h-8 w-8 p-0',
-	'icon-xs': 'h-7 w-7 p-0',
+	'icon-sm': 'size-8 p-0',
+	'icon-xs': 'size-7 p-0',
 };
 
 /** Props for the minimal Button primitive used inside the composer. */
@@ -35,6 +35,8 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
 	size?: ButtonSize;
 	/** HTML button type. Defaults to `'button'` to prevent accidental form submits. */
 	type?: ButtonHTMLAttributes<HTMLButtonElement>['type'];
+	/** React 19 ref prop. */
+	ref?: Ref<HTMLButtonElement>;
 }
 
 /**
@@ -45,10 +47,14 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
  * @param props - Standard button props plus `variant` + `size` tokens.
  * @returns A button element with the chat-* token style baked in.
  */
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-	{ className, variant = 'ghost', size = 'default', type = 'button', ...rest },
+export function Button({
+	className,
+	variant = 'ghost',
+	size = 'default',
+	type = 'button',
 	ref,
-) {
+	...rest
+}: ButtonProps): JSX.Element {
 	return (
 		<button
 			ref={ref}
@@ -62,4 +68,4 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 			{...rest}
 		/>
 	);
-});
+}

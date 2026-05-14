@@ -10,8 +10,9 @@
 
 'use client';
 
+import Image from 'next/image';
 import type { ReactNode } from 'react';
-import type { ChatProviderSlug } from '../types/index';
+import type { ChatProviderSlug } from '../types';
 import { cn } from '../utils/cn';
 
 /** Props for a single provider logo SVG. */
@@ -220,12 +221,13 @@ export function ProviderLogo({
 		return (
 			// `override` URL renders as a square image; consumers control sizing
 			// via the className prop.
-			<img
+			<Image
 				src={override}
 				alt=""
 				aria-hidden="true"
 				className={cn('size-3', className)}
 				height={12}
+				unoptimized
 				width={12}
 			/>
 		);

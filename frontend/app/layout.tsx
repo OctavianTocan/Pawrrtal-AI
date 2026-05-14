@@ -27,16 +27,6 @@ const newsreader = Newsreader({
 });
 
 /**
- * Google Sans Flex + Google Sans — default UI sans stack (`--font-sans-stack` in
- * `globals.css`). **Not** loaded with `next/font/google`: those families are
- * missing from Next.js’s capsize fallback metrics DB, so the loader logs
- * “Failed to find font override values…” on every dev start (and
- * `adjustFontFallback: false` is unreliable in some Next 15/16 versions).
- * Instead we add a standard Google Fonts `<link>` in `<head>` (see below) so
- * the same public `fonts.gstatic.com` files load without the metrics pipeline.
- */
-
-/**
  * Geist + Geist Mono — preloaded so the Cursor preset's typography
  * actually renders the moment the user picks it. The fonts cite
  * themselves by name (`"Geist"`, `"Geist Mono"`) inside the preset's
@@ -81,12 +71,6 @@ export default function RootLayout({
 				script only modifies the class list, not the DOM structure.
 			*/}
 			<head>
-				<link href="https://fonts.googleapis.com" rel="preconnect" />
-				<link href="https://fonts.gstatic.com" crossOrigin="anonymous" rel="preconnect" />
-				<link
-					href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&display=swap"
-					rel="stylesheet"
-				/>
 				{/* System theme detection — runs synchronously before hydration
 				    to prevent FOUC.  Body lives in `frontend/public/theme-detection.js`.
 

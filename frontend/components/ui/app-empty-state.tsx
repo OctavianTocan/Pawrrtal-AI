@@ -97,7 +97,7 @@ export function AppEmptyState({
 
 	if (tone === 'card') {
 		return (
-			<div className={cn('flex h-full w-full items-center justify-center p-6', className)}>
+			<div className={cn('flex size-full items-center justify-center p-6', className)}>
 				<div className="flex max-w-[360px] flex-col items-center gap-3 rounded-surface-lg border border-border bg-background-elevated p-8 text-center shadow-minimal">
 					<span className="flex size-10 items-center justify-center rounded-full bg-foreground-5 text-muted-foreground">
 						{icon}
@@ -127,12 +127,7 @@ export function AppEmptyState({
 
 	if (tone === 'page') {
 		return (
-			<div
-				className={cn(
-					'flex h-full w-full items-center justify-center px-6 py-10',
-					className
-				)}
-			>
+			<div className={cn('flex size-full items-center justify-center px-6 py-10', className)}>
 				<div className="flex max-w-[420px] flex-col items-center gap-3 text-center">
 					<span className="flex size-12 items-center justify-center rounded-full bg-foreground/[0.05] text-muted-foreground">
 						{icon}
@@ -168,7 +163,7 @@ export function AppEmptyState({
 				className
 			)}
 		>
-			<div className="flex h-10 w-10 items-center justify-center rounded-soft bg-foreground/[0.03] text-muted-foreground/70 shadow-minimal">
+			<div className="flex size-10 items-center justify-center rounded-soft bg-foreground/[0.03] text-muted-foreground/70 shadow-minimal">
 				{icon}
 			</div>
 			<h3 className="mt-4 text-sm font-medium text-foreground">{title}</h3>

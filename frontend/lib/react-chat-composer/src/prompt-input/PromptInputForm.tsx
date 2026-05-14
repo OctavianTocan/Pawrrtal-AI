@@ -17,6 +17,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
+	useEffectEvent,
 	useMemo,
 	useRef,
 	useState,
@@ -37,10 +38,10 @@ export interface PromptInputMessage {
 }
 
 /** Error codes surfaced via the form's optional `onError` callback. */
-export type PromptInputFormErrorCode = 'max_files' | 'max_file_size' | 'accept';
+type PromptInputFormErrorCode = 'max_files' | 'max_file_size' | 'accept';
 
 /** Error payload passed to `onError` on a rejected drop/pick. */
-export interface PromptInputFormError {
+interface PromptInputFormError {
 	/** Discriminator for the error condition. */
 	code: PromptInputFormErrorCode;
 	/** Human-readable message; safe to surface in the UI. */
@@ -101,8 +102,10 @@ function fileMatchesAccept(file: File, accept?: string): boolean {
 	if (!accept?.trim()) return true;
 	return accept
 		.split(',')
-		.map((pattern) => pattern.trim())
-		.filter(Boolean)
+		.flatMap((pattern) => {
+			const trimmed = pattern.trim();
+			return trimmed ? [trimmed] : [];
+		})
 		.some((pattern) => {
 			if (pattern.endsWith('/*')) {
 				const prefix = pattern.slice(0, -1);
@@ -215,6 +218,9 @@ export function PromptInputForm({
 		() => ({ files, add, remove, clear, openFileDialog, fileInputRef: inputRef }),
 		[files, add, remove, clear, openFileDialog],
 	);
+	const addDroppedFiles = useEffectEvent((fileList: FileList) => {
+		add(fileList);
+	});
 
 	// Clean up object URLs when the form unmounts.
 	useEffect(() => {
@@ -239,7 +245,7 @@ export function PromptInputForm({
 		const onDocumentDrop = (e: DragEvent): void => {
 			if (e.dataTransfer && hasDraggedFiles(e.dataTransfer)) e.preventDefault();
 			if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-				add(e.dataTransfer.files);
+				addDroppedFiles(e.dataTransfer.files);
 			}
 		};
 		document.addEventListener('dragover', onDocumentDragOver);
@@ -248,9 +254,9 @@ export function PromptInputForm({
 			document.removeEventListener('dragover', onDocumentDragOver);
 			document.removeEventListener('drop', onDocumentDrop);
 		};
-	}, [add, globalDrop]);
+	}, [globalDrop]);
 
-	const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
+	const ingestSelectedFiles: ChangeEventHandler<HTMLInputElement> = (event) => {
 		if (event.currentTarget.files) add(event.currentTarget.files);
 		event.currentTarget.value = '';
 	};
@@ -289,7 +295,7 @@ export function PromptInputForm({
 				aria-label="Upload files"
 				className="hidden"
 				multiple={multiple}
-				onChange={handleChange}
+				onChange={ingestSelectedFiles}
 				ref={inputRef}
 				title="Upload files"
 				type="file"

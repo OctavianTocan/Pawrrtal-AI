@@ -13,11 +13,11 @@
  *   - chokidar remains the watcher (works equally well under Bun).
  */
 
+import { randomUUID } from 'node:crypto';
 import { promises as fsp } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 
-import { watch, type FSWatcher } from 'chokidar';
+import { type FSWatcher, watch } from 'chokidar';
 
 import type { DirEntry, Result, WatchEvent } from '../../shared/rpc-types';
 import { requestPermission } from '../permissions';
@@ -64,7 +64,7 @@ export async function handleFsWriteFile(rawPath: string, content: string): Promi
 }
 
 export async function handleFsListDirectory(
-	rawPath: string,
+	rawPath: string
 ): Promise<Result<{ entries: DirEntry[] }>> {
 	const validated = validateFilePath(rawPath);
 	if (!validated.ok) return validated;
@@ -91,7 +91,7 @@ export async function handleFsListDirectory(
 						modifiedAt: 0,
 					} satisfies DirEntry;
 				}
-			}),
+			})
 		);
 		return { ok: true, entries };
 	} catch (error) {
@@ -101,7 +101,7 @@ export async function handleFsListDirectory(
 
 export async function handleFsWatchDirectory(
 	rawPath: string,
-	onEvent: (event: WatchEvent) => void,
+	onEvent: (event: WatchEvent) => void
 ): Promise<Result<{ id: string }>> {
 	const validated = validateFilePath(rawPath);
 	if (!validated.ok) return validated;

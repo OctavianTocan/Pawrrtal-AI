@@ -82,7 +82,7 @@ export function CreateProjectModal({
 				Cancel
 			</Button>
 			<Button className="cursor-pointer" disabled={!canSubmit} form={formId} type="submit">
-				{isPending ? 'Creating…' : 'Create project'}
+				{isPending ? 'Creating...' : 'Create project'}
 			</Button>
 		</AppDialogFooter>
 	);
@@ -105,7 +105,6 @@ export function CreateProjectModal({
 			>
 				<AppFormRow htmlFor={inputId} label="Project name">
 					<Input
-						autoFocus
 						id={inputId}
 						maxLength={255}
 						onChange={(event) => setDraft(event.target.value)}

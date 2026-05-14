@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DecisionPill } from './DecisionPill';
 import { BOUNCY_SPRING, getInitials, type RequestRowProps } from './types';
@@ -24,7 +24,7 @@ import { BOUNCY_SPRING, getInitials, type RequestRowProps } from './types';
  */
 export function RequestRow({ request, decision, onApprove, onReject, onReset }: RequestRowProps) {
 	return (
-		<motion.div
+		<m.div
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			transition={{ duration: 0.15 }}
@@ -36,28 +36,28 @@ export function RequestRow({ request, decision, onApprove, onReject, onReset }: 
 				 * creates a shared-layout transition: the avatar appears to physically
 				 * fly from the header group into this row position on expand.
 				 */}
-				<motion.div layoutId={`avatar-${request.id}`} transition={BOUNCY_SPRING}>
+				<m.div layoutId={`avatar-${request.id}`} transition={BOUNCY_SPRING}>
 					<Avatar size="sm">
 						{request.avatarUrl && (
 							<AvatarImage src={request.avatarUrl} alt={request.name} />
 						)}
 						<AvatarFallback>{getInitials(request.name)}</AvatarFallback>
 					</Avatar>
-				</motion.div>
+				</m.div>
 
 				{/* Scale bounce echoes the avatar spring for a cohesive row entry */}
-				<motion.span
+				<m.span
 					className="text-sm font-medium"
 					initial={{ scale: 0.92, opacity: 0 }}
 					animate={{ scale: 1, opacity: 1 }}
 					transition={BOUNCY_SPRING}
 				>
 					{request.name}
-				</motion.span>
+				</m.span>
 			</div>
 
 			{/* Same spring as the name so the entire right side arrives together */}
-			<motion.div
+			<m.div
 				initial={{ scale: 0.85, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
 				transition={BOUNCY_SPRING}
@@ -69,7 +69,7 @@ export function RequestRow({ request, decision, onApprove, onReject, onReset }: 
 					onReject={onReject}
 					onReset={onReset}
 				/>
-			</motion.div>
-		</motion.div>
+			</m.div>
+		</m.div>
 	);
 }

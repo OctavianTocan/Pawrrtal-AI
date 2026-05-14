@@ -1,7 +1,7 @@
 'use client';
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
-import { forwardRef, type ReactNode } from 'react';
+import type { JSX, ReactNode, Ref } from 'react';
 import { cn } from '../utils/cn';
 
 /**
@@ -16,6 +16,8 @@ export const TooltipTrigger = TooltipPrimitive.Trigger;
 /** Props for the styled `TooltipContent`. */
 export interface TooltipContentProps extends TooltipPrimitive.TooltipContentProps {
 	children: ReactNode;
+	/** React 19 ref prop forwarded to Radix content. */
+	ref?: Ref<HTMLDivElement>;
 }
 
 /**
@@ -24,10 +26,12 @@ export interface TooltipContentProps extends TooltipPrimitive.TooltipContentProp
  *
  * @returns The tooltip content rendered inside Radix's portal.
  */
-export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(function TooltipContent(
-	{ className, sideOffset = 4, ...rest },
+export function TooltipContent({
+	className,
+	sideOffset = 4,
 	ref,
-) {
+	...rest
+}: TooltipContentProps): JSX.Element {
 	return (
 		<TooltipPrimitive.Portal>
 			<TooltipPrimitive.Content
@@ -41,4 +45,4 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(fu
 			/>
 		</TooltipPrimitive.Portal>
 	);
-});
+}

@@ -23,19 +23,25 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
 
-import { ApplicationMenu, BrowserView, BrowserWindow, app } from 'electrobun/bun';
+import { ApplicationMenu, app, BrowserView, BrowserWindow } from 'electrobun/bun';
 
 import type { PawrrtalRPCType } from '../shared/rpc-types';
-import { handleFsListDirectory, handleFsReadFile, handleFsUnwatch, handleFsWatchDirectory, handleFsWriteFile } from './handlers/fs';
+import {
+	handleFsListDirectory,
+	handleFsReadFile,
+	handleFsUnwatch,
+	handleFsWatchDirectory,
+	handleFsWriteFile,
+} from './handlers/fs';
 import { handleShellKill, handleShellRun, handleShellSpawnStreaming } from './handlers/shell';
-import { getMode, requestPermission, resolvePrompt, setMode, setPromptFn } from './permissions';
-import { startNextServer, type StartedServer } from './server';
+import { getMode, resolvePrompt, setMode, setPromptFn } from './permissions';
+import { type StartedServer, startNextServer } from './server';
 import { createStore } from './store';
 import { addRoot, ensureDefaultWorkspaceRoot, listRoots, removeRoot } from './workspace';
 
 // ELECTROBUN_DEV is not reliably propagated in v1.18 — detect dev mode via
 // PAWRRTAL_REPO_ROOT, which the 'bun start' script injects.
-const isDev = Boolean(process.env['PAWRRTAL_REPO_ROOT']);
+const isDev = Boolean(process.env.PAWRRTAL_REPO_ROOT);
 
 // ─── Window state persistence ────────────────────────────────────────────────
 // Restores the previous window size between launches (mirrors Electron shell).
@@ -101,22 +107,26 @@ const rpc = BrowserView.defineRPC<PawrrtalRPCType>({
 
 			// ── Filesystem ────────────────────────────────────────────────
 			fsReadFile: async ({ filePath }) => handleFsReadFile(filePath),
-			fsWriteFile: async ({ filePath, content }) =>
-				handleFsWriteFile(filePath, content),
+			fsWriteFile: async ({ filePath, content }) => handleFsWriteFile(filePath, content),
 			fsListDirectory: async ({ dirPath }) => handleFsListDirectory(dirPath),
-			fsWatchDirectory: async ({ dirPath }) => handleFsWatchDirectory(dirPath, (event) => {
-				win?.webview.rpc.send.fsWatchEvent(event);
-			}),
+			fsWatchDirectory: async ({ dirPath }) =>
+				handleFsWatchDirectory(dirPath, (event) => {
+					win?.webview.rpc.send.fsWatchEvent(event);
+				}),
 			fsUnwatch: async ({ id }) => handleFsUnwatch(id),
 
 			// ── Shell ─────────────────────────────────────────────────────
 			shellRun: async (request) => handleShellRun(request),
 			shellSpawnStreaming: async (request) =>
-				handleShellSpawnStreaming(request, (event) => {
-					win?.webview.rpc.send.shellStream(event);
-				}, (event) => {
-					win?.webview.rpc.send.shellStreamEnd(event);
-				}),
+				handleShellSpawnStreaming(
+					request,
+					(event) => {
+						win?.webview.rpc.send.shellStream(event);
+					},
+					(event) => {
+						win?.webview.rpc.send.shellStreamEnd(event);
+					}
+				),
 			shellKill: async ({ jobId }) => handleShellKill(jobId),
 
 			// ── Permissions ───────────────────────────────────────────────
@@ -168,7 +178,11 @@ ApplicationMenu.setApplicationMenu([
 			{ label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
 			{ label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
 			{ type: 'separator' },
-			{ label: 'Toggle Full Screen', accelerator: 'Ctrl+CmdOrCtrl+F', role: 'togglefullscreen' },
+			{
+				label: 'Toggle Full Screen',
+				accelerator: 'Ctrl+CmdOrCtrl+F',
+				role: 'togglefullscreen',
+			},
 		],
 	},
 	{
@@ -240,8 +254,12 @@ function injectDragRegion() {
 	win?.webview.executeJavascript(INJECT_DRAG_REGION);
 }
 
-win.webview.on('did-navigate', () => { injectDragRegion(); });
-win.webview.on('did-navigate-in-page', () => { injectDragRegion(); });
+win.webview.on('did-navigate', () => {
+	injectDragRegion();
+});
+win.webview.on('did-navigate-in-page', () => {
+	injectDragRegion();
+});
 
 // ─── Graceful shutdown ─────────────────────────────────────────────────────
 // Kill the spawned Next.js server when the window closes to avoid ghost

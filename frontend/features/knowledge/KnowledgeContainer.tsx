@@ -9,7 +9,7 @@
  *  - Live workspace data via {@link useWorkspaceTree} and
  *    {@link useWorkspaceFile} (real API, not mock) — also inside
  *    {@link useKnowledgeUrlState}.
- *  - Translation of UI events (select view, open child, close file, …)
+ *  - Translation of UI events (select view, open child, close file, ...)
  *    into `router.replace` calls — delegated to
  *    {@link useKnowledgeNavigation}.
  *
@@ -47,7 +47,7 @@ function TreeLoadingState(): ReactNode {
 	return (
 		<div className="flex h-full items-center justify-center text-muted-foreground">
 			<LoaderIcon className="size-4 animate-spin" aria-hidden="true" />
-			<span className="ml-2 text-[13px]">Loading workspace…</span>
+			<span className="ml-2 text-[13px]">Loading workspace&hellip;</span>
 		</div>
 	);
 }

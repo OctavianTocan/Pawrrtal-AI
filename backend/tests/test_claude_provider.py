@@ -142,9 +142,7 @@ async def _collect(
     conversation_id: UUID,
     user_id: UUID,
 ) -> list[StreamEvent]:
-    return [
-        event async for event in provider.stream(question, conversation_id, user_id)
-    ]
+    return [event async for event in provider.stream(question, conversation_id, user_id)]
 
 
 # ---------------------------------------------------------------------------
@@ -264,9 +262,7 @@ class TestEventsFromMessage:
             model="claude",
         )
         events = list(_events_from_message(message))
-        assert events == [
-            {"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}
-        ]
+        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "output"}]
 
     def test_assistant_mixed_blocks_preserve_order(self) -> None:
         """Multiple blocks in one message should yield events in order."""
@@ -300,9 +296,7 @@ class TestEventsFromMessage:
             content=[ToolResultBlock(tool_use_id="tu_1", content="ok")],
         )
         events = list(_events_from_message(message))
-        assert events == [
-            {"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}
-        ]
+        assert events == [{"type": "tool_result", "tool_use_id": "tu_1", "content": "ok"}]
 
     def test_user_message_with_string_content_emits_nothing(self) -> None:
         """Plain string user messages are echoes — no events should be emitted."""
@@ -403,10 +397,7 @@ class TestProviderOptions:
         # Default falls back to the shared `DEFAULT_AGENT_SYSTEM_PROMPT`
         # (provider-agnostic since PR #131 review).  Real chat traffic
         # gets the workspace's SOUL.md + AGENTS.md instead.
-        assert (
-            options.system_prompt is not None
-            and "chat application" in options.system_prompt
-        )
+        assert options.system_prompt is not None and "chat application" in options.system_prompt
 
     @pytest.mark.anyio
     async def test_first_turn_uses_session_id_not_resume(
@@ -853,19 +844,17 @@ class TestFactory:
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "from-config")
 
-        provider = factory.resolve_llm("claude-sonnet-4-6")
+        provider = factory.resolve_llm("anthropic/claude-sonnet-4-6")
         assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token == "from-config"
 
-    def test_resolve_llm_omits_token_when_blank(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_resolve_llm_omits_token_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A blank token in settings must coerce to ``None`` so we don't forward an empty value."""
         from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "")
 
-        provider = factory.resolve_llm("claude-sonnet-4-6")
+        provider = factory.resolve_llm("anthropic/claude-sonnet-4-6")
         assert isinstance(provider, ClaudeLLM)
         assert provider._config.oauth_token is None
 
@@ -904,35 +893,37 @@ class TestProviderScenarios:
         """
         _patch_query(
             monkeypatch,
-            _async_iter([
-                AssistantMessage(
-                    content=[
-                        ThinkingBlock(thinking="let me check the files", signature="sig"),
-                        ToolUseBlock(id="tu_ls", name="Bash", input={"cmd": "ls"}),
-                    ],
-                    model="claude",
-                ),
-                UserMessage(
-                    content=[
-                        ToolResultBlock(
-                            tool_use_id="tu_ls",
-                            content="file.txt\nother.txt",
-                        )
-                    ],
-                ),
-                AssistantMessage(
-                    content=[TextBlock(text="Found 2 files.")],
-                    model="claude",
-                ),
-                ResultMessage(
-                    subtype="success",
-                    duration_ms=100,
-                    duration_api_ms=80,
-                    is_error=False,
-                    num_turns=2,
-                    session_id="s",
-                ),
-            ]),
+            _async_iter(
+                [
+                    AssistantMessage(
+                        content=[
+                            ThinkingBlock(thinking="let me check the files", signature="sig"),
+                            ToolUseBlock(id="tu_ls", name="Bash", input={"cmd": "ls"}),
+                        ],
+                        model="claude",
+                    ),
+                    UserMessage(
+                        content=[
+                            ToolResultBlock(
+                                tool_use_id="tu_ls",
+                                content="file.txt\nother.txt",
+                            )
+                        ],
+                    ),
+                    AssistantMessage(
+                        content=[TextBlock(text="Found 2 files.")],
+                        model="claude",
+                    ),
+                    ResultMessage(
+                        subtype="success",
+                        duration_ms=100,
+                        duration_api_ms=80,
+                        is_error=False,
+                        num_turns=2,
+                        session_id="s",
+                    ),
+                ]
+            ),
         )
 
         events = await _collect(
@@ -969,25 +960,27 @@ class TestProviderScenarios:
         """
         _patch_query(
             monkeypatch,
-            _async_iter([
-                AssistantMessage(
-                    content=[
-                        ToolUseBlock(id="tu_a", name="Read", input={"path": "a.txt"}),
-                        ToolUseBlock(id="tu_b", name="Read", input={"path": "b.txt"}),
-                    ],
-                    model="claude",
-                ),
-                UserMessage(
-                    content=[
-                        ToolResultBlock(tool_use_id="tu_a", content="content-a"),
-                        ToolResultBlock(tool_use_id="tu_b", content="content-b"),
-                    ],
-                ),
-                AssistantMessage(
-                    content=[TextBlock(text="done")],
-                    model="claude",
-                ),
-            ]),
+            _async_iter(
+                [
+                    AssistantMessage(
+                        content=[
+                            ToolUseBlock(id="tu_a", name="Read", input={"path": "a.txt"}),
+                            ToolUseBlock(id="tu_b", name="Read", input={"path": "b.txt"}),
+                        ],
+                        model="claude",
+                    ),
+                    UserMessage(
+                        content=[
+                            ToolResultBlock(tool_use_id="tu_a", content="content-a"),
+                            ToolResultBlock(tool_use_id="tu_b", content="content-b"),
+                        ],
+                    ),
+                    AssistantMessage(
+                        content=[TextBlock(text="done")],
+                        model="claude",
+                    ),
+                ]
+            ),
         )
 
         events = await _collect(
@@ -1020,21 +1013,23 @@ class TestProviderScenarios:
         """
         _patch_query(
             monkeypatch,
-            _async_iter([
-                AssistantMessage(
-                    content=[TextBlock(text="partial answer")],
-                    model="claude",
-                ),
-                ResultMessage(
-                    subtype="error_max_turns",
-                    duration_ms=500,
-                    duration_api_ms=450,
-                    is_error=True,
-                    num_turns=1,
-                    session_id="s",
-                    stop_reason="max_turns",
-                ),
-            ]),
+            _async_iter(
+                [
+                    AssistantMessage(
+                        content=[TextBlock(text="partial answer")],
+                        model="claude",
+                    ),
+                    ResultMessage(
+                        subtype="error_max_turns",
+                        duration_ms=500,
+                        duration_api_ms=450,
+                        is_error=True,
+                        num_turns=1,
+                        session_id="s",
+                        stop_reason="max_turns",
+                    ),
+                ]
+            ),
         )
 
         events = await _collect(

@@ -68,6 +68,14 @@ function loadDesktopSidebarWidth(): number {
 	}
 }
 
+function persistDesktopSidebarWidth(width: number): void {
+	try {
+		window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.width, String(width));
+	} catch {
+		// Storage writes are best-effort only for this UI preference.
+	}
+}
+
 type SidebarContextProps = {
 	/** Current sidebar state ("expanded" or "collapsed"). */
 	state: 'expanded' | 'collapsed';
@@ -94,7 +102,7 @@ type SidebarContextProps = {
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
 
 function useSidebar() {
-	const context = React.useContext(SidebarContext);
+	const context = React.use(SidebarContext);
 	if (!context) {
 		throw new Error('useSidebar must be used within a SidebarProvider.');
 	}
@@ -177,23 +185,16 @@ function SidebarProvider({
 
 	// Set the desktop sidebar width and clamp it to valid range.
 	const setDesktopWidth = React.useCallback((width: number): void => {
-		setDesktopWidthState(clampSidebarWidth(width));
+		const nextWidth = clampSidebarWidth(width);
+		setDesktopWidthState(nextWidth);
+		persistDesktopSidebarWidth(nextWidth);
 	}, []);
 
 	// Reset the desktop sidebar width to default value.
 	const resetDesktopWidth = React.useCallback((): void => {
 		setDesktopWidthState(SIDEBAR_DEFAULT_WIDTH);
+		persistDesktopSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
 	}, []);
-
-	// useEffect justified: persisting desktopWidth to localStorage is a side effect
-	// that must happen after render, and effects don't run on SSR.
-	React.useEffect(() => {
-		try {
-			window.localStorage.setItem(SIDEBAR_STORAGE_KEYS.width, String(desktopWidth));
-		} catch {
-			// Storage writes are best-effort only for this UI preference.
-		}
-	}, [desktopWidth]);
 
 	// Adds a keyboard shortcut to toggle the sidebar.
 	React.useEffect(() => {
@@ -307,7 +308,7 @@ function Sidebar({
 						<SheetTitle>Sidebar</SheetTitle>
 						<SheetDescription>Displays the mobile sidebar.</SheetDescription>
 					</SheetHeader>
-					<div className="flex h-full w-full flex-col">{children}</div>
+					<div className="flex size-full flex-col">{children}</div>
 				</SheetContent>
 			</Sheet>
 		);

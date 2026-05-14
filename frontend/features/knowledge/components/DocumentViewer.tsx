@@ -36,7 +36,7 @@ import {
 	UserPlusIcon,
 	XIcon,
 } from 'lucide-react';
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useReducer, useRef } from 'react';
 import { Streamdown } from 'streamdown';
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ function EditActionsRow({
 				) : (
 					<SaveIcon aria-hidden="true" className="size-3.5" />
 				)}
-				{isSaving ? 'Saving…' : 'Save'}
+				{isSaving ? 'Saving...' : 'Save'}
 			</button>
 		</div>
 	);
@@ -273,6 +273,77 @@ interface DocumentViewerProps {
 	onSave?: (newContent: string) => Promise<void>;
 }
 
+interface DocumentViewerState {
+	editContent: string;
+	isEditing: boolean;
+	isSaving: boolean;
+	saveError: string | null;
+	showStaleWarning: boolean;
+}
+
+type DocumentViewerAction =
+	| { type: 'cancel-edit' }
+	| { type: 'dismiss-stale-warning' }
+	| { type: 'edit-content-changed'; content: string }
+	| { type: 'enter-edit'; content: string }
+	| { type: 'reload-content'; content: string }
+	| { type: 'save-failed'; message: string }
+	| { type: 'save-started' }
+	| { type: 'save-succeeded' }
+	| { type: 'save-stopped' }
+	| { type: 'stale-warning-shown' };
+
+const initialDocumentViewerState: DocumentViewerState = {
+	editContent: '',
+	isEditing: false,
+	isSaving: false,
+	saveError: null,
+	showStaleWarning: false,
+};
+
+function documentViewerReducer(
+	state: DocumentViewerState,
+	action: DocumentViewerAction
+): DocumentViewerState {
+	if (action.type === 'cancel-edit') {
+		return { ...state, isEditing: false, saveError: null, showStaleWarning: false };
+	}
+	if (action.type === 'dismiss-stale-warning') {
+		return { ...state, showStaleWarning: false };
+	}
+	if (action.type === 'edit-content-changed') {
+		return { ...state, editContent: action.content };
+	}
+	if (action.type === 'enter-edit') {
+		return {
+			...state,
+			editContent: action.content,
+			isEditing: true,
+			saveError: null,
+			showStaleWarning: false,
+		};
+	}
+	if (action.type === 'reload-content') {
+		return { ...state, editContent: action.content, showStaleWarning: false };
+	}
+	if (action.type === 'save-failed') {
+		return { ...state, saveError: action.message };
+	}
+	if (action.type === 'save-started') {
+		return { ...state, isSaving: true, saveError: null };
+	}
+	if (action.type === 'save-succeeded') {
+		return { ...state, isEditing: false, showStaleWarning: false };
+	}
+	if (action.type === 'save-stopped') {
+		return { ...state, isSaving: false };
+	}
+	if (action.type === 'stale-warning-shown') {
+		return { ...state, showStaleWarning: true };
+	}
+	return state;
+}
+
 /**
  * Pure presentation. The container decides what Close does, and provides the
  * `onSave` handler that calls the write API.
@@ -283,11 +354,8 @@ export function DocumentViewer({
 	onClose,
 	onSave,
 }: DocumentViewerProps): ReactNode {
-	const [isEditing, setIsEditing] = useState(false);
-	const [editContent, setEditContent] = useState('');
-	const [isSaving, setIsSaving] = useState(false);
-	const [saveError, setSaveError] = useState<string | null>(null);
-	const [showStaleWarning, setShowStaleWarning] = useState(false);
+	const [state, dispatchViewer] = useReducer(documentViewerReducer, initialDocumentViewerState);
+	const { editContent, isEditing, isSaving, saveError, showStaleWarning } = state;
 	// Markdown the user *started* editing from. Set on Edit-button click so
 	// we can detect when the file is overwritten externally (typically the
 	// agent rewriting the same path) while a draft is in flight.
@@ -305,43 +373,40 @@ export function DocumentViewer({
 	// We do not auto-clobber the draft; the banner lets the user choose.
 	useEffect(() => {
 		if (!isEditing || baselineMarkdownRef.current === null) return;
-		if (markdown !== baselineMarkdownRef.current) setShowStaleWarning(true);
+		if (markdown !== baselineMarkdownRef.current) {
+			dispatchViewer({ type: 'stale-warning-shown' });
+		}
 	}, [markdown, isEditing]);
 
 	const handleEdit = useCallback(() => {
-		setEditContent(markdown);
 		baselineMarkdownRef.current = markdown;
-		setSaveError(null);
-		setShowStaleWarning(false);
-		setIsEditing(true);
+		dispatchViewer({ type: 'enter-edit', content: markdown });
 	}, [markdown]);
 
 	const handleCancel = useCallback(() => {
-		setIsEditing(false);
-		setSaveError(null);
-		setShowStaleWarning(false);
 		baselineMarkdownRef.current = null;
+		dispatchViewer({ type: 'cancel-edit' });
 	}, []);
 
 	const handleReload = useCallback(() => {
-		setEditContent(markdown);
 		baselineMarkdownRef.current = markdown;
-		setShowStaleWarning(false);
+		dispatchViewer({ type: 'reload-content', content: markdown });
 	}, [markdown]);
 
 	const handleSave = useCallback(async () => {
 		if (!onSave) return;
-		setIsSaving(true);
-		setSaveError(null);
+		dispatchViewer({ type: 'save-started' });
 		try {
 			await onSave(editContentRef.current);
-			setIsEditing(false);
-			setShowStaleWarning(false);
 			baselineMarkdownRef.current = null;
+			dispatchViewer({ type: 'save-succeeded' });
 		} catch (err) {
-			setSaveError(err instanceof Error ? err.message : 'Save failed — please try again.');
+			dispatchViewer({
+				type: 'save-failed',
+				message: err instanceof Error ? err.message : 'Save failed — please try again.',
+			});
 		} finally {
-			setIsSaving(false);
+			dispatchViewer({ type: 'save-stopped' });
 		}
 	}, [onSave]);
 
@@ -375,7 +440,7 @@ export function DocumentViewer({
 			{showStaleWarning && (
 				<StaleWarningBanner
 					disabled={isSaving}
-					onDismiss={() => setShowStaleWarning(false)}
+					onDismiss={() => dispatchViewer({ type: 'dismiss-stale-warning' })}
 					onReload={handleReload}
 				/>
 			)}
@@ -384,7 +449,9 @@ export function DocumentViewer({
 				isEditing={isEditing}
 				isSaving={isSaving}
 				markdown={markdown}
-				onChangeContent={setEditContent}
+				onChangeContent={(content) =>
+					dispatchViewer({ type: 'edit-content-changed', content })
+				}
 			/>
 		</div>
 	);

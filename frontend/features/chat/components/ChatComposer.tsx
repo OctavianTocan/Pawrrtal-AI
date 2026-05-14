@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
 import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';
+import type { ChatModelOption } from '../hooks/use-chat-models';
 import { useVoiceTranscribe } from '../hooks/use-voice-transcribe';
 import {
 	AttachButton,
@@ -26,11 +27,7 @@ import {
 	VoiceMeter,
 } from './ChatComposerControls';
 import { ConnectAppsStrip } from './ConnectAppsStrip';
-import {
-	type ChatModelId,
-	type ChatReasoningLevel,
-	ModelSelectorPopover,
-} from './ModelSelectorPopover';
+import { type ChatReasoningLevel, ModelSelectorPopover } from './ModelSelectorPopover';
 
 /** Props for the Codex-like chat composer island. */
 export type ChatComposerProps = {
@@ -38,8 +35,12 @@ export type ChatComposerProps = {
 	message: PromptInputMessage;
 	/** Whether an assistant response is currently streaming. */
 	isLoading?: boolean;
-	/** Selected chat model ID. */
-	selectedModelId: ChatModelId;
+	/** Catalog entries from `useChatModels()` — passed down by the container. */
+	models: readonly ChatModelOption[];
+	/** True while the model catalog request is still in flight. */
+	isCatalogLoading?: boolean;
+	/** Selected chat model ID in canonical wire form (`host:vendor/model`). */
+	selectedModelId: string;
 	/** Selected reasoning level. */
 	selectedReasoning: ChatReasoningLevel;
 	/** Additional classes for the root composer form. */
@@ -56,8 +57,8 @@ export type ChatComposerProps = {
 	onSendMessage: (message: PromptInputMessage) => void;
 	/** Callback fired when voice transcription should replace the draft content. */
 	onReplaceMessageContent: (content: string) => void;
-	/** Callback fired when the selected model changes. */
-	onSelectModel: (modelId: ChatModelId) => void;
+	/** Callback fired when the selected model changes. Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
 	/** Callback fired when the selected reasoning level changes. */
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when the connect-apps footer band is dismissed. */
@@ -160,17 +161,23 @@ function AnimatedComposerPlaceholder({
  * model picker's literal-union typing.
  */
 interface ComposerSendClusterProps {
-	isRecording: boolean;
-	isTranscribing: boolean;
-	isLoading: ChatComposerProps['isLoading'];
-	hasContent: boolean;
+	state: ComposerSendClusterState;
+	models: ChatComposerProps['models'];
+	isCatalogLoading: ChatComposerProps['isCatalogLoading'];
 	selectedModelId: ChatComposerProps['selectedModelId'];
 	selectedReasoning: ChatComposerProps['selectedReasoning'];
 	onSelectModel: ChatComposerProps['onSelectModel'];
 	onSelectReasoning: ChatComposerProps['onSelectReasoning'];
 	onStartRecording: () => void;
+}
+
+interface ComposerSendClusterState {
+	isRecording: boolean;
+	isTranscribing: boolean;
+	isLoading: ChatComposerProps['isLoading'];
+	hasContent: boolean;
 	/** When true, both Plan and Send buttons share a yellow accent. */
-	isPlanMode?: boolean;
+	isPlanMode: boolean;
 }
 
 /**
@@ -179,27 +186,28 @@ interface ComposerSendClusterProps {
  * budget. Pure presentation — receives every input as a prop.
  */
 function ComposerSendCluster({
-	isRecording,
-	isTranscribing,
-	isLoading,
-	hasContent,
+	state,
+	models,
+	isCatalogLoading,
 	selectedModelId,
 	selectedReasoning,
 	onSelectModel,
 	onSelectReasoning,
 	onStartRecording,
-	isPlanMode = false,
 }: ComposerSendClusterProps): React.JSX.Element {
+	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing } = state;
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
 			<ModelSelectorPopover
+				models={models}
 				selectedModelId={selectedModelId}
 				selectedReasoning={selectedReasoning}
 				onSelectModel={onSelectModel}
 				onSelectReasoning={onSelectReasoning}
+				isLoading={isCatalogLoading}
 			/>
 			<ComposerTooltip
-				content={isTranscribing ? 'Transcribing…' : 'Click to dictate or hold ^M'}
+				content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
 			>
 				<Button
 					aria-label="Start voice input"
@@ -245,6 +253,8 @@ function ComposerSendCluster({
 export function ChatComposer({
 	message,
 	isLoading,
+	models,
+	isCatalogLoading,
 	selectedModelId,
 	selectedReasoning,
 	className,
@@ -379,16 +389,20 @@ export function ChatComposer({
 					</div>
 
 					<ComposerSendCluster
-						isRecording={isRecording}
-						isTranscribing={isTranscribing}
-						isLoading={isLoading}
-						hasContent={hasContent}
+						state={{
+							hasContent,
+							isLoading,
+							isPlanMode: isPlanTagVisible,
+							isRecording,
+							isTranscribing,
+						}}
+						models={models}
+						isCatalogLoading={isCatalogLoading}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
 						onSelectModel={onSelectModel}
 						onSelectReasoning={onSelectReasoning}
 						onStartRecording={startRecording}
-						isPlanMode={isPlanTagVisible}
 					/>
 				</PromptInputFooter>
 			</PromptInput>

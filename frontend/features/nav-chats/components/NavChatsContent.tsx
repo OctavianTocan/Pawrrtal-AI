@@ -6,7 +6,8 @@
  */
 
 import { Inbox, Search } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, domAnimation, LazyMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import type {
 	KeyboardEvent as ReactKeyboardEvent,
 	MouseEvent as ReactMouseEvent,
@@ -33,6 +34,10 @@ const GROUP_EXPAND_EXIT_DURATION = 0.1;
 const GROUP_EXPAND_ENTER_EASE = [0.16, 1, 0.3, 1] as const;
 /** ease-in-quint — same curve used by the dropdown exit motion. */
 const GROUP_EXPAND_EXIT_EASE = [0.7, 0, 0.84, 0] as const;
+// Scrolling lives on the parent wrapper in NavChatsView so projects and
+// conversations scroll as one group. This element keeps listbox semantics and
+// the spacing rhythm from the Projects section above.
+const CONVERSATION_LIST_CLASS = 'mt-3 pt-1 outline-none';
 
 /**
  * Slice of the parent `NavChatsView` props that the inner content rendering
@@ -183,8 +188,13 @@ function ConversationRow({
 					<SearchCountBadge count={searchCount} isSelected={isSelected} />
 				) : undefined
 			}
-			isInMultiSelect={multiSelectedIds.size > 1 && isSelected}
-			showSeparator={index > 0}
+			state={{
+				isArchived: conversation.is_archived,
+				isFlagged: conversation.is_flagged,
+				isInMultiSelect: multiSelectedIds.size > 1 && isSelected,
+				isUnread: conversation.is_unread,
+				showSeparator: index > 0,
+			}}
 			onClick={() => onConversationClick(conversation.id, visibleIndex, href)}
 			onMouseDown={(event) => onConversationMouseDown(event, conversation.id, visibleIndex)}
 			buttonProps={{
@@ -200,9 +210,6 @@ function ConversationRow({
 				onKeyDown: (event: ReactKeyboardEvent) =>
 					onConversationKeyDown(event, conversation, visibleIndex),
 			}}
-			isArchived={conversation.is_archived}
-			isFlagged={conversation.is_flagged}
-			isUnread={conversation.is_unread}
 			status={conversation.status}
 			appliedLabelIds={labels.filter((label): label is string => typeof label === 'string')}
 			onNavigate={onNavigate}
@@ -262,7 +269,7 @@ export function NavChatsContent({
 	if (isEmpty) {
 		return (
 			<ConversationsEmptyState
-				icon={<Inbox className="h-4 w-4" />}
+				icon={<Inbox className="size-4" />}
 				title="No sessions yet"
 				description="Sessions with your agent appear here. Start one to get going."
 				buttonLabel="New Session"
@@ -274,7 +281,7 @@ export function NavChatsContent({
 	if (isSearchActive && resultCount === 0) {
 		return (
 			<ConversationsEmptyState
-				icon={<Search className="h-4 w-4" />}
+				icon={<Search className="size-4" />}
 				title="No matching sessions"
 				description="Try a different title fragment. Search also digs through loaded chat history once you have at least two characters."
 			/>
@@ -297,113 +304,112 @@ export function NavChatsContent({
 	}
 
 	return (
-		<div
-			ref={navigatorRef}
-			// Scrolling lives on the parent wrapper in NavChatsView so the
-			// projects list and the conversation list scroll together as one
-			// group. This element keeps the listbox role + keyboard focus
-			// handling but no longer owns the overflow. `mt-3` gives the
-			// Today/Yesterday/Archived groups breathing room from the Projects
-			// section above, matching the ChatGPT-style section rhythm.
-			className="mt-3 pt-1 outline-none"
-			role="listbox"
-			aria-label="Sessions"
-			aria-multiselectable="true"
-			onMouseDown={onNavigatorMouseDown}
-		>
-			<ul className="flex w-full min-w-0 flex-col gap-0">
-				{filteredGroups.map((group) => {
-					const isCollapsed = collapsedKeys.has(group.key);
+		<LazyMotion features={domAnimation}>
+			<div
+				ref={navigatorRef}
+				className={CONVERSATION_LIST_CLASS}
+				role="listbox"
+				aria-label="Sessions"
+				aria-multiselectable="true"
+				onMouseDown={onNavigatorMouseDown}
+			>
+				<ul className="flex w-full min-w-0 flex-col gap-0">
+					{filteredGroups.map((group) => {
+						const isCollapsed = collapsedKeys.has(group.key);
 
-					return (
-						<Fragment key={group.key}>
-							{canCollapse ? (
-								<CollapsibleGroupHeader
-									label={group.label}
-									isCollapsed={isCollapsed}
-									itemCount={group.items.length}
-									onToggle={() => onToggleGroup(group.key)}
-								/>
-							) : (
-								<SectionHeader label={group.label} />
-							)}
-							{/* Animate the group's items in/out on collapse/expand.
+						return (
+							<Fragment key={group.key}>
+								{canCollapse ? (
+									<CollapsibleGroupHeader
+										label={group.label}
+										isCollapsed={isCollapsed}
+										itemCount={group.items.length}
+										onToggle={() => onToggleGroup(group.key)}
+									/>
+								) : (
+									<SectionHeader label={group.label} />
+								)}
+								{/* Animate the group's items in/out on collapse/expand.
 							    See file-header note for why height + opacity are
 							    interpolated together at GROUP_EXPAND_* timing.
 							    Reduced-motion is honored automatically by Motion. */}
-							<AnimatePresence initial={false}>
-								{!isCollapsed && (
-									<motion.div
-										key={`${group.key}-items`}
-										initial={{ height: 0, opacity: 0 }}
-										animate={{
-											height: 'auto',
-											opacity: 1,
-											transition: {
-												height: {
-													duration: GROUP_EXPAND_ENTER_DURATION,
-													ease: GROUP_EXPAND_ENTER_EASE,
+								<AnimatePresence initial={false}>
+									{!isCollapsed && (
+										<m.div
+											key={`${group.key}-items`}
+											initial={{ height: 0, opacity: 0 }}
+											animate={{
+												height: 'auto',
+												opacity: 1,
+												transition: {
+													height: {
+														duration: GROUP_EXPAND_ENTER_DURATION,
+														ease: GROUP_EXPAND_ENTER_EASE,
+													},
+													opacity: {
+														duration:
+															GROUP_EXPAND_ENTER_DURATION * 0.85,
+														ease: GROUP_EXPAND_ENTER_EASE,
+													},
 												},
-												opacity: {
-													duration: GROUP_EXPAND_ENTER_DURATION * 0.85,
-													ease: GROUP_EXPAND_ENTER_EASE,
+											}}
+											exit={{
+												height: 0,
+												opacity: 0,
+												transition: {
+													height: {
+														duration: GROUP_EXPAND_EXIT_DURATION,
+														ease: GROUP_EXPAND_EXIT_EASE,
+													},
+													opacity: {
+														duration: GROUP_EXPAND_EXIT_DURATION * 0.85,
+														ease: GROUP_EXPAND_EXIT_EASE,
+													},
 												},
-											},
-										}}
-										exit={{
-											height: 0,
-											opacity: 0,
-											transition: {
-												height: {
-													duration: GROUP_EXPAND_EXIT_DURATION,
-													ease: GROUP_EXPAND_EXIT_EASE,
-												},
-												opacity: {
-													duration: GROUP_EXPAND_EXIT_DURATION * 0.85,
-													ease: GROUP_EXPAND_EXIT_EASE,
-												},
-											},
-										}}
-										style={{ overflow: 'hidden' }}
-									>
-										{group.items.map((conversation, index) => (
-											<ConversationRow
-												key={conversation.id}
-												conversation={conversation}
-												index={index}
-												visibleIndex={
-													flatIndexMap.get(conversation.id) ?? 0
-												}
-												isSearchActive={isSearchActive}
-												searchQuery={searchQuery}
-												multiSelectedIds={multiSelectedIds}
-												contentSearchResults={contentSearchResults}
-												activeChatMatchInfo={activeChatMatchInfo}
-												onConversationClick={onConversationClick}
-												onConversationMouseDown={onConversationMouseDown}
-												onConversationKeyDown={onConversationKeyDown}
-												registerConversationElement={
-													registerConversationElement
-												}
-												onNavigate={onNavigate}
-												onRename={onRename}
-												onDelete={onDelete}
-												onArchive={onArchive}
-												onFlag={onFlag}
-												onSetStatus={onSetStatus}
-												onMarkUnread={onMarkUnread}
-												onRegenerateTitle={onRegenerateTitle}
-												onToggleLabel={onToggleLabel}
-												onExportMarkdown={onExportMarkdown}
-											/>
-										))}
-									</motion.div>
-								)}
-							</AnimatePresence>
-						</Fragment>
-					);
-				})}
-			</ul>
-		</div>
+											}}
+											style={{ overflow: 'hidden' }}
+										>
+											{group.items.map((conversation, index) => (
+												<ConversationRow
+													key={conversation.id}
+													conversation={conversation}
+													index={index}
+													visibleIndex={
+														flatIndexMap.get(conversation.id) ?? 0
+													}
+													isSearchActive={isSearchActive}
+													searchQuery={searchQuery}
+													multiSelectedIds={multiSelectedIds}
+													contentSearchResults={contentSearchResults}
+													activeChatMatchInfo={activeChatMatchInfo}
+													onConversationClick={onConversationClick}
+													onConversationMouseDown={
+														onConversationMouseDown
+													}
+													onConversationKeyDown={onConversationKeyDown}
+													registerConversationElement={
+														registerConversationElement
+													}
+													onNavigate={onNavigate}
+													onRename={onRename}
+													onDelete={onDelete}
+													onArchive={onArchive}
+													onFlag={onFlag}
+													onSetStatus={onSetStatus}
+													onMarkUnread={onMarkUnread}
+													onRegenerateTitle={onRegenerateTitle}
+													onToggleLabel={onToggleLabel}
+													onExportMarkdown={onExportMarkdown}
+												/>
+											))}
+										</m.div>
+									)}
+								</AnimatePresence>
+							</Fragment>
+						);
+					})}
+				</ul>
+			</div>
+		</LazyMotion>
 	);
 }

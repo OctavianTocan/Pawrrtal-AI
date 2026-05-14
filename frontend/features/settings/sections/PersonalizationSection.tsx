@@ -1,13 +1,15 @@
 'use client';
 
 import type * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
 import { Textarea } from '@/components/ui/textarea';
 import {
+	EMPTY_PROFILE,
 	loadPersonalizationProfile,
 	PERSONALITY_OPTIONS,
+	PERSONALIZATION_STORAGE_KEY,
 	type PersonalityId,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
@@ -20,6 +22,43 @@ import {
 	Switch,
 } from '../primitives';
 
+const PERSONALIZATION_PROFILE_EVENT = 'pawrrtal:personalization-profile';
+
+let cachedProfileRaw: string | null | undefined;
+let cachedProfileSnapshot: PersonalizationProfile = EMPTY_PROFILE;
+
+const getServerProfileSnapshot = (): PersonalizationProfile => EMPTY_PROFILE;
+
+const getClientProfileSnapshot = (): PersonalizationProfile => {
+	const raw = window.localStorage.getItem(PERSONALIZATION_STORAGE_KEY);
+	if (raw === cachedProfileRaw) {
+		return cachedProfileSnapshot;
+	}
+	cachedProfileRaw = raw;
+	cachedProfileSnapshot = loadPersonalizationProfile();
+	return cachedProfileSnapshot;
+};
+
+const subscribeToProfile = (onStoreChange: () => void): (() => void) => {
+	const handleStorageChange = (event: StorageEvent): void => {
+		if (event.key === PERSONALIZATION_STORAGE_KEY) {
+			onStoreChange();
+		}
+	};
+
+	window.addEventListener('storage', handleStorageChange);
+	window.addEventListener(PERSONALIZATION_PROFILE_EVENT, onStoreChange);
+
+	return () => {
+		window.removeEventListener('storage', handleStorageChange);
+		window.removeEventListener(PERSONALIZATION_PROFILE_EVENT, onStoreChange);
+	};
+};
+
+const dispatchProfileChange = (): void => {
+	window.dispatchEvent(new Event(PERSONALIZATION_PROFILE_EVENT));
+};
+
 /**
  * Personalization settings section.
  *
@@ -29,24 +68,18 @@ import {
  * the profile).
  */
 export function PersonalizationSection(): React.JSX.Element {
-	const [profile, setProfile] = useState<PersonalizationProfile>(() =>
-		loadPersonalizationProfile()
+	const profile = useSyncExternalStore(
+		subscribeToProfile,
+		getClientProfileSnapshot,
+		getServerProfileSnapshot
 	);
 	const [enableMemories, setEnableMemories] = useState(true);
 	const [skipToolChats, setSkipToolChats] = useState(false);
 
-	// Re-load on mount so SSR-served HTML doesn't pin an empty profile —
-	// localStorage is only available client-side after hydration.
-	useEffect(() => {
-		setProfile(loadPersonalizationProfile());
-	}, []);
-
 	const patchProfile = (patch: Partial<PersonalizationProfile>): void => {
-		setProfile((current) => {
-			const next = { ...current, ...patch };
-			savePersonalizationProfile(next);
-			return next;
-		});
+		const next = { ...profile, ...patch };
+		savePersonalizationProfile(next);
+		dispatchProfileChange();
 	};
 
 	const personality: PersonalityId = profile.personality ?? PERSONALITY_OPTIONS[0].id;
@@ -99,7 +132,7 @@ export function PersonalizationSection(): React.JSX.Element {
 				<Textarea
 					className="min-h-32 resize-y border-0 bg-transparent px-0 text-sm focus-visible:ring-0"
 					onChange={(event) => patchProfile({ customInstructions: event.target.value })}
-					placeholder="Add your custom instructions…"
+					placeholder="Add your custom instructions..."
 					value={profile.customInstructions ?? ''}
 				/>
 				<div className="flex justify-end pt-2">

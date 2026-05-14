@@ -18,7 +18,7 @@ describe('Reasoning', () => {
 		const { getByText } = render(
 			<Reasoning defaultOpen isStreaming>
 				<ReasoningTrigger>Reasoning</ReasoningTrigger>
-				<ReasoningContent>partial…</ReasoningContent>
+				<ReasoningContent>partial&hellip;</ReasoningContent>
 			</Reasoning>
 		);
 		expect(getByText(/partial/)).toBeTruthy();

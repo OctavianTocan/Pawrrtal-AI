@@ -10,10 +10,12 @@
  * during 60fps drags.
  */
 
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useReducer, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { ColorPill, SettingsRow } from '../primitives';
 import { TEXT_INPUT_DEBOUNCE_MS, toHex } from './appearance-helpers';
+
+const replaceDraft = (_current: string, next: string): string => next;
 
 /** Props for the {@link ColorRow}. */
 export interface ColorRowProps {
@@ -45,7 +47,35 @@ export function ColorRow({
 	defaultValue,
 	onCommit,
 }: ColorRowProps): React.JSX.Element {
-	const [draft, setDraft] = useState(overrideValue ?? '');
+	const initialDraft = overrideValue ?? '';
+	return (
+		<ColorRowDraft
+			defaultValue={defaultValue}
+			initialDraft={initialDraft}
+			key={initialDraft}
+			label={label}
+			onCommit={onCommit}
+			resolvedValue={resolvedValue}
+		/>
+	);
+}
+
+interface ColorRowDraftProps {
+	defaultValue: string;
+	initialDraft: string;
+	label: string;
+	onCommit: (next: string | null) => void;
+	resolvedValue: string;
+}
+
+function ColorRowDraft({
+	defaultValue,
+	initialDraft,
+	label,
+	onCommit,
+	resolvedValue,
+}: ColorRowDraftProps): React.JSX.Element {
+	const [draft, dispatchDraft] = useReducer(replaceDraft, initialDraft);
 	const draftRef = useRef(draft);
 	const commitRef = useRef(onCommit);
 
@@ -58,27 +88,21 @@ export function ColorRow({
 		commitRef.current = onCommit;
 	}, [onCommit]);
 
-	// External `overrideValue` changes (preset apply, server refetch)
-	// reset the local draft so the field doesn't show stale text.
 	useEffect(() => {
-		setDraft(overrideValue ?? '');
-	}, [overrideValue]);
-
-	useEffect(() => {
-		if (draft === (overrideValue ?? '')) return;
+		if (draft === initialDraft) return;
 		const handle = setTimeout(() => {
 			const next = draftRef.current.trim();
 			commitRef.current(next.length === 0 ? null : next);
 		}, TEXT_INPUT_DEBOUNCE_MS);
 		return () => clearTimeout(handle);
-	}, [draft, overrideValue]);
+	}, [draft, initialDraft]);
 
-	const handleValueChange = useCallback((next: string) => setDraft(next), []);
+	const handleValueChange = useCallback((next: string) => dispatchDraft(next), []);
 
 	// RAF-batched picker commit so 60fps dragging produces ≤60 PUTs/s.
 	const pickerRafRef = useRef<number | null>(null);
 	const handlePickerChange = useCallback((next: string) => {
-		setDraft(next);
+		dispatchDraft(next);
 		if (pickerRafRef.current !== null) cancelAnimationFrame(pickerRafRef.current);
 		pickerRafRef.current = requestAnimationFrame(() => {
 			pickerRafRef.current = null;
@@ -92,7 +116,7 @@ export function ColorRow({
 		};
 	}, []);
 
-	const pickerSeed = toHex(overrideValue ?? resolvedValue);
+	const pickerSeed = toHex(initialDraft || resolvedValue);
 
 	return (
 		<SettingsRow label={label}>
@@ -135,7 +159,32 @@ export function FontRow({
 	defaultValue,
 	onCommit,
 }: FontRowProps): React.JSX.Element {
-	const [draft, setDraft] = useState(overrideValue ?? '');
+	const initialDraft = overrideValue ?? '';
+	return (
+		<FontRowDraft
+			defaultValue={defaultValue}
+			initialDraft={initialDraft}
+			key={initialDraft}
+			label={label}
+			onCommit={onCommit}
+		/>
+	);
+}
+
+interface FontRowDraftProps {
+	defaultValue: string;
+	initialDraft: string;
+	label: string;
+	onCommit: (next: string | null) => void;
+}
+
+function FontRowDraft({
+	defaultValue,
+	initialDraft,
+	label,
+	onCommit,
+}: FontRowDraftProps): React.JSX.Element {
+	const [draft, dispatchDraft] = useReducer(replaceDraft, initialDraft);
 	const draftRef = useRef(draft);
 	const commitRef = useRef(onCommit);
 
@@ -145,21 +194,18 @@ export function FontRow({
 	useEffect(() => {
 		commitRef.current = onCommit;
 	}, [onCommit]);
-	useEffect(() => {
-		setDraft(overrideValue ?? '');
-	}, [overrideValue]);
 
 	useEffect(() => {
-		if (draft === (overrideValue ?? '')) return;
+		if (draft === initialDraft) return;
 		const handle = setTimeout(() => {
 			const next = draftRef.current.trim();
 			commitRef.current(next.length === 0 ? null : next);
 		}, TEXT_INPUT_DEBOUNCE_MS);
 		return () => clearTimeout(handle);
-	}, [draft, overrideValue]);
+	}, [draft, initialDraft]);
 
-	const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-		setDraft(event.target.value);
+	const updateFontFamilyDraft = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+		dispatchDraft(event.target.value);
 	}, []);
 
 	return (
@@ -167,7 +213,7 @@ export function FontRow({
 			<Input
 				aria-label={`${label} family`}
 				className="w-72 text-xs"
-				onChange={handleChange}
+				onChange={updateFontFamilyDraft}
 				placeholder={defaultValue}
 				value={draft}
 			/>

@@ -1,0 +1,51 @@
+name: React Doctor
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'react-doctor.config.json'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/react-doctor.yml'
+  push:
+    branches: [development, main]
+    paths:
+      - 'frontend/**'
+      - 'react-doctor.config.json'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/react-doctor.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: react-doctor-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  react-doctor:
+    name: React Doctor
+    if: >-
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, openclaw-mini, pawrrtal]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+
+      - name: React Doctor
+        uses: millionco/react-doctor@1d3d514a562bbab42dcefa0badeed2e707ed7ea9 # react-doctor@0.0.38
+        with:
+          directory: .
+          project: pawrrtal,@octavian-tocan/react-dropdown,@octavian-tocan/react-chat-composer
+          fail-on: warning
+          offline: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
