@@ -1,10 +1,11 @@
 ---
 # pawrrtal-s1wa
 title: Add Fumadocs documentation site at /docs
-status: draft
+status: todo
 type: feature
+priority: normal
 created_at: 2026-05-14T09:08:55Z
-updated_at: 2026-05-14T09:08:55Z
+updated_at: 2026-05-14T09:10:01Z
 ---
 
 Add a Fumadocs documentation site to the existing frontend Next.js app, serving /docs/handbook (curated public-safe internal docs) and /docs/product (5 seed pages, feature-tour). Stock theme, public surface, single deployment.
