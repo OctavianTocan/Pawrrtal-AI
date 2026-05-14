@@ -5,11 +5,9 @@ description: ADR — add a Fumadocs-powered documentation surface to the existin
 
 # 2026-05-14 — Add Fumadocs documentation site at `/docs`
 
-**Status:** Proposed
-**Decision:** Add a Fumadocs-powered documentation surface to the existing
-`frontend/` Next.js app, serving a public-facing internal **handbook** at
-`/docs/handbook/**` and a user-facing **product** section at
-`/docs/product/**`. Single repo, single Next app, single deployment.
+<Callout type="info" title="Status: Proposed">
+Add a Fumadocs-powered documentation surface to the existing `frontend/` Next.js app, serving a public-facing internal **handbook** at `/docs/handbook/**` and a user-facing **product** section at `/docs/product/**`. Single repo, single Next app, single deployment.
+</Callout>
 
 ---
 
@@ -171,8 +169,7 @@ files.
 
 Two loaders, two route segments, one shared layout:
 
-```ts
-// frontend/lib/source.ts
+```ts title="frontend/lib/source.ts"
 import { handbookDocs, productDocs } from 'collections/server';
 import { loader } from 'fumadocs-core/source';
 
@@ -194,8 +191,7 @@ pathname and passes `source.getPageTree()` to `<DocsLayout>`. The two
 
 ## Provider composition & theme integration
 
-```tsx
-// frontend/app/layout.tsx (shape)
+```tsx title="frontend/app/layout.tsx"
 <html lang="en" suppressHydrationWarning className={...fontVars}>
   <head>
     <Script src="/theme-detection.js" strategy="beforeInteractive" />
@@ -306,9 +302,9 @@ Feature-tour style. Each ~200–400 words, no marketing fluff.
   frontmatter issues, broken `createRelativeLink` calls, and missing
   pages.
 - **Route smoke** (single Node script or Stagehand spec): `/docs`,
-  `/docs/handbook`, `/docs/product`, `/docs/handbook/decisions/<known-slug>`,
+  `/docs/handbook`, `/docs/product`, `/docs/handbook/decisions/&lt;known-slug&gt;`,
   `/api/search?query=models` all return HTTP 200 and contain the
-  expected `<title>`.
+  expected `&lt;title&gt;` element.
 - **Source-tree unit test** (`frontend/test/source.test.ts`):
   `handbookSource.getPages().length` equals the count of MDX files
   under `content/docs/handbook/**`. Same check for product. Catches
