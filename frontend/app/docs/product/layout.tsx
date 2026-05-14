@@ -1,16 +1,21 @@
 /**
- * `DocsLayout` for the product section, scoped to the product page
- * tree. Wraps every `/docs/product/**` route.
+ * Notebook layout for the product section. Fumadocs' Notebook layout is
+ * a compact variant of `DocsLayout` — tighter chrome, less navigation
+ * weight — which fits the short, user-facing product pages better than
+ * the full DocsLayout used on the handbook.
+ *
+ * The handbook intentionally keeps `DocsLayout` because long-form ADRs
+ * benefit from the heavier sidebar tree and breadcrumb chrome.
  */
 
-import { DocsLayout } from 'fumadocs-ui/layouts/docs';
+import { DocsLayout } from 'fumadocs-ui/layouts/notebook';
 import type { ReactNode } from 'react';
 import { DocsSidebarBanner, DocsSidebarFooter } from '@/components/docs/sidebar-chrome';
 import { baseOptions } from '@/lib/layout.shared';
 import { productSource } from '@/lib/source';
 
 /**
- * Renders the product chrome (sidebar, breadcrumbs) around child routes.
+ * Renders the product chrome (compact Notebook variant) around child routes.
  *
  * @param props.children - the active product page
  * @returns the wrapped layout
