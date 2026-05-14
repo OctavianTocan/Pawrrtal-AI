@@ -21,11 +21,15 @@ from typing import Any, Literal, TypedDict
 
 
 class TextContent(TypedDict):
+    """Plain-text content block inside an assistant or user message."""
+
     type: Literal["text"]
     text: str
 
 
 class ToolCallContent(TypedDict):
+    """Tool-invocation content block emitted by the assistant."""
+
     type: Literal["toolCall"]
     tool_call_id: str
     name: str
@@ -33,6 +37,8 @@ class ToolCallContent(TypedDict):
 
 
 class ToolResultContent(TypedDict):
+    """Plain-text content block inside a ``toolResult`` message."""
+
     type: Literal["text"]
     text: str
 
@@ -43,17 +49,23 @@ class ToolResultContent(TypedDict):
 
 
 class UserMessage(TypedDict):
+    """User-authored turn in the conversation history."""
+
     role: Literal["user"]
     content: str
 
 
 class AssistantMessage(TypedDict):
+    """One assistant turn (text + optional tool calls) with its stop reason."""
+
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
 
 
 class ToolResultMessage(TypedDict):
+    """Result message paired with a previous ``ToolCallContent`` by tool_call_id."""
+
     role: Literal["toolResult"]
     tool_call_id: str
     content: list[ToolResultContent]
@@ -69,11 +81,15 @@ AgentMessage = UserMessage | AssistantMessage | ToolResultMessage
 
 
 class LLMTextDeltaEvent(TypedDict):
+    """Incremental text chunk emitted by a provider during streaming."""
+
     type: Literal["text_delta"]
     text: str
 
 
 class LLMToolCallEvent(TypedDict):
+    """Provider-side tool call (the loop dispatches to the matching AgentTool)."""
+
     type: Literal["tool_call"]
     tool_call_id: str
     name: str
@@ -81,6 +97,8 @@ class LLMToolCallEvent(TypedDict):
 
 
 class LLMDoneEvent(TypedDict):
+    """Terminal event yielded by a provider to flush the assembled assistant turn."""
+
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
@@ -95,35 +113,49 @@ LLMEvent = LLMTextDeltaEvent | LLMToolCallEvent | LLMDoneEvent
 
 
 class AgentStartEvent(TypedDict):
+    """First event of any ``agent_loop`` invocation."""
+
     type: Literal["agent_start"]
 
 
 class TurnStartEvent(TypedDict):
+    """Boundary marker before each new assistant turn."""
+
     type: Literal["turn_start"]
 
 
 class MessageStartEvent(TypedDict):
+    """Boundary marker before each appended user / tool-result message."""
+
     type: Literal["message_start"]
     message: AgentMessage
 
 
 class MessageEndEvent(TypedDict):
+    """Boundary marker after each appended user / tool-result message."""
+
     type: Literal["message_end"]
     message: AgentMessage
 
 
 class TextDeltaEvent(TypedDict):
+    """Streaming assistant text chunk (provider-neutral counterpart of LLMTextDeltaEvent)."""
+
     type: Literal["text_delta"]
     text: str
 
 
 class ToolCallStartEvent(TypedDict):
+    """Loop announces the start of dispatching one tool call to its ``AgentTool``."""
+
     type: Literal["tool_call_start"]
     tool_call_id: str
     name: str
 
 
 class ToolCallEndEvent(TypedDict):
+    """Loop reports the arguments the tool call resolved to."""
+
     type: Literal["tool_call_end"]
     tool_call_id: str
     name: str
@@ -131,6 +163,8 @@ class ToolCallEndEvent(TypedDict):
 
 
 class ToolResultEvent(TypedDict):
+    """Result of executing one tool call (or a permission denial / tool error)."""
+
     type: Literal["tool_result"]
     tool_call_id: str
     content: str
@@ -138,12 +172,16 @@ class ToolResultEvent(TypedDict):
 
 
 class TurnEndEvent(TypedDict):
+    """Boundary marker after one assistant turn + tool results complete."""
+
     type: Literal["turn_end"]
     message: AssistantMessage
     tool_results: list[ToolResultMessage]
 
 
 class AgentEndEvent(TypedDict):
+    """Final event emitted when the loop exits normally."""
+
     type: Literal["agent_end"]
     messages: list[AgentMessage]
 
@@ -300,6 +338,58 @@ class AgentSafetyConfig:
         )
 
 
+# ---------------------------------------------------------------------------
+# Permission gate (PR 03)
+#
+# The agent loop calls ``permission_check`` (when configured) before
+# every tool ``execute``.  A ``deny`` short-circuits the call and emits
+# a ``tool_result`` event with ``is_error=True``.  The optional
+# ``permission_audit_sink`` lets the chat router persist a
+# ``security_violation`` audit row without coupling the loop to the
+# governance module.
+#
+# ``PermissionCheckFn`` itself lives in
+# ``app.core.governance.permissions``.  We only declare the typing
+# aliases here so ``AgentLoopConfig`` can reference them without a
+# circular import.
+# ---------------------------------------------------------------------------
+
+
+class PermissionCheckResult(TypedDict):
+    """Loop-side projection of :class:`governance.PermissionDecision`.
+
+    The loop only needs three fields; importing the full dataclass
+    would pull the governance package into ``agent_loop`` and
+    re-introduce the circular dependency we deliberately avoid.
+    """
+
+    allow: bool
+    reason: str | None
+    violation_type: str | None
+
+
+PermissionCheckFn = Callable[
+    [str, dict[str, Any]],
+    Coroutine[Any, Any, PermissionCheckResult],
+]
+"""Async predicate ``(tool_name, arguments) -> PermissionCheckResult``.
+
+Bound by the chat router with the per-request ``PermissionContext``
+already captured in the closure.  The loop is provider-neutral by
+construction, so the signature is minimal.
+"""
+
+
+PermissionAuditSinkFn = Callable[
+    [str, dict[str, Any], PermissionCheckResult],
+    Coroutine[Any, Any, None],
+]
+"""Optional sink called after every denial so the chat router can
+persist a ``security_violation`` audit row.  Errors raised by the
+sink are swallowed by the loop — audit failures must never break a
+turn."""
+
+
 @dataclass
 class AgentLoopConfig:
     """Configuration for a single agent_loop invocation.
@@ -313,9 +403,20 @@ class AgentLoopConfig:
     safety: hard limits on iterations, wall-clock, retries, etc.  See
         :class:`AgentSafetyConfig`.  Defaults are conservative and
         appropriate for the chat path.
+    permission_check: optional async permission gate called before every
+        tool execution.  Returning ``allow=False`` skips the tool call
+        and surfaces a ``tool_result`` event with ``is_error=True``.
+        ``None`` (default) keeps the previous behaviour: every tool
+        call dispatches to ``tool.execute`` directly.
+    permission_audit_sink: optional async callback fired after every
+        denial.  Receives ``(tool_name, arguments, decision)``.  Errors
+        raised by the sink are swallowed; a failed audit must never
+        break the turn.
     """
 
     convert_to_llm: Callable[[list[AgentMessage]], list[AgentMessage]]
     transform_context: TransformContextFn | None = None
     should_stop_after_turn: ShouldStopFn | None = None
     safety: AgentSafetyConfig = field(default_factory=AgentSafetyConfig)
+    permission_check: PermissionCheckFn | None = None
+    permission_audit_sink: PermissionAuditSinkFn | None = None
