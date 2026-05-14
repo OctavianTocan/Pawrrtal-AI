@@ -14,7 +14,21 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.core.config import settings
+from app.core.governance.secret_redaction import redact_mapping
 from app.core.providers.base import StreamEvent
+
+
+def _maybe_redact(payload: Any) -> Any:
+    """Run the redaction pass only when the global toggle is on.
+
+    Centralised so the aggregator body stays readable. The toggle is
+    checked at call time (not at import time) so tests can flip it
+    via the settings singleton without re-importing the module.
+    """
+    if not settings.secret_redaction_enabled:
+        return payload
+    return redact_mapping(payload)
 
 
 @dataclass
@@ -81,11 +95,20 @@ class ChatTurnAggregator:
         if event_type == "tool_use":
             self._mark_started()
             tool_use_id = str(event.get("tool_use_id", ""))
+            # Redact secrets in the tool input before persistence. The
+            # raw stream event is unchanged — only the persisted shape
+            # is scrubbed. This matters because ``tool_calls`` is read
+            # back into the UI on rehydration and would otherwise show
+            # an API key the user pasted verbatim.
+            raw_input = dict(event.get("input", {}) or {})
+            safe_input = _maybe_redact(raw_input)
+            if not isinstance(safe_input, dict):
+                safe_input = raw_input
             self.tool_calls.append(
                 _ToolCall(
                     id=tool_use_id,
                     name=str(event.get("name", "")),
-                    input=dict(event.get("input", {}) or {}),
+                    input=safe_input,
                 )
             )
             self.timeline.append({"kind": "tool", "toolCallId": tool_use_id})

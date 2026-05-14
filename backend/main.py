@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
+from app.api.audit import get_audit_router
 from app.api.auth import get_auth_router
 from app.api.channels import get_channels_router
 from app.api.chat import get_chat_router
@@ -20,9 +21,9 @@ from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
+from app.api.stt import get_stt_router
 from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
-from app.api.stt import get_stt_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.core.rate_limit import ChatRateLimitMiddleware
@@ -138,6 +139,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_workspace_env_router(),
+    )
+    fastapi_app.include_router(
+        get_audit_router(),
     )
     fastapi_app.include_router(
         get_health_router(),
