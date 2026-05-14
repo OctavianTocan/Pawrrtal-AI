@@ -5,6 +5,7 @@
 
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import type { ReactNode } from 'react';
+import { DocsSidebarBanner, DocsSidebarFooter } from '@/components/docs/sidebar-chrome';
 import { baseOptions } from '@/lib/layout.shared';
 import { handbookSource } from '@/lib/source';
 
@@ -18,7 +19,11 @@ export default function HandbookLayout({ children }: { children: ReactNode }): R
 	return (
 		<DocsLayout
 			tree={handbookSource.pageTree}
-			sidebar={{ defaultOpenLevel: 1 }}
+			sidebar={{
+				defaultOpenLevel: 1,
+				banner: <DocsSidebarBanner />,
+				footer: <DocsSidebarFooter />,
+			}}
 			tabs={[
 				{ title: 'Handbook', url: '/docs/handbook' },
 				{ title: 'Product', url: '/docs/product' },
