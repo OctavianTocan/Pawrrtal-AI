@@ -1,7 +1,8 @@
 /**
  * Next.js request middleware: session gate for protected app routes.
  *
- * @fileoverview Runs on matched paths (see {@link config.matcher}). Public auth pages bypass checks;
+ * @fileoverview Runs on matched paths (see {@link config.matcher}). Public auth pages and
+ *              the public `/docs/**` documentation surface bypass the session check; all
  *              other routes require the `session_token` cookie or redirect to `/login`.
  */
 
@@ -10,14 +11,26 @@ import { type NextRequest, NextResponse } from 'next/server';
 /** Application roots that require an authenticated session. */
 const protectedRoutes = ['/'];
 
-/** Routes that must stay reachable without a session (sign-in flows). */
+/** Exact-match routes that must stay reachable without a session (sign-in flows). */
 const publicRoutes = ['/login', '/signup'];
+
+/**
+ * Path prefixes that are public for the entire subtree.
+ *
+ * `/docs` hosts the public Fumadocs documentation site (handbook + product
+ * sections). Without this carve-out, the `protectedRoutes = ['/']`
+ * `startsWith` check below treats every URL — including `/docs/*` — as
+ * protected, redirecting anonymous visitors to `/login`.
+ */
+const publicPrefixes = ['/docs'];
 
 /** True when `path` is under any protected prefix. */
 const isProtectedRoute = (path: string) => protectedRoutes.some((route) => path.startsWith(route));
 
-/** True when `path` is exactly a public auth page. */
-const isPublicRoute = (path: string) => publicRoutes.includes(path);
+/** True when `path` is a public auth page or sits under a public subtree. */
+const isPublicRoute = (path: string) =>
+	publicRoutes.includes(path) ||
+	publicPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 
 /**
  * Next.js middleware entrypoint: enforces cookie auth on protected paths.
