@@ -38,6 +38,7 @@ class BackendApiKeyMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: object) -> Response:  # type: ignore[override]
+        """Validate the configured backend API key before routing the request."""
         # If no key is configured, the middleware is effectively disabled.
         if not settings.backend_api_key:
             return await call_next(request)  # type: ignore[misc]

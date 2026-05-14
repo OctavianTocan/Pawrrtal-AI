@@ -101,15 +101,36 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
     )
 
 
-def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
-    """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
+async def _require_workspace_root(
+    *,
+    user_id: object,
+    session: AsyncSession,
+    request_id: str,
+) -> Path:
+    """Return the user's default workspace path or reject the chat turn."""
+    workspace = await get_default_workspace(user_id, session)
+    if workspace is None:
+        raise HTTPException(
+            status_code=412,
+            detail="Onboarding not completed: no default workspace exists for this user.",
+        )
+    root = Path(workspace.path)
+    # Blocking ``Path.exists()`` would stall the event loop on slow
+    # FS / network mounts — route through ``anyio.Path`` so the stat
+    # runs in a worker thread.
+    if not await anyio.Path(root).exists():
+        # Workspace row exists but the directory is gone (manually
+        # deleted, volume wipe, etc.).  Same outcome — do not run.
+        logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", request_id, user_id, root)
+        raise HTTPException(
+            status_code=412,
+            detail="Workspace directory is missing on disk.  Re-run onboarding.",
+        )
+    return root
 
-    The complexity warnings are suppressed: this is a closure-based
-    router builder whose body is intentionally a single streaming
-    endpoint owning setup, persistence, the streamed body, and
-    finalization in one async generator. Splitting it across helpers
-    breaks the natural read order of the request lifecycle without
-    actually reducing the shared state surface, so it stays inline.
+
+def get_chat_router() -> APIRouter:
+    """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
 
     Returns:
         An ``APIRouter`` exposing a single streaming ``POST /`` endpoint
@@ -118,7 +139,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
-    async def chat(  # noqa: C901, PLR0915 — single-endpoint stream lifecycle, see builder docstring
+    async def chat(
         request: ChatRequest,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
@@ -205,24 +226,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
         # that flow yet — the agent should not run at all in that state.
         # Refuse with 412 (Precondition Failed) so the frontend can route to
         # onboarding instead of pretending we shipped a degraded reply.
-        workspace = await get_default_workspace(user.id, session)
-        if workspace is None:
-            raise HTTPException(
-                status_code=412,
-                detail="Onboarding not completed: no default workspace exists for this user.",
-            )
-        root = Path(workspace.path)
-        # Blocking ``Path.exists()`` would stall the event loop on slow
-        # FS / network mounts — route through ``anyio.Path`` so the stat
-        # runs in a worker thread.
-        if not await anyio.Path(root).exists():
-            # Workspace row exists but the directory is gone (manually
-            # deleted, volume wipe, etc.).  Same outcome — do not run.
-            logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
-            raise HTTPException(
-                status_code=412,
-                detail="Workspace directory is missing on disk.  Re-run onboarding.",
-            )
+        root = await _require_workspace_root(user_id=user.id, session=session, request_id=rid)
         # Per-turn tool composition lives in `app.core.agent_tools` —
         # the chat router only decides *that* the agent gets tools,
         # not *which* (that's the builder's job, and where future

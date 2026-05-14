@@ -111,9 +111,7 @@ class Settings(BaseSettings):
         if not self.allowed_emails:
             return frozenset()
         return frozenset(
-            addr.strip().lower()
-            for addr in self.allowed_emails.split(",")
-            if addr.strip()
+            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
         )
 
     # --- OAuth: Google ---
@@ -162,21 +160,6 @@ class Settings(BaseSettings):
     # `X-Telegram-Bot-Api-Secret-Token` header on every webhook delivery
     # so the receiving FastAPI route can drop forgeries.
     telegram_webhook_secret: str = ""
-
-    # Comma-separated email allowlist enforced by ``get_allowed_user`` on
-    # every protected route.  Empty (the default) leaves the deployment
-    # open to any authenticated user — fine for local dev, never deploy
-    # publicly without setting this.  Compare case-insensitive.
-    allowed_emails: str = ""
-
-    @property
-    def allowed_emails_set(self) -> frozenset[str]:
-        """Parsed, lowercased view of ``allowed_emails`` for membership tests."""
-        if not self.allowed_emails:
-            return frozenset()
-        return frozenset(
-            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
-        )
 
     # Per-user chat rate limit (requests per 60-second rolling window).
     # Zero disables the limit entirely — useful for local dev.  Production
