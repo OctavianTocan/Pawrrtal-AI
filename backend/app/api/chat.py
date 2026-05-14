@@ -19,9 +19,7 @@ from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
-from app.core.providers import resolve_llm
-from app.core.providers.base import StreamEvent
-from app.core.providers.catalog import default_model
+from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.artifact_agent import (
