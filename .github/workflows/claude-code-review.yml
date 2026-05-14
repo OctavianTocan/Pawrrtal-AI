@@ -22,7 +22,19 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Detect Claude review workflow changes
+        id: workflow-diff
+        run: |
+          git fetch --no-tags --depth=1 origin "${{ github.event.pull_request.base.ref }}"
+          if git diff --quiet FETCH_HEAD HEAD -- .github/workflows/claude-code-review.yml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Claude Code Review workflow changed in this PR; skipping action until it lands on the default branch."
+          fi
+
       - name: Run Claude Code Review
+        if: steps.workflow-diff.outputs.changed != 'true'
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
