@@ -16,4 +16,4 @@ Capture reusable lessons from the recent onboarding/sidebar/chat fixes so future
 
 ## Summary of Changes
 
-Added `docs/decisions/2026-05-03-frontend-interaction-principles.md`, an ADR-style note capturing reusable frontend interaction principles from the recent fixes. The note covers stable navigation text, separating initial/current values, avoiding live drag state in registration props, composing event handlers, guarding AI-generated metadata, token-based theming, primitive-level affordances, and lifecycle debugging heuristics.
+Added `frontend/content/docs/handbook/decisions/2026-05-03-frontend-interaction-principles.md`, an ADR-style note capturing reusable frontend interaction principles from the recent fixes. The note covers stable navigation text, separating initial/current values, avoiding live drag state in registration props, composing event handlers, guarding AI-generated metadata, token-based theming, primitive-level affordances, and lifecycle debugging heuristics.

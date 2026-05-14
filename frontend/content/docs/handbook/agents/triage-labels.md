@@ -1,3 +1,8 @@
+---
+title: Triage Labels
+description: Maps the five canonical triage roles to the actual bean status field values used in this repo.
+---
+
 # Triage Labels
 
 The skills speak in terms of five canonical triage roles. This file maps those roles to the actual field values used in this repo's bean files.

@@ -489,7 +489,7 @@ Three PRs from the `feat/extract-react-chat-composer` branch:
 
 One decision crosses the bar (hard-to-reverse + surprising + real trade-off):
 
-**`docs/decisions/2026-05-10-react-chat-composer-styling.md`** — explains the
+**`frontend/content/docs/handbook/decisions/2026-05-10-react-chat-composer-styling.md`** — explains the
 Tailwind v4 preset / token-theme approach over a compiled CSS bundle, including
 the precondition (consumers must run Tailwind v4) and why precedent consistency
 with `react-overlay` / `react-dropdown` outweighs the portability win of a

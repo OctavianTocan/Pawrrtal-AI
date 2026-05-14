@@ -1,3 +1,8 @@
+---
+title: Frontend Interaction Principles From Recent Fixes
+description: ADR — codified interaction principles derived from fix sessions covering keyboard nav, focus, and state guards.
+---
+
 # Frontend Interaction Principles From Recent Fixes
 
 Date: 2026-05-03

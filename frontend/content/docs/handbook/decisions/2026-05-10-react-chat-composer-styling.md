@@ -1,3 +1,8 @@
+---
+title: Tailwind v4 preset + chat-* token theme for react-chat-composer
+description: ADR — use a Tailwind v4 preset with chat-* CSS tokens to style the extracted react-chat-composer package.
+---
+
 # ADR: Tailwind v4 preset + `chat-*` token theme for `@octavian-tocan/react-chat-composer`
 
 - **Date:** 2026-05-10

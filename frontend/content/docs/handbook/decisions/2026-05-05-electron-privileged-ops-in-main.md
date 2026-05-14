@@ -1,3 +1,8 @@
+---
+title: Privileged ops live in the Electron main process; agent stays in FastAPI
+description: ADR — desktop-only capabilities (window controls, auto-update, tray) are handled in the Electron main process via IPC.
+---
+
 # Privileged ops live in the Electron main process; agent stays in FastAPI
 
 - **Status:** Accepted

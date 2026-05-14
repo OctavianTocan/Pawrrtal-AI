@@ -1,3 +1,8 @@
+---
+title: Deploying Pawrrtal on a VPS — step by step
+description: Canonical operator runbook for standing up a private Pawrrtal instance on a VPS.
+---
+
 # Deploying Pawrrtal on a VPS — step by step
 
 This guide is the **canonical operator runbook** for standing up a
@@ -108,7 +113,7 @@ $EDITOR backend/.env
 
 Fill it in.  Annotated template:
 
-```env
+```bash
 # ── Core ─────────────────────────────────────────────────────────
 ENV=prod                                  # cookies become secure-only
 DATABASE_URL=postgresql://nexus:<POSTGRES_PASSWORD>@postgres:5432/nexus
@@ -299,7 +304,7 @@ Hold off until that lands.
 1. Create a bot via [@BotFather](https://t.me/BotFather), get a token.
 2. Note the bot username (without the leading `@`).
 3. In `backend/.env`:
-   ```env
+   ```bash
    TELEGRAM_BOT_TOKEN=<from BotFather>
    TELEGRAM_BOT_USERNAME=<bot username>
    TELEGRAM_MODE=polling
@@ -313,7 +318,7 @@ Hold off until that lands.
 
 For webhook mode (preferred for prod — uses fewer resources):
 
-```env
+```bash
 TELEGRAM_MODE=webhook
 TELEGRAM_WEBHOOK_URL=https://pawrrtal.your-domain.com/api/v1/telegram/webhook
 TELEGRAM_WEBHOOK_SECRET=<generate with: python3 -c "import secrets; print(secrets.token_urlsafe(32))">
@@ -349,7 +354,7 @@ Any OTLP/HTTP-compatible backend works.  Common picks:
 
 Add to `backend/.env`:
 
-```env
+```bash
 OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-eu-west-2.grafana.net/otlp
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-of-instance:token>
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf

@@ -10,7 +10,7 @@ blocked_by:
     - pawrrtal-5854
 ---
 
-ADR docs/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md §2. Pure additive: Vendor/Host enums, ParsedModelId, parse_model_id, InvalidModelId, UnknownModelId. No consumers wired yet.
+ADR frontend/content/docs/handbook/decisions/2026-05-14-model-id-canonical-format-and-backend-catalog.md §2. Pure additive: Vendor/Host enums, ParsedModelId, parse_model_id, InvalidModelId, UnknownModelId. No consumers wired yet.
 
 ## Summary
 Module landed: Vendor/Host enums, ParsedModelId, parse_model_id, InvalidModelId, UnknownModelId, CANONICAL_HOST. 12 tests pass; ruff + mypy clean.

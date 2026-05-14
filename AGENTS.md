@@ -54,7 +54,7 @@ This is a public repo wired to a self-hosted runner pool on Octavian's VPS. CI i
 - **Default runner is self-hosted:** `runs-on: [self-hosted, openclaw-mini, pawrrtal]`. The runner pool is `openclaw-vps-NN` registered out of `/srv/github-runners/<repo>/actions-runner/` as the `gha` system user. Use `ubuntu-latest` only when there's a real reason (macOS/Windows/GPU/untrusted external code already gated separately).
 - **Documented exception:** `rebase.yml` uses `pull_request_target` and never runs PR code; it relies on `author_association` instead of the actor gate. See `.claude/rules/github-actions/safe-pull-request-target.md`.
 - **Repo-level Actions settings** (must be set in the GitHub UI; the standard CI tokens don't have Actions admin scope): require approval for first-time contributor workflows, default workflow permissions = read.
-- **Layout / install / removal:** `docs/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
+- **Layout / install / removal:** `frontend/content/docs/handbook/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
 
 New CI surfaces (backend pytest, frontend vitest, Maestro E2E, etc.) belong on the self-hosted runner with the actor gate. If you find yourself thinking "just this once on `ubuntu-latest` without the gate," don't.
 
@@ -66,7 +66,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **Local check**: `just sentrux` — runs `scripts/sentrux-check.sh`, which checks a temporary app-code snapshot and excludes agent/tooling roots such as `.agents/`, `.claude/`, `.cursor/`, `.factory/`, `.goose/`, and `.pi/`.
 - **CI**: `.github/workflows/sentrux.yml` runs the same filtered check on every PR to `development`/`main` and posts violations as a PR comment on failure.
 - **Per-session loop** (agents): if the sentrux MCP is wired into your client (Claude Code, Cursor, etc.), call `session_start` before substantive work and `session_end` after to surface architectural regressions caused by the session. Local baseline is stored at `.sentrux/baseline.json` (gitignored).
-- **Why this exists**: see `docs/decisions/2026-05-03-adopt-sentrux-architecture-gating.md` (baseline quality 6753/10000, equality bottleneck, 2.5% test coverage gap noted).
+- **Why this exists**: see `frontend/content/docs/handbook/decisions/2026-05-03-adopt-sentrux-architecture-gating.md` (baseline quality 6753/10000, equality bottleneck, 2.5% test coverage gap noted).
 
 ## Coding Style & Naming Conventions
 
@@ -160,7 +160,7 @@ The curated reading list for the highest-signal rules in this stack lives at [`d
 
 ## Learned User Preferences
 
-- When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
+- When the user asks to log a technical or architectural decision, capture it in `frontend/content/docs/handbook/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
 - When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
 - When a UI fix establishes a reusable pattern, or when a surface fetches data as soon as it appears (for example integration connection state), use a loader or skeleton until the result is known; capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
@@ -272,12 +272,12 @@ Access 85k tokens of past work via get_observations([IDs]) or mem-search skill.
 
 ### Issue tracker
 
-Local markdown via `beans` CLI — tasks live in `.beans/` as individual markdown files with frontmatter (`status`, `type`, `priority`, `tags`). See `docs/agents/issue-tracker.md`.
+Local markdown via `beans` CLI — tasks live in `.beans/` as individual markdown files with frontmatter (`status`, `type`, `priority`, `tags`). See `frontend/content/docs/handbook/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Beans uses a flat `status` field (`todo`, `in-progress`, `completed`). No triage state machine. The five canonical triage roles are unused — issues are either tracked or done. See `docs/agents/triage-labels.md`.
+Beans uses a flat `status` field (`todo`, `in-progress`, `completed`). No triage state machine. The five canonical triage roles are unused — issues are either tracked or done. See `frontend/content/docs/handbook/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context. One `CONTEXT.md` at the repo root when created. ADRs live in `docs/decisions/` (not `docs/adr/`). See `docs/agents/domain.md`.
+Single-context. One `CONTEXT.md` at the repo root when created. ADRs live in `frontend/content/docs/handbook/decisions/` (not `docs/adr/`). See `frontend/content/docs/handbook/agents/domain.md`.

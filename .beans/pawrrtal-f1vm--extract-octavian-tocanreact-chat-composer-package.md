@@ -8,7 +8,7 @@ created_at: 2026-05-10T21:45:31Z
 updated_at: 2026-05-11T04:31:11Z
 ---
 
-Lift the chat composer surface (ChatComposer, ChatComposerControls, ModelSelectorPopover, ChatPromptSuggestions) out of frontend/features/chat/components/ into a self-contained, npm-publishable React package modelled on @octavian-tocan/react-overlay. Full plan: docs/plans/extract-react-chat-composer.md. Styling ADR: docs/decisions/2026-05-10-react-chat-composer-styling.md. Three sequential PRs on branch feat/extract-react-chat-composer.
+Lift the chat composer surface (ChatComposer, ChatComposerControls, ModelSelectorPopover, ChatPromptSuggestions) out of frontend/features/chat/components/ into a self-contained, npm-publishable React package modelled on @octavian-tocan/react-overlay. Full plan: docs/plans/extract-react-chat-composer.md. Styling ADR: frontend/content/docs/handbook/decisions/2026-05-10-react-chat-composer-styling.md. Three sequential PRs on branch feat/extract-react-chat-composer.
 
 ## Todo
 

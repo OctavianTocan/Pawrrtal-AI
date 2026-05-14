@@ -9,7 +9,7 @@
  * `@/features/appearance` module — the types and defaults are inlined as
  * mock data and have a `Mock` prefix so any future re-import doesn't
  * silently re-bind to a system that's gone. See
- * `docs/decisions/2026-05-06-rip-theming-system.md`.
+ * `frontend/content/docs/handbook/decisions/2026-05-06-rip-theming-system.md`.
  */
 
 import { LaptopMinimal, Moon, Sun } from 'lucide-react';

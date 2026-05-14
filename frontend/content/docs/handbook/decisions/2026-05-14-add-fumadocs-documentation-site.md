@@ -1,3 +1,8 @@
+---
+title: Add Fumadocs documentation site at /docs
+description: ADR — add a Fumadocs-powered documentation surface to the existing Next.js app for handbook and product docs.
+---
+
 # 2026-05-14 — Add Fumadocs documentation site at `/docs`
 
 **Status:** Proposed

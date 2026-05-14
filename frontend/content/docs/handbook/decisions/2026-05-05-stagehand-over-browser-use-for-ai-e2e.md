@@ -1,3 +1,8 @@
+---
+title: Stagehand v3 (LOCAL) over browser-use for the AI-driven E2E suite
+description: ADR — chose Stagehand v3 over browser-use 0.12.6 for the AI-driven E2E suite after browser-use failed due to LLM structured-output rejection.
+---
+
 # ADR: Stagehand v3 (LOCAL) over browser-use 0.12.6 for the AI-driven E2E suite
 
 - **Date:** 2026-05-05

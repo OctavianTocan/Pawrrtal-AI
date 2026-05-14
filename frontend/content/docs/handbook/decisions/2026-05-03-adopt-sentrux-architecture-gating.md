@@ -1,3 +1,8 @@
+---
+title: Adopt Sentrux for Architectural Quality Gating
+description: ADR — adopt sentrux v0.5.7+ for enforcing layer rules and cross-stack boundaries in CI.
+---
+
 # Adopt Sentrux for Architectural Quality Gating
 
 Date: 2026-05-03

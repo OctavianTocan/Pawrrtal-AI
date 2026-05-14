@@ -1,3 +1,8 @@
+---
+title: Canonical model-ID format and backend-owned model catalog
+description: ADR — standardize on provider/model-name canonical IDs and move the model catalog to the backend.
+---
+
 # ADR: Canonical model-ID format and backend-owned model catalog
 
 - **Date:** 2026-05-14

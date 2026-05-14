@@ -1,3 +1,8 @@
+---
+title: Rip out the theming / appearance system
+description: ADR — remove the user-customizable theming system; keep a single fixed dark-mode visual identity.
+---
+
 # 2026-05-06 — Rip out the theming / appearance system
 
 ## Status
