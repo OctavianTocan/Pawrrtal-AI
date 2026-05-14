@@ -1773,3 +1773,13 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 
 /* `composer-placeholder-enter` keyframe ships with
    `@octavian-tocan/react-chat-composer` (imported at the top of this file). */
+
+/* Pawrrtal docs override: page-body headings render in the brand
+ * editorial face (Newsreader, with a system-serif fallback chain).
+ * The `pawrrtal-docs` class is set via `containerProps` on the docs
+ * layouts so this scope only affects /docs/** and never bleeds into
+ * in-app prose surfaces (chat messages, knowledge viewer, etc.). */
+.pawrrtal-docs :is(h1, h2, h3, h4) {
+	font-family: var(--font-display-stack);
+	letter-spacing: -0.01em;
+}

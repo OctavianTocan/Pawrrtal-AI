@@ -19,6 +19,7 @@ export default function HandbookLayout({ children }: { children: ReactNode }): R
 	return (
 		<DocsLayout
 			tree={handbookSource.pageTree}
+			containerProps={{ className: 'pawrrtal-docs' }}
 			sidebar={{
 				defaultOpenLevel: 1,
 				banner: <DocsSidebarBanner />,

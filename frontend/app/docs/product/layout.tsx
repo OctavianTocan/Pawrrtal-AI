@@ -24,6 +24,7 @@ export default function ProductLayout({ children }: { children: ReactNode }): Re
 	return (
 		<DocsLayout
 			tree={productSource.pageTree}
+			containerProps={{ className: 'pawrrtal-docs' }}
 			sidebar={{
 				defaultOpenLevel: 1,
 				banner: <DocsSidebarBanner />,
