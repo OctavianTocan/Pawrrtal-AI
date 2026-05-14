@@ -45,17 +45,10 @@ export default {
 		// Additional dirs to watch in `electrobun dev --watch` mode, beyond the
 		// automatic watch of the bun entrypoint directory. Handlers and shared
 		// RPC types live outside src/bun/ so we need to include them explicitly.
-		watch: [
-			'src/shared',
-			'src/bun/handlers',
-		],
+		watch: ['src/shared', 'src/bun/handlers'],
 
 		// Don't trigger rebuilds for build/artifact output or generated files.
-		watchIgnore: [
-			'build/**',
-			'artifacts/**',
-			'**/*.generated.*',
-		],
+		watchIgnore: ['build/**', 'artifacts/**', '**/*.generated.*'],
 
 		// ── macOS platform config ──────────────────────────────────────────────
 		mac: {
@@ -63,12 +56,10 @@ export default {
 			// Generate an .iconset with: iconutil -c iconset icon.icns
 			// Uncomment once the asset exists:
 			// icons: 'icon.iconset',
-
 			// Code signing + notarization for distribution (App Store / direct).
 			// Requires APPLE_DEVELOPER_CERTIFICATE + APPLE_NOTARIZE_CREDENTIALS.
 			// codesign: true,
 			// notarize: true,
-
 			// Entitlements for future hardware access (mic/camera for voice/video):
 			// entitlements: {
 			//   'com.apple.security.device.microphone':
@@ -84,7 +75,6 @@ export default {
 			// Convert from PNG: magick icon-256.png -define icon:auto-resize=256,48,32,16 icon.ico
 			// Uncomment once the asset exists:
 			// icons: 'icon.ico',
-
 			// CEF gives a consistent Chromium renderer across Windows versions,
 			// avoiding WebView2 availability/version issues on older machines.
 			// Adds ~120MB to the bundle but removes the WebView2 runtime dependency.
