@@ -3,7 +3,7 @@
 import { ChevronDown, Plus, Search, Settings as SettingsIcon, X } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
-import { ResponsiveModal } from '@/components/ui/responsive-modal';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { cn } from '@/lib/utils';
 import { type CatalogIntegration, INTEGRATION_CATALOG } from './catalog';
 
@@ -32,7 +32,7 @@ export function AddIntegrationModal({
 	);
 
 	return (
-		<ResponsiveModal
+		<AppDialog
 			ariaLabel="Add integrations"
 			onDismiss={onDismiss}
 			open={open}
@@ -89,7 +89,7 @@ export function AddIntegrationModal({
 					))}
 				</div>
 			</div>
-		</ResponsiveModal>
+		</AppDialog>
 	);
 }
 

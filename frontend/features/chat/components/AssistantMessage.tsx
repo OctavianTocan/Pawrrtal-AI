@@ -8,8 +8,9 @@ import { AgentSpinner } from '@/components/ui/agent-spinner';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { ArtifactCard } from '../artifacts';
 import { extractToolChips, type ToolResultChips } from '../tool-result-parsers';
-import type { ChatTimelineEntry, ChatToolCall } from '../types';
+import type { ChatArtifactPayload, ChatTimelineEntry, ChatToolCall } from '../types';
 import { ChainOfThought } from './ChainOfThought';
 import { ReplyActionsRow } from './ReplyActionsRow';
 import { ThinkingHeader } from './ThinkingHeader';
@@ -26,20 +27,27 @@ interface AssistantMessageProps {
 	toolCalls?: ChatToolCall[];
 	/** Arrival-ordered list of thinking bursts and tool invocations. */
 	timeline?: ChatTimelineEntry[];
-	/** Whether the assistant is still streaming this message. */
-	isStreaming: boolean;
-	/** Whether this turn ended in a stream-level error. */
-	isFailed?: boolean;
+	/** Rendering status for this assistant turn. */
+	status: AssistantMessageStatus;
 	/** Total reasoning duration (whole seconds) — only set after streaming. */
 	thinkingDurationSeconds?: number;
-	/** Whether this row's copy button should currently render its "Copied!" state. */
-	isCopied?: boolean;
 	/** Copy the response body to the clipboard. */
 	onCopy?: () => void;
 	/** Re-run the assistant turn for this message. */
 	onRegenerate?: () => void;
+	/** Artifacts the agent rendered during this turn (preview cards). */
+	artifacts?: ChatArtifactPayload[];
+}
+
+interface AssistantMessageStatus {
+	/** Whether this row's copy button should currently render its "Copied!" state. */
+	isCopied?: boolean;
+	/** Whether this turn ended in a stream-level error. */
+	isFailed?: boolean;
 	/** Whether a regeneration request is currently in flight for this row. */
 	isRegenerating?: boolean;
+	/** Whether the assistant is still streaming this message. */
+	isStreaming: boolean;
 }
 
 /** Default state for messages without any chip data. */
@@ -171,14 +179,13 @@ export function AssistantMessage({
 	thinking,
 	toolCalls,
 	timeline,
-	isStreaming,
-	isFailed,
+	status,
 	thinkingDurationSeconds,
-	isCopied,
 	onCopy,
 	onRegenerate,
-	isRegenerating,
+	artifacts,
 }: AssistantMessageProps): ReactNode {
+	const { isCopied, isFailed, isRegenerating, isStreaming } = status;
 	const hasContent = content.length > 0;
 	const hasThinking = Boolean(thinking && thinking.length > 0);
 	const hasTools = Boolean(toolCalls && toolCalls.length > 0);
@@ -218,7 +225,7 @@ export function AssistantMessage({
 				{showInitialLoader ? (
 					<div className="flex items-center gap-2 text-muted-foreground text-sm">
 						<AgentSpinner size={16} />
-						<Shimmer duration={1.2}>Thinking...</Shimmer>
+						<Shimmer duration={1.2}>Thinking&hellip;</Shimmer>
 					</div>
 				) : null}
 
@@ -241,6 +248,14 @@ export function AssistantMessage({
 				) : null}
 
 				{hasContent && !isFailed ? <MessageResponse>{content}</MessageResponse> : null}
+
+				{artifacts && artifacts.length > 0 ? (
+					<div className="mt-3 flex flex-col gap-2">
+						{artifacts.map((a) => (
+							<ArtifactCard artifact={a} key={a.id} />
+						))}
+					</div>
+				) : null}
 
 				{showActions ? (
 					<ReplyActionsRow

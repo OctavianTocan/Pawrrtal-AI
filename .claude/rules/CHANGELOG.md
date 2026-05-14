@@ -1,3 +1,8 @@
+---
+name: changelog
+paths: [".no-match"]
+---
+
 # Changelog
 
 All notable changes to the claude-rules repo.

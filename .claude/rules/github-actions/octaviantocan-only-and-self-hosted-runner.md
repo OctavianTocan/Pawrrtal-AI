@@ -1,6 +1,8 @@
 ---
+
 description: Restrict CI to OctavianTocan and use the openclaw-vps self-hosted runner
 globs: .github/workflows/*.yml
+paths: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 # OctavianTocan-only CI + Self-Hosted Runner
 
@@ -56,4 +58,4 @@ any step runs. When creating or modifying a workflow under
    this rule, and explain why the gate is safe to drop for that
    specific job.
 
-Layout / install / removal: see `docs/ci/self-hosted-runner.md`.
+Layout / install / removal: see `frontend/content/docs/handbook/ci/self-hosted-runner.md`.

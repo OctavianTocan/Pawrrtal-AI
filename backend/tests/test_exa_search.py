@@ -33,8 +33,6 @@ pytest.importorskip("agno", reason="agno is no longer a runtime dependency")
 import json
 from collections.abc import Callable
 from typing import Any
-from unittest.mock import patch
-from uuid import uuid4
 
 import httpx
 import pytest
@@ -74,9 +72,7 @@ def _install_mock_transport(
 
     def _factory(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
         kwargs.pop("transport", None)
-        return real_async_client(
-            *args, transport=httpx.MockTransport(_capturing_handler), **kwargs
-        )
+        return real_async_client(*args, transport=httpx.MockTransport(_capturing_handler), **kwargs)
 
     monkeypatch.setattr("app.core.tools.exa_search.httpx.AsyncClient", _factory)
     return captured
@@ -118,9 +114,7 @@ async def test_missing_api_key_returns_error_without_calling_exa(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without an EXA_API_KEY the core MUST short-circuit before any HTTP call."""
-    requests = _install_mock_transport(
-        monkeypatch, lambda _request: _ok_response({"results": []})
-    )
+    requests = _install_mock_transport(monkeypatch, lambda _request: _ok_response({"results": []}))
     monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "")
 
     result = await exa_search("anything")
@@ -137,9 +131,7 @@ async def test_explicit_api_key_overrides_settings(
 ) -> None:
     """Passing ``api_key`` directly bypasses settings — used by tests / scripts."""
     monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "")
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
+    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
 
     result = await exa_search("hello", api_key="explicit-key")
 
@@ -157,9 +149,7 @@ async def test_explicit_api_key_overrides_settings(
 async def test_request_targets_exa_search_with_required_headers_and_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
+    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
 
     await exa_search("openai launches", api_key="test-key", num_results=4)
 
@@ -183,9 +173,7 @@ async def test_request_targets_exa_search_with_required_headers_and_payload(
 async def test_include_full_text_adds_text_to_contents(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
+    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
 
     await exa_search("topic", api_key="k", include_full_text=True)
 
@@ -207,9 +195,7 @@ async def test_include_full_text_adds_text_to_contents(
 async def test_num_results_is_clamped_to_valid_range(
     monkeypatch: pytest.MonkeyPatch, requested: int, expected: int
 ) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
+    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
 
     await exa_search("q", api_key="k", num_results=requested)
 
@@ -226,9 +212,7 @@ async def test_num_results_is_clamped_to_valid_range(
 async def test_happy_path_normalises_results_and_drops_extra_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]})
-    )
+    _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]}))
 
     result = await exa_search("q", api_key="k")
 
@@ -298,9 +282,7 @@ async def test_skips_non_dict_rows_in_results(monkeypatch: pytest.MonkeyPatch) -
 async def test_4xx_with_json_error_body_surfaces_exa_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _error_response(401, {"error": "Bad key"})
-    )
+    _install_mock_transport(monkeypatch, lambda _r: _error_response(401, {"error": "Bad key"}))
 
     result = await exa_search("q", api_key="k")
 
@@ -314,9 +296,7 @@ async def test_4xx_with_json_error_body_surfaces_exa_message(
 async def test_5xx_with_text_body_falls_back_to_status_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _error_response(500, "Internal Server Error")
-    )
+    _install_mock_transport(monkeypatch, lambda _r: _error_response(500, "Internal Server Error"))
 
     result = await exa_search("q", api_key="k")
 
@@ -343,9 +323,7 @@ async def test_transport_error_is_caught_and_reported(
 async def test_malformed_json_body_returns_friendly_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: httpx.Response(200, content=b"not-json")
-    )
+    _install_mock_transport(monkeypatch, lambda _r: httpx.Response(200, content=b"not-json"))
 
     result = await exa_search("q", api_key="k")
 
@@ -377,9 +355,7 @@ def test_normalise_hit_drops_blank_text_and_summary() -> None:
 
 
 def test_format_results_as_markdown_error_path() -> None:
-    rendered = format_results_as_markdown(
-        ExaSearchResult(query="q", results=[], error="boom")
-    )
+    rendered = format_results_as_markdown(ExaSearchResult(query="q", results=[], error="boom"))
     assert rendered == "_Web search failed: boom_"
 
 
@@ -425,9 +401,7 @@ def test_agno_toolkit_registers_exa_search() -> None:
 def test_agno_exa_search_returns_markdown_for_hits(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]})
-    )
+    _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]}))
     monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
 
     rendered = ExaTools().exa_search("hyperloop", num_results=3)
@@ -439,9 +413,7 @@ def test_agno_exa_search_returns_markdown_for_hits(
 def test_agno_exa_search_caps_num_results_before_calling_core(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    captured = _install_mock_transport(
-        monkeypatch, lambda _r: _ok_response({"results": []})
-    )
+    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
     monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
 
     ExaTools().exa_search("q", num_results=999)
@@ -460,5 +432,3 @@ def test_agno_exa_search_renders_error_for_missing_key(
 
     assert rendered.startswith("_Web search failed:")
     assert "EXA_API_KEY" in rendered
-
-

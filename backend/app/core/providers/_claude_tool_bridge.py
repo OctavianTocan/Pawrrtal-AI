@@ -70,7 +70,7 @@ def _wrap(agent_tool: AgentTool) -> Any:
     async def _handler(args: dict[str, Any]) -> dict[str, Any]:
         try:
             text = await agent_tool.execute("", **args)
-        except Exception as exc:  # noqa: BLE001 — surface to the model as a tool error
+        except Exception as exc:
             return {
                 "content": [{"type": "text", "text": f"Tool error: {exc}"}],
                 "is_error": True,
@@ -151,8 +151,7 @@ async def auto_approve_bridge_tools(
     return PermissionResultDeny(
         behavior="deny",
         message=(
-            f"Tool {tool_name!r} is outside the bridge's namespace "
-            f"({MCP_SERVER_NAME!r}); deny."
+            f"Tool {tool_name!r} is outside the bridge's namespace ({MCP_SERVER_NAME!r}); deny."
         ),
         interrupt=False,
     )

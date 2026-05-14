@@ -3,6 +3,7 @@
 import { Folder, Pencil } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
+import { SidebarNavRow } from '@/components/ui/sidebar-nav-row';
 import { cn } from '@/lib/utils';
 import { CONVERSATION_DRAG_MIME } from '../constants';
 
@@ -104,21 +105,21 @@ export function ProjectRow({
 		// absolutely positioned inside, marked as transparent to drag
 		// events so the row beneath still receives them.
 		<div className="group/project-row relative" data-project-id={id}>
-			<button
+			<SidebarNavRow
 				aria-current={isSelected ? 'page' : undefined}
+				align="center"
 				className={cn(
-					'flex min-h-9 w-full cursor-pointer items-center gap-2 rounded-[8px] px-2 py-2 pr-9 text-left text-sm transition-colors',
-					'text-foreground/85 hover:bg-foreground/[0.05] hover:text-foreground',
-					isSelected && 'bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.07]',
+					'min-h-9 w-full pr-9 transition-colors',
 					isDropTarget &&
 						'cursor-copy bg-foreground/[0.10] text-foreground ring-1 ring-accent ring-inset hover:bg-foreground/[0.10]'
 				)}
+				density="comfortable"
+				isSelected={!!isSelected}
 				onClick={onClick}
 				onDragEnter={handleDragEnter}
 				onDragLeave={handleDragLeave}
 				onDragOver={handleDragOver}
 				onDrop={handleDrop}
-				type="button"
 			>
 				<Folder
 					aria-hidden="true"
@@ -128,7 +129,7 @@ export function ProjectRow({
 				    row title size and doesn't drift with the parent button
 				    text-size if it's ever retuned. */}
 				<span className="min-w-0 flex-1 truncate text-[14px]">{name}</span>
-			</button>
+			</SidebarNavRow>
 			<button
 				aria-label={`Rename ${name}`}
 				className="absolute right-1.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-[5px] p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.06] hover:text-foreground group-hover/project-row:opacity-100 focus-visible:opacity-100"

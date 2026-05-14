@@ -3,15 +3,9 @@
 import { ChevronDown, ChevronUp, Pencil, Plus, Settings as SettingsIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
+import { AppPill } from '@/components/ui/app-pill';
 import { cn } from '@/lib/utils';
 import type { IntegrationAccount, IntegrationBadge, IntegrationDef } from './catalog';
-
-/** Color tokens per badge state — matches the Codex/reference palette. */
-const BADGE_CLASSES: Record<NonNullable<IntegrationBadge>, string> = {
-	beta: 'bg-foreground/10 text-foreground',
-	connected: 'bg-emerald-500/15 text-emerald-500',
-	expired: 'bg-amber-500/15 text-amber-500',
-};
 
 /** Renders a single integration row + (optional) collapsible per-account list. */
 export function IntegrationRow({
@@ -138,14 +132,10 @@ function IntegrationBadgePill({
 	badge: NonNullable<IntegrationBadge>;
 }): React.JSX.Element {
 	const label = badge === 'beta' ? 'Beta' : badge === 'connected' ? 'Connected' : 'Expired';
+	const tone = badge === 'beta' ? 'neutral' : badge === 'connected' ? 'success' : 'warning';
 	return (
-		<span
-			className={cn(
-				'rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide',
-				BADGE_CLASSES[badge]
-			)}
-		>
+		<AppPill shape="pill" tone={tone}>
 			{label}
-		</span>
+		</AppPill>
 	);
 }

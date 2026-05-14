@@ -1,6 +1,8 @@
 ---
+
 description: Avoid suppressing linter warnings; fix root causes instead
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: No Lint Suppressions
 

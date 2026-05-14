@@ -26,8 +26,13 @@
 		],
 		"paths": {
 			"@/*": ["./*"],
+			"collections/*": ["./.source/*"],
 			"@octavian-tocan/react-dropdown": ["./lib/react-dropdown/src/index.ts"],
-			"@octavian-tocan/react-dropdown/*": ["./lib/react-dropdown/src/*"]
+			"@octavian-tocan/react-dropdown/*": ["./lib/react-dropdown/src/*"],
+			"@octavian-tocan/react-overlay": ["./lib/react-overlay/src/index.ts"],
+			"@octavian-tocan/react-overlay/*": ["./lib/react-overlay/src/*"],
+			"@octavian-tocan/react-chat-composer": ["./lib/react-chat-composer/src/index.ts"],
+			"@octavian-tocan/react-chat-composer/*": ["./lib/react-chat-composer/src/*"]
 		},
 		"esModuleInterop": true
 	},
@@ -48,6 +53,14 @@
 		"lib/react-dropdown/lostpixel.config.ts",
 		"lib/react-dropdown/tsup.config.ts",
 		"lib/react-dropdown/vitest.config.ts",
-		"lib/react-dropdown/vitest.setup.ts"
+		"lib/react-dropdown/vitest.setup.ts",
+		"lib/react-overlay/src/__tests__",
+		"lib/react-overlay/.storybook",
+		"lib/react-overlay/lostpixel.config.ts",
+		"lib/react-overlay/playwright.config.ts",
+		"lib/react-overlay/tsup.config.ts",
+		"lib/react-overlay/vitest.config.ts",
+		"lib/react-overlay/vitest.setup.ts",
+		"lib/react-chat-composer"
 	]
 }

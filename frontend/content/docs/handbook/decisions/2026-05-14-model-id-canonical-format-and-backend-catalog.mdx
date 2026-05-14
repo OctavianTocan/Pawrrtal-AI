@@ -1,0 +1,613 @@
+---
+title: Canonical model-ID format and backend-owned model catalog
+description: ADR — standardize on provider/model-name canonical IDs and move the model catalog to the backend.
+---
+
+# ADR: Canonical model-ID format and backend-owned model catalog
+
+- **Date:** 2026-05-14
+- **Owners:** OctavianTocan
+- **Tracking:** beans `pawrrtal-5854` (the prefix-strip bugfix that surfaced this), follow-up bean for backend-side Telegram validation (TBD).
+
+<Callout type="info" title="Status: Proposed">
+Standardize on `[host:]vendor/model` canonical IDs everywhere and move the model catalog to the backend (`GET /api/v1/models`). Removes three parallel model-ID shapes from the codebase.
+</Callout>
+
+## Context
+
+A Telegram-channel model switch sent `google/gemini-3-flash-preview` to
+the chat router, which passed the string through to the google-genai
+SDK unchanged. The SDK rejected it with HTTP 404 because the SDK only
+recognises the bare `gemini-3-flash-preview` form. The 404 surfaced as
+"Gemini error: 404 Not Found" in the chat reply.
+
+The root cause is that pawrrtal has **three coexisting shapes for the
+same concept**:
+
+| Surface | Wire shape | Stored shape | Source |
+|---|---|---|---|
+| Web frontend | bare `gemini-3-flash-preview` | bare | `frontend/features/chat/constants.ts` |
+| Telegram default + `/model` | vendor-prefixed `google/gemini-3-flash-preview` | vendor-prefixed | `backend/app/integrations/telegram/handlers.py:55,61` |
+| Backend SDK calls | bare (required) | n/a | google-genai / claude-agent-sdk |
+
+`backend/app/core/providers/factory.py:resolve_llm()` papered over the
+mismatch by best-effort prefix-routing on `claude-*` / `gemini-*`.
+This morning's fix added `_strip_provider_segment()` to drop the
+`google/` or `anthropic/` prefix at the provider boundary so the SDK
+sees the bare slug. That unblocks Telegram today but leaves the
+fundamental issue: the codebase still has multiple shapes for the
+same concept, and the frontend ships a parallel model catalog that
+must be hand-synchronised with backend reality.
+
+Forward-looking constraint: a single model is likely to be served by
+multiple hosts (Anthropic direct, Claude Agent SDK, Bedrock, GitHub
+Copilot OAuth, OpenRouter; OpenAI direct, Azure OpenAI, Copilot,
+OpenRouter; Google AI Studio, Vertex AI, OpenRouter). The wire format
+needs to express "which host for this model" — not just "which
+vendor."
+
+## Decision
+
+### 1. Canonical model-ID wire format
+
+```
+[host:]vendor/model
+```
+
+- `vendor` ∈ `anthropic | google | openai` (extensible). Lowercase
+  kebab-case.
+- `model` is the vendor's own slug (`claude-sonnet-4-6`,
+  `gemini-3-flash-preview`).
+- `host:` is optional on **input**. When absent, the Pydantic
+  validator canonicalises the field in place by prepending the
+  canonical host for that vendor. After validation, every stored /
+  re-serialised string is in the fully-qualified form
+  `host:vendor/model`. The `parse → id → parse` round-trip is
+  therefore an identity on the canonical form, and there is exactly
+  one wire string per `(host, vendor, model)` triple.
+- Validation regex:
+  `^([a-z][a-z0-9-]*:)?[a-z][a-z0-9-]*/[a-z0-9][a-z0-9.\-_]*$`
+  enforced at the FastAPI boundary on every field that carries a
+  model ID (`ChatRequest.model_id`, `ConversationCreate.model_id`,
+  `ConversationUpdate.model_id`, `ConversationRead.model_id`).
+- Bare model IDs (no `/`) are rejected with HTTP 422. The earlier
+  vendor-inference fallback is removed.
+
+### Vocabulary
+
+The ADR introduces a `Host` enum alongside the existing notion of an
+"LLM provider class." These are different concepts and the directory
+naming intentionally does *not* change:
+
+- **Vendor** — who built the model (`anthropic`, `google`, `openai`).
+- **Host** — where the model runs (`agent-sdk`, `google-ai`,
+  `bedrock`, `vertex`, `copilot`, `openrouter`, `azure`). One vendor's
+  model can be served by many hosts.
+- **Provider** — the Python class in `backend/app/core/providers/`
+  that talks to one SDK (`ClaudeLLM`, `GeminiLLM`). One host maps to
+  one provider class. The directory keeps the `providers/` name; the
+  existing `.claude/rules/architecture/no-tools-in-providers.md` is
+  unchanged.
+
+The dispatch map `HOST_TO_PROVIDER: dict[Host, type[AILLM]]` makes
+the relationship explicit.
+
+LangChain / LiteLLM developers recognise the `host:vendor/model`
+shape immediately; the visual weight of `host:` correctly signals
+"routing decision," and `vendor/model` is a stable model identity
+independent of where it runs.
+
+### 2. Backend module: `backend/app/core/providers/model_id.py`
+
+Single source of truth for parsing, validation, host resolution.
+
+```python title="backend/app/core/providers/model_id.py"
+from enum import StrEnum
+from dataclasses import dataclass
+import re
+
+class Vendor(StrEnum):
+    anthropic = "anthropic"
+    google = "google"
+    openai = "openai"
+
+class Host(StrEnum):
+    agent_sdk = "agent-sdk"
+    google_ai = "google-ai"
+    # bedrock, copilot, openrouter, vertex, azure, ... land here as they ship.
+
+CANONICAL_HOST: dict[Vendor, Host] = {
+    Vendor.anthropic: Host.agent_sdk,
+    Vendor.google: Host.google_ai,
+}
+
+@dataclass(frozen=True, slots=True)
+class ParsedModelId:
+    host: Host
+    vendor: Vendor
+    model: str
+    raw: str  # original wire form for logs / error messages
+
+    @property
+    def id(self) -> str:
+        """Canonical fully-qualified wire string: `host:vendor/model`."""
+        return f"{self.host.value}:{self.vendor.value}/{self.model}"
+
+class InvalidModelId(ValueError):
+    """The string does not parse as `[host:]vendor/model` against the enums."""
+
+class UnknownModelId(LookupError):
+    """The string parses but the resulting `(host, vendor, model)` triple
+    is not in the catalog. Raised by `resolve_llm` / `catalog.find()`."""
+
+_MODEL_ID_RE = re.compile(
+    r"^(?:(?P<host>[a-z][a-z0-9-]*):)?(?P<vendor>[a-z][a-z0-9-]*)/(?P<model>[a-z0-9][a-z0-9.\-_]*)$"
+)
+
+def parse_model_id(raw: str) -> ParsedModelId: ...
+```
+
+`parse_model_id` is the only function in the backend that splits a
+model-ID string. Internal consumers below the API boundary accept
+`ParsedModelId` where practical; one-line bridge calls
+(`parse_model_id(self._model_id)`) cover provider classes that
+already exist with a `str` field — see §5b.
+
+### 2a. Canonicalising Pydantic validator
+
+```python title="backend/app/schemas.py"
+from pydantic import AfterValidator
+from typing import Annotated
+
+def _canonicalise_model_id(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    parsed = parse_model_id(raw)  # raises InvalidModelId → 422
+    return parsed.id  # always "host:vendor/model"
+
+CanonicalModelId = Annotated[str | None, AfterValidator(_canonicalise_model_id)]
+```
+
+Applied to `ChatRequest.model_id`, `ConversationCreate.model_id`,
+`ConversationUpdate.model_id`, and `ConversationRead.model_id`. The
+`ConversationRead` case matters: even though the DB is wiped today,
+the validator is the standing guarantee that a non-canonical value
+in storage either gets rewritten on the next API response or surfaces
+as 500 (preferable to silently shipping garbage to the frontend).
+
+### 3. Backend module: `backend/app/core/providers/catalog.py`
+
+```python title="backend/app/core/providers/catalog.py"
+from dataclasses import dataclass
+
+@dataclass(frozen=True, slots=True)
+class ModelEntry:
+    host: Host
+    vendor: Vendor
+    model: str
+    display_name: str   # "Claude Opus 4.7"
+    short_name: str     # composer-tight label
+    description: str
+    is_default: bool
+
+    @property
+    def id(self) -> str:
+        return f"{self.host}:{self.vendor}/{self.model}"
+
+MODEL_CATALOG: tuple[ModelEntry, ...] = (
+    ModelEntry(
+        host=Host.agent_sdk, vendor=Vendor.anthropic, model="claude-opus-4-7",
+        display_name="Claude Opus 4.7", short_name="Claude Opus 4.7",
+        description="Most capable for ambitious work", is_default=False,
+    ),
+    # ...one entry per supported model...
+    ModelEntry(
+        host=Host.google_ai, vendor=Vendor.google, model="gemini-3-flash-preview",
+        display_name="Gemini 3 Flash Preview", short_name="Gemini 3 Flash",
+        description="Google's frontier multimodal", is_default=True,
+    ),
+)
+
+# Module-import-time invariant: exactly one default exists.
+# Uses an explicit raise (not `assert`) so `python -O` cannot strip it.
+_default_count = sum(1 for e in MODEL_CATALOG if e.is_default)
+if _default_count != 1:
+    raise ValueError(f"MODEL_CATALOG must have exactly one default; found {_default_count}")
+
+def default_model() -> ModelEntry: ...
+def find(parsed: ParsedModelId) -> ModelEntry | None: ...
+def is_known(parsed: ParsedModelId) -> bool: ...
+
+# Catalog ETag — hashed at import time so cache validators are stable
+# per deploy. The HTTP route exposes this in the `ETag` response header
+# so the frontend can revalidate cheaply when it suspects staleness.
+CATALOG_ETAG: str = _hash_catalog(MODEL_CATALOG)
+```
+
+The `is_default` field lives on the entry itself so the catalog
+remains the single thing to read. No parallel `DEFAULT_MODEL_ID`
+constant.
+
+### 4. Backend route: `GET /api/v1/models`
+
+```jsonc
+// 200 OK
+// ETag: "<CATALOG_ETAG>"
+// Cache-Control: private, must-revalidate
+{
+  "models": [
+    {
+      "id": "agent-sdk:anthropic/claude-opus-4-7",
+      "host": "agent-sdk",
+      "vendor": "anthropic",
+      "model": "claude-opus-4-7",
+      "display_name": "Claude Opus 4.7",
+      "short_name": "Claude Opus 4.7",
+      "description": "Most capable for ambitious work",
+      "is_default": false
+    },
+    /* ... */
+  ]
+}
+```
+
+- `host`, `vendor`, and `model` are exposed as discrete fields on
+  every entry so the frontend never re-parses `id`. The
+  "`parse_model_id` is the only function that splits the string"
+  invariant from §2 stays true on the backend; the frontend treats
+  `id` as opaque for routing decisions and uses `vendor` directly
+  for icon lookup.
+- **Auth posture: authed.** The route sits behind the standard
+  FastAPI-Users session-cookie dependency, consistent with every
+  other `/api/v1/*` route. The catalog tells an unauthenticated
+  caller the operator's host choices (`bedrock`, `vertex`, etc.) —
+  not catastrophic but not value-neutral either, and there is no
+  practical client that needs it pre-login.
+- **Caching:** `ETag` header is the catalog hash computed at import
+  time. The frontend's TanStack Query hook sends `If-None-Match` on
+  refetch; a 304 short-circuits with no body. `Cache-Control:
+  private, must-revalidate` keeps proxies from caching but lets the
+  browser reuse the cached body across tab opens within a session.
+- Pagination not needed; payload is small and stable per-deploy.
+
+### 5. Schema and routing changes
+
+- `backend/app/schemas.py` — `ChatRequest.model_id`,
+  `ConversationCreate.model_id`, `ConversationUpdate.model_id`, and
+  `ConversationRead.model_id` use the `CanonicalModelId` annotated
+  type from §2a. Inputs are canonicalised on the way in; outputs are
+  validated on the way out.
+- `backend/app/core/providers/factory.py` — `resolve_llm` accepts a
+  `str | ParsedModelId | None`. If passed a string, calls
+  `parse_model_id` internally (so callers in non-FastAPI code paths
+  — Telegram, utility scripts — don't have to). Dispatches on
+  `parsed.host` via `HOST_TO_PROVIDER: dict[Host, type[AILLM]]`.
+  Providers receive the bare `parsed.model` slug. The
+  `_strip_provider_segment`, `_GEMINI_PREFIXES`, and
+  `_CLAUDE_PREFIXES` symbols are deleted.
+- `backend/app/api/chat.py` — `_DEFAULT_MODEL` constant is removed;
+  the handler uses `catalog.default_model().id` when neither the
+  request nor the conversation supplies a model.
+
+### 5b. All `model_id` consumers (exhaustive)
+
+The first-pass investigation missed several internal call sites that
+also touch model IDs. Each must be considered:
+
+| File | Today | After this ADR |
+|---|---|---|
+| `backend/app/api/chat.py:50,213` | `_DEFAULT_MODEL = "gemini-3-flash-preview"`; `resolve_llm(model_id, user_id)` | Use `catalog.default_model().id`; pass either the canonicalised string or the parsed form. |
+| `backend/app/integrations/telegram/bot.py:199` | `resolve_llm(context.model_id)` | Same; the canonicalised string flows through from `ConversationRead`. See §7 for `InvalidModelId` handling at the channel boundary. |
+| `backend/app/core/providers/factory.py:18` | `_DEFAULT_MODEL` constant | Deleted; sole owner is `catalog.default_model()`. |
+| `backend/app/core/providers/claude_provider.py:87,422-428` | `_MODEL_MAP: dict[str, str]` keyed on bare slugs (`claude-opus-4-7` → SDK-specific name); `_resolve_sdk_model(self._model_id)` | `self._model_id` stays as a bare slug (provider receives `parsed.model`, not the canonical form). `_MODEL_MAP` keys are unchanged. The factory passes `parsed.model` to the constructor. |
+| `backend/app/core/providers/agno_provider.py:18-32` | `AgnoLLM.__init__(model_id: str)` → `create_agent(..., self._model_id)` | Same shape: receives bare `parsed.model`. The Agno path is itself a candidate for retirement (see §11), but inside this ADR's scope it just receives the unwrapped slug. |
+| `backend/app/core/agents.py:28,58` | `create_agent(..., model_id: str = "gemini-3.1-flash-lite-preview", ...)`; `Gemini(id=model_id, ...)` | Function parameter accepts the bare slug; caller is responsible for passing `parsed.model`. The hardcoded default is deleted; callers must supply a model. |
+| `backend/app/core/gemini_utils.py:10,22-30` | `_DEFAULT_MODEL = "gemini-2.0-flash"`; `generate_text_once(prompt, model_id=_DEFAULT_MODEL)` | Default sourced from the catalog (`catalog.default_model().model` for the bare slug). Title generation and other utility calls share the catalog default. |
+
+**Invariant after this change:** every place a model ID is held in a
+backend variable, it is either (a) the canonical wire string
+`host:vendor/model`, or (b) the bare `model` slug. The conversion
+between (a) and (b) happens once via `parse_model_id`. No other
+shape exists internally.
+
+### 6. Frontend changes
+
+Remove from `frontend/features/chat/constants.ts`:
+- `PAWRRTAL_MODELS`
+- `ChatModelId`
+- `CHAT_MODEL_IDS`
+- `DEFAULT_CHAT_MODEL_ID`
+
+Remove from `frontend/features/chat/components/ModelSelectorPopover.tsx`:
+- The **second** `CHAT_MODEL_IDS` declared at line 24 (a parallel
+  list with `gpt-5.5`/`gpt-5.4` that has already drifted from
+  `constants.ts`).
+- The component-local `ChatModelId` type at line 35.
+- Any literal model-ID references in test fixtures
+  (`ModelSelectorPopover.test.tsx` imports the popover's local
+  union; rewrite the test to inject catalog data via props).
+
+Add:
+- `frontend/features/chat/hooks/use-chat-models.ts`:
+
+  ```ts title="frontend/features/chat/hooks/use-chat-models.ts"
+  /** Result of `useChatModels()`. */
+  interface UseChatModelsResult {
+    /** Catalog entries returned by `GET /api/v1/models`, empty during initial load. */
+    models: readonly ChatModelOption[];
+    /** Entry with `is_default: true`. `null` while loading or on error. */
+    default: ChatModelOption | null;
+    isLoading: boolean;
+    error: Error | null;
+  }
+
+  export function useChatModels(): UseChatModelsResult { /* ... */ }
+  ```
+
+  TanStack Query wrapper around `GET /api/v1/models`. Zod-validates
+  the response per `.claude/rules/api/validate-response-shape-at-boundary.md`.
+  `staleTime: Infinity` with `ETag` revalidation on focus/reconnect
+  (TanStack's defaults, fetch builds the `If-None-Match` header
+  from the previous response's `ETag`).
+- `frontend/features/chat/lib/is-canonical-model-id.ts` — pure regex
+  matcher (mirror of the backend's). Used as the `usePersistedState`
+  validator for `chat-composer:selected-model-id`. If the stored
+  value isn't a canonical model ID, fall back to `default.id` from
+  the live catalog on first render.
+- `frontend/features/chat/components/VendorLogos.ts` —
+  `VENDOR_LOGOS: Record<Vendor, ComponentType>` mapping. UI concern,
+  stays in the frontend. New vendor → new icon, which is genuinely
+  a frontend change.
+
+`ChatContainer` swaps `PAWRRTAL_MODELS` for `useChatModels()` and
+gates rendering on the loading state (composer disabled during the
+first fetch). `ModelSelectorPopover` becomes a pure prop-driven view
+that receives the list, the current selection, and the default —
+zero module-scope model literals.
+
+### 7. Telegram changes
+
+Telegram is a channel adapter, not a model-knowledge surface.
+
+Important reality the first draft of this ADR got wrong: **Telegram
+turns do not pass through FastAPI's request lifecycle**. The bot
+adapter calls `resolve_llm(context.model_id)` directly from
+`bot.py:199`, so Pydantic validators on `ChatRequest` don't fire on
+the Telegram path. The design must therefore handle validation
+failure at the channel boundary explicitly.
+
+Changes:
+
+- Delete `_DEFAULT_MODEL` and `_VALID_MODEL_PREFIXES` in
+  `backend/app/integrations/telegram/handlers.py`.
+- **Structural vs. catalog ignorance.** "Telegram is ignorant" means
+  Telegram does not carry a list of valid models, defaults, or
+  display names — that's catalog data, single-sourced backend-side.
+  It does, however, share the structural parser, since
+  `parse_model_id` is shared backend logic that has no catalog
+  knowledge: it just enforces the regex and the `Vendor` / `Host`
+  enums. Using it is no more coupling than using
+  `update_conversation_model` from CRUD.
+- **`/model` flow:**
+  1. Call `parse_model_id(raw)` on the user's input.
+  2. On `InvalidModelId`, reply with a structural error
+     ("`<raw>` isn't a valid model ID. Try `/model
+     anthropic/claude-sonnet-4-6`.") and do not store anything.
+  3. On success, store `parsed.id` (the canonical form). This
+     preserves the "stored shape is canonical" invariant for the
+     Telegram write path even though it doesn't pass through a
+     FastAPI Pydantic validator.
+- **Chat-turn flow** (handles the catalog-membership failure mode):
+  1. The chat router's `resolve_llm` calls `parse_model_id` then
+     `catalog.find(parsed)`. If `find` returns `None`, raise
+     `UnknownModelId`.
+  2. `backend/app/integrations/telegram/bot.py` wraps the
+     `resolve_llm` call in `try / except UnknownModelId` and:
+     - replies with a structured message naming the bad ID
+       ("Model `<id>` isn't in the catalog. Switching you back to
+       the default."),
+     - calls `update_conversation_model(conversation_id, None,
+       ...)` to clear the bad stored ID,
+     - re-runs `resolve_llm(catalog.default_model().id)` for this
+       turn so the user still gets a reply.
+  3. Next turn reads `conversation.model_id == None`, falls back
+     to `catalog.default_model().id` cleanly. No "every turn fails
+     forever" trap.
+- The fallback default chain for a fresh conversation becomes:
+  `conversation.model_id` → `catalog.default_model().id`.
+- Helper copy (`_MODEL_OK_MESSAGE`, `_MODEL_MISSING_MESSAGE`) is
+  rewritten to not enumerate known prefixes. Example IDs are
+  documented as "ask the web app's model picker for valid IDs"
+  rather than hardcoded.
+
+Inline TODO + bean for proactive *catalog* validation: a future
+session adds a `catalog.is_known()` call at `/model` time so users
+discover unknown-but-well-formed IDs immediately instead of on the
+next chat turn. The auto-clear behaviour above is the safety net
+that makes this a *quality-of-life* follow-up rather than a
+correctness blocker.
+
+### 8. Tests
+
+New tests:
+- `backend/tests/test_model_id.py` — `parse_model_id` happy path,
+  malformed inputs, host inference from canonical-host table,
+  enum-membership errors.
+- `backend/tests/test_catalog.py` — every entry parses, exactly one
+  default, `id` property roundtrips through `parse_model_id`, vendor
+  and host enums populated.
+- `backend/tests/test_models_api.py` — `GET /api/v1/models` returns
+  200 with the expected shape; Zod-equivalent assertions on
+  response.
+
+Rewrite `backend/tests/test_providers_and_schemas.py`:
+- Delete the three strip tests added in this morning's fix.
+- Add parse tests covering host-prefixed, vendor-prefixed,
+  malformed.
+- `resolve_llm(parsed)` routes by host (with the canonical-host fallback
+  for vendor-prefixed inputs).
+
+Telegram tests:
+- `test_telegram_channel.py` — `/model` flow:
+  - Malformed input (`/model bogus`) → reply names the structural
+    error, nothing stored.
+  - Well-formed but unknown model
+    (`/model bedrock:anthropic/nonsense`) → stored canonical;
+    next chat turn raises `UnknownModelId` inside `resolve_llm`;
+    bot adapter replies, clears the stored value to `NULL`, and
+    completes the turn using `catalog.default_model()`.
+  - The *following* turn cleanly uses the default (no recurring
+    failure).
+  - A subsequent valid `/model` restores user choice.
+
+Negative-path tests:
+- `test_model_id.py::test_parse_model_id_rejects_whitespace_inside`
+- `test_model_id.py::test_parse_model_id_rejects_unknown_vendor`
+- `test_model_id.py::test_parse_model_id_rejects_unknown_host`
+- `test_model_id.py::test_canonicalise_validator_emits_422_via_fastapi`
+- `test_catalog.py::test_default_count_invariant_raises_on_zero_or_many`
+- `test_conversation_read::test_response_validator_rejects_legacy_bare_id`
+  (asserts the post-wipe guarantee that `ConversationRead` cannot
+  ship a non-canonical string even if a future bug bypasses the
+  input validator).
+
+Frontend tests:
+- `frontend/features/chat/hooks/use-chat-models.test.ts` — mocked
+  fetch, Zod validation, error handling.
+- `frontend/features/chat/components/ModelSelectorPopover.test.tsx`
+  — inject mock catalog data via props rather than importing
+  constants.
+
+### 9. DB reset and deploy ordering
+
+`nexus.db` is wiped and recreated. Per the investigation, current
+content is three rows of bare IDs only; no production data is at
+risk. Migration logic is not written.
+
+```sh
+rm -f backend/nexus.db && cd backend && uv run alembic upgrade head
+```
+
+The localStorage `selectedModelId` validator runs at hydration and
+silently invalidates any stored bare ID, so no user-visible
+breakage.
+
+**Deploy ordering** (matters the moment a production DB exists, not
+today):
+
+1. **Wipe / migrate the DB first.** Any
+   `conversations.model_id` row that doesn't parse against the new
+   regex must be either rewritten to canonical form or set to
+   `NULL`.
+2. **Then deploy the schema validator.** `ConversationRead.model_id`
+   is set up to raise on a non-canonical stored value — by design,
+   per §2a — so flipping that on before step 1 turns every legacy
+   `GET /api/v1/conversations/{id}` into a 500.
+
+**Production safety valve** (used if step 1 is ever incomplete): a
+feature flag `STRICT_CONVERSATION_READ_VALIDATION` defaults to
+`True`. Setting it to `False` makes `ConversationRead.model_id` fall
+back to `catalog.default_model().id` and log the bad row instead of
+raising. This is an operator escape hatch, not a documented
+contract — the flag's existence and the log line let on-call clean
+the data up while still serving traffic.
+
+For this ADR's current deploy (dev DB only): the flag ships as
+`True`; the wipe in step 1 makes the question moot.
+
+### 10. Consolidating defaults
+
+After this change, the only places "what is the default model" is
+expressed are:
+
+1. `MODEL_CATALOG` entry with `is_default=True` (the data).
+2. `catalog.default_model()` (the function that returns it).
+
+Removed: `backend/app/api/chat.py:_DEFAULT_MODEL`,
+`backend/app/integrations/telegram/handlers.py:_DEFAULT_MODEL`,
+`backend/app/core/providers/factory.py:_DEFAULT_MODEL`,
+`frontend/features/chat/constants.ts:DEFAULT_CHAT_MODEL_ID`.
+
+## Consequences
+
+### Good
+
+- One canonical wire format. The same string flows from picker →
+  POST → DB → log → provider. No "stored shape ≠ wire shape"
+  duality.
+- Backend owns the catalog. Adding a model is one Python edit and
+  one git commit; frontend picks up the change on next session.
+- Strict Pydantic validation turns malformed IDs into 422 at the
+  edge, not 404 from the SDK two layers in. Errors surface where
+  the bad data is, not three hops away.
+- `Host` and `Vendor` as enums close two whole classes of bug:
+  typos and silent-drop-to-default.
+- Telegram stops carrying a parallel mental model. It's purely a
+  transport.
+- Future hosts (Bedrock, Copilot, Vertex, OpenRouter, Azure) plug
+  in as one `Host` enum member + one `HOST_TO_PROVIDER` entry + one
+  catalog entry per model exposed.
+
+### Bad / accepted tradeoffs
+
+- The frontend's typed `ChatModelId` union goes away. The composer
+  picker is now structurally dependent on an async fetch. The
+  loading state has to be rendered cleanly.
+- localStorage values from prior sessions become invalid on first
+  load. One-time fallback to default; no crash, but technically
+  user-visible.
+- DB wipe is a hard cut. Acceptable for a dev DB; the deploy-ordering
+  + `STRICT_CONVERSATION_READ_VALIDATION` flag in §9 covers the
+  future-production case.
+- Telegram users who type a *malformed* `/model &lt;id&gt;` get an
+  immediate error at `/model` time (structural parser fires). Users
+  who type a well-formed but *unknown* model only discover the
+  error on the next chat turn — at which point the stored value is
+  auto-cleared and they fall back to the default cleanly. The
+  follow-up bean (proactive catalog validation) improves UX from
+  "discovered on next turn" to "discovered immediately."
+
+### Open follow-ups
+
+- Bean: "Telegram proactive model validation" — add a
+  `catalog.is_known()` call at `/model` time so users get instant
+  feedback. Inline `TODO(telegram-proactive-validation, bean
+  pawrrtal-####)` marks the spot.
+- Future: `CANONICAL_HOST` may become a `Settings` field
+  (env-var-driven) so deployments can flip `anthropic` from
+  `agent-sdk` to `bedrock` without code changes. Call sites already
+  go through `model_id.canonical_host(vendor)`, so the change is a
+  one-line swap.
+- Future: per-conversation host override (`bedrock:anthropic/...`)
+  surfaces in the UI as a secondary host picker once a second host
+  ships. The wire format already supports this; only the picker
+  needs work.
+- Future: retire `agno_provider.py` if Agno is no longer needed. It
+  appears in §5b only because it currently consumes a `model_id`
+  string; deciding its fate is a separate ADR.
+
+## §11. Scope boundaries (what this ADR does NOT do)
+
+- Does not introduce a real second host today. `bedrock`, `vertex`,
+  `copilot`, `openrouter`, `azure` are namespace placeholders the
+  `Host` enum will hold once provider classes for them land.
+- Does not migrate existing observability spans / log lines to the
+  new canonical form retroactively. Past logs keep whatever shape
+  they had. New logs use the canonical form.
+- Does not add an admin UI for editing the catalog. The catalog is
+  a Python module; changes ship via PR.
+- Does not change how the chat router composes tools (the
+  no-tools-in-providers rule is unaffected).
+
+## Notes on what stays
+
+- `frontend/features/chat/constants.ts` keeps localStorage key
+  declarations, reasoning-level constants, and safety-mode
+  constants. Only the model-list piece moves to the backend.
+- `VENDOR_LOGOS` (frontend) is a UI concern, not a source-of-truth
+  duplication. Adding a vendor means a new icon, which is a
+  frontend change.
+- The `@octavian-tocan/react-chat-composer` package's
+  `ChatModelOption` type is unchanged. The frontend adapts the
+  catalog API response to it via a small mapper inside
+  `useChatModels`.

@@ -67,7 +67,7 @@ export function BrainAccessPanel(): ReactNode {
 						</h3>
 						<p className="text-[13px] leading-relaxed text-muted-foreground">
 							Invite teammates to your workspace. They can read your saved files,
-							memory, and skills — you control the level of access.
+							memory, and skills. You control the level of access.
 						</p>
 					</div>
 				</div>

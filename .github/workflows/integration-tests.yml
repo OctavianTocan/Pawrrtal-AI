@@ -41,7 +41,7 @@ jobs:
   integration:
     name: Integration suite
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     # Self-hosted to keep token spend bounded: the runner already has
@@ -54,17 +54,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Install backend dependencies
         working-directory: backend
@@ -76,7 +76,7 @@ jobs:
       # was failing on `npm: command not found`.  setup-node provides
       # both binaries on PATH for the duration of the job, with caching.
       - name: Setup Node.js (for npm install of the Claude CLI)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -106,6 +106,8 @@ jobs:
           AUTH_SECRET: ci-not-a-secret
           GOOGLE_API_KEY: ci-not-a-key
           FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          # Required by Settings.workspace_encryption_key (no default).
+          WORKSPACE_ENCRYPTION_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
           CORS_ORIGINS: '["http://localhost:3001"]'
           DATABASE_URL: 'sqlite+aiosqlite:///:memory:'
         run: uv run pytest tests/integration/ -v --tb=short

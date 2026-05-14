@@ -1,0 +1,28 @@
+{
+	"ignore": {
+		"files": [
+			".agents/**",
+			".claude/**",
+			".cline/**",
+			".crush/**",
+			".factory/**",
+			".goose/**",
+			".pi/**",
+			"scripts/**",
+			"frontend/lib/react-dropdown/**",
+			"frontend/lib/react-chat-composer/**",
+			"frontend/lib/react-overlay/**",
+			"../.agents/**",
+			"../.claude/**",
+			"../.cline/**",
+			"../.crush/**",
+			"../.factory/**",
+			"../.goose/**",
+			"../.pi/**",
+			"../scripts/**",
+			"lib/react-dropdown/**",
+			"lib/react-chat-composer/**",
+			"lib/react-overlay/**"
+		]
+	}
+}

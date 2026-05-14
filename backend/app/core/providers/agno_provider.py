@@ -16,6 +16,14 @@ class AgnoProvider:
     """Wraps the Agno agent framework for streaming."""
 
     def __init__(self, model_id: str) -> None:
+        """Construct an Agno provider bound to a specific model slug.
+
+        Args:
+            model_id: The bare vendor slug (e.g. ``"gemini-3-flash-preview"``),
+                **not** the canonical wire form. The factory calls
+                :func:`parse_model_id` first and hands the unwrapped
+                ``parsed.model`` slug here.
+        """
         self._model_id = model_id
 
     async def stream(

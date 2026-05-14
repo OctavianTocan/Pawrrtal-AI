@@ -2,9 +2,10 @@
  * Centralized constants for the chat feature.
  *
  * Houses the canonical set of values, defaults, and `localStorage` keys used
- * across the chat surface (container, composer, controls). Co-locating them
- * here prevents key drift, makes it trivial to audit what we persist client
- * side, and gives one obvious place to look when adding or renaming a key.
+ * across the chat surface (container, composer wiring, host-local
+ * footerActions). Co-locating them here prevents key drift, makes it trivial
+ * to audit what we persist client side, and gives one obvious place to look
+ * when adding or renaming a key.
  *
  * Conventions:
  * - `localStorage` keys are namespaced with `chat-composer:` so they don't
@@ -13,7 +14,13 @@
  *   types at compile time and validate persisted strings at runtime.
  */
 
-import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
+// ─── reasoning levels ──────────────────────────────────────────────────────
+
+/** Reasoning levels exposed in the picker. */
+export const CHAT_REASONING_LEVELS = ['low', 'medium', 'high', 'extra-high'] as const;
+
+/** Narrow union of every reasoning level. */
+export type ChatReasoningLevel = (typeof CHAT_REASONING_LEVELS)[number];
 
 // ─── localStorage keys ─────────────────────────────────────────────────────
 
@@ -39,10 +46,14 @@ export type ChatStorageKey = (typeof CHAT_STORAGE_KEYS)[keyof typeof CHAT_STORAG
 
 // ─── defaults ──────────────────────────────────────────────────────────────
 
-/** Default model used when nothing is persisted yet. */
-export const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
-
-/** Default reasoning level used when nothing is persisted yet. */
+/**
+ * Default reasoning level used when nothing is persisted yet.
+ *
+ * The default model is now sourced from the backend catalog
+ * (`GET /api/v1/models` returns one entry with `is_default: true`), so
+ * there is no `DEFAULT_CHAT_MODEL_ID` constant here — see
+ * `frontend/features/chat/hooks/use-chat-models.ts`.
+ */
 export const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';
 
 /**
@@ -73,19 +84,24 @@ export type SafetyMode = (typeof SAFETY_MODES)[number];
 export const DEFAULT_SAFETY_MODE: SafetyMode = 'auto-review';
 
 /**
- * Order in which the modes are listed in the dropdown. Kept separate from
- * the metadata map so the visual order can change without altering the
- * declaration order of the union (which matters for type narrowing).
+ * Display order for the safety-mode dropdown (top → bottom).
+ * Mirrors SAFETY_MODES but is explicit so future reorders are intentional.
  */
-export const SAFETY_MODE_ORDER: ReadonlyArray<SafetyMode> = [
+export const SAFETY_MODE_ORDER: SafetyMode[] = [
 	'default-permissions',
 	'auto-review',
 	'full-access',
 	'custom',
 ];
 
-/** Modes that render below the in-menu separator (advanced options). */
-export const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set(['custom']);
+/**
+ * "Advanced" modes — the dropdown renders a separator ABOVE the first item in
+ * this set so users see a clear boundary between safe and dangerous choices.
+ */
+export const SAFETY_MODE_ADVANCED: ReadonlySet<SafetyMode> = new Set<SafetyMode>([
+	'full-access',
+	'custom',
+]);
 
 // ─── miscellaneous chat-container constants ────────────────────────────────
 

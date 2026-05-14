@@ -54,7 +54,7 @@ This is a public repo wired to a self-hosted runner pool on Octavian's VPS. CI i
 - **Default runner is self-hosted:** `runs-on: [self-hosted, openclaw-mini, pawrrtal]`. The runner pool is `openclaw-vps-NN` registered out of `/srv/github-runners/<repo>/actions-runner/` as the `gha` system user. Use `ubuntu-latest` only when there's a real reason (macOS/Windows/GPU/untrusted external code already gated separately).
 - **Documented exception:** `rebase.yml` uses `pull_request_target` and never runs PR code; it relies on `author_association` instead of the actor gate. See `.claude/rules/github-actions/safe-pull-request-target.md`.
 - **Repo-level Actions settings** (must be set in the GitHub UI; the standard CI tokens don't have Actions admin scope): require approval for first-time contributor workflows, default workflow permissions = read.
-- **Layout / install / removal:** `docs/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
+- **Layout / install / removal:** `frontend/content/docs/handbook/ci/self-hosted-runner.md`. Use `scripts/install-self-hosted-runner.sh` to add another runner; the script auto-picks the next `openclaw-vps-NN` slot.
 
 New CI surfaces (backend pytest, frontend vitest, Maestro E2E, etc.) belong on the self-hosted runner with the actor gate. If you find yourself thinking "just this once on `ubuntu-latest` without the gate," don't.
 
@@ -66,7 +66,7 @@ Architectural drift is gated by [sentrux](https://github.com/sentrux/sentrux) v0
 - **Local check**: `just sentrux` — runs `scripts/sentrux-check.sh`, which checks a temporary app-code snapshot and excludes agent/tooling roots such as `.agents/`, `.claude/`, `.cursor/`, `.factory/`, `.goose/`, and `.pi/`.
 - **CI**: `.github/workflows/sentrux.yml` runs the same filtered check on every PR to `development`/`main` and posts violations as a PR comment on failure.
 - **Per-session loop** (agents): if the sentrux MCP is wired into your client (Claude Code, Cursor, etc.), call `session_start` before substantive work and `session_end` after to surface architectural regressions caused by the session. Local baseline is stored at `.sentrux/baseline.json` (gitignored).
-- **Why this exists**: see `docs/decisions/2026-05-03-adopt-sentrux-architecture-gating.md` (baseline quality 6753/10000, equality bottleneck, 2.5% test coverage gap noted).
+- **Why this exists**: see `frontend/content/docs/handbook/decisions/2026-05-03-adopt-sentrux-architecture-gating.md` (baseline quality 6753/10000, equality bottleneck, 2.5% test coverage gap noted).
 
 ## Coding Style & Naming Conventions
 
@@ -145,7 +145,7 @@ architecture; the rules at a glance:
 ## How We Work On Pawrrtal
 
 The session-derived working agreement lives in
-`.claude/rules/general/how-we-work-on-pawrrtal.md`. It encodes nine rules
+`.claude/rules/general/how-we-work-on-ai-nexus.md`. It encodes nine rules
 the team keeps re-discovering: read implementations before changing them,
 trace cause before fixing, update `DESIGN.md` when tokens change in code,
 reuse established patterns instead of inventing parallel ones, declare
@@ -154,94 +154,19 @@ every file write, ship tests in the same commit as new features, commit
 one concern at a time, and ask before destructive or scope-bending work.
 Apply on every session.
 
-## Curated Claude rules (Pawrrtal)
+## Claude rules index
 
-Highest-signal defaults for this Next.js + FastAPI + Biome + Bun stack; the full `.claude/rules/` tree has additional coverage.
-
-### Debugging & incidents
-
-- `.claude/rules/general/read-data-before-theory.md`
-- `.claude/rules/general/diagnose-before-workaround.md`
-- `.claude/rules/general/stop-after-two-failed-fixes.md`
-- `.claude/rules/debugging/compare-working-vs-broken-before-fixing.md`
-
-### TypeScript
-
-- `.claude/rules/typescript/never-bypass-type-system-with-any-or-unsafe-cast.md`
-- `.claude/rules/typescript/explicit-return-types-everywhere.md`
-- `.claude/rules/typescript/validate-boundaries.md`
-- `.claude/rules/typescript/discriminated-unions.md`
-- `.claude/rules/typescript/function-signatures-must-be-honest.md`
-- `.claude/rules/typescript/use-direct-named-imports-not-namespace.md`
-
-### React (client UI)
-
-- `.claude/rules/react/avoid-stale-closures-and-mutating-state.md`
-- `.claude/rules/react/use-primitive-values-as-effect-dependencies.md`
-- `.claude/rules/react/purity-in-memo-and-reducers.md`
-- `.claude/rules/react/stable-keys.md`
-- `.claude/rules/react/request-id-cancellation.md`
-- `.claude/rules/react/portal-escape-overflow.md`
-
-### API & fetch boundaries
-
-- `.claude/rules/api/validate-response-shape-at-boundary.md`
-- `.claude/rules/api/abort-controller-per-request.md`
-- `.claude/rules/error-handling/check-response-before-parse.md`
-
-### Auth (sessions/tokens)
-
-- `.claude/rules/auth/deduplicate-concurrent-token-refreshes.md`
-- `.claude/rules/auth/never-override-auth-library-internals.md`
-- `.claude/rules/error-handling/timeout-async-auth.md`
-
-### Errors & async
-
-- `.claude/rules/error-handling/abort-error-is-expected.md`
-- `.claude/rules/error-handling/reset-flags-in-finally.md`
-- `.claude/rules/error-handling/catch-promise-chains.md`
-
-### Testing
-
-- `.claude/rules/testing/vi-hoisted-for-mock-variables.md`
-- `.claude/rules/testing/factory-over-shared-mutable.md`
-- `.claude/rules/testing/test-isolation-ephemeral.md`
-- `.claude/rules/playwright/web-first-assertions.md`
-- `.claude/rules/playwright/role-selectors.md`
-- `.claude/rules/playwright/no-networkidle.md`
-
-### Monorepo & Biome
-
-- `.claude/rules/monorepo/single-lockfile-per-workspace.md`
-- `.claude/rules/monorepo/biome-version-aware-config.md`
-- `.claude/rules/general/biome-2-migration-gotchas.md`
-
-### Git & PRs
-
-- `.claude/rules/git/one-concern-per-pr.md`
-- `.claude/rules/git/conventional-commits.md`
-
-### AI review / sweep
-
-- `.claude/rules/sweep/read-type-signatures-before-use.md`
-- `.claude/rules/sweep/review-comments-are-patterns.md`
-
-**Ignore** `.claude/rules/general/pnpm-only-package-manager.md` for installs — this repo uses Bun (`just install`).
-
-### Vendored Cursor rules (`.cursor/rules/`)
-
-External Cursor rules are vendored under `.cursor/rules/` (repo-root relative). Each file is `.mdc` with YAML frontmatter: `description`, `globs` (and sometimes duplicate `paths`), and `alwaysApply` (when `true`, the rule applies broadly instead of only to glob matches).
-
-A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and diffing alongside the main claude-rules vendored tree. Those `.mdc` copies are not converted to Claude's usual `name` + `paths` `.md` format; use the standard `.claude/rules/**` files above for Claude path-scoped enforcement.
+The curated reading list for the highest-signal rules in this stack lives at [`docs/curated-claude-rules.md`](docs/curated-claude-rules.md). Rule content itself lives under `.claude/rules/**` with `paths:` frontmatter, so Claude only loads each rule when it edits a matching file. Backend agent-loop testing rules (including the `ScriptedStreamFn` pattern) are scoped to `backend/**` and live at [`.claude/rules/testing/agent-loop-testing-philosophy.md`](.claude/rules/testing/agent-loop-testing-philosophy.md).
 
 ## Learned User Preferences
 
-- When the user asks to log a technical or architectural decision, capture it in `docs/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
-- When adapting external UI references (screenshots, other products), use Pawrrtal naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
+- When the user asks to log a technical or architectural decision, capture it in `frontend/content/docs/handbook/decisions/` (ADR-style) and tie it to task tracking (e.g. `beans`) when the flow already uses beans.
+- When adapting external UI references (screenshots, other products), use AI Nexus naming and the repo theme tokens rather than copying third-party branding or palettes from the reference.
 - The user may ask for extremely terse “caveman” explanations when digging into complex technical changes.
-- When a UI fix establishes a reusable pattern (disabled controls, overlays, menus, etc.), capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
+- When a UI fix establishes a reusable pattern, or when a surface fetches data as soon as it appears (for example integration connection state), use a loader or skeleton until the result is known; capture the approach in `DESIGN.md` so the design system stays the single narrative for “how we do this,” not only inline code comments.
 - Prefer modal/backdrop (“scrim”) treatments that combine background blur with a subtle dark tint (for example a linear gradient around 10–15% black) instead of a flat uniform opacity overlay when aiming for depth or a glass-like feel.
 - Electron desktop distribution should plan for an in-app update prompt flow so everyday users are not manually reinstalling each new build.
+- For `@octavian-tocan/react-overlay`, compose overlays using the package’s header and footer surfaces (`ModalHeader`, `ModalDescription`, `ResponsiveModal` `header`/`footer`, and BottomSheet `header`/`footer`) instead of putting titles and primary actions only in the scrollable body.
 
 ## Learned Workspace Facts
 
@@ -253,8 +178,8 @@ A parallel snapshot lives at `.claude/rules/cursor-vendored/` for reference and 
 - The deployed FastAPI backend for remote usage is hosted on Railway; local development still targets plain `localhost` per the ports above unless you intentionally run against that remote URL.
 - Custom React hooks use consistent `use-*` naming for modules and exports (for example `use-login-mutations.ts`).
 - When adding or extending GitHub Actions workflows, follow the repository pattern of running jobs on the team’s custom GitHub runner rather than assuming default hosted runners only.
-
-
+- Git `pre-commit` runs via `backend/.venv/bin/python3 -m pre_commit`; keep `pre-commit` in the backend `pyproject.toml` dev dependency group and run `cd backend && uv sync --group dev` so hooks do not fail with `No module named pre_commit`.
+- From `frontend/`, run scoped Vitest with `bun run test -- <file-or-pattern>` so paths are passed after `--` (avoid `bun run test --run <path>`, which does not match how Vitest is wired here).
 
 <claude-mem-context>
 # Memory Context
@@ -347,12 +272,12 @@ Access 85k tokens of past work via get_observations([IDs]) or mem-search skill.
 
 ### Issue tracker
 
-Local markdown via `beans` CLI — tasks live in `.beans/` as individual markdown files with frontmatter (`status`, `type`, `priority`, `tags`). See `docs/agents/issue-tracker.md`.
+Local markdown via `beans` CLI — tasks live in `.beans/` as individual markdown files with frontmatter (`status`, `type`, `priority`, `tags`). See `frontend/content/docs/handbook/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Beans uses a flat `status` field (`todo`, `in-progress`, `completed`). No triage state machine. The five canonical triage roles are unused — issues are either tracked or done. See `docs/agents/triage-labels.md`.
+Beans uses a flat `status` field (`todo`, `in-progress`, `completed`). No triage state machine. The five canonical triage roles are unused — issues are either tracked or done. See `frontend/content/docs/handbook/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context. One `CONTEXT.md` at the repo root when created. ADRs live in `docs/decisions/` (not `docs/adr/`). See `docs/agents/domain.md`.
+Single-context. One `CONTEXT.md` at the repo root when created. ADRs live in `frontend/content/docs/handbook/decisions/` (not `docs/adr/`). See `frontend/content/docs/handbook/agents/domain.md`.

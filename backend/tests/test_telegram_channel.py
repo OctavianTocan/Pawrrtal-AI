@@ -15,14 +15,16 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.channels import resolve_channel
+from app.channels import registered_surfaces, resolve_channel
 from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
 from app.core.providers.base import StreamEvent
+from app.core.providers.catalog import default_model
+from app.integrations.telegram.bot import _resolve_provider_with_auto_clear
 from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
@@ -30,7 +32,6 @@ from app.integrations.telegram.handlers import (
     handle_plain_message,
     handle_stop_command,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -87,8 +88,6 @@ class TestTelegramRegistry:
         assert isinstance(ch, TelegramChannel)
 
     def test_registered_surface_included(self) -> None:
-        from app.channels import registered_surfaces
-
         assert "telegram" in registered_surfaces()
 
 
@@ -106,9 +105,7 @@ class TestTelegramChannelDeliver:
         channel = TelegramChannel()
         chunks = [
             chunk
-            async for chunk in channel.deliver(
-                _stream({"type": "delta", "content": "hello"}), msg
-            )
+            async for chunk in channel.deliver(_stream({"type": "delta", "content": "hello"}), msg)
         ]
         assert chunks == []
 
@@ -127,9 +124,7 @@ class TestTelegramChannelDeliver:
         msg = _make_channel_message(bot, chat_id=7, message_id=99)
         channel = TelegramChannel()
 
-        async for _ in channel.deliver(
-            _stream({"type": "delta", "content": "hi"}), msg
-        ):
+        async for _ in channel.deliver(_stream({"type": "delta", "content": "hi"}), msg):
             pass
 
         bot.edit_message_text.assert_called_once_with(
@@ -177,9 +172,7 @@ class TestTelegramChannelDeliver:
     async def test_not_modified_error_swallowed(self) -> None:
         """TelegramBadRequest: message is not modified must not propagate."""
         bot = _make_bot()
-        bot.edit_message_text.side_effect = Exception(
-            "TelegramBadRequest: message is not modified"
-        )
+        bot.edit_message_text.side_effect = Exception("TelegramBadRequest: message is not modified")
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
@@ -207,17 +200,13 @@ class TestTelegramChannelDeliver:
 class TestHandlePlainMessage:
     async def test_unbound_user_returns_string(self) -> None:
         """An unknown external_user_id must return the not-bound nudge string."""
-        sender = TelegramSender(
-            user_id=999, chat_id=999, username=None, full_name="Stranger"
-        )
+        sender = TelegramSender(user_id=999, chat_id=999, username=None, full_name="Stranger")
         session = AsyncMock()
         with patch(
             "app.integrations.telegram.handlers.get_user_id_for_external",
             new=AsyncMock(return_value=None),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="hello", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="hello", session=session)
         assert isinstance(result, str)
         assert "don't recognize" in result.lower() or "connect" in result.lower()
 
@@ -225,9 +214,7 @@ class TestHandlePlainMessage:
         """A known user must get a TelegramTurnContext with correct fields."""
         nexus_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
-        sender = TelegramSender(
-            user_id=42, chat_id=42, username="tavi", full_name="Tavi"
-        )
+        sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
 
         # Fake conversation row with no model override.
@@ -245,9 +232,7 @@ class TestHandlePlainMessage:
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="what is RAG?", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="what is RAG?", session=session)
 
         assert isinstance(result, TelegramTurnContext)
         assert result.nexus_user_id == nexus_uid
@@ -258,9 +243,7 @@ class TestHandlePlainMessage:
         """When conversation.model_id is set it must propagate into the context."""
         nexus_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
-        sender = TelegramSender(
-            user_id=42, chat_id=42, username="tavi", full_name="Tavi"
-        )
+        sender = TelegramSender(user_id=42, chat_id=42, username="tavi", full_name="Tavi")
         session = AsyncMock()
 
         fake_conv = AsyncMock()
@@ -277,9 +260,7 @@ class TestHandlePlainMessage:
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
-            result = await handle_plain_message(
-                sender=sender, text="hey", session=session
-            )
+            result = await handle_plain_message(sender=sender, text="hey", session=session)
 
         assert isinstance(result, TelegramTurnContext)
         assert result.model_id == "anthropic/claude-opus-4-5"
@@ -320,22 +301,35 @@ class TestHandleModelCommand:
         """Calling /model with no argument returns the usage hint."""
         sender = TelegramSender(user_id=1, chat_id=1, username=None, full_name=None)
         session = AsyncMock()
-        reply = await handle_model_command(
-            sender=sender, model_arg="", session=session
-        )
+        reply = await handle_model_command(sender=sender, model_arg="", session=session)
         assert "usage" in reply.lower() or "/model" in reply.lower()
 
-    async def test_unknown_model_prefix_returns_error(self) -> None:
-        """A model ID with an unrecognised prefix must be rejected before any DB call."""
+    async def test_model_command_rejects_malformed_input(self) -> None:
+        """/model bogus -> user-facing structural error, nothing stored.
+
+        The parse-on-write path uses ``parse_model_id`` directly, so any
+        string that doesn't match ``[host:]vendor/model`` is rejected
+        before any DB lookup or update.  This is the catalog-ignorant
+        gate documented in ADR 2026-05-14 §7.
+        """
         sender = TelegramSender(user_id=1, chat_id=1, username=None, full_name=None)
         session = AsyncMock()
-        reply = await handle_model_command(
-            sender=sender, model_arg="openai-gpt-4o-no-prefix", session=session
-        )
+        update_mock = AsyncMock(return_value=True)
+        with (
+            patch(
+                "app.integrations.telegram.handlers.get_user_id_for_external",
+                new=AsyncMock(return_value=uuid.uuid4()),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.update_conversation_model",
+                new=update_mock,
+            ),
+        ):
+            reply = await handle_model_command(sender=sender, model_arg="bogus", session=session)
         assert isinstance(reply, str)
-        # Should contain a prefix hint, not a success message.
         assert "✅" not in reply
-        assert "google/" in reply or "anthropic/" in reply or "prefix" in reply.lower()
+        assert "bogus" in reply  # the raw input must appear in the rejection
+        update_mock.assert_not_called()
 
     async def test_unbound_user_returns_error(self) -> None:
         """An unbound sender cannot switch models."""
@@ -346,13 +340,24 @@ class TestHandleModelCommand:
             new=AsyncMock(return_value=None),
         ):
             reply = await handle_model_command(
-                sender=sender, model_arg="google/gemini-3-flash-preview", session=session
+                sender=sender,
+                model_arg="google/gemini-3-flash-preview",
+                session=session,
             )
         assert isinstance(reply, str)
         assert "connect" in reply.lower() or "account" in reply.lower()
 
-    async def test_valid_model_switch_replies_ok(self) -> None:
-        """A bound user switching to a valid model gets the success message."""
+    async def test_model_command_stores_canonical_form_for_well_formed_input(
+        self,
+    ) -> None:
+        """/model anthropic/claude-sonnet-4-6 stores agent-sdk:anthropic/claude-sonnet-4-6.
+
+        The handler runs ``parse_model_id`` and writes ``parsed.id`` (the
+        fully-qualified ``host:vendor/model`` form), regardless of whether
+        the user typed the host prefix.  This is the only remaining write
+        path in the backend that bypasses the Pydantic boundary, so the
+        canonical form is enforced explicitly here.
+        """
         nexus_uid = uuid.uuid4()
         conv_id = uuid.uuid4()
         sender = TelegramSender(user_id=3, chat_id=3, username="t", full_name="T")
@@ -362,6 +367,7 @@ class TestHandleModelCommand:
         fake_conv.id = conv_id
         fake_conv.model_id = None
 
+        update_mock = AsyncMock(return_value=True)
         with (
             patch(
                 "app.integrations.telegram.handlers.get_user_id_for_external",
@@ -373,17 +379,21 @@ class TestHandleModelCommand:
             ),
             patch(
                 "app.integrations.telegram.handlers.update_conversation_model",
-                new=AsyncMock(return_value=True),
+                new=update_mock,
             ),
         ):
             reply = await handle_model_command(
                 sender=sender,
-                model_arg="anthropic/claude-opus-4-5",
+                model_arg="anthropic/claude-sonnet-4-6",
                 session=session,
             )
 
-        assert "anthropic/claude-opus-4-5" in reply
+        canonical_id = "agent-sdk:anthropic/claude-sonnet-4-6"
+        assert canonical_id in reply
         assert "✅" in reply
+        # The persisted value must be the canonical fully-qualified form.
+        update_mock.assert_called_once()
+        assert update_mock.call_args.kwargs["model_id"] == canonical_id
 
     async def test_update_failure_returns_error_message(self) -> None:
         """When the DB update fails the user gets an error string, not an exception."""
@@ -418,3 +428,167 @@ class TestHandleModelCommand:
 
         assert isinstance(reply, str)
         assert "couldn't" in reply.lower() or "fail" in reply.lower() or "try" in reply.lower()
+
+    async def test_valid_model_after_clear_restores_user_choice(self) -> None:
+        """User can re-set with a known /model after the auto-clear path fired.
+
+        The auto-clear path in ``bot.py`` writes ``model_id = NULL``; this
+        test exercises the *follow-up* ``/model`` call that the user issues
+        next to pick a known model.  It must persist the new canonical
+        form unchanged — proving the auto-clear didn't break the write path.
+        """
+        nexus_uid = uuid.uuid4()
+        conv_id = uuid.uuid4()
+        sender = TelegramSender(user_id=5, chat_id=5, username="t", full_name="T")
+        session = AsyncMock()
+
+        # The auto-clear has already happened, so the stored value is NULL.
+        fake_conv = AsyncMock()
+        fake_conv.id = conv_id
+        fake_conv.model_id = None
+
+        update_mock = AsyncMock(return_value=True)
+        with (
+            patch(
+                "app.integrations.telegram.handlers.get_user_id_for_external",
+                new=AsyncMock(return_value=nexus_uid),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                new=AsyncMock(return_value=fake_conv),
+            ),
+            patch(
+                "app.integrations.telegram.handlers.update_conversation_model",
+                new=update_mock,
+            ),
+        ):
+            reply = await handle_model_command(
+                sender=sender,
+                model_arg="agent-sdk:anthropic/claude-haiku-4-5",
+                session=session,
+            )
+
+        canonical_id = "agent-sdk:anthropic/claude-haiku-4-5"
+        assert canonical_id in reply
+        assert "✅" in reply
+        update_mock.assert_called_once()
+        assert update_mock.call_args.kwargs["model_id"] == canonical_id
+
+
+# ---------------------------------------------------------------------------
+# Bot adapter — _resolve_provider_with_auto_clear safety net
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+class TestResolveProviderWithAutoClear:
+    """Cover the chat-turn safety net that catches unknown/malformed stored IDs.
+
+    The handler in :mod:`app.integrations.telegram.bot` wraps the
+    ``resolve_llm`` call so that an unknown-but-well-formed stored model
+    surfaces an immediate user-facing warning, clears the stored value,
+    and still completes the current turn using the catalog default.
+
+    These tests mock ``async_session_maker`` and ``resolve_llm`` so the
+    branching is exercised without spinning up the DB or the providers.
+    """
+
+    @staticmethod
+    def _make_context(model_id: str) -> TelegramTurnContext:
+        return TelegramTurnContext(
+            nexus_user_id=uuid.uuid4(),
+            conversation_id=uuid.uuid4(),
+            model_id=model_id,
+            thread_id=None,
+        )
+
+    async def test_chat_turn_auto_clears_unknown_stored_model(self) -> None:
+        """A well-formed-but-unknown stored ID triggers the auto-clear path.
+
+        - ``_resolve_provider_with_auto_clear`` returns the catalog
+          default's provider for *this* turn,
+        - it surfaces a warning string the caller forwards to the user,
+        - it calls ``update_conversation_model`` with ``model_id=None`` so
+          the stored row is cleared.
+        """
+        context = self._make_context("agent-sdk:anthropic/claude-nonexistent")
+
+        fake_default_provider = MagicMock(name="default_provider")
+        update_mock = AsyncMock(return_value=True)
+        # ``resolve_llm`` is a sync function — use MagicMock, not AsyncMock.
+        resolve_mock = MagicMock(side_effect=[fake_default_provider])
+
+        # ``async_session_maker`` is used as an async context manager.
+        fake_session = AsyncMock()
+        fake_session_maker = MagicMock()
+        fake_session_maker.return_value.__aenter__ = AsyncMock(return_value=fake_session)
+        fake_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(
+                "app.integrations.telegram.bot.resolve_llm",
+                new=resolve_mock,
+            ),
+            patch(
+                "app.integrations.telegram.bot.update_conversation_model",
+                new=update_mock,
+            ),
+            patch(
+                "app.integrations.telegram.bot.async_session_maker",
+                new=fake_session_maker,
+            ),
+        ):
+            provider, warning = await _resolve_provider_with_auto_clear(context)
+
+        # Warning was produced and mentions the bad ID + the default.
+        assert warning is not None
+        assert "agent-sdk:anthropic/claude-nonexistent" in warning
+        assert default_model().id in warning
+
+        # Stored model_id was cleared to NULL.
+        update_mock.assert_awaited_once()
+        assert update_mock.await_args.kwargs["model_id"] is None
+        assert update_mock.await_args.kwargs["conversation_id"] == context.conversation_id
+
+        # resolve_llm was called *once* — only for the catalog default fallback.
+        # (For the unknown path ``require_known()`` raises first, so
+        # ``resolve_llm`` is only invoked for the fallback.)
+        assert resolve_mock.call_count == 1
+        fallback_call = resolve_mock.call_args
+        assert fallback_call.args[0] == default_model().id
+        assert provider is fake_default_provider
+
+    async def test_following_turn_uses_catalog_default_after_clear(self) -> None:
+        """After the auto-clear, a turn with ``model_id=None`` resolves cleanly.
+
+        ``handle_plain_message`` reads ``conversation.model_id`` and falls
+        back to ``default_model().id`` when it is ``NULL``.  Here we
+        simulate that follow-up turn: the resolved context carries the
+        catalog default directly, and the helper neither warns nor clears.
+        """
+        context = self._make_context(default_model().id)
+
+        fake_default_provider = MagicMock(name="default_provider")
+        update_mock = AsyncMock(return_value=True)
+        resolve_mock = MagicMock(side_effect=[fake_default_provider])
+
+        with (
+            patch(
+                "app.integrations.telegram.bot.resolve_llm",
+                new=resolve_mock,
+            ),
+            patch(
+                "app.integrations.telegram.bot.update_conversation_model",
+                new=update_mock,
+            ),
+        ):
+            provider, warning = await _resolve_provider_with_auto_clear(context)
+
+        # Clean path: no warning, no clear.
+        assert warning is None
+        update_mock.assert_not_awaited()
+
+        # resolve_llm was called exactly once with the stored canonical ID.
+        assert resolve_mock.call_count == 1
+        assert resolve_mock.call_args.args[0] == default_model().id
+        assert provider is fake_default_provider

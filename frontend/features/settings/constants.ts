@@ -12,6 +12,7 @@ import {
 	BookOpen,
 	Boxes,
 	Cog,
+	FolderGit2,
 	GitBranch,
 	Globe,
 	Layers,
@@ -26,6 +27,7 @@ import {
 /** Stable IDs for each settings section — used as the URL hash + React key. */
 export const SETTINGS_SECTION_IDS = [
 	'general',
+	'workspaces',
 	'appearance',
 	'configuration',
 	'personalization',
@@ -60,6 +62,7 @@ export type SettingsSection = {
  */
 export const SETTINGS_SECTIONS = [
 	{ id: 'general', label: 'General', Icon: Cog },
+	{ id: 'workspaces', label: 'Workspaces', Icon: FolderGit2 },
 	{ id: 'appearance', label: 'Appearance', Icon: Sun },
 	{ id: 'configuration', label: 'Configuration', Icon: Sliders },
 	{ id: 'personalization', label: 'Personalization', Icon: SparklesIcon },

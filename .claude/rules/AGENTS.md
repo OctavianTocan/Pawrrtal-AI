@@ -1,3 +1,8 @@
+---
+name: agents
+paths: [".no-match"]
+---
+
 # AGENTS.md — claude-rules
 
 Guide for humans and AI agents working on this repository. Covers philosophy, authoring, naming, categorization, and frontmatter conventions.

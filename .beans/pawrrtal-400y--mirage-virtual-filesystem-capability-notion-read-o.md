@@ -75,7 +75,7 @@ speaks fluently.
 - [ ] Per-user auth wired — no Notion token leak between users.
 - [ ] Latency budget documented for a typical "browse + read 1 page"
       turn.
-- [ ] Decision logged in `docs/decisions/` whether to expand to
+- [ ] Decision logged in `frontend/content/docs/handbook/decisions/` whether to expand to
       additional Mirage resources (S3, GDrive, Slack, GitHub) in a
       follow-up.
 - [ ] **Zero provider-specific Mirage shim.** All integration is via

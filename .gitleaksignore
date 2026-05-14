@@ -1,0 +1,15 @@
+# Gitleaks ignore list — false positives only.
+#
+# Format: file:rule:secret-fingerprint  (one per line)
+# Generated from `pre-commit run gitleaks` output.
+#
+# Add findings here only when the matched value is a *deliberate* dummy in
+# CI/test scaffolding (e.g. Fernet-format placeholders for pydantic-settings
+# at import time).  Real secrets must never be ignored — fix the leak instead.
+
+# CI dummy keys: pydantic-settings requires WORKSPACE_ENCRYPTION_KEY at
+# import time even for in-memory test runs that never touch real data.
+# Pinned to a fixed Fernet-format value so test runs are deterministic.
+.github/workflows/tests.yml:generic-api-key:155
+.github/workflows/integration-tests.yml:generic-api-key:106
+.github/workflows/stagehand-e2e.yml:generic-api-key:103

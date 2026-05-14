@@ -97,7 +97,7 @@ export function useConversationMetadataActions(
 	};
 
 	const handleRegenerateTitle = (conversationId: string): void => {
-		toast.loading('Regenerating title…', {
+		toast.loading('Regenerating title...', {
 			id: TOAST_IDS.conversationRegenerateTitle,
 		});
 		regenerateTitleMutation

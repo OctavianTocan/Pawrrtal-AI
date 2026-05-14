@@ -4,12 +4,64 @@ These are *not* database models — they define the shape of data flowing
 through the API layer.
 """
 
+import logging
 import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
+
+from app.core.config import settings
+from app.core.providers.catalog import default_model
+from app.core.providers.model_id import InvalidModelId, parse_model_id
+
+logger = logging.getLogger(__name__)
+
+
+def _canonicalise_model_id(raw: str | None) -> str | None:
+    """Rewrite any accepted input shape to canonical form.
+
+    Canonical form is ``host:vendor/model``. ``None`` passes through.
+
+    Raises:
+        ValueError: If the string fails to parse (FastAPI maps this
+            to HTTP 422).
+    """
+    if raw is None:
+        return None
+    try:
+        return parse_model_id(raw).id
+    except InvalidModelId as exc:
+        # Re-raise as ValueError so Pydantic generates a clean 422.
+        raise ValueError(str(exc)) from exc
+
+
+def _canonicalise_model_id_for_read(raw: str | None) -> str | None:
+    """Output validator for ``ConversationResponse.model_id``.
+
+    Defaults to strict (matches the input contract). When
+    ``settings.strict_conversation_read_validation`` is ``False``,
+    a non-canonical stored value falls back to the catalog default
+    and is logged. Operator escape hatch, not a documented contract.
+    """
+    if raw is None:
+        return None
+    try:
+        return parse_model_id(raw).id
+    except InvalidModelId as exc:
+        if settings.strict_conversation_read_validation:
+            raise ValueError(str(exc)) from exc
+        logger.warning(
+            "CONVERSATION_READ_FALLBACK bad_model_id=%r error=%s",
+            raw,
+            exc,
+        )
+        return default_model().id
+
+
+CanonicalModelId = Annotated[str | None, AfterValidator(_canonicalise_model_id)]
+CanonicalModelIdForRead = Annotated[str | None, AfterValidator(_canonicalise_model_id_for_read)]
 
 # --- User schemas (provided by fastapi-users) --------------------------------
 
@@ -21,35 +73,9 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 
 
 class UserCreate(schemas.BaseUserCreate):
-    """Request schema for user registration (email, password, invite_code)."""
+    """Request schema for user registration (email, password)."""
 
-    # ``invite_code`` is a gate-check field: it's validated in
-    # ``UserManager.create()`` (users.py) to verify the user has a valid
-    # invite before registration is allowed. It is NOT a database column —
-    # it exists only on this schema.
-    #
-    # Problem: fastapi-users converts this schema to a dict and passes it
-    # to ``User(**dict)`` (the SQLAlchemy model). If ``invite_code`` is
-    # still in that dict, SQLAlchemy crashes because ``User`` has no such
-    # column.
-    #
-    # Solution: override the two methods fastapi-users uses to convert
-    # this schema to a dict (``create_update_dict`` for safe=True,
-    # ``create_update_dict_superuser`` for safe=False) and strip
-    # ``invite_code`` so it never reaches the database layer.
-    invite_code: str = ""
-
-    def create_update_dict(self):
-        """Strip ``invite_code`` from the safe (non-superuser) update dict before persistence."""
-        d = super().create_update_dict()
-        d.pop("invite_code", None)
-        return d
-
-    def create_update_dict_superuser(self):
-        """Strip ``invite_code`` from the superuser update dict before persistence."""
-        d = super().create_update_dict_superuser()
-        d.pop("invite_code", None)
-        return d
+    pass
 
 
 class UserUpdate(schemas.BaseUserUpdate):
@@ -92,7 +118,7 @@ class ConversationResponse(BaseModel):
     is_flagged: bool = False
     is_unread: bool = False
     status: str | None = None
-    model_id: str | None = None
+    model_id: CanonicalModelIdForRead = None
     # Always serialized as a list (never null) so the frontend never has to
     # narrow with `?? []` before iterating.
     labels: list[str] = []
@@ -109,7 +135,7 @@ class ConversationUpdate(BaseModel):
     is_flagged: bool | None = None
     is_unread: bool | None = None
     status: str | None = None
-    model_id: str | None = None  # optional — only set when changing model
+    model_id: CanonicalModelId = None  # optional — only set when changing model
     # Optional in the PATCH body — when provided, fully replaces the row's
     # label set. Sentinel `None` means "leave labels unchanged" (matches the
     # other partial-update fields above).
@@ -249,7 +275,7 @@ class ChatRequest(BaseModel):
 
     question: str
     conversation_id: uuid.UUID
-    model_id: str | None = None
+    model_id: CanonicalModelId = None
 
 
 class ChatResponse(BaseModel):

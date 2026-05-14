@@ -109,9 +109,32 @@ export function applyChatEvent(message: AgnoMessage, event: ChatStreamEvent): Ag
 			);
 			return { ...message, tool_calls: updated };
 		}
+		case 'artifact': {
+			// The matching `tool_use` for `render_artifact` arrives just
+			// before this event and is already in `tool_calls` — we keep
+			// the artifact as a separate first-class field rather than
+			// stuffing it into the tool-call slot, so the renderer can
+			// treat artifacts as their own surface (preview card +
+			// expandable dialog) without picking apart tool metadata.
+			const stamped = markStartedAt(message);
+			return {
+				...stamped,
+				artifacts: [...(stamped.artifacts ?? []), event.artifact],
+			};
+		}
 		case 'error':
 			// Should be unreachable — the transport surfaces errors by throwing.
 			return { ...message, content: `Error: ${event.content}`, assistant_status: 'failed' };
+		case 'agent_terminated':
+			// Safety layer fired a controlled stop (iteration cap, wall-clock
+			// budget, or consecutive-error threshold).  Append the explanation
+			// to whatever content the model produced before stopping, and mark
+			// the message complete so it doesn’t linger in a streaming state.
+			return {
+				...message,
+				content: `${message.content ? `${message.content}\n\n` : ''}⚠️ ${event.content}`,
+				assistant_status: 'complete',
+			};
 		default:
 			return message;
 	}

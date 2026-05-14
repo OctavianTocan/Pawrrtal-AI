@@ -14,14 +14,8 @@ interface ConversationSidebarItemProps {
 	title: ReactNode;
 	/** ISO 8601 timestamp of the conversation's last update. */
 	updatedAt: string;
-	/** Whether to render a separator above this item. */
-	showSeparator: boolean;
-	/** Whether the conversation is archived. */
-	isArchived: boolean;
-	/** Whether the conversation is flagged. */
-	isFlagged: boolean;
-	/** Whether the conversation has an unread indicator. */
-	isUnread: boolean;
+	/** Row and conversation status flags. */
+	state: ConversationSidebarItemState;
 	/** Current workflow status tag. */
 	status: ConversationStatus;
 	/** String label IDs currently applied (resolved against NAV_CHATS_LABELS). */
@@ -52,14 +46,25 @@ interface ConversationSidebarItemProps {
 	badges?: ReactNode;
 	/** Content shown after the title (e.g. search match count badge). */
 	titleTrailing?: ReactNode;
-	/** True when this item is part of an active multi-select. */
-	isInMultiSelect?: boolean;
 	/** Called when the row is clicked. */
 	onClick?: () => void;
 	/** Called on mouse down on the row. */
 	onMouseDown?: (e: React.MouseEvent) => void;
 	/** Extra button props for the row's interactive element. */
 	buttonProps?: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> };
+}
+
+interface ConversationSidebarItemState {
+	/** Whether the conversation is archived. */
+	isArchived: boolean;
+	/** Whether the conversation is flagged. */
+	isFlagged: boolean;
+	/** True when this item is part of an active multi-select. */
+	isInMultiSelect?: boolean;
+	/** Whether the conversation has an unread indicator. */
+	isUnread: boolean;
+	/** Whether to render a separator above this item. */
+	showSeparator: boolean;
 }
 
 /**
@@ -80,10 +85,7 @@ export function ConversationSidebarItem({
 	id,
 	title,
 	updatedAt,
-	showSeparator,
-	isArchived,
-	isFlagged,
-	isUnread,
+	state,
 	status,
 	appliedLabelIds,
 	onNavigate,
@@ -99,7 +101,6 @@ export function ConversationSidebarItem({
 	icon,
 	badges,
 	titleTrailing,
-	isInMultiSelect,
 	onClick,
 	onMouseDown,
 	buttonProps,
@@ -108,6 +109,7 @@ export function ConversationSidebarItem({
 	const href = `/c/${id}`;
 	const isSelected = pathname === href;
 	const age = formatConversationAge(updatedAt);
+	const { isArchived, isFlagged, isInMultiSelect, isUnread, showSeparator } = state;
 
 	// Compute absolute URL for clipboard operations. No memoization needed —
 	// the computation is trivial and href is already stable (derived from id).
@@ -117,20 +119,22 @@ export function ConversationSidebarItem({
 	return (
 		<ConversationSidebarItemView
 			title={title}
-			isSelected={isSelected}
-			showSeparator={showSeparator}
+			state={{
+				isArchived,
+				isFlagged,
+				isInMultiSelect,
+				isSelected,
+				isUnread,
+				showSeparator,
+			}}
 			age={age}
 			href={href}
 			absoluteHref={absoluteHref}
-			isArchived={isArchived}
-			isFlagged={isFlagged}
-			isUnread={isUnread}
 			status={status}
 			appliedLabelIds={appliedLabelIds}
 			icon={icon}
 			badges={badges}
 			titleTrailing={titleTrailing}
-			isInMultiSelect={isInMultiSelect}
 			onClick={onClick}
 			onMouseDown={onMouseDown}
 			onClickMenuItem={() => onNavigate(href)}

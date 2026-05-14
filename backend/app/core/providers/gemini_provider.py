@@ -24,11 +24,13 @@ from app.core.agent_loop import (
     UserMessage,
     agent_loop,
 )
+from app.core.agent_loop.safety_factory import safety_from_settings
 from app.core.agent_loop.types import TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
 from app.core.config import settings
+from app.core.keys import resolve_api_key
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -102,18 +104,36 @@ def _build_gemini_contents(
     return contents
 
 
-def make_gemini_stream_fn(model_id: str) -> StreamFn:
+def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
-    Returns an async generator that yields LLMEvents.  The generator is
-    provider-specific; the calling agent_loop() is not.
+    Args:
+        model_id: Gemini model identifier (e.g. ``"gemini-3.1-flash-lite-preview"``).
+        user_id: Authenticated user UUID, used to resolve a per-workspace
+            ``GEMINI_API_KEY`` override. When ``None`` the gateway-global
+            ``settings.google_api_key`` is used directly, matching
+            ``ClaudeLLM``'s optional ``user_id`` contract for unauthenticated
+            background work (e.g. utility agents).
+
+    Returns:
+        An async generator factory that yields ``LLMEvent``s. The generator
+        is provider-specific; the calling ``agent_loop()`` is not.
     """
-    client = genai.Client(api_key=settings.google_api_key)
 
     async def stream_fn(
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
+        # Per-user override takes precedence; ``resolve_api_key`` falls back
+        # to ``settings.google_api_key`` automatically when no override is
+        # set, so the explicit ``or settings.google_api_key`` is dead code
+        # and has been removed. For unauthenticated calls (no user_id), we
+        # read the gateway global directly.
+        if user_id is not None:
+            api_key = resolve_api_key(user_id, "GEMINI_API_KEY")
+        else:
+            api_key = settings.google_api_key
+        client = genai.Client(api_key=api_key)
         contents = _build_gemini_contents(messages)
         # ``GenerateContentConfig.tools`` is typed as the wider union
         # ``list[Tool | Callable | mcp.Tool | ClientSession] | None``;
@@ -176,9 +196,7 @@ def make_gemini_stream_fn(model_id: str) -> StreamFn:
 
         except Exception as exc:
             # Log so the error is visible in app.log — previously swallowed silently.
-            logger.error(
-                "Gemini streaming error model=%s: %s", model_id, exc, exc_info=True
-            )
+            logger.error("Gemini streaming error model=%s: %s", model_id, exc, exc_info=True)
             error_text = f"Gemini error: {exc}"
             # Emit a text delta so the frontend shows the error instead of an empty bubble.
             yield LLMTextDeltaEvent(type="text_delta", text=error_text)
@@ -222,9 +240,18 @@ class GeminiLLM:
     chat.py).  Tools are injected per-request via the AgentContext.
     """
 
-    def __init__(self, model_id: str) -> None:
+    def __init__(self, model_id: str, *, user_id: uuid.UUID | None = None) -> None:
+        """Construct a Gemini provider.
+
+        Args:
+            model_id: Gemini model identifier.
+            user_id: Authenticated user UUID, optional. When supplied, a
+                per-workspace ``GEMINI_API_KEY`` override is honoured;
+                otherwise the gateway-global key is used. Optional to match
+                ``ClaudeLLM``'s contract for unauthenticated callers.
+        """
         self._model_id = model_id
-        self._stream_fn = make_gemini_stream_fn(model_id)
+        self._stream_fn = make_gemini_stream_fn(model_id, user_id)
 
     async def stream(
         self,
@@ -277,7 +304,14 @@ class GeminiLLM:
             tools=list(tools or []),
         )
         prompt = UserMessage(role="user", content=question)
-        config = AgentLoopConfig(convert_to_llm=_identity_convert)
+        # Safety config is read from app settings so limits are tuneable via
+        # environment variables (AGENT_MAX_ITERATIONS, AGENT_MAX_WALL_CLOCK_SECONDS,
+        # etc.) without a code deploy.  Defaults are conservative and appropriate
+        # for the interactive chat path; raise them for long-running automations.
+        config = AgentLoopConfig(
+            convert_to_llm=_identity_convert,
+            safety=safety_from_settings(settings),
+        )
 
         try:
             async for event in agent_loop([prompt], context, config, self._stream_fn):
@@ -299,6 +333,21 @@ class GeminiLLM:
                         type="tool_result",
                         content=event["content"],
                         tool_use_id=event["tool_call_id"],
+                    )
+
+                elif event["type"] == "agent_terminated":
+                    # Safety layer tripped — forward the structured event so
+                    # the frontend can render a distinct termination notice
+                    # instead of a generic error banner.  ``reason`` is the
+                    # machine-readable label; ``message`` is the human copy.
+                    logger.warning(
+                        "AGENT_TERMINATED reason=%s details=%s",
+                        event["reason"],
+                        event["details"],
+                    )
+                    yield StreamEvent(
+                        type="agent_terminated",
+                        content=event["message"],
                     )
 
                 elif event["type"] == "agent_end":

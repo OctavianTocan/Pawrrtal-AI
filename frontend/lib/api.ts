@@ -177,6 +177,11 @@ export const API_ENDPOINTS = {
 		 */
 		deleteFile: (id: string, path: string) => `/api/v1/workspaces/${id}/files/${path}`,
 	},
+	/** Per-user workspace environment variable overrides. */
+	workspace: {
+		/** Read the workspace env vars. */
+		env: '/api/v1/workspace/env',
+	},
 	/** Third-party messaging channels (Telegram today; more later). */
 	channels: {
 		/** List every channel binding owned by the authenticated user. */

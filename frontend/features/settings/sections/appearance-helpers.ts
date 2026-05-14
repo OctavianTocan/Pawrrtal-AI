@@ -9,7 +9,7 @@
  * `@/features/appearance` module — the types and defaults are inlined as
  * mock data and have a `Mock` prefix so any future re-import doesn't
  * silently re-bind to a system that's gone. See
- * `docs/decisions/2026-05-06-rip-theming-system.md`.
+ * `frontend/content/docs/handbook/decisions/2026-05-06-rip-theming-system.md`.
  */
 
 import { LaptopMinimal, Moon, Sun } from 'lucide-react';
@@ -24,7 +24,7 @@ export const COLOR_SLOTS = [
 	'destructive',
 ] as const;
 
-/** Single color slot key (`'background' | 'foreground' | …`). */
+/** Single color slot key (`'background' | 'foreground' | ...`). */
 export type ColorSlot = (typeof COLOR_SLOTS)[number];
 
 /** Tuple of the three font family slots the visual mock displays. */

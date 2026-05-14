@@ -32,6 +32,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.providers.catalog import default_model
+from app.core.providers.model_id import InvalidModelId, parse_model_id
 from app.crud.channel import (
     get_or_create_telegram_conversation_full,
     get_user_id_for_external,
@@ -48,17 +50,6 @@ _CODE_SHAPE = re.compile(r"^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$")
 logger = logging.getLogger(__name__)
 
 PROVIDER = "telegram"
-
-# Default model used when the conversation has no stored override.
-# Provider-prefixed: "<provider>/<model-id>".  Other surfaces (web, electron)
-# already use this shape; Telegram should match.
-_DEFAULT_MODEL = "google/gemini-3-flash-preview"
-
-# Model ID prefixes accepted by /model.  Anything else is rejected with a
-# helpful message rather than silently stored and failing at runtime.
-# These match the provider segments resolve_llm() in core/providers/factory
-# already understands.
-_VALID_MODEL_PREFIXES = ("google/", "anthropic/")
 
 # Reply strings — centralized here so copy review doesn't require tracing
 # through the dispatcher.
@@ -80,20 +71,19 @@ _BIND_BAD_CODE_MESSAGE = (
 _STOP_STOPPED_MESSAGE = "⏹ Stopped."
 _STOP_NOTHING_MESSAGE = "Nothing is running right now."
 _MODEL_MISSING_MESSAGE = (
-    "Usage: /model <provider>/<model-id>\n\n"
-    "Examples:\n"
-    "  /model google/gemini-3-flash-preview\n"
-    "  /model anthropic/claude-opus-4-5"
+    "Usage: /model &lt;vendor&gt;/&lt;model&gt;\n\n"
+    "The structural form is <code>[host:]vendor/model</code>; the host "
+    "prefix is optional and filled in automatically."
+)
+_MODEL_INVALID_MESSAGE = (
+    "Couldn't parse <code>{raw}</code> as a model ID ({reason}).\n\n"
+    "Expected structural form: <code>[host:]vendor/model</code>."
 )
 _MODEL_NOT_BOUND_MESSAGE = "You need to connect your account first before switching models."
-_MODEL_UNKNOWN_PREFIX_MESSAGE = (
-    "Unknown model prefix. Supported prefixes: google/, anthropic/\n\n"
-    "Examples:\n"
-    "  /model google/gemini-3-flash-preview\n"
-    "  /model anthropic/claude-opus-4-5"
-)
 _MODEL_OK_MESSAGE = "Model switched to <code>{model_id}</code> ✅"
 _MODEL_FAIL_MESSAGE = "Couldn't update model — please try again."
+_NEW_NOT_BOUND_MESSAGE = "Connect your account first before starting a new conversation."
+_NEW_OK_MESSAGE = "✨ New conversation started. What's on your mind?"
 
 
 @dataclass(frozen=True)
@@ -108,6 +98,8 @@ class TelegramSender:
     chat_id: int
     username: str | None
     full_name: str | None
+    # Telegram Bot API 9.3+ topic thread ID.  None when topics not enabled.
+    thread_id: int | None = None
 
 
 @dataclass(frozen=True)
@@ -127,6 +119,9 @@ class TelegramTurnContext:
 
     model_id: str
     """Model to use for this turn (default or conversation override)."""
+
+    thread_id: int | None = None
+    """Telegram topic thread ID, forwarded from the sender. None for plain DMs."""
 
 
 async def handle_start_command(
@@ -228,15 +223,17 @@ async def handle_plain_message(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
-    model_id = conversation.model_id or _DEFAULT_MODEL
+    model_id = conversation.model_id or default_model().id
 
     logger.info(
-        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s text_len=%d",
+        "TELEGRAM_TURN user_id=%s conversation_id=%s model=%s thread_id=%s text_len=%d",
         nexus_user_id,
         conversation.id,
         model_id,
+        sender.thread_id,
         len(text),
     )
 
@@ -244,7 +241,59 @@ async def handle_plain_message(
         nexus_user_id=nexus_user_id,
         conversation_id=conversation.id,
         model_id=model_id,
+        thread_id=sender.thread_id,
     )
+
+
+async def handle_new_command(
+    *,
+    sender: TelegramSender,
+    session: AsyncSession,
+) -> str:
+    """Create a fresh conversation for this sender, staying in the same topic.
+
+    ``/new`` inside a Telegram topic thread creates a new conversation
+    scoped to that thread — the reply stays in the same topic. In a plain
+    DM (no topics) it simply opens a blank slate, same as the web ``/new``.
+
+    Args:
+        sender: Normalized sender identity (carries ``thread_id``).
+        session: Async database session.
+
+    Returns:
+        Reply string the bot should send immediately.
+    """
+    nexus_user_id = await get_user_id_for_external(
+        provider=PROVIDER,
+        external_user_id=str(sender.user_id),
+        session=session,
+    )
+    if nexus_user_id is None:
+        return _NEW_NOT_BOUND_MESSAGE
+
+    from datetime import datetime  # noqa: PLC0415 — already imported by callers
+
+    from app.models import Conversation  # noqa: PLC0415
+
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        user_id=nexus_user_id,
+        title="Telegram",
+        origin_channel="telegram",
+        telegram_thread_id=sender.thread_id,
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+    )
+    session.add(conversation)
+    await session.commit()
+
+    logger.info(
+        "TELEGRAM_NEW_CONVERSATION user_id=%s conversation_id=%s thread_id=%s",
+        nexus_user_id,
+        conversation.id,
+        sender.thread_id,
+    )
+    return _NEW_OK_MESSAGE
 
 
 def handle_stop_command(*, was_running: bool) -> str:
@@ -291,15 +340,18 @@ async def handle_model_command(
     Returns:
         Reply string the bot should send immediately.
     """
-    model_id = model_arg.strip()
-    if not model_id:
+    # TODO(pawrrtal-yea3): proactive catalog validation via catalog.is_known()
+    # at /model time so unknown-but-well-formed IDs are rejected here instead
+    # of triggering the auto-clear path on the next chat turn.  For now the
+    # handler stays catalog-ignorant — only the structural parser runs.
+    raw = model_arg.strip()
+    if not raw:
         return _MODEL_MISSING_MESSAGE
 
-    # Reject unknown prefixes immediately — storing a garbage ID would fail
-    # silently at stream time, which is much harder to debug than a clear
-    # rejection here.
-    if not any(model_id.startswith(p) for p in _VALID_MODEL_PREFIXES):
-        return _MODEL_UNKNOWN_PREFIX_MESSAGE
+    try:
+        parsed = parse_model_id(raw)
+    except InvalidModelId as exc:
+        return _MODEL_INVALID_MESSAGE.format(raw=raw, reason=str(exc))
 
     nexus_user_id = await get_user_id_for_external(
         provider=PROVIDER,
@@ -312,18 +364,23 @@ async def handle_model_command(
     conversation = await get_or_create_telegram_conversation_full(
         user_id=nexus_user_id,
         session=session,
+        thread_id=sender.thread_id,
     )
 
+    # Store the canonical, fully-qualified form ("host:vendor/model"), not
+    # the raw user input — keeps stored model_ids consistent regardless of
+    # whether the user typed the host prefix.
+    canonical_id = parsed.id
     updated = await update_conversation_model(
         conversation_id=conversation.id,
-        model_id=model_id,
+        model_id=canonical_id,
         session=session,
     )
     if not updated:
         logger.warning(
             "TELEGRAM_MODEL_UPDATE_FAILED conversation_id=%s model_id=%s",
             conversation.id,
-            model_id,
+            canonical_id,
         )
         return _MODEL_FAIL_MESSAGE
 
@@ -331,6 +388,6 @@ async def handle_model_command(
         "TELEGRAM_MODEL_SET user_id=%s conversation_id=%s model_id=%s",
         nexus_user_id,
         conversation.id,
-        model_id,
+        canonical_id,
     )
-    return _MODEL_OK_MESSAGE.format(model_id=model_id)
+    return _MODEL_OK_MESSAGE.format(model_id=canonical_id)

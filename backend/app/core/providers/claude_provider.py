@@ -60,6 +60,7 @@ from app.core.agent_loop.types import AgentTool
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
+from app.core.keys import resolve_api_key
 
 from ._claude_tool_bridge import (
     MCP_SERVER_NAME as AGENT_TOOL_MCP_SERVER_NAME,
@@ -160,8 +161,6 @@ class ClaudeLLMConfig:
     """Additional environment variables forwarded to the CLI subprocess."""
 
 
-
-
 # ---------------------------------------------------------------------------
 # Provider
 # ---------------------------------------------------------------------------
@@ -175,9 +174,25 @@ class ClaudeLLM:
         model_id: str,
         *,
         config: ClaudeLLMConfig | None = None,
+        user_id: uuid.UUID | None = None,
     ) -> None:
+        """Construct a Claude provider bound to a specific model slug.
+
+        Args:
+            model_id: The bare vendor slug (e.g. ``"claude-sonnet-4-6"``),
+                **not** the canonical wire form. The factory calls
+                :func:`parse_model_id` first and hands the unwrapped
+                ``parsed.model`` slug here; ``_MODEL_MAP`` is keyed on
+                bare slugs by design.
+            config: Optional Claude-specific config (OAuth token,
+                ``max_turns``, extra env). Defaults are read by the
+                factory from ``settings``.
+            user_id: App-level user UUID. When set, ``stream()`` resolves
+                per-workspace API-key overrides for this user.
+        """
         self._model_id = model_id
         self._config = config or ClaudeLLMConfig()
+        self._user_id = user_id
 
     async def stream(
         self,
@@ -199,12 +214,20 @@ class ClaudeLLM:
             user_id: App-level user UUID. Currently unused by this
                 provider but kept in the protocol so future per-user
                 cwd / quota logic can wire in without a signature change.
+            history: Ignored — the Claude SDK manages session continuity
+                natively via ``resume``. Accepted for protocol parity
+                with other providers (e.g. ``GeminiLLM``).
+            tools: Optional list of cross-provider :class:`AgentTool`
+                instances. Bridged into a single in-process MCP server
+                by ``_claude_tool_bridge`` so the SDK can call them.
+            system_prompt: Optional system prompt to override the
+                provider-default chat-scoped prompt. Falls back to
+                :data:`DEFAULT_AGENT_SYSTEM_PROMPT` when ``None``.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
             events, an optional rate-limit warning, and any error events.
         """
-        del user_id  # reserved for future per-user routing
         options = self._build_options(
             conversation_id,
             system_prompt=system_prompt,
@@ -251,9 +274,7 @@ class ClaudeLLM:
             )
         except CLIJSONDecodeError:
             logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event(
-                "Failed to parse a JSON message from the Claude Code CLI."
-            )
+            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
         except ClaudeSDKError as error:
             # `exception` (not `error`) so the traceback lands in the log
             # — broad SDK errors are the bucket where new failure modes
@@ -358,9 +379,12 @@ class ClaudeLLM:
     def _build_env(self) -> dict[str, str]:
         """Compose the env dict forwarded to the CLI subprocess."""
         env: dict[str, str] = dict(self._config.extra_env)
-        token = self._config.oauth_token
-        if token:
-            env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+        if self._user_id:
+            token = resolve_api_key(self._user_id, "CLAUDE_CODE_OAUTH_TOKEN")
+            if token:
+                env["CLAUDE_CODE_OAUTH_TOKEN"] = token
+        elif self._config.oauth_token:
+            env["CLAUDE_CODE_OAUTH_TOKEN"] = self._config.oauth_token
         return env
 
 
@@ -444,8 +468,11 @@ def _session_exists(session_id: str, directory: str | None) -> bool:
 # Event-translation helpers live in ``_claude_events`` so this file
 # stays under the 500-line gate.  Re-exported here because the existing
 # tests + provider code import them from this module — keeping the
-# import surface stable means the split is internal-only.
-from ._claude_events import (
+# import surface stable means the split is internal-only. Late import is
+# intentional: it must follow the class definitions above so the module
+# graph round-trips without a circular reference; ruff's E402 doesn't
+# express this constraint, so it's silenced explicitly.
+from ._claude_events import (  # noqa: E402  (deliberate post-class re-export)
     _error_event,
     _events_from_assistant,
     _events_from_message,

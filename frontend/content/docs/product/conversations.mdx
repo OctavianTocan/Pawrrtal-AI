@@ -1,0 +1,62 @@
+---
+title: Conversations & Sidebar
+description: How conversations are organised, navigated, and managed.
+---
+
+# Conversations & Sidebar
+
+## Starting a new conversation
+
+Every page in Pawrrtal has a composer at the bottom of the main area. Typing a
+message and pressing Enter (or clicking the send button) creates a new
+conversation automatically — there is no explicit "New chat" button required.
+To start fresh from anywhere in the app, click the new-session icon at the top
+of the sidebar, which navigates to the root page and opens a blank composer.
+
+## Sidebar layout
+
+The left sidebar lists all your conversations, organised into date-based groups
+by the most recent activity. The group labels are:
+
+- **Today** — conversations updated on the current calendar day.
+- **Yesterday** — conversations updated the previous calendar day.
+- **Earlier dates** — each remaining group is labelled with a short month and
+  day string (for example "Mar 25"), one group per calendar day.
+- **Archived** — a separate collapsed group at the bottom for conversations you
+  have archived.
+
+Each group can be collapsed or expanded by clicking its header. Collapsed groups
+persist across sessions via `localStorage` (key: `nav-chats-collapsed-groups`),
+so your preferred layout survives page reloads.
+
+## Searching conversations
+
+A search bar sits at the top of the sidebar. Typing two or more characters
+filters the conversation list by title — the match is case-insensitive and
+checks whether the query appears anywhere in the title. Searches shorter than
+two characters are ignored and the full list is shown. Search is title-only;
+message content is not indexed in the sidebar filter.
+
+## Context-menu actions
+
+Right-clicking a conversation (or using the three-dot menu that appears on
+hover) opens a two-tier action menu. Available actions include:
+
+- **Open** — navigate to the conversation.
+- **Status** — tag the conversation with a workflow status (submenu).
+- **Labels** — toggle pre-defined labels such as Bug, Feature, Idea, Question,
+  and Reference (submenu).
+- **Flag / Unflag** — mark the conversation for follow-up (keyboard: Shift+F).
+- **Mark as Unread / Read** — toggle the unread indicator (keyboard: Shift+U).
+- **Rename** — edit the conversation title inline (keyboard: F2).
+- **Archive / Unarchive** — move the conversation to the Archived group or back
+  (keyboard: E).
+- **More** submenu — Regenerate Title (ask the model to re-derive a title from
+  the conversation), Open in New Window, Copy Link, Export as Markdown.
+- **Delete** — permanently remove the conversation (keyboard: Backspace).
+
+## Sidebar collapse state persistence
+
+The set of date-group keys you have collapsed is stored in `localStorage` under
+the key `nav-chats-collapsed-groups`. This is client-side preference state — it
+does not sync across devices or browsers.

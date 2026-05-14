@@ -39,6 +39,7 @@ import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/On
 import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
 import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { NavUser, type NavUserIdentity } from './nav-user';
 import { NewSessionButton } from './new-session-button';
 import { Button } from './ui/button';
@@ -171,57 +172,76 @@ function WorkspaceSelector(): React.JSX.Element {
 			<DropdownMenuSeparator />
 			<DropdownMenuItem onSelect={handleOpenOnboarding}>
 				<FolderPlusIcon aria-hidden="true" className="size-3.5" />
-				Add Workspace...
+				Add Workspace&hellip;
 			</DropdownMenuItem>
 		</DropdownPanelMenu>
 	);
 }
 
 function HelpMenu(): React.JSX.Element {
-	return (
-		<DropdownPanelMenu
-			asChild
-			usePortal
-			align="end"
-			contentClassName="popover-styled p-1 min-w-56"
-			trigger={
-				<Button
-					aria-label="Open documentation menu"
-					className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground aria-expanded:bg-foreground/[0.05]"
-					size="icon-xs"
-					type="button"
-					variant="ghost"
-				>
-					<CircleHelpIcon aria-hidden="true" className="size-4" />
-				</Button>
-			}
-		>
-			{HELP_LINKS.map((link) => {
-				const Icon = link.icon;
+	const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
+	const [isAppleLike, setIsAppleLike] = React.useState(false);
 
-				return (
-					<DropdownMenuItem className="justify-between" key={link.label}>
-						<span className="flex items-center gap-2">
-							<Icon aria-hidden="true" className="size-3.5" />
-							{link.label}
-						</span>
-						<ExternalLinkIcon
-							aria-hidden="true"
-							className="size-3.5 text-muted-foreground"
-						/>
-					</DropdownMenuItem>
-				);
-			})}
-			<DropdownMenuSeparator />
-			<DropdownMenuItem>
-				<BookOpenIcon aria-hidden="true" className="size-3.5" />
-				All Documentation
-			</DropdownMenuItem>
-			<DropdownMenuItem>
-				<SettingsIcon aria-hidden="true" className="size-3.5" />
-				Keyboard Shortcuts
-			</DropdownMenuItem>
-		</DropdownPanelMenu>
+	React.useEffect(() => {
+		if (typeof navigator === 'undefined') return;
+		setIsAppleLike(/Mac|iPhone|iPad|iPod/i.test(navigator.userAgent));
+	}, []);
+
+	return (
+		<>
+			<KeyboardShortcutsDialog
+				isMac={isAppleLike}
+				onOpenChange={setShortcutsOpen}
+				open={shortcutsOpen}
+			/>
+			<DropdownPanelMenu
+				asChild
+				usePortal
+				align="end"
+				contentClassName="popover-styled p-1 min-w-56"
+				trigger={
+					<Button
+						aria-label="Open documentation menu"
+						className="size-7 rounded-[7px] text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground aria-expanded:bg-foreground/[0.05]"
+						size="icon-xs"
+						type="button"
+						variant="ghost"
+					>
+						<CircleHelpIcon aria-hidden="true" className="size-4" />
+					</Button>
+				}
+			>
+				{HELP_LINKS.map((link) => {
+					const Icon = link.icon;
+
+					return (
+						<DropdownMenuItem className="justify-between" key={link.label}>
+							<span className="flex items-center gap-2">
+								<Icon aria-hidden="true" className="size-3.5" />
+								{link.label}
+							</span>
+							<ExternalLinkIcon
+								aria-hidden="true"
+								className="size-3.5 text-muted-foreground"
+							/>
+						</DropdownMenuItem>
+					);
+				})}
+				<DropdownMenuSeparator />
+				<DropdownMenuItem>
+					<BookOpenIcon aria-hidden="true" className="size-3.5" />
+					All Documentation
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onSelect={() => {
+						setShortcutsOpen(true);
+					}}
+				>
+					<SettingsIcon aria-hidden="true" className="size-3.5" />
+					Keyboard Shortcuts
+				</DropdownMenuItem>
+			</DropdownPanelMenu>
+		</>
 	);
 }
 
@@ -238,6 +258,8 @@ function HelpMenu(): React.JSX.Element {
  */
 function AppHeader(): React.JSX.Element {
 	const isMacDesktop = useIsMacDesktop();
+	const { isMobile, state } = useSidebar();
+	const showHeaderNewSession = !isMobile && state === 'collapsed';
 
 	return (
 		<header
@@ -265,6 +287,7 @@ function AppHeader(): React.JSX.Element {
 					className="ml-1 data-vertical:h-4 data-vertical:self-auto"
 				/>
 				<WorkspaceSelector />
+				{showHeaderNewSession ? <NewSessionButton layout="headerCompact" /> : null}
 			</div>
 
 			{/* Spacer that consumes the leftover width and stays inside
@@ -406,7 +429,7 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
 						<NavUser user={SIDEBAR_USER} />
 					</SidebarFocusShell>
 				</Sidebar>
-				<div className="h-full w-full min-w-0 pt-10">
+				<div className="size-full min-w-0 pt-10">
 					<ChatFocusShell>{children}</ChatFocusShell>
 				</div>
 			</>

@@ -1,7 +1,6 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { SidebarSectionHeader } from '@/components/ui/sidebar-section-header';
 
 interface CollapsibleGroupHeaderProps {
 	/** The date-group label text (e.g. "Today", "Yesterday", "Mar 25"). */
@@ -29,31 +28,13 @@ export function CollapsibleGroupHeader({
 }: CollapsibleGroupHeaderProps): React.JSX.Element {
 	return (
 		<li>
-			<button
-				type="button"
-				onClick={onToggle}
-				className="w-full py-2 px-4 flex items-center gap-1.5 cursor-pointer group/header relative"
-			>
-				<div className="absolute inset-y-0.5 left-2 right-2 rounded-[6px] group-hover/header:bg-foreground/2 transition-colors pointer-events-none" />
-				<ChevronRight
-					className={cn(
-						'h-3.5 w-3.5 text-muted-foreground/60 transition-transform relative',
-						!isCollapsed && 'rotate-90'
-					)}
-				/>
-				{/* DESIGN.md → Sidebar Type Baseline pins the floor at 14px
-				    (`text-sm`); group-meta de-emphasis is carried by
-				    `text-muted-foreground`, not a smaller font size. */}
-				<span className="text-sm font-medium text-muted-foreground relative">
-					{label}
-					{isCollapsed ? (
-						<>
-							{' · '}
-							<span className="text-muted-foreground/50">{itemCount}</span>
-						</>
-					) : null}
-				</span>
-			</button>
+			<SidebarSectionHeader
+				collapsedMetaCount={itemCount}
+				isCollapsed={isCollapsed}
+				label={label}
+				onToggle={onToggle}
+				variant="collapsible"
+			/>
 		</li>
 	);
 }

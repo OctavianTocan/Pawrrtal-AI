@@ -39,14 +39,14 @@ jobs:
   check:
     name: bun run check
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
 
@@ -55,11 +55,20 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
       - name: Build local libs (frontend/lib/* submodules)
         run: bash scripts/build-local-libs.sh
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate Fumadocs source files
+        working-directory: frontend
+        run: bun run generate:docs
 
       - name: Run check (Biome + TypeScript + file-lines)
         id: check

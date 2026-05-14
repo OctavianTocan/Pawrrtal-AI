@@ -1,40 +1,47 @@
-"""Shared scripted-trajectory test infrastructure for agent_loop harness tests.
+"""Shared test harness for agent-loop scenario tests.
 
-Philosophy — "reverse eval":
-    Evaluate the harness under scripted model conditions, not the model
-    itself.  Each test defines a realistic sequence of LLM decisions
-    (tool calls, text responses, stream errors) and runs them through the
-    real agent_loop with real tool execution, real safety enforcement, and
-    real retry logic.  The only fake is the LLM.
+``ScriptedStreamFn`` replaces the real LLM at the ``StreamFn`` seam so tests
+run through the genuine ``agent_loop``, safety layer, and tool-execution code
+without any real API calls.
 
-Usage:
+The pattern is sometimes called "reverse eval" or "mock-provider scenario
+testing":
+
+* You author a deterministic decision sequence (tool calls, text replies,
+  errors) as a list of "turns".
+* ``ScriptedStreamFn`` replays the sequence one turn per agent-loop call.
+* The real harness (``agent_loop``, tool execution) runs against the
+  scripted decisions.
+* Assertions target what the harness *did*, not what the LLM *said*.
+
+References
+----------
+* pytest-agentcontract  — contract-style fixture pattern
+* langchain-replay      — recorded response replay
+* Agentspan mock_run    — provider-level replay
+
+Usage
+-----
+::
+
     from tests.agent_harness import (
         ScriptedStreamFn,
         echo_tool,
+        error_turn,
         failing_tool,
         identity_convert,
+        make_recording_stream_fn,
+        parallel_tool_calls_turn,
+        run_scenario,
         text_turn,
         tool_call_turn,
-        error_turn,
     )
-
-    stream = ScriptedStreamFn(turns=[
-        tool_call_turn("echo", {"value": "step-1"}),
-        text_turn("Done."),
-    ])
-    provider = GeminiLLM("gemini-test")
-    monkeypatch.setattr(provider, "_stream_fn", stream)
-
-Rule: Every new test that exercises agent_loop harness behavior (safety,
-tool execution, retry, event translation) MUST use ScriptedStreamFn.
-Using bare AsyncMock or hand-rolled generators for multi-turn scenarios
-is a code smell — migrate them here.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+import dataclasses
+from collections.abc import AsyncIterator
 
 from app.core.agent_loop import (
     AgentContext,
@@ -43,26 +50,32 @@ from app.core.agent_loop import (
     AgentMessage,
     AgentSafetyConfig,
     AgentTool,
-    LLMEvent,
     UserMessage,
     agent_loop,
 )
 from app.core.agent_loop.types import (
     LLMDoneEvent,
+    LLMEvent,
     LLMTextDeltaEvent,
     LLMToolCallEvent,
     TextContent,
     ToolCallContent,
 )
 
-
 # ---------------------------------------------------------------------------
-# Turn builders — construct realistic LLMEvent sequences
+# Turn builders — each returns a list of LLMEvents for one LLM call
 # ---------------------------------------------------------------------------
 
 
-def text_turn(text: str = "Done.") -> list[LLMEvent]:
-    """A model turn that returns plain text and signals stop."""
+def text_turn(text: str) -> list[LLMEvent]:
+    """LLM responds with plain text and stops.
+
+    Args:
+        text: The text the LLM replies with.
+
+    Returns:
+        A two-element list: a ``text_delta`` event and a ``done`` event.
+    """
     return [
         LLMTextDeltaEvent(type="text_delta", text=text),
         LLMDoneEvent(
@@ -75,20 +88,23 @@ def text_turn(text: str = "Done.") -> list[LLMEvent]:
 
 def tool_call_turn(
     name: str,
-    args: dict[str, Any] | None = None,
-    turn_id: int = 0,
+    args: dict,
+    turn_id: str = "tc-0",
 ) -> list[LLMEvent]:
-    """A model turn that requests a single tool call.
+    """LLM requests one tool call and stops with ``stop_reason='tool_use'``.
 
-    ``stop_reason="tool_use"`` causes agent_loop to execute the tool and
-    loop back for the next turn — exactly what a stuck-in-a-loop model does.
+    Args:
+        name: Tool name to call.
+        args: Arguments dict passed to the tool.
+        turn_id: Stable tool-call ID (defaults to ``'tc-0'``).
+
+    Returns:
+        A two-element list: a ``tool_call`` event and a ``done`` event.
     """
-    args = args or {}
-    tc_id = f"call-{name}-{turn_id}"
     return [
         LLMToolCallEvent(
             type="tool_call",
-            tool_call_id=tc_id,
+            tool_call_id=turn_id,
             name=name,
             arguments=args,
         ),
@@ -98,7 +114,7 @@ def tool_call_turn(
             content=[
                 ToolCallContent(
                     type="toolCall",
-                    tool_call_id=tc_id,
+                    tool_call_id=turn_id,
                     name=name,
                     arguments=args,
                 )
@@ -108,12 +124,91 @@ def tool_call_turn(
 
 
 def error_turn() -> Exception:
-    """Sentinel: this turn should raise a provider exception.
+    """Return an exception that simulates a transient provider failure.
 
-    Pass as an element in ``ScriptedStreamFn.turns`` to simulate a
-    transient or persistent LLM provider failure.
+    Assign the return value into a ``turns`` list; ``ScriptedStreamFn``
+    will *raise* it (not yield it) when that index is reached.
     """
     return RuntimeError("provider unavailable")
+
+
+def parallel_tool_calls_turn(
+    calls: list[tuple[str, dict, str]],
+) -> list[LLMEvent]:
+    """LLM requests multiple tool calls in a single turn (parallel tool use).
+
+    Args:
+        calls: A list of ``(name, args, turn_id)`` triples, one per tool call.
+
+    Returns:
+        One ``tool_call`` event per call followed by a single ``done`` event
+        with ``stop_reason='tool_use'``, mirroring what real providers emit
+        when the model fans out to several tools in one turn.
+
+    Example::
+
+        turns = [
+            parallel_tool_calls_turn([
+                ("search", {"query": "x"}, "tc-0"),
+                ("search", {"query": "y"}, "tc-1"),
+            ]),
+            text_turn("Done."),
+        ]
+    """
+    events: list[LLMEvent] = [
+        LLMToolCallEvent(
+            type="tool_call",
+            tool_call_id=turn_id,
+            name=name,
+            arguments=args,
+        )
+        for name, args, turn_id in calls
+    ]
+    events.append(
+        LLMDoneEvent(
+            type="done",
+            stop_reason="tool_use",
+            content=[
+                ToolCallContent(
+                    type="toolCall",
+                    tool_call_id=turn_id,
+                    name=name,
+                    arguments=args,
+                )
+                for name, args, turn_id in calls
+            ],
+        )
+    )
+    return events
+
+
+def make_recording_stream_fn(
+    turns: list[list[LLMEvent] | Exception],
+) -> ScriptedStreamFn:
+    """Return a ``ScriptedStreamFn`` that also records messages passed per call.
+
+    The returned script's ``messages_seen[N]`` contains the ``messages`` list
+    that was passed to the Nth LLM call, allowing tests to assert on context
+    accumulation without hand-rolling a recording generator.
+
+    Args:
+        turns: The scripted decision sequence (same as ``ScriptedStreamFn.turns``).
+
+    Returns:
+        A ``ScriptedStreamFn`` with ``messages_seen`` populated after each call.
+
+    Example::
+
+        script = make_recording_stream_fn([
+            tool_call_turn("search", {"query": "x"}),
+            text_turn("answer"),
+        ])
+        events = await run_scenario(script)
+        # Verify the second LLM call sees the tool result in context.
+        assert any(m["role"] == "toolResult" for m in script.messages_seen[1])
+        assert script.call_count == 2
+    """
+    return ScriptedStreamFn(turns)
 
 
 # ---------------------------------------------------------------------------
@@ -121,127 +216,171 @@ def error_turn() -> Exception:
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclasses.dataclass
 class ScriptedStreamFn:
-    """Plays back a scripted sequence of model decisions as a StreamFn.
+    """A deterministic ``StreamFn`` that replays a pre-written script of turns.
 
-    Each entry in ``turns`` is either:
-    - ``list[LLMEvent]``  — events to yield for that invocation
-    - ``Exception``       — to raise, simulating a provider failure
+    Each element of ``turns`` is either:
 
-    If the loop calls us more times than there are scripted turns we
-    yield an empty stop event so the loop exits cleanly rather than
-    raising.  This keeps safety assertions clean: you specify exactly
-    the scenario, and the loop terminates normally when the script ends.
+    * ``list[LLMEvent]`` — events yielded for that LLM call, or
+    * ``Exception``      — raised as if the provider failed that call.
 
-    Attributes:
-        turns: The scripted turn sequence.
-        call_count: Incremented on every invocation; use to assert
-            that the StreamFn was / was not called.
+    When the script is exhausted any additional calls yield an empty
+    ``done/stop`` event so the loop exits cleanly rather than hanging.
+
+    ``call_count`` is updated after every call; inspect it after
+    ``run_scenario`` to confirm how many LLM calls were made.
+
+    Example::
+
+        script = ScriptedStreamFn([
+            tool_call_turn("search", {"query": "python async"}),
+            text_turn("Here's what I found…"),
+        ])
+        events = await run_scenario(script, tools=[search_tool])
+        assert script.call_count == 2
     """
 
     turns: list[list[LLMEvent] | Exception]
-    call_count: int = field(default=0, init=False)
+    call_count: int = dataclasses.field(default=0, init=False)
+    messages_seen: list[list[AgentMessage]] = dataclasses.field(default_factory=list, init=False)
 
     async def __call__(
         self,
         messages: list[AgentMessage],
         tools: list[AgentTool],
-    ):
+    ) -> AsyncIterator[LLMEvent]:
+        self._record_messages(messages)
         idx = self.call_count
         self.call_count += 1
-
         if idx >= len(self.turns):
-            # Script exhausted: model stops cleanly.
-            yield LLMDoneEvent(type="done", stop_reason="stop", content=[])
+            # Script exhausted — yield a clean stop so the loop exits.
+            yield LLMDoneEvent(
+                type="done",
+                stop_reason="stop",
+                content=[TextContent(type="text", text="")],
+            )
             return
-
         turn = self.turns[idx]
-
         if isinstance(turn, Exception):
             raise turn
-
         for event in turn:
             yield event
 
+    def _record_messages(self, messages: list[AgentMessage]) -> None:
+        """Internal: append a snapshot of messages to messages_seen."""
+        self.messages_seen.append(list(messages))
+
 
 # ---------------------------------------------------------------------------
-# AgentTool builders
+# Pre-built AgentTools
 # ---------------------------------------------------------------------------
 
 
 def echo_tool(name: str = "echo") -> AgentTool:
-    """An AgentTool that echoes its ``value`` kwarg back.  Always succeeds."""
+    """AgentTool that echoes the ``value`` kwarg back to the caller.
 
-    async def execute(tool_call_id: str, *, value: str = "echo", **_: Any) -> str:
-        return f"echoed: {value}"
+    Args:
+        name: Tool name (defaults to ``'echo'``).
+
+    Returns:
+        A ready-to-use ``AgentTool`` with a single ``value`` parameter.
+    """
+
+    async def execute(tool_call_id: str, **kwargs: object) -> str:
+        return f"echoed: {kwargs.get('value', '')}"
 
     return AgentTool(
         name=name,
-        description="Echoes a value back.",
+        description="Echo value back",
         parameters={
             "type": "object",
             "properties": {"value": {"type": "string"}},
-            "required": [],
+            "required": ["value"],
         },
         execute=execute,
     )
 
 
-def failing_tool(name: str = "failing_tool") -> AgentTool:
-    """An AgentTool that always raises a RuntimeError (is_error=True)."""
+def failing_tool(name: str = "fail") -> AgentTool:
+    """AgentTool that always raises ``RuntimeError``.
 
-    async def execute(tool_call_id: str, **_: Any) -> str:
-        raise RuntimeError("disk full")
+    Args:
+        name: Tool name (defaults to ``'fail'``).
+
+    Returns:
+        A ready-to-use ``AgentTool`` that always errors on execution.
+    """
+
+    async def execute(tool_call_id: str, **kwargs: object) -> str:
+        raise RuntimeError(f"{name} always fails")
 
     return AgentTool(
         name=name,
-        description="Always fails.",
-        parameters={"type": "object", "properties": {}, "required": []},
+        description="Always fails",
+        parameters={"type": "object", "properties": {}},
         execute=execute,
     )
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Message converter
 # ---------------------------------------------------------------------------
 
 
 def identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
-    """Pass through only roles the LLM understands."""
+    """Pass through user/assistant/toolResult messages unchanged.
+
+    Args:
+        messages: Raw message list from the agent loop.
+
+    Returns:
+        Filtered list containing only LLM-visible message types.
+    """
     return [m for m in messages if m["role"] in {"user", "assistant", "toolResult"}]
 
 
-async def run_scenario(
-    turns: list[list[LLMEvent] | Exception],
-    safety: AgentSafetyConfig,
-    tools: list[AgentTool] | None = None,
-    question: str = "Run the scenario.",
-) -> list[AgentEvent]:
-    """Run a scripted scenario through the real agent_loop.
+# ---------------------------------------------------------------------------
+# High-level runner
+# ---------------------------------------------------------------------------
 
-    Returns the full list of emitted AgentEvents.  Tool execution, safety
-    enforcement, and retry logic all run for real.
+
+async def run_scenario(
+    turns: list[list[LLMEvent] | Exception] | ScriptedStreamFn,
+    tools: list[AgentTool] | None = None,
+    question: str = "go",
+    safety: AgentSafetyConfig | None = None,
+) -> list[AgentEvent]:
+    """Run an agent-loop scenario end-to-end and return all emitted events.
+
+    Builds a minimal ``AgentContext`` and ``AgentLoopConfig`` then collects
+    every event from ``agent_loop`` into a list for assertion.
 
     Args:
-        turns: The scripted LLM decision sequence.
-        safety: Safety configuration to apply.
-        tools: Optional list of AgentTools to make available.
-        question: The user prompt to inject (content doesn't matter for
-            harness tests, but something realistic helps readability).
+        turns: Either a pre-built ``ScriptedStreamFn`` (when you need to inspect
+            ``call_count`` after the run) or a raw list of turn events/exceptions
+            (when you only care about the emitted events).
+        tools: Tools available to the agent.  Defaults to an empty list.
+        question: The user's question text.
 
     Returns:
-        All AgentEvents emitted by the loop, in order.
+        All ``AgentEvent`` instances emitted by ``agent_loop``, in order.
+
+    Example — checking ``call_count`` after the run::
+
+        script = ScriptedStreamFn([tool_call_turn("ping", {})] * 5)
+        events = await run_scenario(script, tools=[ping_tool])
+        assert script.call_count == 5
     """
-    stream_fn = ScriptedStreamFn(turns=turns)
-    context = AgentContext(
-        system_prompt="You are a test agent.",
+    stream_fn = turns if isinstance(turns, ScriptedStreamFn) else ScriptedStreamFn(turns)
+    ctx = AgentContext(
+        system_prompt="",
         messages=[],
-        tools=tools or [],
+        tools=list(tools or []),
+    )
+    cfg = AgentLoopConfig(
+        convert_to_llm=identity_convert,
+        safety=safety or AgentSafetyConfig.disabled(),
     )
     prompt = UserMessage(role="user", content=question)
-    config = AgentLoopConfig(
-        convert_to_llm=identity_convert,
-        safety=safety,
-    )
-    return [ev async for ev in agent_loop([prompt], context, config, stream_fn)]
+    return [ev async for ev in agent_loop([prompt], ctx, cfg, stream_fn)]

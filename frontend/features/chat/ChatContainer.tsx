@@ -1,40 +1,131 @@
 'use client';
+import type { ChatComposerMessage } from '@octavian-tocan/react-chat-composer';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import {
-	CHAT_MODEL_IDS,
 	CHAT_REASONING_LEVELS,
-	type ChatModelId,
-	type ChatReasoningLevel,
-} from './components/ModelSelectorPopover';
-import {
 	CHAT_STORAGE_KEYS,
-	DEFAULT_CHAT_MODEL_ID,
+	type ChatReasoningLevel,
 	DEFAULT_REASONING_LEVEL,
 	FALLBACK_TITLE_MAX_LENGTH,
 } from './constants';
 import { useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
+import { type ChatModelOption, useChatModels } from './hooks/use-chat-models';
 import { useChatTurns } from './hooks/use-chat-turns';
-import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
+import { isCanonicalModelId } from './lib/is-canonical-model-id';
 
-/** Runtime guard for persisted model IDs — older builds may have stored a now-renamed model. */
-function isChatModelId(value: unknown): value is ChatModelId {
-	return typeof value === 'string' && (CHAT_MODEL_IDS as readonly string[]).includes(value);
-}
-
-/** Runtime guard for persisted reasoning levels — same rationale as {@link isChatModelId}. */
+/** Runtime guard for persisted reasoning levels. */
 function isChatReasoningLevel(value: unknown): value is ChatReasoningLevel {
 	return (
 		typeof value === 'string' && (CHAT_REASONING_LEVELS as readonly string[]).includes(value)
+	);
+}
+
+/**
+ * Placeholder used while the persisted model ID is hydrating from
+ * `localStorage` and/or the catalog request is in flight.
+ *
+ * `usePersistedState` requires a literal default, but we don't know the
+ * catalog default until `useChatModels` resolves. The empty string never
+ * passes {@link isCanonicalModelId}, so {@link resolveSelectedModelId}
+ * always replaces it with the live catalog default on the first render
+ * the catalog is available.
+ */
+const PENDING_MODEL_ID = '';
+
+/**
+ * Resolve the model ID to render: prefer the persisted value if it is both
+ * canonically shaped AND present in the live catalog; otherwise fall back
+ * to the catalog's `is_default` entry.
+ *
+ * Stale legacy IDs (e.g. `'gpt-5.5'` left over from an older build) fail
+ * the canonical regex up-front, so this function never has to know about
+ * legacy slugs explicitly.
+ */
+function resolveSelectedModelId(
+	persistedId: string,
+	models: readonly ChatModelOption[],
+	defaultEntry: ChatModelOption | null
+): string {
+	if (
+		isCanonicalModelId(persistedId) &&
+		models.some((model): boolean => model.id === persistedId)
+	) {
+		return persistedId;
+	}
+	return defaultEntry?.id ?? '';
+}
+
+/** Return shape for {@link useSelectedChatModel}. */
+interface UseSelectedChatModelResult {
+	/** Live model catalog from `GET /api/v1/models`. */
+	models: readonly ChatModelOption[];
+	/** Currently selected canonical model ID — empty string while the catalog loads. */
+	selectedModelId: string;
+	/** Setter that writes the new selection through `usePersistedState`. */
+	setPersistedModelId: (value: string | ((prev: string) => string)) => void;
+	/** True until the first catalog response lands. */
+	isCatalogLoading: boolean;
+}
+
+/**
+ * Hoists the catalog fetch + persisted-selection resolution so
+ * {@link ChatContainer} stays under the project's per-function line budget.
+ *
+ * Storage value: canonical model ID (`host:vendor/model`) or `''` while
+ * we're waiting for the catalog to seed the default. The validator
+ * rejects any string that doesn't match the canonical shape, so
+ * legacy slugs left in `localStorage` (e.g. `'gpt-5.5'`) silently fall
+ * back to the catalog default on first read.
+ */
+function useSelectedChatModel(): UseSelectedChatModelResult {
+	const { models, default: defaultModel, isLoading: isCatalogLoading } = useChatModels();
+
+	const [persistedModelId, setPersistedModelId] = usePersistedState<string>({
+		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
+		defaultValue: PENDING_MODEL_ID,
+		validate: isCanonicalModelId,
+	});
+
+	const selectedModelId = useMemo(
+		() => resolveSelectedModelId(persistedModelId, models, defaultModel),
+		[persistedModelId, models, defaultModel]
+	);
+
+	return { models, selectedModelId, setPersistedModelId, isCatalogLoading };
+}
+
+/**
+ * Publish chat-activity updates to the sidebar context and clear them on
+ * unmount. Extracted from {@link ChatContainer} so the container stays
+ * under the per-function line budget.
+ */
+function useChatActivitySync(
+	conversationId: string,
+	chatHistory: Array<AgnoMessage>,
+	isLoading: boolean
+): void {
+	const { publishActiveConversation, clearActiveConversation } = useChatActivity();
+
+	// Keep the sidebar's chat-activity context in sync. Fires on every change so
+	// the sidebar can show spinners, unread badges, and content-search matches.
+	useEffect(() => {
+		publishActiveConversation({ conversationId, chatHistory, isLoading });
+	}, [chatHistory, conversationId, isLoading, publishActiveConversation]);
+
+	// Clear activity state on unmount, guarded by conversationId so a stale
+	// cleanup doesn't clobber a newly opened conversation.
+	useEffect(
+		() => () => clearActiveConversation(conversationId),
+		[clearActiveConversation, conversationId]
 	);
 }
 
@@ -73,32 +164,36 @@ interface ChatContainerProps {
  * - Fires LLM title generation (via {@link useGenerateConversationTitle}).
  * - Streams assistant responses and accumulates chat history (via {@link useChatTurns}).
  * - Keeps the browser URL and the Next.js router in sync.
+ * - Fetches the live model catalog (via {@link useChatModels}) and resolves
+ *   the persisted selection against it.
  *
- * Render logic is delegated to the presentational {@link ChatView}.
+ * Render logic is delegated to the presentational {@link ChatView}. The
+ * composer's textarea value lives here as a plain controlled string —
+ * `@octavian-tocan/react-chat-composer` accepts both controlled (`value` +
+ * `onChange`) and uncontrolled modes; pawrrtal uses the controlled form so
+ * the container can clear the draft on submit + insert prompt suggestions
+ * programmatically.
  */
 export default function ChatContainer({
 	conversationId,
 	initialChatHistory,
-}: ChatContainerProps): React.JSX.Element {
+}: ChatContainerProps): React.JSX.Element | null {
 	const { streamMessage } = useChat();
 	const createConversationMutation = useCreateConversation(conversationId);
 	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
-	const router = useRouter();
-	const { setActiveConversation, clearActiveConversation } = useChatActivity();
+	const { replace } = useRouter();
 	const hasNavigated = useRef(false);
 
-	const {
-		message,
-		setMessage,
-		onUpdateMessage: handleUpdateMessage,
-		onReplaceMessageContent: handleReplaceMessageContent,
-		onSelectSuggestion: handleSelectSuggestion,
-	} = useComposerMessage();
-	const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
-		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
-		defaultValue: DEFAULT_CHAT_MODEL_ID,
-		validate: isChatModelId,
-	});
+	// Server-owned model catalog (`GET /api/v1/models`). The hook resolves the
+	// persisted selection against the live catalog so this function stays
+	// under the per-function line budget. Render is gated on
+	// `isCatalogLoading` below so streaming can never fire on `''`.
+	const { models, selectedModelId, setPersistedModelId, isCatalogLoading } =
+		useSelectedChatModel();
+
+	// Composer textarea — controlled string so the container can reset it on
+	// send + write into it from suggestion clicks.
+	const [composerText, setComposerText] = useState('');
 	const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>({
 		storageKey: CHAT_STORAGE_KEYS.selectedReasoning,
 		defaultValue: DEFAULT_REASONING_LEVEL,
@@ -146,18 +241,19 @@ export default function ChatContainer({
 	});
 
 	const handleSendMessage = useCallback(
-		async (sentMessage: PromptInputMessage): Promise<void> => {
-			setMessage({ content: '', files: [] });
-			beginStream(sentMessage.content);
+		async (message: ChatComposerMessage): Promise<void> => {
+			const prompt = message.text;
+			setComposerText('');
+			beginStream(prompt);
 			try {
-				await send(sentMessage.content);
+				await send(prompt);
 			} finally {
 				endStream();
 				// Sync the Next.js router after streaming so sidebar router.push works.
-				if (hasNavigated.current) router.replace(`/c/${conversationId}`);
+				if (hasNavigated.current) replace(`/c/${conversationId}`);
 			}
 		},
-		[beginStream, conversationId, endStream, router, send, setMessage]
+		[beginStream, conversationId, endStream, replace, send]
 	);
 
 	// Read chatHistory through a ref so the callback identity doesn't churn
@@ -184,33 +280,30 @@ export default function ChatContainer({
 		[copy]
 	);
 
-	// Keep the sidebar's chat-activity context in sync. Fires on every change so
-	// the sidebar can show spinners, unread badges, and content-search matches.
-	useEffect(() => {
-		setActiveConversation({ conversationId, chatHistory, isLoading });
-	}, [chatHistory, conversationId, isLoading, setActiveConversation]);
+	const handleSelectSuggestion = useCallback((prompt: string) => {
+		setComposerText(prompt);
+	}, []);
 
-	// Clear activity state on unmount, guarded by conversationId so a stale
-	// cleanup doesn't clobber a newly opened conversation.
-	useEffect(
-		() => () => clearActiveConversation(conversationId),
-		[clearActiveConversation, conversationId]
-	);
+	useChatActivitySync(conversationId, chatHistory, isLoading);
+
+	// Gate render on the catalog so streaming can never fire on an empty
+	// model ID — see `useSelectedChatModel`. Keeps dev-console-smoke clean.
+	if (isCatalogLoading || selectedModelId === '') return null;
 
 	return (
 		<ChatView
 			chatHistory={chatHistory}
+			composerText={composerText}
 			copiedMessageId={copiedId}
 			isLoading={isLoading}
-			message={message}
+			models={models}
+			onChangeComposerText={setComposerText}
 			onCopy={handleCopy}
 			onRegenerate={handleRegenerate}
-			onReplaceMessageContent={handleReplaceMessageContent}
-			onSelectModel={setSelectedModelId}
+			onSelectModel={setPersistedModelId}
 			onSelectReasoning={setSelectedReasoning}
 			onSelectSuggestion={handleSelectSuggestion}
 			onSendMessage={handleSendMessage}
-			onUpdateMessage={handleUpdateMessage}
 			regeneratingIndex={regeneratingIndex}
 			selectedModelId={selectedModelId}
 			selectedReasoning={selectedReasoning}

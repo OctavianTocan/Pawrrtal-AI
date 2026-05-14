@@ -1,40 +1,66 @@
 'use client';
 
+import {
+	ChatComposer,
+	type ChatComposerMessage,
+	ChatPromptSuggestions,
+	type ChatModelOption as PackageChatModelOption,
+} from '@octavian-tocan/react-chat-composer';
 import type * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
 import { useWhimsyTile } from '@/features/whimsy';
+import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
-import type { PromptInputMessage } from '../../components/ai-elements/prompt-input';
 import { AssistantMessage } from './components/AssistantMessage';
-import { ChatComposer } from './components/ChatComposer';
-import { ChatPromptSuggestions } from './components/ChatPromptSuggestions';
-import type { ChatModelId, ChatReasoningLevel } from './components/ModelSelectorPopover';
+import { ConnectAppsStrip } from './components/ConnectAppsStrip';
+import { PlanButton } from './components/PlanButton';
+import { SafetyModeSelector } from './components/SafetyModeSelector';
 import { UserMessage } from './components/UserMessage';
+import {
+	CHAT_REASONING_LEVELS,
+	CHAT_STORAGE_KEYS,
+	type ChatReasoningLevel,
+	DEFAULT_PLAN_MODE_VISIBLE,
+} from './constants';
+import type { ChatModelOption } from './hooks/use-chat-models';
+import { useTranscribeAudioCallback } from './hooks/use-transcribe-audio-callback';
+
+/** Empty-state suggestion rows shown when no conversation has begun. */
+const PROMPT_SUGGESTIONS = [
+	{
+		id: 'review-commits',
+		label: 'Review my recent commits for correctness risks and maintainability concerns',
+	},
+	{ id: 'unblock-pr', label: 'Unblock my most recent open PR' },
+	{ id: 'connect-apps', label: 'Connect my favorite apps to Pawrrtal' },
+] as const;
 
 /**
  * Props for the {@link ChatView} presentational component.
  */
 type ChatProps = {
-	/** The current message being composed by the user. */
-	message: PromptInputMessage;
+	/** Controlled text value of the composer's textarea. */
+	composerText: string;
 	/** Whether the assistant is generating a response (shows a loading indicator). */
 	isLoading?: boolean;
-	/** Callback fired when the textarea content changes. */
-	onUpdateMessage: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-	/** Callback fired when the user submits a message. */
-	onSendMessage: (message: PromptInputMessage) => void;
-	/** Callback fired when generated text should replace the draft content. */
-	onReplaceMessageContent: (content: string) => void;
+	/** Callback fired when the composer's textarea content changes. */
+	onChangeComposerText: (text: string) => void;
+	/** Callback fired when the user submits a composer message. */
+	onSendMessage: (message: ChatComposerMessage) => void;
 	/** The full conversation history to render. */
 	chatHistory: Array<AgnoMessage>;
-	/** The selected model used for new chat requests. */
-	selectedModelId: ChatModelId;
+	/** Live model catalog from `useChatModels()`, hoisted by the container. */
+	models: readonly ChatModelOption[];
+	/** True until the first model-catalog response lands. */
+	isCatalogLoading?: boolean;
+	/** Selected canonical model ID (`host:vendor/model`) used for new chat requests. */
+	selectedModelId: string;
 	/** The selected reasoning level shown in the composer. */
 	selectedReasoning: ChatReasoningLevel;
-	/** Callback fired when the model selector changes. */
-	onSelectModel: (modelId: ChatModelId) => void;
+	/** Callback fired when the model selector changes. Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
 	/** Callback fired when the reasoning selector changes. */
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** Callback fired when an empty-state prompt suggestion is selected. */
@@ -52,17 +78,317 @@ type ChatProps = {
 /**
  * Invisible anchor component that scrolls the conversation to the bottom
  * whenever `track` changes (i.e. when new messages are added).
- *
- * Must be rendered inside a `<Conversation>` that provides the
- * `useStickToBottomContext`.
  */
 function ChatScrollAnchor({ track: _track }: { track: number }): React.JSX.Element | null {
 	const { scrollToBottom } = useStickToBottomContext();
-
 	useEffect(() => {
 		scrollToBottom();
 	}, [scrollToBottom]);
 	return null;
+}
+
+/** Runtime guard for the persisted Plan-mode visibility boolean. */
+function isBoolean(value: unknown): value is boolean {
+	return typeof value === 'boolean';
+}
+
+/**
+ * Persisted Plan-mode visibility. Owned by the host (not the package)
+ * because the Plan button itself is a pawrrtal-specific affordance rendered
+ * in the composer's `footerActions` slot.
+ */
+function usePlanModeVisible(): readonly [
+	boolean,
+	(next: boolean | ((prev: boolean) => boolean)) => void,
+] {
+	return usePersistedState<boolean>({
+		storageKey: CHAT_STORAGE_KEYS.planModeVisible,
+		defaultValue: DEFAULT_PLAN_MODE_VISIBLE,
+		validate: isBoolean,
+	});
+}
+
+/**
+ * Wires the host's Shift+Tab keybinding to a `setIsPlanVisible` toggle.
+ *
+ * The package's `ChatComposer` previously exposed an `onKeyDown` callback
+ * the host used for this; that hook now lives inside the package, so the
+ * host listens at document level and scopes the binding to the textarea
+ * so it only fires while the composer has focus.
+ */
+function useShiftTabPlanToggle(
+	setIsPlanVisible: (next: boolean | ((prev: boolean) => boolean)) => void
+): void {
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent): void => {
+			if (event.key !== 'Tab' || !event.shiftKey) return;
+			const target = event.target;
+			if (!(target instanceof HTMLElement) || target.tagName !== 'TEXTAREA') return;
+			event.preventDefault();
+			setIsPlanVisible((visible) => !visible);
+		};
+		document.addEventListener('keydown', handleKeyDown);
+		return () => document.removeEventListener('keydown', handleKeyDown);
+	}, [setIsPlanVisible]);
+}
+
+/**
+ * Whimsy texture overlay rendered behind the chat content. Returns `null`
+ * when the user has disabled the texture in Settings → Appearance.
+ *
+ * Sits behind all chat content via tree order: an absolute sibling without
+ * z-index paints after static children, so the content wrappers below need
+ * `relative` to appear above it.
+ */
+function WhimsyOverlay(): React.JSX.Element | null {
+	const whimsy = useWhimsyTile();
+	if (!whimsy.cssUrl) return null;
+	return (
+		<>
+			{whimsy.backgroundColor ? (
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute inset-0"
+					style={{ backgroundColor: whimsy.backgroundColor }}
+				/>
+			) : null}
+			<div
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 text-foreground [mask-repeat:repeat] [-webkit-mask-repeat:repeat]"
+				style={{
+					backgroundColor: whimsy.tintColor,
+					opacity: whimsy.opacity,
+					maskImage: whimsy.cssUrl,
+					WebkitMaskImage: whimsy.cssUrl,
+					maskSize: whimsy.maskSize,
+					WebkitMaskSize: whimsy.maskSize,
+				}}
+			/>
+		</>
+	);
+}
+
+/** Props shared between the empty-state and active-conversation composer rows. */
+interface ComposerRowProps {
+	composerText: string;
+	isLoading?: boolean;
+	/** Model catalog in the package's `ChatModelOption` shape — pre-mapped by `ChatView`. */
+	models: readonly PackageChatModelOption[];
+	/** Canonical model-ID wire form (`host:vendor/model`). */
+	selectedModelId: string;
+	selectedReasoning: ChatReasoningLevel;
+	onChangeComposerText: (text: string) => void;
+	onSendMessage: (message: ChatComposerMessage) => void;
+	/** Emits the canonical wire form. */
+	onSelectModel: (modelId: string) => void;
+	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
+	footerActions: React.ReactNode;
+	transcribeAudio: (audio: Blob, mimeType: string) => Promise<string>;
+}
+
+/**
+ * Map a backend catalog entry to the package's `ChatModelOption` shape.
+ *
+ * The backend exposes `display_name` / `short_name` / `vendor`; the package
+ * expects `name` / `shortName` / `provider`. Kept as a pure helper so the
+ * mapping can be tested in isolation and re-used if other surfaces ever
+ * need the package shape too.
+ */
+function toPackageModelOption(entry: ChatModelOption): PackageChatModelOption {
+	return {
+		id: entry.id,
+		shortName: entry.short_name,
+		name: entry.display_name,
+		provider: entry.vendor,
+		description: entry.description,
+	};
+}
+
+/**
+ * Landing-state composer column rendered above the connect-apps strip and
+ * suggestion list when the conversation is empty.
+ */
+function LandingState({
+	composerText,
+	isLoading,
+	models,
+	selectedModelId,
+	selectedReasoning,
+	onChangeComposerText,
+	onSelectModel,
+	onSelectReasoning,
+	onSelectSuggestion,
+	onSendMessage,
+	footerActions,
+	transcribeAudio,
+}: ComposerRowProps & {
+	onSelectSuggestion: (prompt: string) => void;
+}): React.JSX.Element {
+	return (
+		<div className="relative mx-auto flex size-full max-w-[60rem] min-w-0 flex-col">
+			<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
+				<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
+					What should we build in Pawrrtal?
+				</h1>
+				<div className="relative flex w-full max-w-[48.75rem] flex-col">
+					<ChatComposer
+						className="relative z-10"
+						footerActions={footerActions}
+						isLoading={isLoading}
+						models={[...models]}
+						onChange={onChangeComposerText}
+						onSelectModel={onSelectModel}
+						onSelectReasoning={(level) =>
+							onSelectReasoning(level as ChatReasoningLevel)
+						}
+						onSubmit={onSendMessage}
+						onTranscribeAudio={transcribeAudio}
+						reasoningLevels={[...CHAT_REASONING_LEVELS]}
+						selectedModelId={selectedModelId}
+						selectedReasoning={selectedReasoning}
+						value={composerText}
+					/>
+					<ConnectAppsStrip />
+				</div>
+				<ChatPromptSuggestions
+					className="mt-5 w-full max-w-[48.75rem]"
+					onSelectSuggestion={onSelectSuggestion}
+					suggestions={[...PROMPT_SUGGESTIONS]}
+				/>
+			</div>
+		</div>
+	);
+}
+
+/** Renders one row of the conversation history. */
+function ConversationRow({
+	chatMessage,
+	index,
+	isLast,
+	isLoading,
+	regeneratingIndex,
+	copiedMessageId,
+	onCopy,
+	onRegenerate,
+}: {
+	chatMessage: AgnoMessage;
+	index: number;
+	isLast: boolean;
+	isLoading?: boolean;
+	regeneratingIndex?: number | null;
+	copiedMessageId?: string | null;
+	onCopy?: (id: string, text: string) => void;
+	onRegenerate?: (assistantIndex: number) => void;
+}): React.JSX.Element {
+	if (chatMessage.role === 'assistant') {
+		const messageId = `assistant-${index}`;
+		const isCurrentlyRegenerating = regeneratingIndex === index;
+		return (
+			<AssistantMessage
+				content={chatMessage.content}
+				onCopy={onCopy ? () => onCopy(messageId, chatMessage.content) : undefined}
+				onRegenerate={onRegenerate ? () => onRegenerate(index) : undefined}
+				status={{
+					isCopied: copiedMessageId === messageId,
+					isFailed: chatMessage.assistant_status === 'failed',
+					isRegenerating: isCurrentlyRegenerating,
+					isStreaming: Boolean(isLoading && isLast),
+				}}
+				thinking={chatMessage.thinking}
+				thinkingDurationSeconds={chatMessage.thinking_duration_seconds}
+				timeline={chatMessage.timeline}
+				toolCalls={chatMessage.tool_calls}
+			/>
+		);
+	}
+	const userMessageId = `user-${index}`;
+	return (
+		<UserMessage
+			content={chatMessage.content}
+			isCopied={copiedMessageId === userMessageId}
+			onCopy={onCopy ? () => onCopy(userMessageId, chatMessage.content) : undefined}
+		/>
+	);
+}
+
+/**
+ * Active-conversation surface — scrollable history above a follow-up composer.
+ *
+ * IMPORTANT: the scroll container is intentionally NOT wrapped in a
+ * `max-w-[60rem]` column. Constraining the scroll area there meant the user
+ * could only scroll while the cursor was over the narrow centered region.
+ */
+function ActiveConversationState({
+	chatHistory,
+	composerText,
+	isLoading,
+	models,
+	selectedModelId,
+	selectedReasoning,
+	onChangeComposerText,
+	onSelectModel,
+	onSelectReasoning,
+	onSendMessage,
+	regeneratingIndex,
+	copiedMessageId,
+	onCopy,
+	onRegenerate,
+	footerActions,
+	transcribeAudio,
+}: ComposerRowProps & {
+	chatHistory: Array<AgnoMessage>;
+	regeneratingIndex?: number | null;
+	copiedMessageId?: string | null;
+	onCopy?: (id: string, text: string) => void;
+	onRegenerate?: (assistantIndex: number) => void;
+}): React.JSX.Element {
+	return (
+		<div className="relative flex size-full min-w-0 flex-col">
+			<Conversation className="scrollbar-hide min-h-0 flex-1 overflow-y-auto" resize="smooth">
+				<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
+					{chatHistory.map((chatMessage, index) => {
+						const messageKey = [
+							chatMessage.role,
+							chatMessage.thinking_started_at ?? 'saved',
+							chatMessage.content.slice(0, 80),
+						].join(':');
+						return (
+							<ConversationRow
+								chatMessage={chatMessage}
+								copiedMessageId={copiedMessageId}
+								index={index}
+								isLast={index === chatHistory.length - 1}
+								isLoading={isLoading}
+								key={messageKey}
+								onCopy={onCopy}
+								onRegenerate={onRegenerate}
+								regeneratingIndex={regeneratingIndex}
+							/>
+						);
+					})}
+				</ConversationContent>
+				<ChatScrollAnchor track={chatHistory.length} />
+			</Conversation>
+			<div className="mx-auto flex w-full max-w-[60rem] shrink-0 justify-center pb-4">
+				<ChatComposer
+					className="w-full max-w-[48.75rem]"
+					footerActions={footerActions}
+					isLoading={isLoading}
+					models={[...models]}
+					onChange={onChangeComposerText}
+					onSelectModel={onSelectModel}
+					onSelectReasoning={(level) => onSelectReasoning(level as ChatReasoningLevel)}
+					onSubmit={onSendMessage}
+					onTranscribeAudio={transcribeAudio}
+					placeholder="Ask a follow up"
+					reasoningLevels={[...CHAT_REASONING_LEVELS]}
+					selectedModelId={selectedModelId}
+					selectedReasoning={selectedReasoning}
+					value={composerText}
+				/>
+			</div>
+		</div>
+	);
 }
 
 /**
@@ -72,19 +398,19 @@ function ChatScrollAnchor({ track: _track }: { track: number }): React.JSX.Eleme
  * is thinking, and the message composer. All state management is handled by
  * the parent {@link ChatContainer}.
  *
- * The outer panel uses `rounded-surface-lg` (`--radius-surface-lg` in `globals.css`,
- * DESIGN.md `rounded.lg`) so its corners match {@link ChatComposer} and composer
- * dropdown chrome. Avoid `rounded-xl` here: with `--radius: 0`, `rounded-xl` is only ~4px.
+ * The outer panel uses `rounded-surface-lg` (`--radius-surface-lg` in
+ * `globals.css`, DESIGN.md `rounded.lg`) so its corners match the composer
+ * chrome. Avoid `rounded-xl` here: with `--radius: 0`, `rounded-xl` is only ~4px.
  */
 function ChatView({
-	message,
+	composerText,
 	isLoading,
 	chatHistory,
+	models,
 	selectedModelId,
 	selectedReasoning,
 	onSendMessage,
-	onUpdateMessage,
-	onReplaceMessageContent,
+	onChangeComposerText,
 	onSelectModel,
 	onSelectReasoning,
 	onSelectSuggestion,
@@ -93,186 +419,61 @@ function ChatView({
 	onCopy,
 	onRegenerate,
 }: ChatProps): React.JSX.Element {
-	const isEmptyConversation = chatHistory.length === 0;
-	const whimsy = useWhimsyTile();
+	const transcribeAudio = useTranscribeAudioCallback();
+	const [isPlanVisible, setIsPlanVisible] = usePlanModeVisible();
+	useShiftTabPlanToggle(setIsPlanVisible);
 
-	// Chat panel reads `--background-elevated` directly via inline style.
-	// Inline style is used (rather than a `bg-…` Tailwind utility) because the
-	// Tailwind v4 build was not always picking up new `@theme` tokens during
-	// hot-reload, and the user observed the chat panel rendering as a stale
-	// gray on every preset. The CSS variable itself, defined in globals.css
-	// as `color-mix(in srgb, var(--foreground) 1.5%, var(--background))`,
-	// is computed live: when the AppearanceProvider rewrites `--background`
-	// or `--foreground` on `<html>`, the panel re-derives — slightly darker
-	// than the canvas when foreground is dark, slightly lighter when
-	// foreground is light, re-tinting per preset hue.
+	// Map the backend catalog onto the package's `ChatModelOption` shape once
+	// per catalog change. The `useChatModels` hook returns a stable array
+	// reference, so `useMemo` keyed on it avoids re-mapping on unrelated
+	// re-renders (composer text, loading flips, etc.).
+	const packageModels = useMemo<readonly PackageChatModelOption[]>(
+		() => models.map(toPackageModelOption),
+		[models]
+	);
+
+	const footerActions = (
+		<>
+			{isPlanVisible ? <PlanButton /> : null}
+			<SafetyModeSelector />
+		</>
+	);
+	const rowProps = {
+		composerText,
+		isLoading,
+		models: packageModels,
+		selectedModelId,
+		selectedReasoning,
+		onChangeComposerText,
+		onSendMessage,
+		onSelectModel,
+		onSelectReasoning,
+		footerActions,
+		transcribeAudio,
+	};
+
+	// Chat panel reads `--background-elevated` directly via inline style
+	// because the Tailwind v4 build was not always picking up new `@theme`
+	// tokens during hot-reload — the panel was rendering as a stale gray on
+	// every preset until this was switched off the bg- utility. The CSS
+	// variable resolves live so the AppearanceProvider can re-tint per theme.
 	return (
 		<div
 			className="relative z-10 flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden rounded-surface-lg px-4 shadow-panel-floating"
 			style={{ backgroundColor: 'var(--background-elevated)' }}
 		>
-			{/*
-			 * Whimsy texture overlay. Sits behind all chat content via tree
-			 * order: an absolute sibling without z-index paints after static
-			 * children, so the content wrappers below need `relative` to
-			 * appear above it (see .claude/rules/figma/check-stacking-context-
-			 * for-absolute-backgrounds.md).
-			 *
-			 * Inputs come from the user-tunable config in
-			 * `frontend/features/whimsy` (Settings → Appearance → Whimsy
-			 * texture). Color is `currentColor` (text-foreground), and overall
-			 * intensity is multiplied through CSS `opacity` from the same
-			 * config — so the texture re-tints with theme tokens. When the
-			 * user disables the texture, `cssUrl` is null and the overlay is
-			 * skipped entirely.
-			 */}
-			{whimsy.cssUrl ? (
-				<>
-					{/*
-					 * Optional solid-colour layer painted under the masked
-					 * tile. ``null`` means the user kept the theme default,
-					 * in which case the chat panel's own ``bg-background``
-					 * shows through. Skip the wrapper entirely in that case
-					 * to avoid layering an opaque box over interactive
-					 * content for no reason.
-					 */}
-					{whimsy.backgroundColor ? (
-						<div
-							aria-hidden="true"
-							className="pointer-events-none absolute inset-0"
-							style={{ backgroundColor: whimsy.backgroundColor }}
-						/>
-					) : null}
-					<div
-						aria-hidden="true"
-						className="pointer-events-none absolute inset-0 text-foreground"
-						style={{
-							backgroundColor: whimsy.tintColor,
-							opacity: whimsy.opacity,
-							maskImage: whimsy.cssUrl,
-							WebkitMaskImage: whimsy.cssUrl,
-							maskSize: whimsy.maskSize,
-							WebkitMaskSize: whimsy.maskSize,
-							maskRepeat: 'repeat',
-							WebkitMaskRepeat: 'repeat',
-						}}
-					/>
-				</>
-			) : null}
-			{isEmptyConversation ? (
-				<div className="relative mx-auto flex h-full w-full max-w-[60rem] min-w-0 flex-col">
-					<div className="flex min-h-0 flex-1 flex-col items-center pt-[24vh]">
-						{/* `mb-10` (40px) for breathing room between the headline and
-						    the composer; `mb-6` parked them too tight against each
-						    other for a landing surface. */}
-						<h1 className="mb-10 text-center text-[28px] font-medium tracking-normal text-balance text-foreground sm:text-[30px]">
-							What should we build in Pawrrtal?
-						</h1>
-						<ChatComposer
-							message={message}
-							isLoading={isLoading}
-							selectedModelId={selectedModelId}
-							selectedReasoning={selectedReasoning}
-							showConnectAppsStrip
-							onSendMessage={onSendMessage}
-							onReplaceMessageContent={onReplaceMessageContent}
-							onSelectModel={onSelectModel}
-							onSelectReasoning={onSelectReasoning}
-							onUpdateMessage={onUpdateMessage}
-						/>
-						<ChatPromptSuggestions
-							className="mt-5"
-							onSelectSuggestion={onSelectSuggestion}
-						/>
-					</div>
-				</div>
+			<WhimsyOverlay />
+			{chatHistory.length === 0 ? (
+				<LandingState {...rowProps} onSelectSuggestion={onSelectSuggestion} />
 			) : (
-				// IMPORTANT: the scroll container is intentionally NOT wrapped in
-				// a `max-w-[60rem]` column. Constraining the scroll area there
-				// meant the user could only scroll while the cursor was over the
-				// narrow centered region — moving the mouse to either side of the
-				// chat panel killed scroll capture. Letting `<Conversation>` span
-				// the full panel width fixes that and parks the (hidden) scrollbar
-				// flush with the panel's right edge.
-				<div className="relative flex h-full w-full min-w-0 flex-col">
-					<Conversation
-						className="scrollbar-hide min-h-0 flex-1 overflow-y-auto"
-						resize="smooth"
-					>
-						{/* `pt-12` (48px) so the first message lands a comfortable
-						    distance below the panel's rounded top edge — `py-6`
-						    parked the first turn flush with the chrome and read
-						    as cramped. Bottom padding stays `pb-6` so the last
-						    message has breathing room above the composer. */}
-						<ConversationContent className="scrollbar-hide mx-auto w-full max-w-[48.75rem] px-0 pt-12 pb-6">
-							{chatHistory.map((chatMessage, index) => {
-								const key = `${chatMessage.role}-${index}`;
-								if (chatMessage.role === 'assistant') {
-									const isLast = index === chatHistory.length - 1;
-									const messageId = `assistant-${index}`;
-									const isCurrentlyRegenerating = regeneratingIndex === index;
-									return (
-										<AssistantMessage
-											content={chatMessage.content}
-											isCopied={copiedMessageId === messageId}
-											isFailed={chatMessage.assistant_status === 'failed'}
-											isRegenerating={isCurrentlyRegenerating}
-											isStreaming={Boolean(isLoading && isLast)}
-											key={key}
-											onCopy={
-												onCopy
-													? () => onCopy(messageId, chatMessage.content)
-													: undefined
-											}
-											onRegenerate={
-												onRegenerate ? () => onRegenerate(index) : undefined
-											}
-											thinking={chatMessage.thinking}
-											thinkingDurationSeconds={
-												chatMessage.thinking_duration_seconds
-											}
-											timeline={chatMessage.timeline}
-											toolCalls={chatMessage.tool_calls}
-										/>
-									);
-								}
-								const userMessageId = `user-${index}`;
-								return (
-									<UserMessage
-										content={chatMessage.content}
-										isCopied={copiedMessageId === userMessageId}
-										key={key}
-										onCopy={
-											onCopy
-												? () => onCopy(userMessageId, chatMessage.content)
-												: undefined
-										}
-									/>
-								);
-							})}
-						</ConversationContent>
-						<ChatScrollAnchor track={chatHistory.length} />
-					</Conversation>
-					{/* Composer stays centered on the original `max-w-[60rem]`
-					    column so the input width is unchanged — only the scroll
-					    region was widened. */}
-					<div className="mx-auto flex w-full max-w-[60rem] shrink-0 justify-center pb-4">
-						<ChatComposer
-							message={message}
-							isLoading={isLoading}
-							selectedModelId={selectedModelId}
-							selectedReasoning={selectedReasoning}
-							// Follow-up turn — fixed placeholder rather than the
-							// rotating landing-page tip carousel.
-							placeholderOverride="Ask a follow up"
-							onSendMessage={onSendMessage}
-							onReplaceMessageContent={onReplaceMessageContent}
-							onSelectModel={onSelectModel}
-							onSelectReasoning={onSelectReasoning}
-							onUpdateMessage={onUpdateMessage}
-						/>
-					</div>
-				</div>
+				<ActiveConversationState
+					{...rowProps}
+					chatHistory={chatHistory}
+					copiedMessageId={copiedMessageId}
+					onCopy={onCopy}
+					onRegenerate={onRegenerate}
+					regeneratingIndex={regeneratingIndex}
+				/>
 			)}
 		</div>
 	);

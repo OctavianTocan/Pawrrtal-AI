@@ -12,9 +12,9 @@ import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-from app.core import config
+from app.core.keys import resolve_api_key
 from app.db import User
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def get_stt_router() -> APIRouter:
         file: UploadFile = File(...),
         language: str | None = Form(default=None),
         format: bool = Form(default=True),  # noqa: A002
-        _user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
     ) -> JSONResponse:
         """Forward an uploaded audio file to xAI and return the transcript JSON.
 
@@ -56,7 +56,9 @@ def get_stt_router() -> APIRouter:
         Returns the upstream JSON response unmodified so the frontend has
         access to ``text``, ``duration``, and the optional ``words`` array.
         """
-        api_key = config.settings.xai_api_key
+        # `resolve_api_key` already falls back to `settings.xai_api_key`, so
+        # the caller doesn't need a manual `or settings.x` suffix.
+        api_key = resolve_api_key(user.id, "XAI_API_KEY")
         if not api_key:
             raise HTTPException(
                 status_code=503,

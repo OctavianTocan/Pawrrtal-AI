@@ -5,6 +5,18 @@ Test structure mirrors pi-mono/packages/agent/test/agent-loop.test.ts
 (https://github.com/badlogic/pi-mono/blob/main/packages/agent/test/agent-loop.test.ts)
 
 RED phase: all tests fail until loop.py and types.py are implemented.
+
+.. note::
+
+    **Legacy suite — prefer ``agent_harness`` for new tests.**
+
+    These tests were written before ``ScriptedStreamFn`` existed and use the
+    bespoke ``make_mock_stream`` helper, which operates on ``AssistantMessage``
+    objects rather than ``LLMEvent`` sequences.  They are kept as-is for
+    regression coverage.  Any *new* test of agent-loop behaviour, safety,
+    tool dispatch, or context accumulation must use the shared primitives in
+    ``backend/tests/agent_harness.py`` (see AGENTS.md §Agent-Loop Testing
+    Philosophy).
 """
 
 from __future__ import annotations
@@ -14,6 +26,7 @@ from typing import Any
 
 import pytest
 
+from app.core.agent_loop.loop import agent_loop
 from app.core.agent_loop.types import (
     AgentContext,
     AgentEvent,
@@ -30,8 +43,6 @@ from app.core.agent_loop.types import (
     ToolResultContent,
     UserMessage,
 )
-from app.core.agent_loop.loop import agent_loop
-
 
 # ---------------------------------------------------------------------------
 # Helpers — mock primitives matching Pi's test helpers
@@ -114,9 +125,7 @@ async def test_agent_loop_emits_full_event_sequence_for_simple_turn() -> None:
     context = AgentContext(system_prompt="You are helpful.", messages=[], tools=[])
     prompt = make_user_message("Hello")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
-    stream_fn = make_mock_stream(
-        make_assistant_message([make_text_content("Hi there!")])
-    )
+    stream_fn = make_mock_stream(make_assistant_message([make_text_content("Hi there!")]))
 
     events: list[AgentEvent] = []
     returned_messages: list[AgentMessage] = []
@@ -152,9 +161,7 @@ async def test_agent_loop_streams_text_deltas() -> None:
     context = AgentContext(system_prompt="You are helpful.", messages=[], tools=[])
     prompt = make_user_message("Hi")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
-    stream_fn = make_mock_stream(
-        make_assistant_message([make_text_content("Hello world")])
-    )
+    stream_fn = make_mock_stream(make_assistant_message([make_text_content("Hello world")]))
 
     events: list[AgentEvent] = []
     async for event in agent_loop([prompt], context, config, stream_fn):
@@ -180,9 +187,7 @@ async def test_agent_loop_applies_transform_context_before_convert() -> None:
         make_user_message("old 2"),
         make_assistant_message([make_text_content("old reply 2")]),
     ]
-    context = AgentContext(
-        system_prompt="You are helpful.", messages=old_messages, tools=[]
-    )
+    context = AgentContext(system_prompt="You are helpful.", messages=old_messages, tools=[])
     prompt = make_user_message("new message")
 
     seen_by_llm: list[list[AgentMessage]] = []
@@ -238,9 +243,7 @@ async def test_agent_loop_executes_tool_calls_and_loops() -> None:
         execute=echo_execute,
     )
 
-    context = AgentContext(
-        system_prompt="You are helpful.", messages=[], tools=[echo_tool]
-    )
+    context = AgentContext(system_prompt="You are helpful.", messages=[], tools=[echo_tool])
     prompt = make_user_message("Echo hello")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
 
@@ -316,9 +319,7 @@ async def test_agent_loop_includes_existing_context_messages() -> None:
         make_user_message("What is 2+2?"),
         make_assistant_message([make_text_content("4")]),
     ]
-    context = AgentContext(
-        system_prompt="You are helpful.", messages=prior_messages, tools=[]
-    )
+    context = AgentContext(system_prompt="You are helpful.", messages=prior_messages, tools=[])
     prompt = make_user_message("And 3+3?")
     config = AgentLoopConfig(convert_to_llm=identity_converter)
 

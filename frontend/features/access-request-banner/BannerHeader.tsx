@@ -1,7 +1,8 @@
 'use client';
 
 import { IconChevronDown, IconX } from '@tabler/icons-react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 import {
 	Avatar,
 	AvatarFallback,
@@ -46,7 +47,7 @@ function CollapsedAvatarGroup({
 	return (
 		<AvatarGroup>
 			{collapsedAvatars.map((r, i) => (
-				<motion.div
+				<m.div
 					key={r.id}
 					layoutId={`avatar-${r.id}`}
 					transition={BOUNCY_SPRING}
@@ -57,7 +58,7 @@ function CollapsedAvatarGroup({
 						{r.avatarUrl && <AvatarImage src={r.avatarUrl} alt={r.name} />}
 						<AvatarFallback>{getInitials(r.name)}</AvatarFallback>
 					</Avatar>
-				</motion.div>
+				</m.div>
 			))}
 
 			{/* Overflow bubble — only rendered when requests exceed the collapsed limit */}
@@ -85,7 +86,7 @@ function HeaderTextBlock({
 		<div className="min-w-0 flex-1 overflow-hidden">
 			<AnimatePresence mode="popLayout" initial={false}>
 				{bannerState.status === 'expanded' ? (
-					<motion.div
+					<m.div
 						key="title"
 						initial={{ opacity: 0, y: -16, filter: 'blur(4px)' }}
 						animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
@@ -95,9 +96,9 @@ function HeaderTextBlock({
 						<span className="block text-sm font-semibold text-foreground">
 							Access Requests
 						</span>
-					</motion.div>
+					</m.div>
 				) : (
-					<motion.div
+					<m.div
 						key="summary"
 						initial={{ opacity: 0, y: 16, filter: 'blur(4px)' }}
 						animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
@@ -105,7 +106,7 @@ function HeaderTextBlock({
 						transition={TEXT_SWAP_SPRING}
 					>
 						<SummaryText requests={requests} />
-					</motion.div>
+					</m.div>
 				)}
 			</AnimatePresence>
 		</div>
@@ -150,13 +151,13 @@ export function BannerHeader({
 
 				<HeaderTextBlock bannerState={bannerState} requests={requests} />
 
-				<motion.div
+				<m.div
 					animate={{ rotate: bannerState.status === 'expanded' ? 180 : 0 }}
 					transition={BOUNCY_SPRING}
 					className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 				>
 					<IconChevronDown className="size-4" />
-				</motion.div>
+				</m.div>
 			</button>
 
 			{onDismiss && (

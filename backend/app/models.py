@@ -12,10 +12,6 @@ from typing import Any
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
-from sqlalchemy_utils import StringEncryptedType
-from sqlalchemy_utils.types.encrypted.encrypted_type import FernetEngine
-
-from app.core import config
 
 from .db import Base
 
@@ -70,6 +66,13 @@ class Conversation(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True
     )
+    # Channel that created this conversation (e.g. "telegram", "web").
+    origin_channel: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # Telegram Bot API 9.3+ topic thread ID.  NULL for non-topic DMs.
+    telegram_thread_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Lifecycle marker for the auto-title feature:
+    # NULL = not yet titled, "auto" = generated, "user" = user-edited.
+    title_set_by: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
 
 class Project(Base):
@@ -166,22 +169,6 @@ class UserAppearance(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 
 
-class APIKey(Base):
-    """API key for a user's provider account."""
-
-    __tablename__ = "api_keys"
-
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
-    provider: Mapped[str] = mapped_column(String(50))
-    encrypted_key: Mapped[str] = mapped_column(
-        StringEncryptedType(String, config.settings.fernet_key, FernetEngine)
-    )
-    is_active: Mapped[bool] = mapped_column(default=True)
-
-
 class ChannelBinding(Base):
     """Persistent map from a third-party messaging identity to a Nexus user.
 
@@ -212,6 +199,19 @@ class ChannelBinding(Base):
     # Display handle captured at bind time. Stored for admin/debug only,
     # never used for authentication.
     display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # The conversation that is currently active for non-topic DMs.
+    # NULL until the first message arrives.  ON DELETE SET NULL so
+    # removing the conversation doesn't orphan the binding.
+    active_conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid,
+        ForeignKey("conversations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # True when this Telegram chat has Bot API 9.3+ Topics enabled.
+    # Drives the routing branch in the inbound message handler.
+    has_topics_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
@@ -274,6 +274,10 @@ class ChatMessage(Base):
     )
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Workspace-relative path to a file the agent delivered via send_message.
+    attachment: Mapped[str | None] = mapped_column(String(4096), nullable=True)
+    # MIME type detected from the attachment path (e.g. "image/png").
+    attachment_mime: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
 

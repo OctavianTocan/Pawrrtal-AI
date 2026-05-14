@@ -9,6 +9,7 @@
 		"commit": "bun run commit.ts",
 		"lint:policies": "bun run check-policies.mjs",
 		"lint:file-lines": "node scripts/check-file-lines.mjs",
+		"lint:view-container": "node scripts/check-view-container.mjs",
 		"lint:docs": "bun run scripts/check-docs.ts",
 		"design:lint": "bunx @google/design.md lint DESIGN.md",
 		"design:diff": "bunx @google/design.md diff",
@@ -19,15 +20,17 @@
 		"@google/design.md": "^0.1.1",
 		"@tanstack/react-query-devtools": "^5.100.9",
 		"@types/bun": "latest",
-		"mcporter": "^0.9.0"
+		"mcporter": "^0.10.2"
 	},
 	"peerDependencies": {
 		"typescript": "^5.9.3"
 	},
 	"workspaces": [
 		"frontend",
-		"electron",
-		"frontend/lib/react-dropdown"
+		"electrobun",
+		"frontend/lib/react-dropdown",
+		"frontend/lib/react-overlay",
+		"frontend/lib/react-chat-composer"
 	],
 	"overrides": {
 		"react": "19.2.6",

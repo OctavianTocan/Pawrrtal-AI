@@ -26,8 +26,9 @@ class Settings(BaseSettings):
     env: str = "dev"
     # The API key for Google services.
     google_api_key: str
-    # Fernet Encryption Key (used to encrypt API keys)
-    fernet_key: str
+    # Encryption key for per-user workspace .env files.
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    workspace_encryption_key: str
     # OAuth token used by the Claude Agent SDK to authenticate the bundled
     # Claude Code CLI subprocess. Optional — only required when a chat
     # request resolves to a Claude model. Generate with `claude setup-token`.
@@ -52,12 +53,37 @@ class Settings(BaseSettings):
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     # If True, forces the Secure flag on cookies. If False, forces HTTP allowed. If None, auto-detects based on is_production.
     cookie_secure: bool | None = None
-    # Optional secret required to register a new account. When set, anyone
-    # attempting to register must supply this value as ``invite_code`` in the
-    # request body. Leave unset (or empty) to allow open registration.
-    registration_secret: str = ""
     # The base directory where workspaces will be stored. Each workspace can contain files, configurations, and other resources specific to a user's project or environment.
     workspace_base_dir: str = "/data/workspaces"
+
+    # ── Agent loop safety ────────────────────────────────────────────────
+    # See backend/app/core/agent_loop/types.py::AgentSafetyConfig for the
+    # behavioural contract.  All four caps accept None to opt out of the
+    # specific guard (set the matching env var to an empty string in
+    # ``.env`` and Pydantic will coerce to None — or pass --None).
+
+    # Hard cap on assistant turns per chat invocation.  Default 25 covers
+    # multi-step refactors and deep research; runaway tool loops trip
+    # well before this.  Set 0/empty to disable.
+    agent_max_iterations: int | None = 25
+
+    # Wall-clock budget (seconds) for one chat invocation.  Counted from
+    # entry to ``agent_loop``.  Default 300 (5 min); raise for long-
+    # running automations.
+    agent_max_wall_clock_seconds: float | None = 300.0
+
+    # Back-to-back stream errors before the loop bails.  Resets on any
+    # successful stream.  Default 3 — covers transient provider blips
+    # while still bailing out of a real outage quickly.
+    agent_max_consecutive_llm_errors: int | None = 3
+
+    # Back-to-back tool failures before the loop bails.  Resets on any
+    # successful tool call.  Default 5.
+    agent_max_consecutive_tool_errors: int | None = 5
+
+    # Base backoff (seconds) between LLM retries; doubles each retry,
+    # capped at 30s inside the loop.  Set 0 for instant retry.
+    agent_llm_retry_backoff_seconds: float = 1.0
     # Admin user credentials (for testing).
     admin_email: str | None = None
     admin_password: str | None = None
@@ -71,9 +97,7 @@ class Settings(BaseSettings):
     google_oauth_client_secret: str = ""
     # Where Google redirects back to after auth. Must be an authorized
     # redirect URI on the OAuth client. Default targets local dev.
-    google_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/google/callback"
-    )
+    google_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
 
     # --- OAuth: Apple ---
     # Apple Sign In requires four pieces: services ID (acts as client_id),
@@ -83,9 +107,7 @@ class Settings(BaseSettings):
     apple_oauth_team_id: str = ""
     apple_oauth_key_id: str = ""
     apple_oauth_private_key: str = ""
-    apple_oauth_redirect_uri: str = (
-        "http://localhost:8000/api/v1/auth/oauth/apple/callback"
-    )
+    apple_oauth_redirect_uri: str = "http://localhost:8000/api/v1/auth/oauth/apple/callback"
 
     # Where to send the user after a successful OAuth sign-in. Override in
     # production to point at the deployed frontend (e.g. https://app/...).
@@ -113,6 +135,39 @@ class Settings(BaseSettings):
     # so the receiving FastAPI route can drop forgeries.
     telegram_webhook_secret: str = ""
 
+    # Comma-separated email allowlist enforced by ``get_allowed_user`` on
+    # every protected route.  Empty (the default) leaves the deployment
+    # open to any authenticated user — fine for local dev, never deploy
+    # publicly without setting this.  Compare case-insensitive.
+    allowed_emails: str = ""
+
+    @property
+    def allowed_emails_set(self) -> frozenset[str]:
+        """Parsed, lowercased view of ``allowed_emails`` for membership tests."""
+        if not self.allowed_emails:
+            return frozenset()
+        return frozenset(
+            addr.strip().lower() for addr in self.allowed_emails.split(",") if addr.strip()
+        )
+
+    # Per-user chat rate limit (requests per 60-second rolling window).
+    # Zero disables the limit entirely — useful for local dev.  Production
+    # deployments should pick a value that matches the operator's monthly
+    # token budget divided by expected request count.
+    chat_rate_limit_per_minute: int = 0
+
+    # When True, ConversationResponse 422s on a non-canonical stored
+    # model_id. When False (operator escape hatch), the bad value falls
+    # back to ``catalog.default_model().id`` and the row is logged.
+    strict_conversation_read_validation: bool = True
+
+    # Demo-mode toggle.  When true, the backend refuses to start the
+    # Telegram channel (which would expose a public reply surface) and
+    # the chat router enforces the demo restrictions documented in
+    # docs/deployment/demo-mode.md.  Default false so production /
+    # private deploys are never accidentally demo-shaped.
+    demo_mode: bool = False
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:
@@ -131,9 +186,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_secure_cookie(self) -> "Settings":
         """Reject misconfigurations where ``SameSite=none`` is paired with insecure cookies."""
-        secure = (
-            self.cookie_secure if self.cookie_secure is not None else self.is_production
-        )
+        secure = self.cookie_secure if self.cookie_secure is not None else self.is_production
         if self.cookie_samesite == "none" and not secure:
             raise ValueError(
                 "cookie_samesite='none' requires HTTPS (cookie_secure must be True, or run with ENV=prod)."
@@ -197,4 +250,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()  # type: ignore[call-arg]
-

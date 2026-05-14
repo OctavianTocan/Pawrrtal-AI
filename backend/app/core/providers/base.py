@@ -18,11 +18,12 @@ class StreamEvent(TypedDict, total=False):
     carries ``name`` + ``input``).
     """
 
-    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error"
+    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error" | "artifact"
     content: str  # for delta and thinking
     name: str  # for tool_use
     input: dict[str, Any]  # for tool_use
     tool_use_id: str  # for tool_result
+    artifact: dict[str, Any]  # for artifact (id, title, spec)
 
 
 class AILLM(Protocol):
@@ -39,7 +40,7 @@ class AILLM(Protocol):
         conversation_id: uuid.UUID,
         user_id: uuid.UUID,
         history: list[dict[str, str]] | None = None,
-        tools: list["AgentTool"] | None = None,
+        tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.

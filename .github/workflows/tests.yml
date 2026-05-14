@@ -41,14 +41,14 @@ jobs:
   frontend:
     name: Frontend Vitest
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
 
@@ -57,11 +57,20 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
       - name: Build local libs (frontend/lib/* submodules)
         run: bash scripts/build-local-libs.sh
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Generate Fumadocs source files
+        working-directory: frontend
+        run: bun run generate:docs
 
       - name: Run Vitest
         id: test
@@ -108,24 +117,24 @@ jobs:
   backend:
     name: Backend pytest
     if: >-
-      github.actor == 'OctavianTocan' &&
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
       (github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, pawrrtal]
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           submodules: recursive
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Check Python nesting depth
         # Cheap pre-check before installing the test deps — fails fast on
@@ -157,6 +166,10 @@ jobs:
           # via `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
           # and pinned here so test runs are deterministic.
           FERNET_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
+          # Required by Settings.workspace_encryption_key (no default).
+          # Same Fernet-format key as FERNET_KEY above — both are
+          # encryption keys, just at different layers.
+          WORKSPACE_ENCRYPTION_KEY: 'zG9KQK6sH0xLm4LJ4n8C9aD2vF3gN5pT7rE1yU8xKqM='
           CORS_ORIGINS: '["http://localhost:3001"]'
           DATABASE_URL: 'sqlite+aiosqlite:///:memory:'
         run: |

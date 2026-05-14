@@ -1,9 +1,30 @@
 {
-	"enabledPlugins": {
-		"notion-workspace-plugin@notion-plugin-marketplace": true
-	},
-	"hooks": {
-		"SessionStart": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }],
-		"PreCompact": [{ "hooks": [{ "type": "command", "command": "beans prime" }] }]
-	}
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "pyright-lsp@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "serena@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true
+  }
 }

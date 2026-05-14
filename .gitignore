@@ -130,7 +130,7 @@ agno.db-wal
 .sentrux/baseline.json
 package-lock.json
 
-# react-dropdown is now a git submodule under frontend/lib/react-dropdown
+# react-dropdown and react-overlay are git submodules under frontend/lib/*
 # (managed by .gitmodules).  The previous "nested git repo" pattern broke
 # CI because the directory wasn't present on fresh checkouts; submodule
 # tracking fixes that without forcing the package source into the parent
@@ -145,3 +145,6 @@ package-lock.json
 
 # OpenCode internal generated artifacts
 .opencode/package-lock.json
+
+# Databases
+*.db

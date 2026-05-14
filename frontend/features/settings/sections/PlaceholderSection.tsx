@@ -7,7 +7,7 @@ import { SettingsPage } from '../primitives';
 /**
  * Placeholder body rendered for settings sections that aren't yet built
  * (Configuration, MCP servers, Git, Environments, Worktrees, Browser
- * use, …). Wraps the standard `SettingsPage` so the title row matches
+ * use, ...). Wraps the standard `SettingsPage` so the title row matches
  * every other section's vertical rhythm — only the body differs.
  */
 export function PlaceholderSection({ title }: { title: string }): React.JSX.Element {

@@ -11,6 +11,7 @@ import {
 	DropdownContextMenuContent,
 } from '@octavian-tocan/react-dropdown';
 import { DropdownMenuProvider, ContextMenuProvider } from '@/components/ui/menu-context';
+import { sidebarNavRowSurfaceClassName } from '@/components/ui/sidebar-nav-row';
 import { cn } from '@/lib/utils';
 
 export interface EntityRowProps {
@@ -21,8 +22,7 @@ export interface EntityRowProps {
 	badges?: React.ReactNode;
 	trailing?: React.ReactNode;
 	children?: React.ReactNode;
-	isSelected?: boolean;
-	showSeparator?: boolean;
+	state?: EntityRowState;
 	className?: string;
 	separatorClassName?: string;
 	onClick?: () => void;
@@ -30,12 +30,8 @@ export interface EntityRowProps {
 	menuContent?: React.ReactNode;
 	/** Override context menu content (defaults to menuContent) */
 	contextMenuContent?: React.ReactNode;
-	/** Multi-select highlight */
-	isInMultiSelect?: boolean;
 	/** Mouse down handler for modifier key detection */
 	onMouseDown?: (e: React.MouseEvent) => void;
-	/** When true, the inner row becomes draggable. */
-	draggable?: boolean;
 	/** Fires on drag start — the row sets up the dataTransfer payload here. */
 	onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
 	/** Fires on drag end — used to clean up local "is dragging" state. */
@@ -46,6 +42,13 @@ export interface EntityRowProps {
 	dataAttributes?: Record<string, string | undefined>;
 	/** Hide the "..." more button */
 	hideMoreButton?: boolean;
+}
+
+export interface EntityRowState {
+	isDraggable?: boolean;
+	isInMultiSelect?: boolean;
+	isSelected?: boolean;
+	showSeparator?: boolean;
 }
 
 /**
@@ -64,22 +67,25 @@ export function EntityRow({
 	badges,
 	trailing,
 	children,
-	isSelected = false,
-	showSeparator = false,
+	state,
 	className,
 	separatorClassName = 'pl-[38px] pr-4',
 	onClick,
 	menuContent,
 	contextMenuContent,
-	isInMultiSelect = false,
 	onMouseDown,
-	draggable: isDraggable,
 	onDragStart,
 	onDragEnd,
 	buttonProps,
 	dataAttributes,
 	hideMoreButton = false,
 }: EntityRowProps): React.JSX.Element {
+	const {
+		isDraggable = false,
+		isInMultiSelect = false,
+		isSelected = false,
+		showSeparator = false,
+	} = state ?? {};
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [contextMenuOpen, setContextMenuOpen] = useState(false);
 	const resolvedContextMenu = contextMenuContent ?? menuContent;
@@ -108,9 +114,12 @@ export function EntityRow({
 					}
 				}}
 				className={cn(
-					'flex w-full items-start gap-2 pl-2 pr-4 py-2 text-left text-sm outline-none rounded-[8px]',
-					'transition-[background-color] duration-75 cursor-pointer',
-					isSelected || isInMultiSelect ? 'bg-foreground/3' : 'hover:bg-foreground/2',
+					sidebarNavRowSurfaceClassName({
+						selected: isSelected || isInMultiSelect,
+						density: 'comfortable',
+						align: 'start',
+					}),
+					'cursor-pointer',
 					buttonProps?.className
 				)}
 			>
@@ -159,7 +168,7 @@ export function EntityRow({
 													onClick={(e) => e.stopPropagation()}
 													aria-label="More actions"
 												>
-													<MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+													<MoreHorizontal className="size-3.5 text-muted-foreground" />
 												</button>
 											}
 										>
@@ -249,7 +258,7 @@ export function EntityRow({
 									onClick={(e) => e.stopPropagation()}
 									aria-label="More actions"
 								>
-									<MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+									<MoreHorizontal className="size-4 text-muted-foreground" />
 								</button>
 							}
 						>

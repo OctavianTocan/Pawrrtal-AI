@@ -44,9 +44,9 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
-import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
 
@@ -113,6 +113,8 @@ const EXEMPT_FUNCTIONS = new Set([]);
 const EXEMPT_PATH_FRAGMENTS = [
 	'frontend/components/ui/', // shadcn-generated primitives
 	'frontend/lib/react-dropdown/', // vendored sibling package
+	'frontend/lib/react-overlay/', // vendored sibling package
+	'frontend/lib/react-chat-composer/', // vendored sibling package
 	'routeTree.gen.ts', // TanStack Router generated tree
 ];
 
@@ -151,7 +153,7 @@ const FUNCTION_KINDS = new Set([
 
 /** Best-effort name for a function-like node. */
 function functionName(node, parent) {
-	if (node.name && node.name.escapedText) return String(node.name.escapedText);
+	if (node.name?.escapedText) return String(node.name.escapedText);
 	// Arrow / function expression assigned to a variable: `const foo = () => {}`.
 	if (parent && parent.kind === ts.SyntaxKind.VariableDeclaration && parent.name) {
 		return String(parent.name.escapedText ?? parent.name.getText?.() ?? '<anonymous>');
@@ -230,7 +232,7 @@ async function checkFile(filePath, repoRelative) {
 		source,
 		ts.ScriptTarget.Latest,
 		/* setParentNodes */ true,
-		scriptKind,
+		scriptKind
 	);
 	const offenders = analyse(sourceFile);
 	return offenders
@@ -264,13 +266,13 @@ async function main() {
 
 	all.sort((a, b) => b.deepest - a.deepest || a.path.localeCompare(b.path) || a.line - b.line);
 	console.error(
-		`check-nesting (frontend): ${all.length} function(s) exceed depth ${MAX_DEPTH}:\n`,
+		`check-nesting (frontend): ${all.length} function(s) exceed depth ${MAX_DEPTH}:\n`
 	);
 	for (const o of all) {
 		console.error(`  depth=${o.deepest}  ${o.path}:${o.line}  in ${o.name}()`);
 	}
 	console.error(
-		'\nFlatten with guard clauses or extract helpers to bring each function under the budget.',
+		'\nFlatten with guard clauses or extract helpers to bring each function under the budget.'
 	);
 	process.exitCode = 1;
 }

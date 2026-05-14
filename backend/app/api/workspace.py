@@ -15,11 +15,14 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import mimetypes
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.workspace import list_workspaces
+from app.crud.workspace import get_default_workspace, list_workspaces
 from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
@@ -29,8 +32,7 @@ from app.schemas import (
     WorkspaceRead,
     WorkspaceTreeResponse,
 )
-from app.users import current_active_user
-
+from app.users import get_allowed_user
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -51,9 +53,7 @@ async def _get_owned_workspace(
     )
     ws = result.scalar_one_or_none()
     if ws is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
     return ws
 
 
@@ -73,9 +73,7 @@ def _safe_child(root: Path, relative: str) -> Path:
     return resolved
 
 
-def _build_tree(
-    root: Path, relative_root: Path | None = None
-) -> list[WorkspaceFileNode]:
+def _build_tree(root: Path, relative_root: Path | None = None) -> list[WorkspaceFileNode]:
     """Recursively build a flat list of file-tree nodes.
 
     ``relative_root`` is the workspace root used to compute workspace-relative
@@ -122,7 +120,7 @@ def get_workspace_router() -> APIRouter:
 
     @router.get("", response_model=list[WorkspaceRead])
     async def list_user_workspaces(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> list[WorkspaceRead]:
         """Return all workspaces owned by the authenticated user."""
@@ -136,7 +134,7 @@ def get_workspace_router() -> APIRouter:
     @router.get("/{workspace_id}/tree", response_model=WorkspaceTreeResponse)
     async def get_workspace_tree(
         workspace_id: uuid.UUID,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceTreeResponse:
         """Return the full file tree of a workspace as a flat node list."""
@@ -156,13 +154,11 @@ def get_workspace_router() -> APIRouter:
     # Read file
     # ------------------------------------------------------------------
 
-    @router.get(
-        "/{workspace_id}/files/{file_path:path}", response_model=WorkspaceFileContent
-    )
+    @router.get("/{workspace_id}/files/{file_path:path}", response_model=WorkspaceFileContent)
     async def read_workspace_file(
         workspace_id: uuid.UUID,
         file_path: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceFileContent:
         """Read a file's text content from the workspace."""
@@ -170,9 +166,7 @@ def get_workspace_router() -> APIRouter:
         target = _safe_child(Path(ws.path), file_path)
 
         if not target.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
         if target.is_dir():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -202,7 +196,7 @@ def get_workspace_router() -> APIRouter:
         workspace_id: uuid.UUID,
         file_path: str,
         payload: WorkspaceFileWrite,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> WorkspaceFileContent:
         """Create or replace a text file inside the workspace."""
@@ -231,12 +225,62 @@ def get_workspace_router() -> APIRouter:
     async def delete_workspace_file(
         workspace_id: uuid.UUID,
         file_path: str,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a file from the workspace.  Does not delete directories."""
         ws = await _get_owned_workspace(workspace_id, user, session)
         target = _safe_child(Path(ws.path), file_path)
+
+        if not target.exists():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+        if target.is_dir():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Use a dedicated endpoint to delete directories",
+            )
+
+        target.unlink()
+
+    # ------------------------------------------------------------------
+    # Serve binary file from the default workspace
+    # ------------------------------------------------------------------
+
+    @router.get(
+        "/default/serve/{file_path:path}",
+        response_class=FileResponse,
+        summary="Serve a binary file from the user's default workspace",
+    )
+    async def serve_default_workspace_file(
+        file_path: str,
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> FileResponse:
+        """Serve a file from the user's default workspace with its detected MIME type.
+
+        Unlike the text-only ``GET /{workspace_id}/files/{file_path}`` endpoint,
+        this route returns raw bytes (``FileResponse``) so the frontend can render
+        images, audio, and other binary artifacts that agents produce via the
+        ``send_message`` tool.
+
+        Path traversal is blocked: the resolved target must stay inside the
+        workspace root or the request is rejected with 400.
+
+        Args:
+            file_path: Workspace-relative path (e.g. ``artifacts/chart.png``).
+
+        Returns:
+            The file streamed with the appropriate ``Content-Type`` header.
+        """
+        ws = await get_default_workspace(user.id, session)
+        if ws is None:
+            raise HTTPException(
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail="No default workspace found.  Complete onboarding first.",
+            )
+
+        root = Path(ws.path).resolve()
+        target = _safe_child(root, file_path)
 
         if not target.exists():
             raise HTTPException(
@@ -245,9 +289,14 @@ def get_workspace_router() -> APIRouter:
         if target.is_dir():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Use a dedicated endpoint to delete directories",
+                detail="Path is a directory, not a file",
             )
 
-        target.unlink()
+        mime, _ = mimetypes.guess_type(str(target))
+        return FileResponse(
+            path=str(target),
+            media_type=mime or "application/octet-stream",
+            filename=target.name,
+        )
 
     return router

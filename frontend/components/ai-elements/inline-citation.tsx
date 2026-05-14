@@ -7,14 +7,7 @@
 'use client';
 
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
-import {
-	type ComponentProps,
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useState,
-} from 'react';
+import { type ComponentProps, createContext, use, useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
 	Carousel,
@@ -74,7 +67,7 @@ export const InlineCitationCardBody = ({ className, ...props }: InlineCitationCa
 const CarouselApiContext = createContext<CarouselApi | undefined>(undefined);
 
 const useCarouselApi = () => {
-	const context = useContext(CarouselApiContext);
+	const context = use(CarouselApiContext);
 	return context;
 };
 
@@ -134,20 +127,29 @@ export const InlineCitationCarouselIndex = ({
 	...props
 }: InlineCitationCarouselIndexProps) => {
 	const api = useCarouselApi();
-	const [current, setCurrent] = useState(0);
-	const [count, setCount] = useState(0);
+	const [slideState, setSlideState] = useState({ current: 0, count: 0 });
 
 	useEffect(() => {
 		if (!api) {
 			return;
 		}
 
-		setCount(api.scrollSnapList().length);
-		setCurrent(api.selectedScrollSnap() + 1);
-
-		api.on('select', () => {
-			setCurrent(api.selectedScrollSnap() + 1);
+		const readSlideState = () => ({
+			count: api.scrollSnapList().length,
+			current: api.selectedScrollSnap() + 1,
 		});
+
+		setSlideState(readSlideState());
+
+		const updateCurrentSlide = () => {
+			setSlideState(readSlideState());
+		};
+
+		api.on('select', updateCurrentSlide);
+
+		return () => {
+			api.off('select', updateCurrentSlide);
+		};
 	}, [api]);
 
 	return (
@@ -158,7 +160,7 @@ export const InlineCitationCarouselIndex = ({
 			)}
 			{...props}
 		>
-			{children ?? `${current}/${count}`}
+			{children ?? `${slideState.current}/${slideState.count}`}
 		</div>
 	);
 };
@@ -171,7 +173,7 @@ export const InlineCitationCarouselPrev = ({
 }: InlineCitationCarouselPrevProps) => {
 	const api = useCarouselApi();
 
-	const handleClick = useCallback(() => {
+	const scrollToPreviousCitation = useCallback(() => {
 		if (api) {
 			api.scrollPrev();
 		}
@@ -181,7 +183,7 @@ export const InlineCitationCarouselPrev = ({
 		<button
 			aria-label="Previous"
 			className={cn('shrink-0', className)}
-			onClick={handleClick}
+			onClick={scrollToPreviousCitation}
 			type="button"
 			{...props}
 		>
@@ -198,7 +200,7 @@ export const InlineCitationCarouselNext = ({
 }: InlineCitationCarouselNextProps) => {
 	const api = useCarouselApi();
 
-	const handleClick = useCallback(() => {
+	const scrollToNextCitation = useCallback(() => {
 		if (api) {
 			api.scrollNext();
 		}
@@ -208,7 +210,7 @@ export const InlineCitationCarouselNext = ({
 		<button
 			aria-label="Next"
 			className={cn('shrink-0', className)}
-			onClick={handleClick}
+			onClick={scrollToNextCitation}
 			type="button"
 			{...props}
 		>

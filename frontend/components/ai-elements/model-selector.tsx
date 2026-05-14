@@ -4,6 +4,7 @@
  * @fileoverview AI Elements — `model-selector`.
  */
 
+import Image from 'next/image';
 import type { ComponentProps, ReactNode } from 'react';
 
 import {
@@ -153,12 +154,13 @@ export type ModelSelectorLogoProps = Omit<ComponentProps<'img'>, 'src' | 'alt'> 
 };
 
 export const ModelSelectorLogo = ({ provider, className, ...props }: ModelSelectorLogoProps) => (
-	<img
+	<Image
 		{...props}
 		alt={`${provider} logo`}
 		className={cn('size-3 dark:invert', className)}
 		height={12}
 		src={`https://models.dev/logos/${provider}.svg`}
+		unoptimized
 		width={12}
 	/>
 );

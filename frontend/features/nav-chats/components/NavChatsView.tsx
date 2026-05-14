@@ -153,7 +153,11 @@ export function NavChatsView({
 				data-scroll-down={canScrollDown ? 'true' : 'false'}
 				className="scrollbar-hover min-h-0 flex-1 overflow-y-auto"
 			>
-				<ProjectsList />
+				{/* Hide the Projects section entirely while the chat list is empty —
+				    showing the "Create your first project" CTA alongside the
+				    "No sessions yet" empty state looks unpolished, and toggling the
+				    Projects header causes the empty-state text to jump up/down. */}
+				{!isEmpty && <ProjectsList />}
 				<NavChatsContent
 					isLoading={isLoading}
 					isEmpty={isEmpty}

@@ -1,0 +1,104 @@
+---
+title: Adopt Sentrux for Architectural Quality Gating
+description: ADR — adopt sentrux v0.5.7+ for enforcing layer rules and cross-stack boundaries in CI.
+---
+
+# Adopt Sentrux for Architectural Quality Gating
+
+Date: 2026-05-03
+
+<Callout type="info" title="Status: Accepted">
+This ADR is accepted. Sentrux is active in CI and enforced on every PR to `development` and `main`.
+</Callout>
+
+Related bean: `pawrrtal-ups6`
+
+## Context
+
+The codebase has reached a size (1,083 source files, ~84k LOC) where local
+human review can no longer reliably catch architectural drift introduced by
+fast iteration with AI agents. We needed a sensor that grades structural
+health on every change, not just code style or test coverage.
+
+Initial scan via [`sentrux`](https://github.com/sentrux/sentrux) v0.5.7
+produced this baseline:
+
+| Metric                | Value                |
+| --------------------- | -------------------- |
+| Quality signal        | **6753 / 10000**     |
+| Acyclicity            | 10000 (no cycles)    |
+| Modularity            | 5815                 |
+| **Equality**          | **5506 (bottleneck)** |
+| Redundancy            | 6579                 |
+| Depth                 | 6667                 |
+| Coupling score        | 0.072 (grade A)      |
+| God files             | 2                    |
+| Complex functions     | 12                   |
+| Cross-module imports  | 355 of 736           |
+| Test coverage         | 18 test files / 1064 source files (2.5%) |
+| Hotspots (90d)        | 30                   |
+
+Heuristic file-level findings (since the free tier returns aggregates only):
+
+- **God files (>500 LOC, project-owned)**: `ChatComposer.tsx` (570),
+  `NavChatsView.tsx` (552). Plus two vendored: `prompt-input.tsx` (1293),
+  `sidebar.tsx` (774).
+- **Triple-threat (god + hotspot + complex)**: `backend/app/api/conversations.py`
+  (362 LOC, 17 commits in 90d, 23 decision points).
+- **Top hotspots**: `backend/main.py` (31 commits), `ChatContainer.tsx` (23),
+  `app/(app)/page.tsx` (21), `ChatView.tsx` (19), `conversations.py` (17).
+
+The biggest single quality lever is **test coverage**: 2.5% means almost
+every change is unverified at the unit level. Adding tests around the 30
+churn hotspots would move every other metric forward indirectly.
+
+## Decision
+
+1. Adopt `sentrux check` as a CI-blocking step on every PR to `development`
+   and `main` via `.github/workflows/sentrux.yml`.
+2. Codify architectural intent in `.sentrux/rules.toml` with:
+   - `max_cycles = 0` (currently passes; locks in)
+   - `max_coupling = "C"` (loose; tighten to `"B"` after first round of
+     refactors)
+   - `max_cc = 30` (covers the highest project-owned function)
+   - `no_god_files = false` (the two real god files are vendored
+     `prompt-input.tsx` / `sidebar.tsx`; flip to `true` after wrapping or
+     extracting them)
+   - Layered architecture for both frontend and backend (`fe-app` →
+     `fe-features` → `fe-ai-elements` → `fe-ui-primitives` → `fe-lib`;
+     `be-entry` → `be-api` → `be-crud` → `be-models` → `be-core`)
+   - Hard boundaries: `frontend/* ⇏ backend/*` and the reverse
+3. Wire the sentrux MCP server into agent toolchains so agents can call
+   `session_start` / `session_end` around multi-step work for per-session
+   regression detection. Local baseline lives at `.sentrux/baseline.json`
+   and is gitignored (per-developer state).
+4. Keep one architectural exception in the rules file:
+   `backend/app/core/admin_seed.py` is layered as `be-entry` rather than
+   `be-core` because it does startup wiring that depends on the api layer.
+   TODO: relocate to `backend/app/cli/admin_seed.py` and remove the
+   exception.
+
+## Consequences
+
+- Every PR gets a structural quality verdict alongside Biome/typecheck.
+- Architectural smells (a `frontend/components/ui/*` file accidentally
+  importing from `frontend/features/*`, a `crud/*` file reaching into
+  `api/*`, a Python module reaching into TypeScript paths or vice versa)
+  become CI failures rather than something a reviewer has to spot.
+- The rules file is intentionally conservative — it passes today (5/5).
+  As work lands, we ratchet it up: tighter coupling grade, `no_god_files`
+  on, and additional sub-layer boundaries (e.g. `models ⇏ schemas`,
+  `core ⇏ db.py`).
+- The 2.5% test coverage gap is not addressed by sentrux directly; it
+  becomes the highest-priority quality investment outside this ADR.
+
+## Follow-up work (not in this ADR)
+
+- Move `backend/app/core/admin_seed.py` → `backend/app/cli/admin_seed.py`
+  and tighten the rules.
+- Refactor `backend/app/api/conversations.py` (god + hotspot + complex).
+- Refactor `frontend/features/chat/components/ChatComposer.tsx` (god).
+- Refactor `frontend/features/nav-chats/components/NavChatsView.tsx` (god).
+- Wrap or trim vendored `prompt-input.tsx` and `sidebar.tsx`, then enable
+  `no_god_files = true`.
+- Test coverage push around the 30 git hotspots first.

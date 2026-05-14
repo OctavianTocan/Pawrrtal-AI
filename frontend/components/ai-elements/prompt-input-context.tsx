@@ -12,10 +12,11 @@ import {
 	createContext,
 	type PropsWithChildren,
 	type RefObject,
+	use,
 	useCallback,
-	useContext,
 	useEffect,
 	useMemo,
+	useReducer,
 	useRef,
 	useState,
 } from 'react';
@@ -53,6 +54,7 @@ export type PromptInputProviderProps = PropsWithChildren<{
 export const PromptInputController = createContext<PromptInputControllerProps | null>(null);
 export const ProviderAttachmentsContext = createContext<AttachmentsContext | null>(null);
 export const LocalAttachmentsContext = createContext<AttachmentsContext | null>(null);
+const replaceTextInput = (_current: string, next: string): string => next;
 
 const revokeFileUrl = (file: { url?: string }) => {
 	if (file.url) {
@@ -70,7 +72,7 @@ const createFilePart = (file: File): FileUIPart & { id: string } => ({
 
 /** Read the nearest provider-backed prompt input controller. */
 export const usePromptInputController = () => {
-	const ctx = useContext(PromptInputController);
+	const ctx = use(PromptInputController);
 	if (!ctx) {
 		throw new Error(
 			'Wrap your component inside <PromptInputProvider> to use usePromptInputController().'
@@ -80,11 +82,11 @@ export const usePromptInputController = () => {
 };
 
 /** Read the provider-backed prompt input controller when one exists. */
-export const useOptionalPromptInputController = () => useContext(PromptInputController);
+export const useOptionalPromptInputController = () => use(PromptInputController);
 
 /** Read the provider-level attachment controller. */
 export const useProviderAttachments = () => {
-	const ctx = useContext(ProviderAttachmentsContext);
+	const ctx = use(ProviderAttachmentsContext);
 	if (!ctx) {
 		throw new Error(
 			'Wrap your component inside <PromptInputProvider> to use useProviderAttachments().'
@@ -94,12 +96,12 @@ export const useProviderAttachments = () => {
 };
 
 /** Read provider-level attachments when the component is wrapped by a provider. */
-export const useOptionalProviderAttachments = () => useContext(ProviderAttachmentsContext);
+export const useOptionalProviderAttachments = () => use(ProviderAttachmentsContext);
 
 /** Read the attachment controller for the current prompt input. */
 export const usePromptInputAttachments = () => {
 	const provider = useOptionalProviderAttachments();
-	const local = useContext(LocalAttachmentsContext);
+	const local = use(LocalAttachmentsContext);
 	const context = provider ?? local;
 	if (!context) {
 		throw new Error(
@@ -117,7 +119,7 @@ export function PromptInputProvider({
 	initialInput: initialTextInput = '',
 	children,
 }: PromptInputProviderProps) {
-	const [textInput, setTextInput] = useState(initialTextInput);
+	const [textInput, setTextInput] = useReducer(replaceTextInput, initialTextInput);
 	const clearInput = useCallback(() => setTextInput(''), []);
 	const [attachmentFiles, setAttachmentFiles] = useState<(FileUIPart & { id: string })[]>([]);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);

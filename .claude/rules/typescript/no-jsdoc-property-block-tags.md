@@ -1,6 +1,6 @@
 ---
 name: no-jsdoc-property-block-tags
-paths: ["**/*"]
+paths: ["**/*.ts", "**/*.tsx"]
 ---
 
 # JSDoc @property Block Tags Are Invisible in IDE Hover - Use Inline Property Docs Instead

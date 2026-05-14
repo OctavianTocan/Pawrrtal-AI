@@ -8,7 +8,7 @@
 
 import { ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, use, useReducer, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,10 @@ export type WebPreviewContextValue = {
 };
 
 const WebPreviewContext = createContext<WebPreviewContextValue | null>(null);
+const replaceStringState = (_current: string, next: string): string => next;
 
 const useWebPreview = () => {
-	const context = useContext(WebPreviewContext);
+	const context = use(WebPreviewContext);
 	if (!context) {
 		throw new Error('WebPreview components must be used within a WebPreview');
 	}
@@ -44,7 +45,7 @@ export const WebPreview = ({
 	onUrlChange,
 	...props
 }: WebPreviewProps) => {
-	const [url, setUrl] = useState(defaultUrl);
+	const [url, setUrl] = useReducer(replaceStringState, defaultUrl);
 	const [consoleOpen, setConsoleOpen] = useState(false);
 
 	const handleUrlChange = (newUrl: string) => {
@@ -98,7 +99,7 @@ export const WebPreviewNavigationButton = ({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
-					className="h-8 w-8 p-0 hover:text-foreground"
+					className="size-8 p-0 hover:text-foreground"
 					disabled={disabled}
 					onClick={onClick}
 					size="sm"
@@ -117,14 +118,20 @@ export const WebPreviewNavigationButton = ({
 
 export type WebPreviewUrlProps = ComponentProps<typeof Input>;
 
-export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPreviewUrlProps) => {
-	const { url, setUrl } = useWebPreview();
-	const [inputValue, setInputValue] = useState(url);
+type WebPreviewUrlInputProps = WebPreviewUrlProps & {
+	url: string;
+	setUrl: (url: string) => void;
+};
 
-	// Sync input value with context URL when it changes externally
-	useEffect(() => {
-		setInputValue(url);
-	}, [url]);
+const WebPreviewUrlInput = ({
+	value,
+	onChange,
+	onKeyDown,
+	url,
+	setUrl,
+	...props
+}: WebPreviewUrlInputProps) => {
+	const [inputValue, setInputValue] = useReducer(replaceStringState, url);
 
 	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		setInputValue(event.target.value);
@@ -149,6 +156,12 @@ export const WebPreviewUrl = ({ value, onChange, onKeyDown, ...props }: WebPrevi
 			{...props}
 		/>
 	);
+};
+
+export const WebPreviewUrl = (props: WebPreviewUrlProps) => {
+	const { url, setUrl } = useWebPreview();
+
+	return <WebPreviewUrlInput key={url} url={url} setUrl={setUrl} {...props} />;
 };
 
 export type WebPreviewBodyProps = ComponentProps<'iframe'> & {
@@ -180,9 +193,11 @@ export type WebPreviewConsoleProps = ComponentProps<'div'> & {
 	}>;
 };
 
+const EMPTY_WEB_PREVIEW_LOGS: NonNullable<WebPreviewConsoleProps['logs']> = [];
+
 export const WebPreviewConsole = ({
 	className,
-	logs = [],
+	logs = EMPTY_WEB_PREVIEW_LOGS,
 	children,
 	...props
 }: WebPreviewConsoleProps) => {
@@ -203,7 +218,7 @@ export const WebPreviewConsole = ({
 					Console
 					<ChevronDownIcon
 						className={cn(
-							'h-4 w-4 transition-transform duration-150',
+							'size-4 transition-transform duration-150',
 							consoleOpen && 'rotate-180'
 						)}
 					/>
@@ -219,7 +234,7 @@ export const WebPreviewConsole = ({
 					{logs.length === 0 ? (
 						<p className="text-muted-foreground">No console output</p>
 					) : (
-						logs.map((log, index) => (
+						logs.map((log) => (
 							<div
 								className={cn(
 									'text-xs',
@@ -227,7 +242,7 @@ export const WebPreviewConsole = ({
 									log.level === 'warn' && 'text-yellow-600',
 									log.level === 'log' && 'text-foreground'
 								)}
-								key={`${log.timestamp.getTime()}-${index}`}
+								key={`${log.timestamp.getTime()}-${log.level}-${log.message}`}
 							>
 								<span className="text-muted-foreground">
 									{log.timestamp.toLocaleTimeString()}

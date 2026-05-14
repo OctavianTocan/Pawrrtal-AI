@@ -5,6 +5,7 @@
  */
 
 import { Agentation } from 'agentation';
+import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Newsreader } from 'next/font/google';
 import Script from 'next/script';
@@ -25,16 +26,6 @@ const newsreader = Newsreader({
 	variable: '--font-display-loaded',
 	display: 'swap',
 });
-
-/**
- * Google Sans Flex + Google Sans — default UI sans stack (`--font-sans-stack` in
- * `globals.css`). **Not** loaded with `next/font/google`: those families are
- * missing from Next.js’s capsize fallback metrics DB, so the loader logs
- * “Failed to find font override values…” on every dev start (and
- * `adjustFontFallback: false` is unreliable in some Next 15/16 versions).
- * Instead we add a standard Google Fonts `<link>` in `<head>` (see below) so
- * the same public `fonts.gstatic.com` files load without the metrics pipeline.
- */
 
 /**
  * Geist + Geist Mono — preloaded so the Cursor preset's typography
@@ -81,12 +72,6 @@ export default function RootLayout({
 				script only modifies the class list, not the DOM structure.
 			*/}
 			<head>
-				<link href="https://fonts.googleapis.com" rel="preconnect" />
-				<link href="https://fonts.gstatic.com" crossOrigin="anonymous" rel="preconnect" />
-				<link
-					href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400..700&family=Google+Sans:wght@400..700&display=swap"
-					rel="stylesheet"
-				/>
 				{/* System theme detection — runs synchronously before hydration
 				    to prevent FOUC.  Body lives in `frontend/public/theme-detection.js`.
 
@@ -113,8 +98,20 @@ export default function RootLayout({
 				)}
 			</head>
 			<body>
-				<Providers>{children}</Providers>
-				{process.env.NODE_ENV === 'development' && <Agentation />}
+				<RootProvider
+					theme={{
+						// The blocking script at /theme-detection.js is the FOUC defence
+						// and the source of truth for the `dark` class on <html>.
+						// `attribute="class"` makes next-themes (inside RootProvider)
+						// read from that class on mount rather than write its own.
+						attribute: 'class',
+						defaultTheme: 'system',
+						enableSystem: true,
+					}}
+				>
+					<Providers>{children}</Providers>
+					{process.env.NODE_ENV === 'development' && <Agentation />}
+				</RootProvider>
 			</body>
 		</html>
 	);

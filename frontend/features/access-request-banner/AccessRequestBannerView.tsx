@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutGroup } from 'motion/react';
+import { domAnimation, LayoutGroup, LazyMotion } from 'motion/react';
 import { BannerHeader } from './BannerHeader';
 import { ExpandedRequestList } from './ExpandedRequestList';
 import type { AccessRequestBannerViewProps } from './types';
@@ -46,26 +46,28 @@ export function AccessRequestBannerView({
 	onResetRequest,
 }: AccessRequestBannerViewProps) {
 	return (
-		<LayoutGroup>
-			<div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-				<BannerHeader
-					bannerState={bannerState}
-					requests={requests}
-					collapsedAvatars={collapsedAvatars}
-					remainingCount={remainingCount}
-					onToggleExpand={onToggleExpand}
-					onDismiss={onDismiss}
-				/>
+		<LazyMotion features={domAnimation}>
+			<LayoutGroup>
+				<div className="w-full overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+					<BannerHeader
+						bannerState={bannerState}
+						requests={requests}
+						collapsedAvatars={collapsedAvatars}
+						remainingCount={remainingCount}
+						onToggleExpand={onToggleExpand}
+						onDismiss={onDismiss}
+					/>
 
-				<ExpandedRequestList
-					bannerState={bannerState}
-					requests={requests}
-					decisions={decisions}
-					onApproveRequest={onApproveRequest}
-					onRejectRequest={onRejectRequest}
-					onResetRequest={onResetRequest}
-				/>
-			</div>
-		</LayoutGroup>
+					<ExpandedRequestList
+						bannerState={bannerState}
+						requests={requests}
+						decisions={decisions}
+						onApproveRequest={onApproveRequest}
+						onRejectRequest={onRejectRequest}
+						onResetRequest={onResetRequest}
+					/>
+				</div>
+			</LayoutGroup>
+		</LazyMotion>
 	);
 }

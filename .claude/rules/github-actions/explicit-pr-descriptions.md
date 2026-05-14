@@ -1,6 +1,8 @@
 ---
+
 description: Ensure Pull Request descriptions are honest and accurate
 globs: .github/workflows/*.yml
+paths: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 # Explicit Pull Request Descriptions
 

@@ -61,7 +61,13 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(
+				result.current.streamMessage(
+					'Hi',
+					'conversation-1',
+					'google-ai:google/gemini-3-flash-preview'
+				)
+			)
 		).resolves.toEqual([
 			{ type: 'delta', content: 'Hel' },
 			{ type: 'delta', content: 'lo' },
@@ -72,7 +78,7 @@ describe('useChat', (): void => {
 			body: JSON.stringify({
 				question: 'Hi',
 				conversation_id: 'conversation-1',
-				model_id: 'gpt-5.5',
+				model_id: 'google-ai:google/gemini-3-flash-preview',
 			}),
 			headers: {
 				'Content-Type': 'application/json',
@@ -94,14 +100,20 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(
+				result.current.streamMessage(
+					'Hi',
+					'conversation-1',
+					'google-ai:google/gemini-3-flash-preview'
+				)
+			)
 		).resolves.toEqual([{ type: 'delta', content: 'Split' }]);
 	});
 
 	it('yields thinking, tool_use, and tool_result events alongside deltas', async (): Promise<void> => {
 		vi.mocked(fetch).mockResolvedValue(
 			createStreamResponse([
-				'data: {"type":"thinking","content":"Let me search…"}\n\n',
+				'data: {"type":"thinking","content":"Let me search..."}\n\n',
 				'data: {"type":"tool_use","tool_use_id":"t1","name":"web_search","input":{"q":"foo"}}\n\n',
 				'data: {"type":"tool_result","tool_use_id":"t1","content":"result body"}\n\n',
 				'data: {"type":"delta","content":"Done."}\n\n',
@@ -112,9 +124,15 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
+			collectStream(
+				result.current.streamMessage(
+					'Hi',
+					'conversation-1',
+					'agent-sdk:anthropic/claude-sonnet-4-6'
+				)
+			)
 		).resolves.toEqual([
-			{ type: 'thinking', content: 'Let me search…' },
+			{ type: 'thinking', content: 'Let me search...' },
 			{ type: 'tool_use', tool_use_id: 't1', name: 'web_search', input: { q: 'foo' } },
 			{ type: 'tool_result', tool_use_id: 't1', content: 'result body' },
 			{ type: 'delta', content: 'Done.' },
@@ -132,7 +150,13 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'claude-sonnet-4-6'))
+			collectStream(
+				result.current.streamMessage(
+					'Hi',
+					'conversation-1',
+					'agent-sdk:anthropic/claude-sonnet-4-6'
+				)
+			)
 		).rejects.toThrow('Claude CLI failed: missing auth');
 	});
 
@@ -148,7 +172,13 @@ describe('useChat', (): void => {
 		const { result } = renderHook(() => useChat());
 
 		await expect(
-			collectStream(result.current.streamMessage('Hi', 'conversation-1', 'gpt-5.5'))
+			collectStream(
+				result.current.streamMessage(
+					'Hi',
+					'conversation-1',
+					'google-ai:google/gemini-3-flash-preview'
+				)
+			)
 		).resolves.toEqual([{ type: 'delta', content: 'hi' }]);
 	});
 });

@@ -8,14 +8,21 @@
 
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { ChatModelId } from '../components/ModelSelectorPopover';
 import type { ChatStreamEvent } from '../types';
 
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
 const STREAM_DONE = Symbol('STREAM_DONE');
 
 /** Allowed `type` field values for chat SSE events. */
-const CHAT_EVENT_TYPES = ['delta', 'thinking', 'tool_use', 'tool_result', 'error'] as const;
+const CHAT_EVENT_TYPES = [
+	'delta',
+	'thinking',
+	'tool_use',
+	'tool_result',
+	'artifact',
+	'error',
+	'agent_terminated',
+] as const;
 
 /**
  * Narrow an unknown JSON payload to a {@link ChatStreamEvent}.
@@ -69,6 +76,9 @@ function* parseFrameBatch(frames: string[]): Generator<ChatStreamEvent, 'done' |
 		if (parsed.type === 'error') {
 			throw new Error(parsed.content || 'Chat stream failed.');
 		}
+		// agent_terminated is a controlled stop, not an exception — yield it
+		// to the reducer so the UI can display a distinct notice rather than
+		// a generic error banner.
 		yield parsed;
 	}
 	return 'continue';
@@ -101,7 +111,7 @@ export function useChat(): {
 	streamMessage: (
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: string
 	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
@@ -109,7 +119,7 @@ export function useChat(): {
 	async function* streamMessage(
 		message: string,
 		conversationId: string,
-		modelId: ChatModelId
+		modelId: string
 	): AsyncGenerator<ChatStreamEvent> {
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',

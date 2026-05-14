@@ -2,25 +2,31 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
+import anyio
 from fastapi import Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
+from opentelemetry import trace as _otel_trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pathlib import Path
-
 from app.channels import resolve_channel, surface_from_header
-from app.core.chat_aggregator import ChatTurnAggregator
+from app.channels.base import ChannelMessage
 from app.core.agent_tools import build_agent_tools
-from app.core.providers import resolve_llm
-from app.core.providers.base import StreamEvent
-from app.core.tools.agents_md import assemble_workspace_prompt
-from app.core.workspace import get_default_workspace
+from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
+from app.core.tools.agents_md import assemble_workspace_prompt
+from app.core.tools.artifact_agent import (
+    ARTIFACT_TOOL_NAME,
+    ArtifactValidationError,
+    build_artifact,
+)
 from app.crud.chat_message import (
     append_assistant_placeholder,
     append_user_message,
@@ -31,9 +37,10 @@ from app.crud.conversation import (
     get_conversation_service,
     update_conversation_model_service,
 )
+from app.crud.workspace import get_default_workspace
 from app.db import User, async_session_maker, get_async_session
 from app.schemas import ChatRequest
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +48,76 @@ logger = logging.getLogger(__name__)
 # Keeps token usage predictable while preserving recent turns.
 _HISTORY_WINDOW = 20
 
-_DEFAULT_MODEL = "gemini-3-flash-preview"
+
+def _annotate_chat_span(
+    *,
+    user_id: object,
+    conversation_id: object,
+    model_id: str | None,
+    surface: str,
+    question_len: int,
+    request_id: str,
+) -> None:
+    """Attach pawrrtal-namespaced attributes to the active OTel span.
+
+    Pure observability — a failure here must never break the chat
+    path, so the whole body is wrapped in a broad ``try / except``.
+    ``get_current_span()`` returns a no-op when telemetry is disabled.
+    """
+    try:
+        span = _otel_trace.get_current_span()
+        span.set_attribute("pawrrtal.user_id", str(user_id))
+        span.set_attribute("pawrrtal.conversation_id", str(conversation_id))
+        span.set_attribute("pawrrtal.model_id", model_id or "<default>")
+        span.set_attribute("pawrrtal.surface", surface)
+        span.set_attribute("pawrrtal.question_len", question_len)
+        span.set_attribute("pawrrtal.request_id", request_id)
+    except Exception:
+        logger.debug("OTEL_SPAN_ANNOTATE_FAILED", exc_info=True)
 
 
-def get_chat_router() -> APIRouter:
+def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
+    """Build an ``artifact`` SSE event from a ``render_artifact`` tool_use.
+
+    Returns ``None`` for any other event so the caller can no-op cheaply.
+    Validation errors are swallowed silently here — the tool's own
+    ``execute`` callback will return a corrective error string to the LLM
+    so the agent can self-correct on the next turn, and emitting a half-
+    formed artifact event would leave the frontend rendering nothing.
+    """
+    if event.get("type") != "tool_use" or event.get("name") != ARTIFACT_TOOL_NAME:
+        return None
+    tool_input = event.get("input") or {}
+    title = tool_input.get("title")
+    spec = tool_input.get("spec")
+    if not isinstance(title, str) or not isinstance(spec, dict):
+        return None
+    try:
+        payload = build_artifact(title=title, spec=spec)
+    except ArtifactValidationError:
+        return None
+    return StreamEvent(
+        type="artifact",
+        artifact={
+            "id": payload["id"],
+            "title": payload["title"],
+            "spec": payload["spec"],
+            # Echo the originating tool_use_id so the frontend can attach
+            # this artifact to the matching tool-call slot if it wants to.
+            "tool_use_id": event.get("tool_use_id", ""),
+        },
+    )
+
+
+def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
     """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
+
+    The complexity warnings are suppressed: this is a closure-based
+    router builder whose body is intentionally a single streaming
+    endpoint owning setup, persistence, the streamed body, and
+    finalization in one async generator. Splitting it across helpers
+    breaks the natural read order of the request lifecycle without
+    actually reducing the shared state surface, so it stays inline.
 
     Returns:
         An ``APIRouter`` exposing a single streaming ``POST /`` endpoint
@@ -54,9 +126,9 @@ def get_chat_router() -> APIRouter:
     router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
 
     @router.post("/")
-    async def chat(
+    async def chat(  # noqa: C901, PLR0915 — single-endpoint stream lifecycle, see builder docstring
         request: ChatRequest,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
         x_nexus_surface: str | None = Header(default=None),
     ) -> StreamingResponse:
@@ -87,6 +159,18 @@ def get_chat_router() -> APIRouter:
         channel = resolve_channel(surface)
 
         rid = get_request_id()
+
+        # Annotate the FastAPI-instrumentor span with semantic attributes
+        # so a trace search by user / conversation / model / surface lands
+        # the right request immediately.
+        _annotate_chat_span(
+            user_id=user.id,
+            conversation_id=request.conversation_id,
+            model_id=request.model_id,
+            surface=surface,
+            question_len=len(request.question),
+            request_id=rid,
+        )
         logger.info(
             "CHAT_IN  rid=%s user_id=%s conversation_id=%s model_id=%s surface=%s question_len=%d",
             rid,
@@ -97,9 +181,7 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(
-            user.id, session, request.conversation_id
-        )
+        conversation = await get_conversation_service(user.id, session, request.conversation_id)
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -109,8 +191,11 @@ def get_chat_router() -> APIRouter:
             )
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Resolve model: request overrides stored model, stored model overrides default
-        model_id = request.model_id or conversation.model_id or _DEFAULT_MODEL
+        # Resolve model: request overrides stored model, stored model overrides
+        # catalog default.  Request and stored values are already canonical
+        # (validated by Pydantic at the API boundary); ``default_model().id``
+        # is the canonical wire form of the catalog default.
+        model_id = request.model_id or conversation.model_id or default_model().id
 
         # Persist model change if it differs from what is stored
         if model_id != conversation.model_id:
@@ -152,7 +237,7 @@ def get_chat_router() -> APIRouter:
         # short-lived session inside the generator for the final UPDATE.
         await session.commit()
 
-        provider = resolve_llm(model_id)
+        provider = resolve_llm(model_id, user_id=user.id)
 
         # Resolve the user's default workspace.  A workspace is created as
         # part of onboarding, so its absence means the user hasn't finished
@@ -166,12 +251,13 @@ def get_chat_router() -> APIRouter:
                 detail="Onboarding not completed: no default workspace exists for this user.",
             )
         root = Path(workspace.path)
-        if not root.exists():
+        # Blocking ``Path.exists()`` would stall the event loop on slow
+        # FS / network mounts — route through ``anyio.Path`` so the stat
+        # runs in a worker thread.
+        if not await anyio.Path(root).exists():
             # Workspace row exists but the directory is gone (manually
             # deleted, volume wipe, etc.).  Same outcome — do not run.
-            logger.error(
-                "CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root
-            )
+            logger.error("CHAT_WORKSPACE_MISSING rid=%s user_id=%s path=%s", rid, user.id, root)
             raise HTTPException(
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",
@@ -182,7 +268,24 @@ def get_chat_router() -> APIRouter:
         # per-agent / per-user permission gating will land).  Provider
         # files stay tool-agnostic; see
         # `.claude/rules/architecture/no-tools-in-providers.md`.
-        agent_tools = build_agent_tools(workspace_root=root)
+        # Web send_fn — lets the agent call send_message() to push text or
+        # files back to the user mid-turn.  Events are placed on a per-request
+        # queue and drained into the SSE stream after each provider event,
+        # keeping chat.py free of any tool-name coupling.
+        _web_send_queue: asyncio.Queue[StreamEvent] = asyncio.Queue()
+
+        async def _web_send_fn(
+            text: str | None,
+            file_path: Path | None,
+            mime: str | None,
+        ) -> None:
+            event: StreamEvent = {"type": "message", "content": text or ""}
+            if file_path is not None:
+                event["attachment"] = str(file_path.relative_to(root))
+                event["mime"] = mime
+            await _web_send_queue.put(event)
+
+        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
 
         # Load SOUL.md + AGENTS.md from the workspace as the agent's
         # system prompt.  The workspace is guaranteed by the 412 gate
@@ -227,6 +330,25 @@ def get_chat_router() -> APIRouter:
                         event_count += 1
                         aggregator.apply(event)
                         yield event
+                        # When the agent invokes ``render_artifact``, lift the
+                        # spec out of the tool's input and emit a sibling
+                        # ``artifact`` event for the frontend.  The tool's
+                        # own result string (returned to the LLM) stays a
+                        # short confirmation — the spec lives on this
+                        # parallel channel so the model doesn't see it
+                        # echoed back on the next turn.
+                        artifact_event = _maybe_artifact_event(event)
+                        if artifact_event is not None:
+                            event_count += 1
+                            aggregator.apply(artifact_event)
+                            yield artifact_event
+                        # Drain side-channel events placed by send_message
+                        # tool during this iteration's tool execution.
+                        while not _web_send_queue.empty():
+                            side = _web_send_queue.get_nowait()
+                            event_count += 1
+                            aggregator.apply(side)
+                            yield side
                 except Exception as exc:
                     logger.exception(
                         "CHAT_ERR rid=%s conversation_id=%s model_id=%s after %d events",
@@ -238,8 +360,6 @@ def get_chat_router() -> APIRouter:
                     error_event: StreamEvent = {"type": "error", "content": str(exc)}
                     aggregator.apply(error_event)
                     yield error_event
-
-            from app.channels.base import ChannelMessage  # noqa: PLC0415
 
             channel_message: ChannelMessage = {
                 "user_id": user.id,

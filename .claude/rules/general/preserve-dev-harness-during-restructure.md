@@ -1,6 +1,6 @@
 ---
 name: preserve-dev-harness-during-restructure
-paths: ["**/*"]
+paths: [".no-match"]
 ---
 
 # When Restructuring a Repo, Preserve the Dev Harness (scripts, configs, test fixtures)

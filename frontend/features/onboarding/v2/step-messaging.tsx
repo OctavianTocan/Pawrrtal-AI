@@ -1,8 +1,8 @@
 'use client';
 
-import { Check } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import type * as React from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import {
@@ -10,6 +10,7 @@ import {
 	type MessagingChannelId,
 	type PersonalizationProfile,
 } from '@/features/personalization/storage';
+import { listChannels } from '@/lib/channels';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';
 
@@ -23,9 +24,10 @@ export interface StepMessagingProps {
 /**
  * Step 4 — connect at least one messaging channel.
  *
- * Visual-only today. Clicking Connect on any row "connects" by toggling
- * the channel ID into `connectedChannels`. Continue is disabled until
- * at least one channel is in the list.
+ * Non-Telegram rows remain visual toggles backed by `connectedChannels`.
+ * Telegram mirrors `GET /api/v1/channels` once the snapshot loads (and
+ * again after the bind dialog closes) so we stay in sync without mounting
+ * a second {@link useTelegramBinding} instance alongside the dialog.
  */
 export function StepMessaging({
 	profile,
@@ -33,12 +35,32 @@ export function StepMessaging({
 	onFinish,
 }: StepMessagingProps): React.JSX.Element {
 	const connected = profile.connectedChannels ?? [];
-	const hasOne = connected.length > 0;
-	// Telegram is the first channel with a real backend behind it; the
-	// rest are still visual-only chips. When the user clicks Connect on
-	// the Telegram row we pop the binding dialog instead of toggling the
-	// chip directly, then add the chip once the bind succeeds.
 	const [telegramDialogOpen, setTelegramDialogOpen] = useState(false);
+	const [channelsReady, setChannelsReady] = useState(false);
+	const [serverTelegramConnected, setServerTelegramConnected] = useState(false);
+
+	const refreshTelegramSnapshot = useCallback(async (): Promise<void> => {
+		let hasServerTelegramConnection = false;
+		try {
+			const rows = await listChannels();
+			hasServerTelegramConnection = rows.some((row) => row.provider === 'telegram');
+			setServerTelegramConnected(hasServerTelegramConnection);
+		} catch {
+			setServerTelegramConnected(false);
+		} finally {
+			setChannelsReady(true);
+		}
+		if (hasServerTelegramConnection && !connected.includes('telegram')) {
+			onPatch({ connectedChannels: [...connected, 'telegram'] });
+		}
+	}, [connected, onPatch]);
+
+	useEffect(() => {
+		if (telegramDialogOpen) return;
+		void refreshTelegramSnapshot();
+	}, [telegramDialogOpen, refreshTelegramSnapshot]);
+
+	const hasOne = connected.length > 0 || serverTelegramConnected;
 
 	const markChannelConnected = (id: MessagingChannelId): void => {
 		if (connected.includes(id)) return;
@@ -56,6 +78,14 @@ export function StepMessaging({
 		onPatch({ connectedChannels: next });
 	};
 
+	const rowConnected = (id: MessagingChannelId): boolean => {
+		if (id === 'telegram') {
+			if (!channelsReady) return false;
+			return serverTelegramConnected || connected.includes('telegram');
+		}
+		return connected.includes(id);
+	};
+
 	return (
 		<OnboardingShell
 			footer={
@@ -66,7 +96,7 @@ export function StepMessaging({
 					size="lg"
 					type="button"
 				>
-					Continue
+					Finish messaging setup
 				</Button>
 			}
 			subtitle="Connect at least one messaging channel to continue."
@@ -74,7 +104,9 @@ export function StepMessaging({
 		>
 			<div className="flex flex-col gap-2.5">
 				{MESSAGING_CHANNELS.map((channel) => {
-					const isConnected = connected.includes(channel.id);
+					const isConnected = rowConnected(channel.id);
+					const showTelegramSpinner = channel.id === 'telegram' && !channelsReady;
+
 					return (
 						<div
 							className="flex items-center justify-between gap-3 rounded-[12px] border border-foreground/10 bg-foreground/[0.02] px-4 py-3"
@@ -92,25 +124,35 @@ export function StepMessaging({
 									Connect {channel.label}
 								</span>
 							</div>
-							<Button
-								className={cn(
-									'h-9 min-w-24 cursor-pointer px-4',
-									isConnected && 'bg-success text-background hover:bg-success/85'
-								)}
-								onClick={() => toggleChannel(channel.id)}
-								size="sm"
-								type="button"
-								variant={isConnected ? 'default' : 'default'}
-							>
-								{isConnected ? (
-									<>
-										<Check aria-hidden="true" className="mr-1 size-3.5" />
-										Connected
-									</>
-								) : (
-									'Connect'
-								)}
-							</Button>
+							{showTelegramSpinner ? (
+								<span className="flex h-9 min-w-24 items-center justify-center">
+									<Loader2
+										aria-label="Checking Telegram connection"
+										className="size-4 animate-spin text-muted-foreground"
+									/>
+								</span>
+							) : (
+								<Button
+									className={cn(
+										'h-9 min-w-24 cursor-pointer px-4',
+										isConnected &&
+											'bg-success text-background hover:bg-success/85'
+									)}
+									onClick={() => toggleChannel(channel.id)}
+									size="sm"
+									type="button"
+									variant={isConnected ? 'default' : 'default'}
+								>
+									{isConnected ? (
+										<>
+											<Check aria-hidden="true" className="mr-1 size-3.5" />
+											Connected
+										</>
+									) : (
+										'Connect'
+									)}
+								</Button>
+							)}
 						</div>
 					);
 				})}

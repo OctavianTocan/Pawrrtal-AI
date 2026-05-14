@@ -3,7 +3,6 @@
 import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import {
 	ArrowUpIcon,
-	CheckIcon,
 	ChevronDownIcon,
 	HandIcon,
 	ListChecksIcon,
@@ -29,17 +28,7 @@ import {
 	SAFETY_MODES,
 	type SafetyMode,
 } from '../constants';
-
-/**
- * Bar heights (px) used by the scrolling waveform timeline. The pattern
- * is intentionally jagged so the rendered timeline reads as "live audio"
- * rather than a synthesizer-style equalizer; the array is doubled and
- * scrolled with a CSS animation to give the illusion of continuous flow.
- */
-const WAVEFORM_BARS = [
-	6, 10, 8, 14, 22, 18, 12, 28, 20, 14, 8, 18, 24, 16, 10, 6, 12, 20, 28, 22, 14, 10, 16, 24, 18,
-	12, 8, 14, 20, 26, 18, 12, 8, 16, 22, 28, 20, 14, 10, 6,
-] as const;
+import { WaveformTimeline } from './ChatComposerWaveform';
 
 /** Minimal browser speech-recognition surface used by the composer. */
 export type BrowserSpeechRecognition = {
@@ -186,12 +175,24 @@ export function AttachButton(): React.JSX.Element {
 }
 
 /** Renders the compact plan-mode trigger used in the composer toolbar. */
-export function PlanButton(): React.JSX.Element {
+export function PlanButton({
+	isActive = false,
+	onToggle,
+}: {
+	isActive?: boolean;
+	onToggle?: () => void;
+}): React.JSX.Element {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<Button
-					className="h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal text-muted-foreground hover:text-foreground"
+					className={cn(
+						'h-7 gap-1 rounded-[7px] px-1.5 text-[12px] font-normal',
+						isActive
+							? 'bg-info/20 text-info hover:bg-info/25'
+							: 'text-muted-foreground hover:text-foreground'
+					)}
+					onClick={onToggle}
 					type="button"
 					variant="ghost"
 				>
@@ -212,8 +213,10 @@ interface SafetyModeMeta {
 	label: string;
 	/** Lucide icon used as the leading affordance for this mode. */
 	Icon: typeof ShieldCheckIcon;
-	/** Tailwind text color token applied to the trigger + icon for this mode. */
+	/** Tailwind text color token applied to the trigger label + chevron. */
 	colorClass: string;
+	/** Optional icon-only tint on the composer trigger (inherits `colorClass` when omitted). */
+	iconClass?: string;
 	/** Tailwind background tint applied behind the icon for this mode. */
 	bgClass: string;
 }
@@ -236,7 +239,8 @@ const SAFETY_MODE_META: Record<SafetyMode, SafetyModeMeta> = {
 	'default-permissions': {
 		label: 'Default permissions',
 		Icon: HandIcon,
-		colorClass: 'text-info',
+		colorClass: 'text-foreground/90',
+		iconClass: 'text-info',
 		bgClass: 'bg-info/15',
 	},
 	'auto-review': {
@@ -322,7 +326,10 @@ export function AutoReviewSelector(): React.JSX.Element {
 									type="button"
 									variant="ghost"
 								>
-									<ActiveIcon aria-hidden="true" className="size-3.5" />
+									<ActiveIcon
+										aria-hidden="true"
+										className={cn('size-3.5', activeMeta.iconClass)}
+									/>
 									{activeMeta.label}
 									<ChevronDownIcon aria-hidden="true" className="size-3" />
 								</Button>
@@ -342,7 +349,7 @@ interface SafetyModeMenuItemProps {
 	onSelect: (mode: SafetyMode) => void;
 }
 
-/** Single dropdown row for a safety mode, with a leading icon and trailing checkmark when active. */
+/** Single dropdown row for a safety mode. Selected mode uses a filled dot instead of a checkmark. */
 function SafetyModeMenuItem({
 	mode,
 	isSelected,
@@ -352,7 +359,10 @@ function SafetyModeMenuItem({
 
 	return (
 		<button
-			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
+			className={cn(
+				'flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
+				isSelected && 'bg-foreground/[0.06]'
+			)}
 			onClick={() => onSelect(mode)}
 			type="button"
 		>
@@ -367,11 +377,9 @@ function SafetyModeMenuItem({
 				>
 					<Icon className="size-3" />
 				</span>
-				{label}
+				<span className={isSelected ? 'font-medium' : undefined}>{label}</span>
 			</span>
-			{isSelected ? (
-				<CheckIcon aria-hidden="true" className="size-3.5 text-foreground" />
-			) : null}
+			{isSelected ? <span className="size-1.5 shrink-0 rounded-full bg-foreground" /> : null}
 		</button>
 	);
 }
@@ -380,22 +388,25 @@ function SafetyModeMenuItem({
 export function VoiceMeter({
 	elapsedSeconds,
 	isTranscribing,
+	meterLevel,
 	onSend,
 	onStop,
 }: {
 	elapsedSeconds: number;
 	/** When true, swap the stop button for a loader and disable Send. */
 	isTranscribing?: boolean;
+	/** Live mic RMS (0–1) from {@link useVoiceTranscribe}; animates bar heights. */
+	meterLevel: number;
 	onSend: () => void;
 	onStop: () => void;
 }): React.JSX.Element {
 	return (
 		<div className="ml-2 flex min-w-0 flex-1 items-center gap-2">
-			<WaveformTimeline isPaused={Boolean(isTranscribing)} />
+			<WaveformTimeline isPaused={Boolean(isTranscribing)} meterLevel={meterLevel} />
 			<span className="w-9 text-right text-[12px] text-muted-foreground tabular-nums">
 				{formatRecordingTime(elapsedSeconds)}
 			</span>
-			<ComposerTooltip content={isTranscribing ? 'Transcribing…' : 'Stop and transcribe'}>
+			<ComposerTooltip content={isTranscribing ? 'Transcribing...' : 'Stop and transcribe'}>
 				<Button
 					aria-label={isTranscribing ? 'Transcribing' : 'Stop and transcribe'}
 					className="size-8 rounded-full bg-foreground-10 text-foreground hover:bg-foreground-15 disabled:cursor-not-allowed disabled:opacity-60"
@@ -427,46 +438,6 @@ export function VoiceMeter({
 					<ArrowUpIcon aria-hidden="true" className="size-4" />
 				</Button>
 			</ComposerTooltip>
-		</div>
-	);
-}
-
-/**
- * Continuously scrolling bar timeline used as the recording-state
- * indicator. Renders the bars twice end-to-end and translates the
- * inner strip leftward via CSS keyframe so the result reads as
- * "audio scrolling past a playhead" without an actual analyser node.
- *
- * `isPaused=true` halts the scroll (used while transcribing) so the
- * UI feels frozen on the captured timeline rather than ticking forward
- * after the recording ended.
- */
-function WaveformTimeline({ isPaused }: { isPaused: boolean }): React.JSX.Element {
-	return (
-		<div className="relative flex h-8 min-w-0 flex-1 items-center overflow-hidden">
-			<div
-				aria-hidden="true"
-				className="flex h-full items-center gap-[3px]"
-				style={{
-					animation: isPaused ? undefined : 'waveform-scroll 6s linear infinite',
-				}}
-			>
-				{[...WAVEFORM_BARS, ...WAVEFORM_BARS].map((height, index) => (
-					<span
-						className="w-[2px] shrink-0 rounded-full bg-foreground/75"
-						key={`bar-${index}-${height}`}
-						style={{
-							height,
-							opacity: 0.4 + ((index % 5) / 5) * 0.6,
-						}}
-					/>
-				))}
-			</div>
-			{/* Subtle right-side fade so the scroll edge doesn't read as a hard cut. */}
-			<div
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-foreground-5 to-transparent"
-			/>
 		</div>
 	);
 }

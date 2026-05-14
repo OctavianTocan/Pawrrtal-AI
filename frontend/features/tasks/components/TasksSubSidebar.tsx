@@ -19,6 +19,8 @@ import {
 	PlusIcon,
 } from 'lucide-react';
 import type { ComponentType, ReactNode, SVGProps } from 'react';
+import { SidebarNavRow } from '@/components/ui/sidebar-nav-row';
+import { SidebarSectionHeader } from '@/components/ui/sidebar-section-header';
 import { cn } from '@/lib/utils';
 import { PROJECT_TONE_CLASSES, TASK_VIEWS } from '../constants';
 import type { TaskProject, TaskViewId } from '../types';
@@ -140,7 +142,7 @@ export function TasksSubSidebar({
 
 			<div className="mt-auto flex items-center gap-2 px-1 pt-3 text-[11px] text-muted-foreground/70">
 				<CheckSquareIcon aria-hidden="true" className="size-3" strokeWidth={2} />
-				<span>Mock data — no backend yet</span>
+				<span>Mock data, no backend yet</span>
 			</div>
 		</aside>
 	);
@@ -154,9 +156,7 @@ interface NavGroupProps {
 function NavGroup({ label, children }: NavGroupProps): ReactNode {
 	return (
 		<div className="flex flex-col gap-1">
-			<p className="px-2 text-[11px] font-semibold tracking-[0.04em] text-muted-foreground/80 uppercase">
-				{label}
-			</p>
+			<SidebarSectionHeader label={label} variant="static" />
 			<ul className="flex flex-col gap-0.5">{children}</ul>
 		</div>
 	);
@@ -172,17 +172,13 @@ interface NavRowProps {
 function NavRow({ active, onClick, count, children }: NavRowProps): ReactNode {
 	return (
 		<li>
-			<button
-				type="button"
-				onClick={onClick}
+			<SidebarNavRow
+				align="center"
 				aria-current={active ? 'page' : undefined}
-				className={cn(
-					'flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[13px] font-medium transition-colors duration-150 ease-out',
-					active
-						? 'bg-foreground/[0.07] text-foreground'
-						: 'text-foreground/85 hover:bg-foreground/[0.04] hover:text-foreground',
-					'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40'
-				)}
+				className="w-full"
+				density="compact"
+				isSelected={active}
+				onClick={onClick}
 			>
 				<span className="flex flex-1 items-center gap-2 truncate">{children}</span>
 				{typeof count === 'number' && count > 0 ? (
@@ -195,7 +191,7 @@ function NavRow({ active, onClick, count, children }: NavRowProps): ReactNode {
 						{count}
 					</span>
 				) : null}
-			</button>
+			</SidebarNavRow>
 		</li>
 	);
 }

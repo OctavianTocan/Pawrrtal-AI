@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
@@ -56,7 +56,7 @@ const VENDORED_MENU_COMPONENTS: MenuComponents = {
  * @throws If called outside a `MenuProvider`.
  */
 export function useMenuComponents(): MenuComponents {
-	const ctx = useContext(MenuComponentsContext);
+	const ctx = use(MenuComponentsContext);
 	if (!ctx) {
 		throw new Error('useMenuComponents must be used within a MenuProvider');
 	}

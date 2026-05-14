@@ -1,6 +1,8 @@
 ---
+
 description: Ensure third-party GitHub Actions are securely pinned
 globs: .github/workflows/*.yml
+paths: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 # Secure Action Pinning
 

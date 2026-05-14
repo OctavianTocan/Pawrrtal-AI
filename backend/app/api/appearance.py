@@ -16,7 +16,7 @@ from app.schemas import (
     AppearanceSettings,
     ThemeColors,
 )
-from app.users import current_active_user
+from app.users import get_allowed_user
 
 
 def _to_settings(row: UserAppearance | None) -> AppearanceSettings:
@@ -42,7 +42,7 @@ def get_appearance_router() -> APIRouter:
 
     @router.get("", response_model=AppearanceSettings)
     async def get_appearance(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> AppearanceSettings:
         """Return the authenticated user's appearance settings.
@@ -58,7 +58,7 @@ def get_appearance_router() -> APIRouter:
     @router.put("", response_model=AppearanceSettings)
     async def upsert_appearance(
         payload: AppearanceSettings,
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> AppearanceSettings:
         """Create or replace the authenticated user's appearance settings."""
@@ -69,7 +69,7 @@ def get_appearance_router() -> APIRouter:
 
     @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
     async def reset_appearance(
-        user: User = Depends(current_active_user),
+        user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Reset the user's appearance back to the Mistral defaults.

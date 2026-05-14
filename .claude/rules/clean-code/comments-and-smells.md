@@ -1,6 +1,8 @@
 ---
+
 description: Ensure code adheres to Clean Code Comments, Structure, and Testing
 globs: **/*.{ts,tsx,js,jsx,py,pyw}
+paths: ["**/*.ts", "**/*.tsx", "**/*.py"]
 ---
 # Clean Code: Comments, Structure, & Testing
 

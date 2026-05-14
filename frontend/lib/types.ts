@@ -121,4 +121,9 @@ export interface AgnoMessage {
 	thinking_duration_seconds?: number;
 	/** Lifecycle of the assistant turn — drives the failed-state UI. */
 	assistant_status?: import('@/features/chat/types').AssistantMessageStatus;
+	/**
+	 * Artifacts the agent rendered during this turn (one per `render_artifact`
+	 * tool call). v0 lives on the in-memory message only — reload drops them.
+	 */
+	artifacts?: import('@/features/chat/types').ChatArtifactPayload[];
 }

@@ -33,7 +33,7 @@ export function ConversationSearchHeader({
 	return (
 		<div className="shrink-0 px-2 pt-1 pb-1.5 border-b border-border/50">
 			<div className="relative rounded-soft shadow-minimal bg-muted/50 has-[:focus-visible]:bg-background">
-				<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+				<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
 				<input
 					type="text"
 					value={searchQuery}
@@ -49,7 +49,7 @@ export function ConversationSearchHeader({
 						title="Clear search"
 						aria-label="Clear search"
 					>
-						<X className="h-3.5 w-3.5 text-muted-foreground" />
+						<X className="size-3.5 text-muted-foreground" />
 					</button>
 				) : null}
 			</div>

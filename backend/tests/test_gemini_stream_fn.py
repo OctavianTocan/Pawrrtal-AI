@@ -1,6 +1,9 @@
 """Tests for GeminiLLM's StreamFn wiring into agent_loop.
 
-Uses a mock StreamFn — no real Gemini API calls.
+Uses ``ScriptedStreamFn`` from ``tests.agent_harness`` — no real Gemini
+API calls are made.  These tests exercise the provider's translation layer
+(AgentEvent → StreamEvent) and confirm that safety config flows end-to-end
+from ``safety_from_settings`` through ``agent_loop`` to the SSE output.
 """
 
 from __future__ import annotations
@@ -21,70 +24,15 @@ from app.core.agent_loop.types import (
     ToolCallContent,
 )
 from app.core.providers.base import StreamEvent
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _make_text_stream_fn(text: str):
-    """StreamFn that yields a single text response."""
-
-    async def stream_fn(
-        messages: list[AgentMessage], tools: list[AgentTool]
-    ) -> AsyncIterator[LLMEvent]:
-        yield LLMTextDeltaEvent(type="text_delta", text=text)
-        yield LLMDoneEvent(
-            type="done",
-            stop_reason="stop",
-            content=[TextContent(type="text", text=text)],
-        )
-
-    return stream_fn
-
-
-def _make_tool_then_text_stream_fn(tool_name: str, tool_args: dict, final_text: str):
-    """StreamFn that first requests a tool call, then returns text."""
-    call_count = 0
-
-    async def stream_fn(
-        messages: list[AgentMessage], tools: list[AgentTool]
-    ) -> AsyncIterator[LLMEvent]:
-        nonlocal call_count
-        if call_count == 0:
-            call_count += 1
-            yield LLMToolCallEvent(
-                type="tool_call",
-                tool_call_id="call-0",
-                name=tool_name,
-                arguments=tool_args,
-            )
-            yield LLMDoneEvent(
-                type="done",
-                stop_reason="tool_use",
-                content=[
-                    ToolCallContent(
-                        type="toolCall",
-                        tool_call_id="call-0",
-                        name=tool_name,
-                        arguments=tool_args,
-                    )
-                ],
-            )
-        else:
-            yield LLMTextDeltaEvent(type="text_delta", text=final_text)
-            yield LLMDoneEvent(
-                type="done",
-                stop_reason="stop",
-                content=[TextContent(type="text", text=final_text)],
-            )
-
-    return stream_fn
-
+from tests.agent_harness import (
+    ScriptedStreamFn,
+    echo_tool,
+    text_turn,
+    tool_call_turn,
+)
 
 # ---------------------------------------------------------------------------
-# Tests
+# Test 1 — delta events pass through the provider translation layer
 # ---------------------------------------------------------------------------
 
 
@@ -96,7 +44,7 @@ async def test_gemini_provider_yields_delta_events_from_loop(
     from app.core.providers.gemini_provider import GeminiLLM
 
     provider = GeminiLLM("gemini-test")
-    monkeypatch.setattr(provider, "_stream_fn", _make_text_stream_fn("hello"))
+    monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("hello")]))
 
     events: list[StreamEvent] = []
     async for event in provider.stream(
@@ -110,6 +58,11 @@ async def test_gemini_provider_yields_delta_events_from_loop(
     delta_events = [e for e in events if e["type"] == "delta"]
     assert len(delta_events) >= 1
     assert any("hello" in e.get("content", "") for e in delta_events)
+
+
+# ---------------------------------------------------------------------------
+# Test 2 — history is included in the message list seen by the StreamFn
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
@@ -148,25 +101,36 @@ async def test_gemini_provider_passes_history_to_loop(
     ):
         pass
 
-    # LLM should have seen: 2 history messages + current question = 3
+    # 2 history messages + current question = 3 total.
     assert len(seen_messages) == 1
     assert len(seen_messages[0]) == 3
+
+
+# ---------------------------------------------------------------------------
+# Test 3 — tool call lifecycle events translate correctly to StreamEvents
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
 async def test_gemini_provider_emits_tool_use_and_result_events(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Tool call lifecycle events are translated to StreamEvents correctly."""
-    from app.core.providers.gemini_provider import GeminiLLM, AgentTool
+    """Tool call lifecycle events translate from AgentEvents to StreamEvents.
+
+    Uses the real GeminiLLM.stream() with a ScriptedStreamFn so we exercise
+    the provider's own translation code, not a hand-rolled reimplementation.
+    """
+    from app.core.providers.gemini_provider import GeminiLLM
 
     executed: list[str] = []
 
-    async def echo_execute(tool_call_id: str, **kwargs) -> str:
-        executed.append(kwargs.get("value", ""))
+    async def echo_execute(tool_call_id: str, **kwargs: object) -> str:
+        executed.append(str(kwargs.get("value", "")))
         return f"echoed: {kwargs.get('value', '')}"
 
-    echo_tool = AgentTool(
+    from app.core.agent_loop.types import AgentTool as AT
+
+    echo = AT(
         name="echo",
         description="Echo",
         parameters={
@@ -181,58 +145,170 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
     monkeypatch.setattr(
         provider,
         "_stream_fn",
-        _make_tool_then_text_stream_fn("echo", {"value": "hi"}, "Done!"),
+        ScriptedStreamFn(
+            [
+                tool_call_turn("echo", {"value": "hi"}, turn_id="tc-0"),
+                text_turn("Done!"),
+            ]
+        ),
     )
 
-    # Patch the context creation to inject the echo tool
-    async def patched_stream(question, conversation_id, user_id, history=None):
-        from app.core.agent_loop import (
-            agent_loop,
-            AgentContext,
-            AgentLoopConfig,
-            UserMessage,
-        )
-        from app.core.providers.gemini_provider import (
-            _FALLBACK_SYSTEM_PROMPT,
-            _identity_convert,
-        )
-
-        prior = [
-            {"role": m["role"], "content": m["content"]}
-            for m in (history or [])
-            if m.get("role") in {"user", "assistant"}
-        ]
-        context = AgentContext(
-            system_prompt=_FALLBACK_SYSTEM_PROMPT,
-            messages=prior,
-            tools=[echo_tool],
-        )
-        prompt = UserMessage(role="user", content=question)
-        config = AgentLoopConfig(convert_to_llm=_identity_convert)
-
-        async for event in agent_loop([prompt], context, config, provider._stream_fn):
-            etype = event["type"]
-            if etype == "text_delta":
-                yield StreamEvent(type="delta", content=event.get("text", ""))
-            elif etype == "tool_call_start":
-                yield StreamEvent(
-                    type="tool_use",
-                    name=event.get("name", ""),
-                    input={},
-                    tool_use_id=event.get("tool_call_id", ""),
-                )
-            elif etype == "tool_result":
-                yield StreamEvent(
-                    type="tool_result",
-                    content=event.get("content", ""),
-                    tool_use_id=event.get("tool_call_id", ""),
-                )
-
     events: list[StreamEvent] = []
-    async for event in patched_stream("Echo hi", uuid4(), uuid4()):
+    async for event in provider.stream(
+        question="Echo hi",
+        conversation_id=uuid4(),
+        user_id=uuid4(),
+        history=[],
+        tools=[echo],
+    ):
         events.append(event)
 
+    # The real tool executed.
     assert executed == ["hi"]
+
+    # All three event types appeared in the SSE stream.
     assert any(e["type"] == "tool_use" for e in events)
     assert any(e["type"] == "tool_result" for e in events)
     assert any(e["type"] == "delta" and "Done!" in e.get("content", "") for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — safety config is wired and terminates a runaway loop
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_gemini_provider_surfaces_agent_terminated_from_safety_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """safety_from_settings flows through GeminiLLM to agent_loop.
+
+    Patches ``safety_from_settings`` to return ``max_iterations=3`` and
+    injects a script with 10 tool-call turns.  After 3 iterations the
+    safety layer must emit an ``agent_terminated`` StreamEvent; the script
+    must be cut short at exactly 3 calls.
+
+    This proves the full chain:
+        safety_from_settings → AgentLoopConfig.safety → agent_loop →
+        AgentTerminatedEvent → GeminiLLM.stream() → StreamEvent("agent_terminated")
+    """
+    from app.core.agent_loop import AgentSafetyConfig
+    from app.core.providers.gemini_provider import GeminiLLM
+
+    # 10-turn runaway script — much more than the 3-iteration limit.
+    turns = [tool_call_turn("ping", {}, turn_id=f"tc-{i}") for i in range(10)]
+    script = ScriptedStreamFn(turns)
+
+    provider = GeminiLLM("gemini-test")
+    monkeypatch.setattr(provider, "_stream_fn", script)
+
+    # Patch the safety factory to inject a tight limit.
+    monkeypatch.setattr(
+        "app.core.providers.gemini_provider.safety_from_settings",
+        lambda _settings: AgentSafetyConfig(
+            max_iterations=3,
+            max_wall_clock_seconds=None,
+            max_consecutive_llm_errors=None,
+            max_consecutive_tool_errors=None,
+        ),
+    )
+
+    events: list[StreamEvent] = []
+    async for event in provider.stream(
+        question="go",
+        conversation_id=uuid4(),
+        user_id=uuid4(),
+        history=[],
+        tools=[echo_tool("ping")],
+    ):
+        events.append(event)
+
+    # The termination event surfaces as a StreamEvent.
+    terminated = [e for e in events if e["type"] == "agent_terminated"]
+    assert len(terminated) == 1
+    assert "max_iterations" in terminated[0]["content"]
+
+    # The script was cut short — no more than 3 LLM calls.
+    assert script.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — tool result is included in context for the subsequent LLM call
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_gemini_provider_accumulates_tool_result_in_context(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each LLM turn receives more messages than the previous one.
+
+    After the tool executes, the second call's message list must include a
+    ``toolResult`` role, proving history accumulation flows through
+    GeminiLLM.stream() → agent_loop.
+    """
+    from app.core.providers.gemini_provider import GeminiLLM
+
+    seen_per_call: list[int] = []
+    second_call_roles: list[str] = []
+    # Use a list as a mutable counter to avoid nonlocal + inline import conflicts.
+    turn_counter: list[int] = [0]
+
+    async def recording_fn(
+        messages: list[AgentMessage], tools: list[AgentTool]
+    ) -> AsyncIterator[LLMEvent]:
+        idx = turn_counter[0]
+        turn_counter[0] += 1
+        seen_per_call.append(len(messages))
+        if idx == 1:
+            second_call_roles.extend(m["role"] for m in messages)
+
+        if idx == 0:
+            # First turn: request a tool call.
+            yield LLMToolCallEvent(
+                type="tool_call",
+                tool_call_id="tc-r",
+                name="echo",
+                arguments={"value": "ctx"},
+            )
+            yield LLMDoneEvent(
+                type="done",
+                stop_reason="tool_use",
+                content=[
+                    ToolCallContent(
+                        type="toolCall",
+                        tool_call_id="tc-r",
+                        name="echo",
+                        arguments={"value": "ctx"},
+                    )
+                ],
+            )
+        else:
+            # Subsequent turns: reply with text.
+            yield LLMTextDeltaEvent(type="text_delta", text="done")
+            yield LLMDoneEvent(
+                type="done",
+                stop_reason="stop",
+                content=[TextContent(type="text", text="done")],
+            )
+
+    provider = GeminiLLM("gemini-test")
+    monkeypatch.setattr(provider, "_stream_fn", recording_fn)
+
+    async for _ in provider.stream(
+        question="go",
+        conversation_id=uuid4(),
+        user_id=uuid4(),
+        history=[],
+        tools=[echo_tool()],
+    ):
+        pass
+
+    # Two LLM calls were made.
+    assert len(seen_per_call) == 2
+
+    # Second call sees more messages than the first.
+    assert seen_per_call[1] > seen_per_call[0]
+
+    # Second call's message list includes the tool result.
+    assert "toolResult" in second_call_roles

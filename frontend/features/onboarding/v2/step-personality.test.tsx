@@ -35,7 +35,7 @@ describe('StepPersonality', () => {
 		const { getByRole } = render(
 			<StepPersonality onContinue={onContinue} onPatch={vi.fn()} profile={{}} />
 		);
-		fireEvent.click(getByRole('button', { name: 'Continue' }));
+		fireEvent.click(getByRole('button', { name: 'Save personality' }));
 		expect(onContinue).toHaveBeenCalled();
 	});
 });

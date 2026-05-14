@@ -1,0 +1,19 @@
+---
+title: Design system
+description: Pointer to the canonical DESIGN.md spec at the repo root.
+---
+
+# Design system
+
+The canonical design system spec lives at the **repo root** in
+[`DESIGN.md`](https://github.com/OctavianTocan/pawrrtal/blob/main/DESIGN.md).
+It is intentionally not duplicated here because `bun run design:lint`
+reads that file directly and many `.claude/rules/` entries link to it
+by repo-root path.
+
+If you are working with tokens, typography, spacing, shape, motion, or
+component bindings, read `DESIGN.md` and run the linter
+(`bun run design:lint`) before opening a PR.
+
+For the why behind the system, see the relevant ADRs in
+[Decisions](/docs/handbook/decisions).

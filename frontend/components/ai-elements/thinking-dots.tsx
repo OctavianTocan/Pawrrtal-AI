@@ -5,10 +5,9 @@
  *
  * @fileoverview AI Elements — `thinking-dots`.
  *
- * Renders three small circles that bounce in a staggered sequence
+ * Renders three small circles that rise in a staggered sequence
  * (150 ms apart) to communicate that the assistant is generating a
- * response.  Uses Tailwind’s `animate-bounce` utility with inline
- * `animationDelay` overrides — no additional CSS required.
+ * response.
  *
  * Replace the static “Thinking...” text in `ChatView` with this
  * component whenever `isLoading` is true.
@@ -31,12 +30,15 @@ export function ThinkingDots() {
 		// us attach `aria-label` (which Biome rightly rejects on a
 		// role-less <span>).
 		<span aria-label="Thinking" className="inline-flex items-center gap-[3px]" role="status">
-			{/* Each dot is a filled circle; delay staggers the bounce phase. */}
+			{/* Each dot is a filled circle; delay staggers the rise phase. */}
 			{[0, 150, 300].map((delay) => (
 				<span
 					key={delay}
-					className="size-1.5 rounded-full bg-muted-foreground animate-bounce"
-					style={{ animationDelay: `${delay}ms`, animationDuration: '1s' }}
+					className="size-1.5 rounded-full bg-muted-foreground"
+					style={{
+						animation: 'thinking-dot-rise 1s ease-out infinite',
+						animationDelay: `${delay}ms`,
+					}}
 				/>
 			))}
 		</span>

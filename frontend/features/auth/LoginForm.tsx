@@ -33,7 +33,7 @@ export function LoginForm({
 	const [password, setPassword] = useState('');
 	const [localErrorMessage, setLocalErrorMessage] = useState('');
 
-	const router = useRouter();
+	const { push } = useRouter();
 
 	const loginMutation = useLoginMutation();
 	const devLoginMutation = useDevAdminLoginMutation();
@@ -74,7 +74,7 @@ export function LoginForm({
 
 		try {
 			await loginMutation.mutateAsync({ email, password });
-			router.push('/');
+			push('/');
 		} catch (error) {
 			setFriendlyNetworkError(error);
 		}
@@ -88,7 +88,7 @@ export function LoginForm({
 
 		try {
 			await devLoginMutation.mutateAsync();
-			router.push('/');
+			push('/');
 		} catch (error) {
 			setFriendlyNetworkError(error);
 		}

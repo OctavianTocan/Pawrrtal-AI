@@ -6,6 +6,8 @@ from .types import (
     AgentEvent,
     AgentLoopConfig,
     AgentMessage,
+    AgentSafetyConfig,
+    AgentTerminatedEvent,
     AgentTool,
     AssistantMessage,
     LLMDoneEvent,
@@ -18,11 +20,12 @@ from .types import (
 )
 
 __all__ = [
-    "agent_loop",
     "AgentContext",
     "AgentEvent",
     "AgentLoopConfig",
     "AgentMessage",
+    "AgentSafetyConfig",
+    "AgentTerminatedEvent",
     "AgentTool",
     "AssistantMessage",
     "LLMDoneEvent",
@@ -32,4 +35,5 @@ __all__ = [
     "StreamFn",
     "ToolResultMessage",
     "UserMessage",
+    "agent_loop",
 ]

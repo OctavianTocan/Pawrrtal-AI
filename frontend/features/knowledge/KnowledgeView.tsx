@@ -15,7 +15,7 @@
  *   group + row tree.
  * - The right panel hosts the active sub-view (file browser, file list +
  *   document viewer column, memory grid, brain access, shared empty
- *   states). The page-level header strip ("Knowledge / Working / Review …")
+ *   states). The page-level header strip ("Knowledge / Working / Review ...")
  *   was removed at the user's request — the sub-sidebar's "New +" button
  *   carries the only top-of-surface affordance now.
  *

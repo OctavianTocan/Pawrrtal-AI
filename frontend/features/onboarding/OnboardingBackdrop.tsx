@@ -176,7 +176,7 @@ export function OnboardingBackdrop(): React.JSX.Element {
 			className="pointer-events-none absolute inset-0 overflow-hidden bg-background"
 			aria-hidden="true"
 		>
-			<canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+			<canvas ref={canvasRef} className="absolute inset-0 size-full" />
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,var(--background)_100%)] opacity-20" />
 		</div>
 	);

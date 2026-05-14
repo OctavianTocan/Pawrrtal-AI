@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type React from 'react';
 import { AppleIcon } from '@/components/brand-icons/AppleIcon';
 import { GoogleIcon } from '@/components/brand-icons/GoogleIcon';
@@ -98,12 +99,12 @@ export function LoginFormView({
 							<Field>
 								<div className="flex items-center">
 									<FieldLabel htmlFor={passwordId}>Password</FieldLabel>
-									<a
+									<Link
 										href="/forgot-password"
 										className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
 									>
 										Forgot your password?
-									</a>
+									</Link>
 								</div>
 								<Input
 									id={passwordId}
@@ -171,7 +172,7 @@ export function LoginFormView({
 									Continue with Apple
 								</Button>
 								<FieldDescription className="text-center">
-									Don&apos;t have an account? <a href="/signup">Sign up</a>
+									Don&apos;t have an account? <Link href="/signup">Sign up</Link>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>

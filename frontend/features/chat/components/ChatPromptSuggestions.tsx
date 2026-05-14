@@ -59,7 +59,7 @@ export function ChatPromptSuggestions({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<button
-									className="flex min-w-0 flex-1 items-center gap-2 bg-transparent px-3 py-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
+									className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 bg-transparent p-3 text-left text-[13px] font-normal transition-colors hover:bg-transparent"
 									onClick={() => onSelectSuggestion(suggestion.label)}
 									type="button"
 								>
@@ -78,7 +78,7 @@ export function ChatPromptSuggestions({
 						</Tooltip>
 						<button
 							aria-label={`Dismiss suggestion: ${suggestion.label}`}
-							className="flex shrink-0 items-center justify-center bg-transparent px-3 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
+							className="flex shrink-0 cursor-pointer items-center justify-center bg-transparent px-3 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
 							onClick={() => {
 								setDismissedIds((previous) => {
 									const next = new Set(previous);

@@ -11,8 +11,9 @@ from agno.tools.local_file_system import LocalFileSystemTools
 from agno.tools.mcp.mcp import MCPTools
 
 from app.core.config import settings
+from app.core.keys import resolve_api_key
 from app.core.tools.exa_search_agno import ExaTools
-from app.core.workspace import get_user_workspace
+from app.core.workspace import _workspace_path
 
 # Initialize the Agno database.
 if settings.is_sqlite:
@@ -24,11 +25,21 @@ else:
 def create_agent(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
-    model_id: str = "gemini-3.1-flash-lite-preview",
+    model_id: str,
 ) -> Agent:
-    """This function allows us to create an Agno agent."""
+    """This function allows us to create an Agno agent.
+
+    ``model_id`` is required — the catalog is the only source of a
+    default model in this codebase; callers should pass the bare
+    vendor slug (e.g. ``"gemini-3-flash-preview"``) that Gemini's SDK
+    expects.
+    """
     # Grab the user's workspace path. This is where the agent will be able to read/write files, so it's important to set this up correctly.
-    user_workspace = get_user_workspace(user_id)
+    # NOTE: agents.py is a legacy Agno harness; workspace_id should come
+    # from the DB via app.crud.workspace.get_default_workspace.  For now,
+    # derive the path directly from user_id treated as workspace_id so this
+    # file compiles (no production traffic flows through Agno any more).
+    user_workspace = str(_workspace_path(user_id))
 
     # Build the toolset. ExaTools is appended only when an EXA_API_KEY
     # is configured — registering it without a key would surface a
@@ -40,8 +51,11 @@ def create_agent(
         MCPTools(transport="streamable-http", url="https://docs.agno.com/mcp"),
         LocalFileSystemTools(target_directory=user_workspace),
     ]
-    if settings.exa_api_key:
-        tools.append(ExaTools())
+    # `resolve_api_key` already falls back to `settings.exa_api_key` when the
+    # user has no workspace override, so a truthy result here means "key is
+    # available somewhere" — workspace-first, gateway-second.
+    if resolve_api_key(user_id, "EXA_API_KEY"):
+        tools.append(ExaTools(user_id=user_id))
 
     agno_agent = Agent(
         name="Agno Agent",
@@ -68,9 +82,7 @@ def create_history_reader_agent(conversation_id: uuid.UUID) -> list[Message]:
 def create_utility_agent(prompt: str) -> RunOutput:
     """Helps with one-off requests, using an Agno agent."""
     agent = Agent(
-        model=Gemini(
-            id="gemini-3.1-flash-lite-preview", api_key=settings.google_api_key
-        ),
+        model=Gemini(id="gemini-3.1-flash-lite-preview", api_key=settings.google_api_key),
     )
     return agent.run(prompt)
 

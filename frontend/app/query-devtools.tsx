@@ -1,7 +1,12 @@
 'use client';
 
 import { ReactQueryDevtools as RQDevtools } from '@tanstack/react-query-devtools';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
+
+const unsubscribeFromHydration = (): void => undefined;
+const subscribeToHydration = (): (() => void) => unsubscribeFromHydration;
+const getClientHydrationSnapshot = (): boolean => true;
+const getServerHydrationSnapshot = (): boolean => false;
 
 /**
  * Client-only wrapper around `ReactQueryDevtools`.
@@ -30,11 +35,11 @@ import { useEffect, useState } from 'react';
  * `frontend/app/providers.tsx:28` ("No QueryClient set").
  */
 export function QueryDevtools() {
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
+	const mounted = useSyncExternalStore(
+		subscribeToHydration,
+		getClientHydrationSnapshot,
+		getServerHydrationSnapshot
+	);
 
 	if (!mounted || process.env.NODE_ENV !== 'development') {
 		return null;

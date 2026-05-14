@@ -1,9 +1,122 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "fumadocs-ui/css/vitepress.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Composer package ships its own keyframes (composer-placeholder-enter,
+   waveform-scroll) and the small theme adjustments it needs. Import the
+   package CSS so the pawrrtal host stops shipping its own copies — the
+   keyframes were extracted to the package as part of PR 1+2. */
+@import "../lib/react-chat-composer/src/styles/theme.css";
+@import "../lib/react-chat-composer/src/styles/animations.css";
+
+@font-face {
+	font-family: "Google Sans";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesans/v67/4Ua_rENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RFD48TE63OOYKtrwEIKli.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans";
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesans/v67/4Ua_rENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RFD48TE63OOYKtrw2IKli.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesans/v67/4Ua_rENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RFD48TE63OOYKtrzaJ6li.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans";
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesans/v67/4Ua_rENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RFD48TE63OOYKtrzjJ6li.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans Flex";
+	font-style: normal;
+	font-weight: 400;
+	font-stretch: normal;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesansflex/v20/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakp8ubycs.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans Flex";
+	font-style: normal;
+	font-weight: 500;
+	font-stretch: normal;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesansflex/v20/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakp_mbycs.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans Flex";
+	font-style: normal;
+	font-weight: 600;
+	font-stretch: normal;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesansflex/v20/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakpxWcycs.ttf")
+		format("truetype");
+}
+
+@font-face {
+	font-family: "Google Sans Flex";
+	font-style: normal;
+	font-weight: 700;
+	font-stretch: normal;
+	font-display: swap;
+	src: url("https://fonts.gstatic.com/s/googlesansflex/v20/t5sJIQcYNIWbFgDgAAzZ34auoVyXkJCOvp3SFWJbN5hF8Ju1x6sKCyp0l9sI40swNJwInycYAJzz0m7kJ4qFQOJBOjLvDSndo0SKMpKSTzwliVdHAy4bxTDHg_ugnAakpyycycs.ttf")
+		format("truetype");
+}
 
 /* Linked `@octavian-tocan/react-dropdown` resolves here — ensure Tailwind scans it so
    menu primitives (e.g. `disabled:bg-muted/*`) are generated in dev + prod. */
 @source "../lib/react-dropdown/src";
+@source "../lib/react-overlay/src";
+@source "../lib/react-chat-composer/src";
+
+/* =============================================================================
+   CHAT-COMPOSER TOKEN BRIDGE
+
+   The `@octavian-tocan/react-chat-composer` package ships generic light/dark
+   defaults for `--color-chat-*` (near-white surface, neutral grey text).
+   Pawrrtal derives surfaces from `--background` so the chat panel inherits
+   the active Mistral / Cursor / preset hue. Re-point the package tokens at
+   pawrrtal's palette so the composer reads as part of the chat shell instead
+   of a flat-white island. The `var()` forwards track preset + theme switches.
+============================================================================= */
+:root {
+	--color-chat-bg-elevated: var(--background-elevated);
+	--color-chat-bg-elevated-shade: var(--background-elevated-shade);
+	--color-chat-foreground: var(--foreground);
+	--color-chat-muted: var(--muted-foreground);
+	--color-chat-border: var(--border);
+	--color-chat-accent: var(--accent);
+	--color-chat-accent-foreground: var(--primary-foreground);
+	--color-chat-info: var(--info);
+	--color-chat-warning: var(--info);
+	--color-chat-destructive: var(--destructive);
+	--color-chat-success: var(--success);
+	--radius-chat-lg: var(--radius-surface-lg);
+	--shadow-chat-minimal: var(--shadow-minimal);
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -232,12 +345,9 @@
 	--step-content-gap: 1.5rem;
 	--step-actions-margin: 2rem;
 
-	/* Fonts — Google Sans Flex → Google Sans → Helvetica; @font-face from
-	   Google Fonts `<link>` in `app/layout.tsx` (not `next/font` — avoids
-	   capsize override warnings for these families). */
-	--font-sans-stack:
-		var(--font-google-sans-flex-loaded, "Google Sans Flex"),
-		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
+	/* Fonts — Google Sans Flex → Google Sans → Helvetica; @font-face rules live
+	   above because these families are not exposed by `next/font/google`. */
+	--font-sans-stack: "Google Sans Flex", "Google Sans", "Helvetica Neue", sans-serif;
 	/* Editorial display family — Mistral-inspired near-serif voice for hero
 	 * displays and large headings. Newsreader (variable Google Font) is the
 	 * canonical face; falls back to a system serif chain so the editorial
@@ -487,9 +597,7 @@ html[data-scenic] {
 
 /* Inter Font - Opt-in via data-font="inter" attribute */
 html[data-font="inter"] {
-	--font-sans-stack:
-		"Inter", var(--font-google-sans-flex-loaded, "Google Sans Flex"),
-		var(--font-google-sans-loaded, "Google Sans"), "Helvetica Neue", sans-serif;
+	--font-sans-stack: "Inter", "Google Sans Flex", "Google Sans", "Helvetica Neue", sans-serif;
 	--font-sans: var(--font-sans-stack);
 	--font-default: var(--font-sans);
 	font-optical-sizing: auto;
@@ -611,8 +719,10 @@ html[data-font="inter"] {
 	--animate-toast-in: toast-in 0.2s ease-out;
 	--animate-thinking-gradient: thinking-gradient-flow 5s linear infinite;
 	--animate-onboarding-panel: onboarding-panel-enter 260ms cubic-bezier(0.25, 1, 0.5, 1) both;
-	--animate-composer-placeholder: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1)
-		both;
+	/* `--animate-composer-placeholder` and the `composer-placeholder-enter`
+	   keyframe + class now ship with `@octavian-tocan/react-chat-composer`
+	   (imported via `theme.css` + `animations.css` at the top of this file).
+	   Same for the `waveform-scroll` keyframe used by the voice meter. */
 	/* Dropdown open/close — expo ease-out curve; `both` fills before & after so
 	   there's no flash. Radix detects animationend on data-state="closed" and
 	   waits before removing the element, so the exit plays in full. */
@@ -1445,19 +1555,13 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	animation: onboarding-panel-enter 260ms cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-.composer-placeholder-enter {
-	animation: composer-placeholder-enter 220ms cubic-bezier(0.25, 1, 0.5, 1) both;
-}
+/* `.composer-placeholder-enter` class + keyframe now ship with
+   `@octavian-tocan/react-chat-composer` (imported at the top of this file). */
 
-/* onboarding-panel-enter + composer-placeholder-enter keyframes moved to
-   the consolidated Animations section. */
+/* onboarding-panel-enter keyframes moved to the consolidated Animations section. */
 
 @media (prefers-reduced-motion: reduce) {
 	.onboarding-panel {
-		animation: none;
-	}
-
-	.composer-placeholder-enter {
 		animation: none;
 	}
 }
@@ -1573,17 +1677,8 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 }
 
-/* Translates the doubled bar strip leftward by exactly half its width so
-   the loop reads as continuous flow. Pair with `[...bars, ...bars]` —
-   the seam at -50% lands on identical content, hiding the wrap. */
-@keyframes waveform-scroll {
-	from {
-		transform: translateX(0);
-	}
-	to {
-		transform: translateX(-50%);
-	}
-}
+/* `waveform-scroll` keyframe ships with `@octavian-tocan/react-chat-composer`
+   (imported at the top of this file). */
 
 @keyframes shimmer {
 	0% {
@@ -1600,6 +1695,18 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 	100% {
 		background-position: 0% 50%;
+	}
+}
+
+@keyframes thinking-dot-rise {
+	0%,
+	100% {
+		opacity: 0.45;
+		transform: translateY(0) scale(0.9);
+	}
+	45% {
+		opacity: 1;
+		transform: translateY(-3px) scale(1);
 	}
 }
 
@@ -1664,13 +1771,15 @@ html.dark[data-scenic] .fullscreen-overlay-background {
 	}
 }
 
-@keyframes composer-placeholder-enter {
-	from {
-		opacity: 0;
-		transform: translateY(4px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
+/* `composer-placeholder-enter` keyframe ships with
+   `@octavian-tocan/react-chat-composer` (imported at the top of this file). */
+
+/* Pawrrtal docs override: page-body headings render in the brand
+ * editorial face (Newsreader, with a system-serif fallback chain).
+ * The `pawrrtal-docs` class is set via `containerProps` on the docs
+ * layouts so this scope only affects /docs/** and never bleeds into
+ * in-app prose surfaces (chat messages, knowledge viewer, etc.). */
+.pawrrtal-docs :is(h1, h2, h3, h4) {
+	font-family: var(--font-display-stack);
+	letter-spacing: -0.01em;
 }

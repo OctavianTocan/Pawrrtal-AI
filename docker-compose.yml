@@ -1,18 +1,17 @@
-# AI Nexus — local development stack
+# AI Nexus — base Compose file (service definitions shared by all environments)
 #
-# Starts PostgreSQL and the FastAPI backend together.  The frontend is
-# intentionally omitted from this Compose file — run it with `bun dev`
-# (or `npm run dev`) in a separate terminal so Next.js hot-reload keeps
-# working normally.
+# This file defines service topology only — no published ports.
+# Use an overlay for ports and dev-only settings:
 #
-# Quick-start:
+#   Local development (ports published to host, hot-reload):
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 #
-#   cp backend/.env.docker backend/.env   # fill in your API keys
-#   docker compose up --build
+#   Production (VPS + Tailscale Serve):
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# The backend will be available at http://localhost:8000.
-# The postgres port is also exposed at localhost:5432 so you can
-# connect with any database client without extra config.
+# The backend is available inside the Docker network at http://backend:8000.
+# The postgres instance is reachable inside the Docker network at postgres:5432.
+# To connect with a local DB client during development, use docker-compose.dev.yml.
 #
 # Migrations run automatically on backend startup; no manual step needed.
 
@@ -27,8 +26,7 @@ services:
       POSTGRES_USER: nexus
       POSTGRES_PASSWORD: nexus_dev
       POSTGRES_DB: nexus
-    ports:
-      - "5432:5432"
+    # No `ports` here — publish on the host only in docker-compose.dev.yml.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -56,8 +54,7 @@ services:
       # reliably for changes made on the host through a Docker bind mount.
       # Force polling so uvicorn --reload actually reloads on every save.
       WATCHFILES_FORCE_POLLING: "true"
-    ports:
-      - "8000:8000"
+    # No `ports` here — publish :8000 on the host only in docker-compose.dev.yml.
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,8 +1,10 @@
 'use client';
 
-import { useId } from 'react';
+import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
+import { AlertTriangle } from 'lucide-react';
+import { AppDialog } from '@/components/ui/app-dialog';
+import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
 import { Button } from '@/components/ui/button';
-import { ResponsiveModal } from '@/components/ui/responsive-modal';
 
 interface ConversationDeleteDialogProps {
 	/** Whether the dialog is open. */
@@ -19,7 +21,7 @@ interface ConversationDeleteDialogProps {
  * Destructive confirmation dialog for deleting a conversation.
  *
  * Renders as a centered Modal on desktop and a draggable BottomSheet on mobile
- * via {@link ResponsiveModal}. Both actions are disabled while the delete
+ * via {@link AppDialog}. Both actions are disabled while the delete
  * mutation is in flight so the user can't double-fire.
  *
  * @returns The delete confirmation rendered through the project overlay primitive.
@@ -30,11 +32,39 @@ export function ConversationDeleteDialog({
 	onOpenChange,
 	onConfirm,
 }: ConversationDeleteDialogProps): React.JSX.Element {
-	const headingId = useId();
-	const descriptionId = useId();
+	const header = (
+		<ModalHeader
+			icon={<AlertTriangle aria-hidden className="size-4 text-white" />}
+			title="Delete Conversation?"
+		/>
+	);
+
+	const footer = (
+		<AppDialogFooter>
+			<Button
+				disabled={isPending}
+				onClick={() => onOpenChange(false)}
+				type="button"
+				variant="outline"
+			>
+				Cancel
+			</Button>
+			<Button
+				disabled={isPending}
+				onClick={(event) => {
+					event.preventDefault();
+					onConfirm();
+				}}
+				type="button"
+				variant="destructive"
+			>
+				{isPending ? 'Deleting...' : 'Delete'}
+			</Button>
+		</AppDialogFooter>
+	);
 
 	return (
-		<ResponsiveModal
+		<AppDialog
 			open={isOpen}
 			onDismiss={() => {
 				if (!isPending) {
@@ -43,44 +73,17 @@ export function ConversationDeleteDialog({
 			}}
 			closeOnOverlayClick={!isPending}
 			closeOnEscape={!isPending}
-			ariaLabelledBy={headingId}
-			ariaDescribedBy={descriptionId}
-			size="sm"
+			ariaLabel="Delete Conversation"
+			footer={footer}
+			header={header}
 			showDismissButton={!isPending}
+			sheetTitle="Delete Conversation"
+			size="sm"
 			testId="conversation-delete-dialog"
 		>
-			<div className="flex flex-col gap-4 p-6 text-foreground">
-				<header className="flex flex-col gap-1.5">
-					<h2 id={headingId} className="text-lg font-semibold leading-none">
-						Delete Conversation?
-					</h2>
-					<p id={descriptionId} className="text-sm text-muted-foreground">
-						This removes the conversation from your sidebar. This action cannot be
-						undone.
-					</p>
-				</header>
-				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => onOpenChange(false)}
-						disabled={isPending}
-					>
-						Cancel
-					</Button>
-					<Button
-						type="button"
-						variant="destructive"
-						disabled={isPending}
-						onClick={(event) => {
-							event.preventDefault();
-							onConfirm();
-						}}
-					>
-						{isPending ? 'Deleting...' : 'Delete'}
-					</Button>
-				</div>
-			</div>
-		</ResponsiveModal>
+			<ModalDescription className="text-muted-foreground">
+				This removes the conversation from your sidebar. This action cannot be undone.
+			</ModalDescription>
+		</AppDialog>
 	);
 }

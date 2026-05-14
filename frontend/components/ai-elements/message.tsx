@@ -8,8 +8,9 @@
 
 import type { FileUIPart, UIMessage } from 'ai';
 import { ChevronLeftIcon, ChevronRightIcon, PaperclipIcon, XIcon } from 'lucide-react';
+import Image from 'next/image';
 import type { ComponentProps, HTMLAttributes, ReactElement } from 'react';
-import { createContext, memo, useContext, useEffect, useState } from 'react';
+import { createContext, memo, use, useEffect, useReducer, useState } from 'react';
 import { Streamdown } from 'streamdown';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupText } from '@/components/ui/button-group';
@@ -110,9 +111,10 @@ type MessageBranchContextType = {
 };
 
 const MessageBranchContext = createContext<MessageBranchContextType | null>(null);
+const replaceNumberState = (_current: number, next: number): number => next;
 
 const useMessageBranch = () => {
-	const context = useContext(MessageBranchContext);
+	const context = use(MessageBranchContext);
 
 	if (!context) {
 		throw new Error('MessageBranch components must be used within MessageBranch');
@@ -132,7 +134,7 @@ export const MessageBranch = ({
 	className,
 	...props
 }: MessageBranchProps) => {
-	const [currentBranch, setCurrentBranch] = useState(defaultBranch);
+	const [currentBranch, setCurrentBranch] = useReducer(replaceNumberState, defaultBranch);
 	const [branches, setBranches] = useState<ReactElement[]>([]);
 
 	const handleBranchChange = (newBranch: number) => {
@@ -340,11 +342,12 @@ export function MessageAttachment({ data, className, onRemove, ...props }: Messa
 		>
 			{isImage ? (
 				<>
-					<img
+					<Image
 						alt={filename || 'attachment'}
 						className="size-full object-cover"
 						height={100}
 						src={data.url}
+						unoptimized
 						width={100}
 					/>
 					{onRemove && (

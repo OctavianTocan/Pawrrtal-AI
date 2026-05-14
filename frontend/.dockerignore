@@ -1,0 +1,50 @@
+# Exclude everything that should not enter the Docker build context.
+# A trimmed context keeps the image small, the build fast, and prevents
+# host-side artifacts (or secrets) from leaking into the image.
+
+# ── Build artefacts ─────────────────────────────────────────────────────
+node_modules
+.next
+out
+dist
+build
+coverage
+.turbo
+.cache
+
+# ── Test / IDE / OS noise ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.swp
+*.swo
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Source control + CI ─────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.github
+
+# ── Secrets / local env ─────────────────────────────────────────────────
+# .env.example is the only env file allowed in the context.
+.env
+.env.*
+!.env.example
+
+# ── Docker files themselves (avoid recursive copy) ─────────────────────
+Dockerfile
+.dockerignore
+
+# ── Misc ────────────────────────────────────────────────────────────────
+README*.md
+CHANGELOG*.md
+LICENSE*
+*.tar
+*.tgz
+playwright-report
+test-results
