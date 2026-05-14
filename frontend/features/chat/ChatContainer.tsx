@@ -8,7 +8,6 @@ import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { AgnoMessage } from '@/lib/types';
 import ChatView from './ChatView';
 import {
-	CHAT_MODEL_IDS,
 	CHAT_REASONING_LEVELS,
 	type ChatModelId,
 	type ChatReasoningLevel,
@@ -26,9 +25,18 @@ import { useComposerMessage } from './hooks/use-composer-message';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
 
-/** Runtime guard for persisted model IDs — older builds may have stored a now-renamed model. */
+/**
+ * Runtime guard for the persisted model id.
+ *
+ * The backend catalog (`GET /api/v1/models`) is the source of truth for
+ * which model ids are accepted; the chat router additionally accepts
+ * both the canonical `"<provider>/<model>"` form and legacy bare SDK
+ * ids.  Validating "any non-empty string" here keeps older persisted
+ * values working — if the value is unrecognised the backend's
+ * `canonicalise()` falls back to the catalog default.
+ */
 function isChatModelId(value: unknown): value is ChatModelId {
-	return typeof value === 'string' && (CHAT_MODEL_IDS as readonly string[]).includes(value);
+	return typeof value === 'string' && value.length > 0;
 }
 
 /** Runtime guard for persisted reasoning levels — same rationale as {@link isChatModelId}. */

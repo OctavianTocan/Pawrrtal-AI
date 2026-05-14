@@ -1,18 +1,74 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode, useState } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import type { ModelsListResponse } from '../hooks/use-models';
 import {
 	type ChatModelId,
 	type ChatReasoningLevel,
 	ModelSelectorPopover,
 } from './ModelSelectorPopover';
 
+// `useModels` hits `/api/v1/models` via TanStack Query — neither is wired
+// up in this Vitest harness, so stub the hook with a static catalog that
+// matches the backend's published shape.  Using factory-style data keeps
+// each test isolated (no shared mutable mock array).
+const CATALOG: ModelsListResponse = {
+	default_canonical_id: 'google/gemini-3-flash-preview',
+	models: [
+		{
+			canonical_id: 'anthropic/claude-sonnet-4-6',
+			provider: 'anthropic',
+			sdk_id: 'claude-sonnet-4-6',
+			display_name: 'Claude Sonnet 4.6',
+			short_name: 'Sonnet 4.6',
+			description: 'Balanced for everyday tasks',
+			context_window: 200_000,
+			supports_thinking: true,
+			supports_tool_use: true,
+			supports_prompt_cache: true,
+			default_reasoning: 'medium',
+		},
+		{
+			canonical_id: 'google/gemini-3-flash-preview',
+			provider: 'google',
+			sdk_id: 'gemini-3-flash-preview',
+			display_name: 'Gemini 3 Flash Preview',
+			short_name: 'Gemini 3 Flash',
+			description: "Google's frontier multimodal",
+			context_window: 1_000_000,
+			supports_thinking: false,
+			supports_tool_use: true,
+			supports_prompt_cache: false,
+			default_reasoning: 'off',
+		},
+		{
+			canonical_id: 'google/gemini-3.1-flash-lite-preview',
+			provider: 'google',
+			sdk_id: 'gemini-3.1-flash-lite-preview',
+			display_name: 'Gemini 3.1 Flash Lite Preview',
+			short_name: 'Gemini Flash Lite',
+			description: 'Light and fast Gemini',
+			context_window: 1_000_000,
+			supports_thinking: false,
+			supports_tool_use: true,
+			supports_prompt_cache: false,
+			default_reasoning: 'off',
+		},
+	],
+};
+
+vi.mock('../hooks/use-models', () => ({
+	useModels: (): { data: ModelsListResponse } => ({ data: CATALOG }),
+}));
+
 // No mock for @octavian-tocan/react-dropdown — we want the real menu / submenu
 // behaviour so the test exercises the same code path the user hits in the app.
 
 function Harness(): React.JSX.Element {
+	// Older builds persist the bare SDK id; the popover must still resolve
+	// it to a catalog row so the chip renders correctly during the cutover.
 	const [selectedModelId, setSelectedModelId] = useState<ChatModelId>('gemini-3-flash-preview');
 	const [selectedReasoning, setSelectedReasoning] = useState<ChatReasoningLevel>('medium');
 	return (
@@ -71,7 +127,7 @@ describe('ModelSelectorPopover', (): void => {
 		function PersistedHarness(): React.JSX.Element {
 			const [selectedModelId, setSelectedModelId] = usePersistedState<ChatModelId>({
 				storageKey: 'chat-composer:selected-model-id',
-				defaultValue: 'gemini-3-flash-preview',
+				defaultValue: 'google/gemini-3-flash-preview',
 			});
 			const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>(
 				{
@@ -98,11 +154,11 @@ describe('ModelSelectorPopover', (): void => {
 			});
 			expect(trigger).toHaveTextContent('Gemini 3 Flash');
 
-			await pickModel(user, /^OpenAI$/, /^GPT-5\.5$/);
+			await pickModel(user, /^Anthropic$/, /^Claude Sonnet 4\.6$/);
 
 			// Bug repro: the trigger should show the new model.  Production
-			// reports it stays on 'Gemini 3 Flash'.
-			expect(trigger).toHaveTextContent('GPT-5.5');
+			// reports it stays on the old label.
+			expect(trigger).toHaveTextContent('Claude Sonnet 4.6');
 		});
 
 		it('updates the trigger label inside StrictMode (double-render)', async (): Promise<void> => {

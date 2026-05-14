@@ -39,8 +39,14 @@ export type ChatStorageKey = (typeof CHAT_STORAGE_KEYS)[keyof typeof CHAT_STORAG
 
 // ─── defaults ──────────────────────────────────────────────────────────────
 
-/** Default model used when nothing is persisted yet. */
-export const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'gemini-3-flash-preview';
+/**
+ * Default model used when nothing is persisted yet.
+ *
+ * Canonical `"<provider>/<model>"` form — matches the backend catalog's
+ * default and keeps the persisted value already in OpenClaw grammar so
+ * the chat router never needs to canonicalise it on write.
+ */
+export const DEFAULT_CHAT_MODEL_ID: ChatModelId = 'google/gemini-3-flash-preview';
 
 /** Default reasoning level used when nothing is persisted yet. */
 export const DEFAULT_REASONING_LEVEL: ChatReasoningLevel = 'medium';

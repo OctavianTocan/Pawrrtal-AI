@@ -9,29 +9,21 @@ import {
 } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import type * as React from 'react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
+import { type CatalogModel, type ModelProvider, useModels } from '../hooks/use-models';
 
 /**
- * Stable model IDs available in the local visual-first selector.
- *
- * Declared as a `const` tuple (rather than only a union) so callers can validate
- * persisted strings at runtime — see {@link ChatContainer}'s storage guards.
+ * Stable model identifier sent back to the backend.  Widened to `string`
+ * because the source of truth lives in `backend/app/core/models_catalog.py`
+ * (exposed via `GET /api/v1/models`); the runtime guard in
+ * {@link ChatContainer} keeps the persisted value honest while the
+ * catalog loads.
  */
-export const CHAT_MODEL_IDS = [
-	'gemini-3-flash-preview',
-	'gemini-3.1-flash-lite-preview',
-	'gpt-5.5',
-	'gpt-5.4',
-	'claude-sonnet-4-6',
-	'claude-opus-4-7',
-	'claude-haiku-4-5',
-] as const;
-
-/** Stable model IDs available in the local visual-first selector. */
-export type ChatModelId = (typeof CHAT_MODEL_IDS)[number];
+export type ChatModelId = string;
 
 /** Reasoning levels displayed next to the selected model. */
 export const CHAT_REASONING_LEVELS = ['low', 'medium', 'high', 'extra-high'] as const;
@@ -39,21 +31,13 @@ export const CHAT_REASONING_LEVELS = ['low', 'medium', 'high', 'extra-high'] as 
 /** Reasoning levels displayed next to the selected model. */
 export type ChatReasoningLevel = (typeof CHAT_REASONING_LEVELS)[number];
 
-/** Stable provider IDs grouped at the top of the model menu. */
-const PROVIDER_IDS = ['anthropic', 'openai', 'google'] as const;
-type ProviderId = (typeof PROVIDER_IDS)[number];
+/** Stable provider IDs the menu can group rows under. */
+const PROVIDER_ORDER: readonly ModelProvider[] = ['anthropic', 'google'];
 
-type ChatModelOption = {
-	/** Backend model identifier. */
-	id: ChatModelId;
-	/** Short label shown in the composer trigger. */
-	shortName: string;
-	/** Full label shown in menus. */
-	name: string;
-	/** Provider logo slug for models.dev. */
-	provider: ProviderId;
-	/** Short tagline rendered as the secondary line in the model menu. */
-	description: string;
+/** Display label for each provider — title-case for menu rows. */
+const PROVIDER_LABELS: Record<ModelProvider, string> = {
+	anthropic: 'Anthropic',
+	google: 'Google',
 };
 
 type ReasoningOption = {
@@ -63,65 +47,6 @@ type ReasoningOption = {
 	label: string;
 };
 
-const MODEL_OPTIONS: ChatModelOption[] = [
-	{
-		id: 'claude-opus-4-7',
-		shortName: 'Claude Opus 4.7',
-		name: 'Claude Opus 4.7',
-		provider: 'anthropic',
-		description: 'Most capable for ambitious work',
-	},
-	{
-		id: 'claude-sonnet-4-6',
-		shortName: 'Claude Sonnet 4.6',
-		name: 'Claude Sonnet 4.6',
-		provider: 'anthropic',
-		description: 'Balanced for everyday tasks',
-	},
-	{
-		id: 'claude-haiku-4-5',
-		shortName: 'Claude Haiku 4.5',
-		name: 'Claude Haiku 4.5',
-		provider: 'anthropic',
-		description: 'Fastest for quick answers',
-	},
-	{
-		id: 'gpt-5.5',
-		shortName: 'GPT-5.5',
-		name: 'GPT-5.5',
-		provider: 'openai',
-		description: "OpenAI's flagship reasoning",
-	},
-	{
-		id: 'gpt-5.4',
-		shortName: 'GPT-5.4',
-		name: 'GPT-5.4',
-		provider: 'openai',
-		description: 'Faster GPT for everyday tasks',
-	},
-	{
-		id: 'gemini-3-flash-preview',
-		shortName: 'Gemini 3 Flash',
-		name: 'Gemini 3 Flash Preview',
-		provider: 'google',
-		description: "Google's frontier multimodal",
-	},
-	{
-		id: 'gemini-3.1-flash-lite-preview',
-		shortName: 'Gemini Flash Lite',
-		name: 'Gemini 3.1 Flash Lite Preview',
-		provider: 'google',
-		description: 'Light and fast Gemini',
-	},
-];
-
-/** Display label for each provider — title-case for menu rows. */
-const PROVIDER_LABELS: Record<ProviderId, string> = {
-	anthropic: 'Anthropic',
-	openai: 'OpenAI',
-	google: 'Google',
-};
-
 const REASONING_OPTIONS: ReasoningOption[] = [
 	{ id: 'low', label: 'Low' },
 	{ id: 'medium', label: 'Medium' },
@@ -129,15 +54,84 @@ const REASONING_OPTIONS: ReasoningOption[] = [
 	{ id: 'extra-high', label: 'Extra High' },
 ];
 
-/** Discriminated union of root-menu rows. */
-type RootRow = { kind: 'provider'; provider: ProviderId } | { kind: 'thinking' };
-
-const ROOT_ROWS: readonly RootRow[] = [
-	{ kind: 'provider', provider: 'anthropic' },
-	{ kind: 'provider', provider: 'openai' },
-	{ kind: 'provider', provider: 'google' },
-	{ kind: 'thinking' },
+/**
+ * Fallback catalog rendered while {@link useModels} is loading or after a
+ * fetch failure.  Keeps the picker usable on a cold start; the canonical
+ * grammar matches the backend so any selection survives the cutover.
+ *
+ * Listed in the same order as the backend catalog so the UI doesn't jump
+ * when the real response replaces this list.
+ */
+const FALLBACK_CATALOG: readonly CatalogModel[] = [
+	{
+		canonical_id: 'anthropic/claude-opus-4-7',
+		provider: 'anthropic',
+		sdk_id: 'claude-opus-4-7',
+		display_name: 'Claude Opus 4.7',
+		short_name: 'Opus 4.7',
+		description: 'Most capable for ambitious work',
+		context_window: 200_000,
+		supports_thinking: true,
+		supports_tool_use: true,
+		supports_prompt_cache: true,
+		default_reasoning: 'medium',
+	},
+	{
+		canonical_id: 'anthropic/claude-sonnet-4-6',
+		provider: 'anthropic',
+		sdk_id: 'claude-sonnet-4-6',
+		display_name: 'Claude Sonnet 4.6',
+		short_name: 'Sonnet 4.6',
+		description: 'Balanced for everyday tasks',
+		context_window: 200_000,
+		supports_thinking: true,
+		supports_tool_use: true,
+		supports_prompt_cache: true,
+		default_reasoning: 'medium',
+	},
+	{
+		canonical_id: 'anthropic/claude-haiku-4-5',
+		provider: 'anthropic',
+		sdk_id: 'claude-haiku-4-5',
+		display_name: 'Claude Haiku 4.5',
+		short_name: 'Haiku 4.5',
+		description: 'Fastest for quick answers',
+		context_window: 200_000,
+		supports_thinking: true,
+		supports_tool_use: true,
+		supports_prompt_cache: true,
+		default_reasoning: 'low',
+	},
+	{
+		canonical_id: 'google/gemini-3-flash-preview',
+		provider: 'google',
+		sdk_id: 'gemini-3-flash-preview',
+		display_name: 'Gemini 3 Flash Preview',
+		short_name: 'Gemini 3 Flash',
+		description: "Google's frontier multimodal",
+		context_window: 1_000_000,
+		supports_thinking: false,
+		supports_tool_use: true,
+		supports_prompt_cache: false,
+		default_reasoning: 'off',
+	},
+	{
+		canonical_id: 'google/gemini-3.1-flash-lite-preview',
+		provider: 'google',
+		sdk_id: 'gemini-3.1-flash-lite-preview',
+		display_name: 'Gemini 3.1 Flash Lite Preview',
+		short_name: 'Gemini Flash Lite',
+		description: 'Light and fast Gemini',
+		context_window: 1_000_000,
+		supports_thinking: false,
+		supports_tool_use: true,
+		supports_prompt_cache: false,
+		default_reasoning: 'off',
+	},
 ];
+
+/** Discriminated union of root-menu rows. */
+type RootRow = { kind: 'provider'; provider: ModelProvider } | { kind: 'thinking' };
 
 /** Stable React key for each root row. */
 function rootRowKey(row: RootRow): string {
@@ -163,30 +157,30 @@ export type ModelSelectorPopoverProps = {
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 };
 
-function getModelOption(modelId: ChatModelId): ChatModelOption {
-	const fallbackModel = MODEL_OPTIONS[0];
-
-	if (!fallbackModel) {
-		throw new Error('Model selector requires at least one model option.');
-	}
-
-	return MODEL_OPTIONS.find((model) => model.id === modelId) ?? fallbackModel;
+/**
+ * Find a model in the active catalog by either canonical id or bare SDK id.
+ *
+ * Older persisted selections store the bare form (`"gemini-3-flash-preview"`)
+ * while the catalog publishes the canonical form (`"google/gemini-3-flash-preview"`);
+ * matching on both keeps the chip and the active-provider checkmark correct
+ * across the cutover.
+ */
+function findModel(
+	catalog: readonly CatalogModel[],
+	modelId: ChatModelId
+): CatalogModel | undefined {
+	return catalog.find((model) => model.canonical_id === modelId || model.sdk_id === modelId);
 }
 
 function getReasoningLabel(reasoning: ChatReasoningLevel): string {
 	return REASONING_OPTIONS.find((option) => option.id === reasoning)?.label ?? 'Medium';
 }
 
-/** Models grouped by provider, preserving the declaration order of MODEL_OPTIONS. */
-function getModelsByProvider(provider: ProviderId): ChatModelOption[] {
-	return MODEL_OPTIONS.filter((model) => model.provider === provider);
-}
-
 function ProviderLogo({
 	provider,
 	className,
 }: {
-	provider: ProviderId;
+	provider: ModelProvider;
 	className?: string;
 }): React.JSX.Element {
 	return (
@@ -212,7 +206,7 @@ function ModelRow({
 	isSelected,
 	onSelect,
 }: {
-	model: ChatModelOption;
+	model: CatalogModel;
 	isSelected: boolean;
 	onSelect: (modelId: ChatModelId) => void;
 }): React.JSX.Element {
@@ -222,12 +216,12 @@ function ModelRow({
 			type="button"
 			className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]"
 			onClick={() => {
-				onSelect(model.id);
+				onSelect(model.canonical_id);
 				closeDropdown();
 			}}
 		>
 			<div className="flex min-w-0 flex-1 flex-col text-left">
-				<span className="truncate text-foreground">{model.shortName}</span>
+				<span className="truncate text-foreground">{model.short_name}</span>
 				<span className="truncate text-[11px] text-muted-foreground">
 					{model.description}
 				</span>
@@ -271,10 +265,10 @@ function ReasoningRow({
 
 /**
  * Renders the chat composer's model selector. Top-level rows group models by
- * provider — each provider opens a flyout submenu with its full model lineup.
- * The `Thinking` row at the bottom is a peer submenu with the four reasoning
- * levels and a descriptive secondary line, mirroring the layout used by the
- * Craft Agents reference design.
+ * provider — each provider opens a flyout submenu with its full model lineup
+ * fetched from `GET /api/v1/models`.  The `Thinking` row at the bottom is a
+ * peer submenu with the four reasoning levels and a descriptive secondary line,
+ * mirroring the layout used by the Craft Agents reference design.
  *
  * Built on `@octavian-tocan/react-dropdown` (the vendored package) to stay
  * consistent with `AutoReviewSelector` and `NavUser`. The package's
@@ -287,10 +281,33 @@ export function ModelSelectorPopover({
 	onSelectModel,
 	onSelectReasoning,
 }: ModelSelectorPopoverProps): React.JSX.Element {
-	const selectedModel = getModelOption(selectedModelId);
+	const { data } = useModels();
+	// Fall back to the bundled catalog while the query is pending or has
+	// errored — the picker must remain usable on a cold load, especially
+	// on Safari which can take a beat to settle the auth cookie before the
+	// first `/api/v1/*` call returns.
+	const catalog = data?.models ?? FALLBACK_CATALOG;
+	const selectedModel = findModel(catalog, selectedModelId) ?? catalog[0];
 	const reasoningLabel = getReasoningLabel(selectedReasoning);
 	const { menuOpen, tooltipOpen, handleMenuOpenChange, handleTooltipOpenChange } =
 		useTooltipDropdown();
+
+	// Order provider rows by `PROVIDER_ORDER`, then hide any provider whose
+	// catalog rows are empty (e.g. backend returned a Google-only catalog).
+	const rootRows = useMemo<readonly RootRow[]>(() => {
+		const providerRows: RootRow[] = PROVIDER_ORDER.filter((provider) =>
+			catalog.some((model) => model.provider === provider)
+		).map((provider) => ({ kind: 'provider', provider }));
+		return [...providerRows, { kind: 'thinking' }];
+	}, [catalog]);
+
+	if (!selectedModel) {
+		// `catalog` is never empty in practice — the fallback is non-empty
+		// and the backend invariant requires at least one entry — but the
+		// type system can't see that, so guard with a defensive return
+		// rather than a non-null assertion.
+		return null;
+	}
 
 	return (
 		<TooltipProvider disableHoverableContent>
@@ -311,7 +328,7 @@ export function ModelSelectorPopover({
 							// Render a separator above the Thinking row to break the
 							// providers section from the reasoning section.
 							getItemSeparator={(row) => row.kind === 'thinking'}
-							items={ROOT_ROWS}
+							items={rootRows}
 							onOpenChange={handleMenuOpenChange}
 							onSelect={() => {
 								// no-op — submenu rows handle their own selection
@@ -328,7 +345,7 @@ export function ModelSelectorPopover({
 									variant="ghost"
 								>
 									<span className="text-foreground">
-										{selectedModel.shortName}
+										{selectedModel.short_name}
 									</span>
 									<span>{reasoningLabel}</span>
 									<ChevronDownIcon aria-hidden="true" className="size-3" />
@@ -336,15 +353,14 @@ export function ModelSelectorPopover({
 							}
 							renderItem={(row) => {
 								if (row.kind === 'provider') {
-									const models = getModelsByProvider(row.provider);
+									const models = catalog.filter(
+										(model) => model.provider === row.provider
+									);
 									if (models.length === 0) return null;
 									const isActiveProvider =
 										selectedModel.provider === row.provider;
 									return (
 										<DropdownSubmenu>
-											{/* `showChevron={false}` was a temporary prop on the
-											    upstream lib that's since been removed.  Hide via CSS
-											    if needed; chevron is baked into the trigger now. */}
 											<DropdownSubmenuTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]">
 												<ProviderLogo provider={row.provider} />
 												<span className="min-w-0 flex-1 truncate text-left">
@@ -365,9 +381,12 @@ export function ModelSelectorPopover({
 											<DropdownSubmenuContent className="chat-composer-dropdown-menu popover-styled p-1 min-w-64">
 												{models.map((model) => (
 													<ModelRow
-														key={model.id}
+														key={model.canonical_id}
 														model={model}
-														isSelected={selectedModelId === model.id}
+														isSelected={
+															selectedModel.canonical_id ===
+															model.canonical_id
+														}
 														onSelect={onSelectModel}
 													/>
 												))}

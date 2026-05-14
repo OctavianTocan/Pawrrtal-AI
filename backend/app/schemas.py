@@ -235,6 +235,76 @@ class AppearanceSettings(BaseModel):
     options: AppearanceOptions = AppearanceOptions()
 
 
+# --- Models catalog schemas ---------------------------------------------------
+
+
+class ModelEntryRead(BaseModel):
+    """Public view of one model in the backend's catalog.
+
+    Mirrors :class:`app.core.models_catalog.ModelEntry` for transport
+    across ``GET /api/v1/models``.  The endpoint is the contract the
+    frontend reads to populate the model picker — adding or renaming a
+    field here without updating the frontend type will produce a
+    Zod/runtime mismatch on the next deploy, which is the desired
+    behaviour: the frontend should never silently ignore a new
+    capability flag.
+    """
+
+    canonical_id: str
+    """OpenClaw-style ``"<provider>/<model>"`` identifier — the form the
+    frontend should send back in ``ChatRequest.model_id``."""
+
+    provider: Literal["anthropic", "google"]
+    """Which provider backs this model.  The frontend uses this to
+    group the menu and pick a provider logo."""
+
+    sdk_id: str
+    """Bare model identifier (no provider prefix).  Exposed so legacy
+    frontend builds still have something usable while migrating."""
+
+    display_name: str
+    """Full label shown in the model menu rows (e.g. ``"Claude Sonnet 4.6"``)."""
+
+    short_name: str
+    """Compact label shown in the composer trigger (e.g. ``"Sonnet 4.6"``)."""
+
+    description: str
+    """One-line tagline rendered under the model name in the menu."""
+
+    context_window: int
+    """Approximate context window in tokens — surfaced as a hint, not
+    a hard limit."""
+
+    supports_thinking: bool
+    """Whether the provider emits reasoning tokens for this model."""
+
+    supports_tool_use: bool
+    """Whether the model honours the chat router's tool list."""
+
+    supports_prompt_cache: bool
+    """Whether the provider supports server-side prompt caching."""
+
+    default_reasoning: Literal["off", "low", "medium", "high"]
+    """Default reasoning effort applied when the request omits one."""
+
+
+class ModelsListResponse(BaseModel):
+    """Envelope returned by ``GET /api/v1/models``.
+
+    The wrapper exists so future additions (the active model id for
+    the user, server-side defaults, feature-flag gates) have a place
+    to land without breaking the array consumers.
+    """
+
+    models: list[ModelEntryRead]
+    """Models in declaration order — the frontend menu can render
+    directly without re-sorting."""
+
+    default_canonical_id: str
+    """Canonical id of the model the backend will pick when the
+    request supplies none."""
+
+
 # --- Chat schemas -------------------------------------------------------------
 
 
