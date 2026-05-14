@@ -1,11 +1,11 @@
 ---
 # pawrrtal-dy4x
 title: Prune irrelevant rules and skills from .claude and .agents
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-05-14T07:17:08Z
-updated_at: 2026-05-14T07:58:00Z
+updated_at: 2026-05-14T08:57:14Z
 ---
 
 Remove rules in .claude/rules/ and skills in .claude/skills + .agents/skills that target stacks Pawrrtal does not use (RN, iOS/Android native, Maestro, Figma, Zustand, Firebase, pnpm, Vercel). Pawrrtal stack: Next.js 16 + React 19 + Bun + Biome + FastAPI + Agno + Electron + self-hosted GH runner + Vitest/Playwright/Stagehand/pytest.
@@ -89,3 +89,21 @@ This repo's CLAUDE.md is 456 lines (≈2× recommended ceiling). Largest hidden 
 ### Open follow-ups (pending user decision)
 - Move 'Agent-Loop Testing Philosophy' section (~80 lines in CLAUDE.md) to .claude/rules/testing/ with paths: ['backend/**/*.py'].
 - Move 'Curated Claude rules (Pawrrtal)' citation list (~50 lines) to a docs/ index file.
+
+## 2026-05-14 finalization
+
+Executed remaining follow-ups:
+
+1. Extracted CLAUDE.md 'Agent-Loop Testing Philosophy' section (~95 lines) → .claude/rules/testing/agent-loop-testing-philosophy.md with paths: ['backend/**/*.py', 'backend/tests/**']. Now loads only when editing backend Python.
+2. Extracted CLAUDE.md 'Curated Claude rules (Pawrrtal)' citation list (~80 lines, including Monorepo/Biome, Git/PRs, AI review subsections, and Vendored Cursor rules notes) → docs/curated-claude-rules.md.
+3. Replaced both sections in CLAUDE.md (via AGENTS.md symlink target) with a single 'Claude rules index' paragraph (1 line of prose + 2 markdown links).
+4. Fixed stale citation to deleted how-we-work-on-pawrrtal.md → now points to how-we-work-on-ai-nexus.md.
+
+### Results
+- AGENTS.md/CLAUDE.md: 456 → 283 lines (≈38% smaller, still 80 over the 200-line target).
+- Net per-session always-on token savings: deleted duplicate (~120 lines) + extracted backend testing philosophy (~95 lines) + extracted citation index (~80 lines) ≈ 295 lines no longer paid on every conversation.
+- Backend testing rule now loads lazily only when editing backend/**/*.py.
+- Citation index now opt-in (docs/curated-claude-rules.md).
+
+### Still over budget
+AGENTS.md is 283 lines — best practices target ≤200. Remaining bloat: 'Learned Workspace Facts' (~25 lines, project memory; could move to docs/), Feb 2026 'Recent Activity' tables under claude-mem-context (~75 lines, auto-injected by claude-mem skill), and 'Collaboration / Safety Notes' (~20 lines). The Feb tables are agent-rewritten so removing them is futile. Worth a follow-up bean only if AGENTS.md keeps growing.
