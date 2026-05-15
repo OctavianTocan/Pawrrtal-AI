@@ -87,57 +87,63 @@ class _TelegramRenderer(HTMLParser):
     # ------------------------------------------------------------------
 
     def _dispatch_start(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in _INLINE_TAG_MAP:
-            self._buf.append(f"<{_INLINE_TAG_MAP[tag]}>")
-        elif tag in _HEADING_TAGS:
-            self._buf.append("<b>")
-        elif tag in _BLOCK_PASSTHROUGH:
-            pass
-        elif tag == "li":
-            self._buf.append("\n• ")
-        elif tag in ("hr", "br"):
-            self._buf.append("\n")
-        elif tag == "a":
-            href = _html.escape(dict(attrs).get("href", "") or "")
-            self._buf.append(f'<a href="{href}">')
-        elif tag == "blockquote":
-            self._buf.append("<blockquote>")
-        elif tag == "pre":
-            self._buf.append("<pre>")
-            self._in_pre = True
-        elif tag == "code":
-            self._start_code(attrs)
-        else:
-            self._skip_stack.append(tag)
+        # `match` keeps the dispatch flat (depth-1 in the AST nesting lint)
+        # while preserving the readable "tag → markup" table shape that an
+        # if/elif chain expressed. Order of cases mirrors the original.
+        match tag:
+            case t if t in _INLINE_TAG_MAP:
+                self._buf.append(f"<{_INLINE_TAG_MAP[t]}>")
+            case t if t in _HEADING_TAGS:
+                self._buf.append("<b>")
+            case t if t in _BLOCK_PASSTHROUGH:
+                pass
+            case "li":
+                self._buf.append("\n• ")
+            case "hr" | "br":
+                self._buf.append("\n")
+            case "a":
+                href = _html.escape(dict(attrs).get("href", "") or "")
+                self._buf.append(f'<a href="{href}">')
+            case "blockquote":
+                self._buf.append("<blockquote>")
+            case "pre":
+                self._buf.append("<pre>")
+                self._in_pre = True
+            case "code":
+                self._start_code(attrs)
+            case _:
+                self._skip_stack.append(tag)
 
     def _start_code(self, attrs: list[tuple[str, str | None]]) -> None:
-        if self._in_pre:
-            lang = dict(attrs).get("class", "") or ""
-            tag_text = f'<code class="{_html.escape(lang)}">' if lang else "<code>"
-            self._buf.append(tag_text)
-        else:
+        if not self._in_pre:
             self._buf.append("<code>")
+            return
+        lang = dict(attrs).get("class", "") or ""
+        tag_text = f'<code class="{_html.escape(lang)}">' if lang else "<code>"
+        self._buf.append(tag_text)
 
     def _dispatch_end(self, tag: str) -> None:
-        if tag in _HEADING_TAGS:
-            self._buf.append("</b>\n\n")
-        elif tag in ("ul", "ol"):
-            self._buf.append("\n")
-        elif tag == "p":
-            self._buf.append("\n\n")
-        elif tag == "li":
-            pass
-        elif tag == "a":
-            self._buf.append("</a>")
-        elif tag == "blockquote":
-            self._buf.append("</blockquote>")
-        elif tag == "pre":
-            self._buf.append("</pre>\n")
-            self._in_pre = False
-        elif tag == "code":
-            self._buf.append("</code>")
-        elif tag in _INLINE_TAG_MAP:
-            self._buf.append(f"</{_INLINE_TAG_MAP[tag]}>")
+        # See ``_dispatch_start`` — same shape, same reason for ``match``.
+        match tag:
+            case t if t in _HEADING_TAGS:
+                self._buf.append("</b>\n\n")
+            case "ul" | "ol":
+                self._buf.append("\n")
+            case "p":
+                self._buf.append("\n\n")
+            case "li":
+                pass
+            case "a":
+                self._buf.append("</a>")
+            case "blockquote":
+                self._buf.append("</blockquote>")
+            case "pre":
+                self._buf.append("</pre>\n")
+                self._in_pre = False
+            case "code":
+                self._buf.append("</code>")
+            case t if t in _INLINE_TAG_MAP:
+                self._buf.append(f"</{_INLINE_TAG_MAP[t]}>")
 
 
 def md_to_telegram_html(text: str) -> str:
