@@ -13,7 +13,7 @@ import {
 	type PersonalityId,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
-} from '@/features/personalization/storage';
+} from '@/lib/personalization/storage';
 import {
 	SettingsCard,
 	SettingsPage,

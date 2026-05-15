@@ -7,7 +7,7 @@ import {
 	PERSONALITY_OPTIONS,
 	type PersonalityId,
 	type PersonalizationProfile,
-} from '@/features/personalization/storage';
+} from '@/lib/personalization/storage';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';
 
