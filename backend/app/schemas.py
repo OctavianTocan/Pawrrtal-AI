@@ -265,6 +265,25 @@ class AppearanceSettings(BaseModel):
 # --- Chat schemas -------------------------------------------------------------
 
 
+class ChatImageInput(BaseModel):
+    """One multimodal image attached to a chat request (PR 09).
+
+    Wire shape matches what both the Claude SDK and Gemini SDK expect
+    after the provider-specific bridge translates: a base64-encoded
+    blob plus an explicit MIME type.  The frontend composer handles
+    the data-URL → base64 split before POSTing.
+    """
+
+    data: str  # base64-encoded image bytes (no data: URL prefix)
+    media_type: Literal["image/png", "image/jpeg", "image/gif", "image/webp"] = "image/png"
+
+
+# Cap on images per chat request — generous enough for pasting a
+# short slideshow but bounded so a malicious client can't blow up
+# the prompt budget.
+MAX_IMAGES_PER_REQUEST = 8
+
+
 class ChatRequest(BaseModel):
     """Request schema for the ``POST /api/v1/chat`` streaming endpoint.
 
@@ -273,12 +292,16 @@ class ChatRequest(BaseModel):
         conversation_id: UUID linking this message to a conversation.
         model_id: The ID of the model to use for the agent.
         reasoning_effort: Optional reasoning-depth knob from the chat composer.
+        images: Optional list of multimodal image inputs (PR 09).
+            Each item is a base64-encoded blob + MIME type the
+            provider plumbs into a multimodal content block.
     """
 
     question: str
     conversation_id: uuid.UUID
     model_id: CanonicalModelId = None
     reasoning_effort: ReasoningEffort | None = None
+    images: list[ChatImageInput] | None = None
 
 
 class ChatResponse(BaseModel):

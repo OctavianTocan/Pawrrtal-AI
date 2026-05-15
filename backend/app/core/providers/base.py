@@ -53,6 +53,7 @@ class AILLM(Protocol):
         system_prompt: str | None = None,
         reasoning_effort: ReasoningEffort | None = None,
         permission_check: PermissionCheckFn | None = None,
+        images: list[dict[str, str]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -87,5 +88,11 @@ class AILLM(Protocol):
                      tool bridge) for Claude — so the same policy is enforced
                      regardless of model.  ``None`` keeps the previous
                      behaviour: every tool call dispatches without a gate.
+            images: Optional list of multimodal image inputs (PR 09).  Each
+                     entry is ``{"data": <base64>, "media_type": "image/<mime>"}``.
+                     Providers that support multimodal turn these into native
+                     content blocks (Claude messages content blocks, Gemini
+                     ``Part.from_bytes``).  Providers without multimodal
+                     ignore the kwarg.
         """
         ...

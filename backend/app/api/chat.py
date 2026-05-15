@@ -300,6 +300,16 @@ def get_chat_router() -> APIRouter:
             surface=surface,
         )
 
+        # PR 09: forward multimodal image inputs from the request body to
+        # the provider via ChatTurnInput.images.  Each provider bridges
+        # these into its native content-block shape — Claude as
+        # messages.content image blocks (PR 05), Gemini as
+        # Part.from_bytes.
+        image_inputs = (
+            [{"data": img.data, "media_type": img.media_type} for img in request.images]
+            if request.images
+            else None
+        )
         turn_input = ChatTurnInput(
             conversation_id=request.conversation_id,
             user_id=user.id,
@@ -312,6 +322,7 @@ def get_chat_router() -> APIRouter:
             tools=agent_tools,
             reasoning_effort=request.reasoning_effort,
             permission_check=permission_check_for_request,
+            images=image_inputs,
             history_window=_HISTORY_WINDOW,
             log_tag="CHAT",
             log_extras={
