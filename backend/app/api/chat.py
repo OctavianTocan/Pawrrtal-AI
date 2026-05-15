@@ -32,6 +32,10 @@ from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
 )
+from app.core.governance.workspace_context import (
+    WorkspaceContext,
+    load_workspace_context,
+)
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.providers.catalog import find as find_catalog_entry
 from app.core.providers.model_id import parse_model_id
@@ -426,20 +430,27 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
 
         agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
 
-        # Load SOUL.md + AGENTS.md from the workspace as the agent's
-        # system prompt.  The workspace is guaranteed by the 412 gate
-        # above, so this is a single line — no extra nesting and no
-        # duplicated path resolution.  Either file may be missing
-        # independently; ``assemble_workspace_prompt`` returns ``None``
-        # only when both are absent, in which case the provider falls
-        # back to its built-in default.
-        workspace_system_prompt = assemble_workspace_prompt(root)
+        # PR 06: cross-provider WorkspaceContext.  Reads SOUL.md +
+        # AGENTS.md + CLAUDE.md + ``.claude/skills/`` + ``.claude/settings.json``
+        # in one pass and produces a single struct every provider +
+        # the permission gate consume.  Falls back to the prior
+        # ``assemble_workspace_prompt`` behaviour when context is
+        # disabled (empty struct → caller sees ``None`` system prompt
+        # and ``None`` allowlist, same as before).
+        workspace_ctx: WorkspaceContext = load_workspace_context(root)
+        workspace_system_prompt = workspace_ctx.system_prompt
+        if workspace_system_prompt is None:
+            # When the new loader is disabled and no workspace-context
+            # files were found, fall back to the legacy prompt builder
+            # so existing deployments don't lose their AGENTS.md.
+            workspace_system_prompt = assemble_workspace_prompt(root)
         if workspace_system_prompt is not None:
             logger.debug(
-                "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d",
+                "CHAT_WORKSPACE_PROMPT rid=%s user_id=%s chars=%d skills=%d",
                 rid,
                 user.id,
                 len(workspace_system_prompt),
+                len(workspace_ctx.skills),
             )
 
         # Build the per-request permission gate (PR 03b).  ``PermissionContext``
@@ -455,6 +466,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
             workspace_root=root,
             conversation_id=str(request.conversation_id),
             surface=surface,
+            enabled_tools=workspace_ctx.enabled_tools,
         )
         _gate = build_default_permission_check()
 

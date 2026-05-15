@@ -17,6 +17,7 @@ from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
 )
+from app.core.governance.workspace_context import load_workspace_context
 from app.core.providers.base import AILLM, StreamEvent
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -207,11 +208,13 @@ def _build_permission_check(
     """
     if workspace_root is None:
         return None
+    workspace_ctx = load_workspace_context(workspace_root)
     permission_context = PermissionContext(
         user_id=str(context.nexus_user_id),
         workspace_root=workspace_root,
         conversation_id=str(context.conversation_id),
         surface=SURFACE_TELEGRAM,
+        enabled_tools=workspace_ctx.enabled_tools,
     )
     gate = build_default_permission_check()
 
