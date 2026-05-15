@@ -151,7 +151,7 @@ stagehand-e2e:
 install:
 	bash -c 'if git rev-parse --git-dir >/dev/null 2>&1; then git submodule update --init --recursive; fi'
 	bun install
-	uv sync --project backend
+	uv sync --project backend --group dev
 	just install-hooks
 
 # Show active tasks from Notion

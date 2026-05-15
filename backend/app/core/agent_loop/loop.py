@@ -52,6 +52,112 @@ from .types import (
 
 _log = logging.getLogger(__name__)
 
+# Truncation budgets for tool-call trace logs. We log enough to identify a
+# stuck loop ("model keeps calling tool X with args Y") without flooding the
+# log with full tool payloads. Full bodies stay at DEBUG.
+_LOG_ARGS_MAX_CHARS = 500
+_LOG_RESULT_MAX_CHARS = 500
+
+
+def _truncate_for_log(value: Any, max_chars: int) -> str:
+    """Render a tool argument or result for logs, truncating long payloads.
+
+    Args:
+        value: The object to render. Dicts are rendered as ``repr`` so keys
+            stay readable; strings pass through untouched.
+        max_chars: Maximum number of characters in the returned string. The
+            truncation marker counts toward the limit so the returned string
+            is always at most ``max_chars`` characters long.
+
+    Returns:
+        A single-line, length-bounded representation suitable for an INFO
+        log line. Newlines are collapsed so each trace stays on one line.
+    """
+    text = value if isinstance(value, str) else repr(value)
+    text = text.replace("\n", " ").replace("\r", " ")
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1] + "…"
+
+
+async def _execute_and_log_tool_call(
+    *,
+    tc: Any,
+    tool_map: dict[str, AgentTool],
+    iteration: int,
+    config: AgentLoopConfig,
+) -> tuple[str, bool]:
+    """Execute one tool call, emit ``TOOL_CALL_*`` traces, and return the result.
+
+    Pulled out of the main loop so the per-call observability (args preview,
+    duration, result length) lives in one place and the outer loop stays
+    inside the team's branch/statement budget.
+
+    Args:
+        tc: The ``toolCall`` content block from the assistant message.
+        tool_map: ``name → AgentTool`` lookup built once per loop iteration.
+        iteration: 1-based loop iteration, included in the trace lines so
+            stuck loops are easy to bucket by turn in the log.
+        config: Loop config carrying the optional permission gate; checked
+            before ``tool.execute`` so denied calls become surfaced errors
+            instead of side-effecting executions.
+
+    Returns:
+        A ``(result_text, is_error)`` tuple. ``result_text`` is always
+        non-empty so the caller can hand it straight to ``ToolResultEvent``
+        and ``ToolResultMessage`` without further branching.
+    """
+    name: str = tc["name"]
+    call_id: str = tc["tool_call_id"]
+    args_preview = _truncate_for_log(tc["arguments"], _LOG_ARGS_MAX_CHARS)
+    _log.info(
+        "TOOL_CALL_START iteration=%d name=%s tool_call_id=%s args=%s",
+        iteration,
+        name,
+        call_id,
+        args_preview,
+    )
+
+    tool = tool_map.get(name)
+    started_at = time.monotonic()
+    if tool is None:
+        result_text = f"Tool '{name}' not found."
+        is_error = True
+    else:
+        permission_denial = await _check_permission_or_none(
+            config=config,
+            tool_name=name,
+            arguments=tc["arguments"],
+        )
+        if permission_denial is not None:
+            result_text = permission_denial
+            is_error = True
+        else:
+            try:
+                result_text = await tool.execute(call_id, **tc["arguments"])
+                is_error = False
+            except Exception as exc:
+                result_text = f"Tool error: {exc}"
+                is_error = True
+    duration_ms = (time.monotonic() - started_at) * 1000.0
+
+    _log.info(
+        "TOOL_CALL_RESULT iteration=%d name=%s tool_call_id=%s "
+        "is_error=%s duration_ms=%.1f result_len=%d",
+        iteration,
+        name,
+        call_id,
+        is_error,
+        duration_ms,
+        len(result_text),
+    )
+    _log.debug(
+        "TOOL_CALL_RESULT_BODY tool_call_id=%s body=%s",
+        call_id,
+        _truncate_for_log(result_text, _LOG_RESULT_MAX_CHARS),
+    )
+    return result_text, is_error
+
 
 async def agent_loop(
     prompts: list[AgentMessage],
@@ -78,7 +184,7 @@ async def agent_loop(
         yield event
 
 
-async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — single cohesive turn-lifecycle body; further splitting fragments shared mutable state without clarifying anything
+async def _run_loop(
     messages: list[AgentMessage],
     tools: list[AgentTool],
     new_messages: list[AgentMessage],
@@ -102,36 +208,9 @@ async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — single cohesive turn-li
     first_turn = True
 
     while True:
-        # ── Pre-turn safety checks ────────────────────────────────────────
-        if safety.max_iterations is not None and iteration >= safety.max_iterations:
-            yield _terminated(
-                reason="max_iterations",
-                message=(
-                    f"Agent stopped: hit max_iterations cap of "
-                    f"{safety.max_iterations}.  This usually means the "
-                    "model got stuck in a tool-call loop.  Reply with "
-                    "new context or raise the cap if the work needs "
-                    "more steps."
-                ),
-                limit=safety.max_iterations,
-                observed=iteration,
-            )
-            break
-
-        elapsed = time.monotonic() - started_at
-        if safety.max_wall_clock_seconds is not None and elapsed >= safety.max_wall_clock_seconds:
-            yield _terminated(
-                reason="max_wall_clock",
-                message=(
-                    f"Agent stopped: hit wall-clock budget of "
-                    f"{safety.max_wall_clock_seconds:.0f}s.  Raise "
-                    "`max_wall_clock_seconds` for legitimately long "
-                    "turns."
-                ),
-                limit_seconds=safety.max_wall_clock_seconds,
-                observed_seconds=round(elapsed, 2),
-                iterations=iteration,
-            )
+        safety_terminated = _check_iteration_safety(safety, iteration, started_at)
+        if safety_terminated is not None:
+            yield safety_terminated
             break
 
         if not first_turn:
@@ -139,14 +218,7 @@ async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — single cohesive turn-li
         first_turn = False
         iteration += 1
 
-        # ── Context transform (e.g. sliding window, compaction) ──────────
-        transformed = messages
-        if config.transform_context is not None:
-            transformed = await config.transform_context(list(messages))
-
-        llm_messages = config.convert_to_llm(transformed)
-
-        # ── Stream the assistant response (with retry) ────────────────────
+        llm_messages = await _prepare_llm_messages(messages, config)
         stream_outcome = await _stream_with_retry(
             stream_fn=stream_fn,
             llm_messages=llm_messages,
@@ -163,116 +235,190 @@ async def _run_loop(  # noqa: C901, PLR0912, PLR0915 — single cohesive turn-li
             yield ev
 
         consecutive_llm_errors = stream_outcome.consecutive_llm_errors_after
-        assistant_content = stream_outcome.assistant_content
-        stop_reason = stream_outcome.stop_reason
-
         assistant_msg = AssistantMessage(
             role="assistant",
-            content=assistant_content,
-            stop_reason=stop_reason,
+            content=stream_outcome.assistant_content,
+            stop_reason=stream_outcome.stop_reason,
         )
         messages.append(assistant_msg)
         new_messages.append(assistant_msg)
 
-        # ── Execute tool calls if any ─────────────────────────────────────
-        tool_calls = [b for b in assistant_content if b["type"] == "toolCall"]
-        tool_results: list[ToolResultMessage] = []
-        tool_safety_terminated: AgentTerminatedEvent | None = None
-
-        if tool_calls:
-            tool_map = {t.name: t for t in tools}
-
-            for tc in tool_calls:
-                if tc["type"] != "toolCall":
-                    continue
-                tool = tool_map.get(tc["name"])
-                is_error = False
-                result_text: str
-
-                if tool is None:
-                    result_text = f"Tool '{tc['name']}' not found."
-                    is_error = True
-                else:
-                    permission_denial = await _check_permission_or_none(
-                        config=config,
-                        tool_name=tc["name"],
-                        arguments=tc["arguments"],
-                    )
-                    if permission_denial is not None:
-                        result_text = permission_denial
-                        is_error = True
-                    else:
-                        try:
-                            result_text = await tool.execute(tc["tool_call_id"], **tc["arguments"])
-                        except Exception as exc:
-                            result_text = f"Tool error: {exc}"
-                            is_error = True
-
-                yield ToolResultEvent(
-                    type="tool_result",
-                    tool_call_id=tc["tool_call_id"],
-                    content=result_text,
-                    is_error=is_error,
-                )
-
-                tool_result_msg = ToolResultMessage(
-                    role="toolResult",
-                    tool_call_id=tc["tool_call_id"],
-                    content=[ToolResultContent(type="text", text=result_text)],
-                    is_error=is_error,
-                )
-                tool_results.append(tool_result_msg)
-                messages.append(tool_result_msg)
-                new_messages.append(tool_result_msg)
-
-                if is_error:
-                    consecutive_tool_errors += 1
-                    if (
-                        safety.max_consecutive_tool_errors is not None
-                        and consecutive_tool_errors >= safety.max_consecutive_tool_errors
-                    ):
-                        tool_safety_terminated = _terminated(
-                            reason="consecutive_tool_errors",
-                            message=(
-                                "Agent stopped: "
-                                f"{consecutive_tool_errors} tool calls "
-                                "failed back-to-back.  The model is "
-                                "likely retrying a broken tool with the "
-                                "same arguments.  Inspect the last tool "
-                                "errors and either fix the inputs or "
-                                "raise `max_consecutive_tool_errors`."
-                            ),
-                            limit=safety.max_consecutive_tool_errors,
-                            observed=consecutive_tool_errors,
-                            iterations=iteration,
-                        )
-                        break
-                else:
-                    consecutive_tool_errors = 0
-
-        yield TurnEndEvent(
-            type="turn_end",
-            message=assistant_msg,
-            tool_results=tool_results,
+        tool_calls = [b for b in stream_outcome.assistant_content if b["type"] == "toolCall"]
+        result_events, tool_results, consecutive_tool_errors, tool_safety_terminated = (
+            await _collect_tool_results(
+                tool_calls,
+                {t.name: t for t in tools},
+                messages,
+                new_messages,
+                safety,
+                consecutive_tool_errors,
+                iteration,
+                config,
+            )
+            if tool_calls
+            else ([], [], consecutive_tool_errors, None)
         )
+
+        for ev in result_events:
+            yield ev
+
+        _log.info(
+            "LOOP_ITERATION iteration=%d stop_reason=%s tool_calls=%d",
+            iteration,
+            stream_outcome.stop_reason,
+            len(tool_calls),
+        )
+        yield TurnEndEvent(type="turn_end", message=assistant_msg, tool_results=tool_results)
 
         if tool_safety_terminated is not None:
             yield tool_safety_terminated
             break
 
-        # ── Check stop conditions ─────────────────────────────────────────
-        if stop_reason in {"error", "aborted"}:
-            break
-
-        if config.should_stop_after_turn is not None:
-            fake_ctx = _make_context_snapshot(messages, tools)
-            if config.should_stop_after_turn(fake_ctx):
-                break
-
-        if not tool_calls:
+        if _should_stop(stream_outcome.stop_reason, tool_calls, config, messages, tools):
             break
 
     yield AgentEndEvent(type="agent_end", messages=new_messages)
+
+
+def _check_iteration_safety(
+    safety: AgentSafetyConfig,
+    iteration: int,
+    started_at: float,
+) -> AgentTerminatedEvent | None:
+    """Return a termination event if any pre-turn safety limit is hit, else None."""
+    if safety.max_iterations is not None and iteration >= safety.max_iterations:
+        return _terminated(
+            reason="max_iterations",
+            message=(
+                f"Agent stopped: hit max_iterations cap of "
+                f"{safety.max_iterations}.  This usually means the "
+                "model got stuck in a tool-call loop.  Reply with "
+                "new context or raise the cap if the work needs "
+                "more steps."
+            ),
+            limit=safety.max_iterations,
+            observed=iteration,
+        )
+
+    elapsed = time.monotonic() - started_at
+    if safety.max_wall_clock_seconds is not None and elapsed >= safety.max_wall_clock_seconds:
+        return _terminated(
+            reason="max_wall_clock",
+            message=(
+                f"Agent stopped: hit wall-clock budget of "
+                f"{safety.max_wall_clock_seconds:.0f}s.  Raise "
+                "`max_wall_clock_seconds` for legitimately long "
+                "turns."
+            ),
+            limit_seconds=safety.max_wall_clock_seconds,
+            observed_seconds=round(elapsed, 2),
+            iterations=iteration,
+        )
+
+    return None
+
+
+async def _prepare_llm_messages(
+    messages: list[AgentMessage],
+    config: AgentLoopConfig,
+) -> list[AgentMessage]:
+    """Apply context transform (if any) and convert to LLM format."""
+    transformed = messages
+    if config.transform_context is not None:
+        transformed = await config.transform_context(list(messages))
+    return config.convert_to_llm(transformed)
+
+
+async def _collect_tool_results(
+    tool_calls: list[Any],
+    tool_map: dict[str, AgentTool],
+    messages: list[AgentMessage],
+    new_messages: list[AgentMessage],
+    safety: AgentSafetyConfig,
+    consecutive_tool_errors: int,
+    iteration: int,
+    config: AgentLoopConfig,
+) -> tuple[list[ToolResultEvent], list[ToolResultMessage], int, AgentTerminatedEvent | None]:
+    """Execute all tool calls for one turn and collect result events.
+
+    Returns ``(result_events, tool_results, consecutive_tool_errors, terminated_event)``.
+    ``terminated_event`` is non-None only when the consecutive-error budget is hit.
+    Messages are appended to both ``messages`` and ``new_messages`` in-place.
+    """
+    result_events: list[ToolResultEvent] = []
+    tool_results: list[ToolResultMessage] = []
+    terminated: AgentTerminatedEvent | None = None
+
+    for tc in tool_calls:
+        if tc["type"] != "toolCall":
+            continue
+        result_text, is_error = await _execute_and_log_tool_call(
+            tc=tc,
+            tool_map=tool_map,
+            iteration=iteration,
+            config=config,
+        )
+        result_events.append(
+            ToolResultEvent(
+                type="tool_result",
+                tool_call_id=tc["tool_call_id"],
+                content=result_text,
+                is_error=is_error,
+            )
+        )
+        tool_result_msg = ToolResultMessage(
+            role="toolResult",
+            tool_call_id=tc["tool_call_id"],
+            content=[ToolResultContent(type="text", text=result_text)],
+            is_error=is_error,
+        )
+        tool_results.append(tool_result_msg)
+        messages.append(tool_result_msg)
+        new_messages.append(tool_result_msg)
+
+        if is_error:
+            consecutive_tool_errors += 1
+            if (
+                safety.max_consecutive_tool_errors is not None
+                and consecutive_tool_errors >= safety.max_consecutive_tool_errors
+            ):
+                terminated = _terminated(
+                    reason="consecutive_tool_errors",
+                    message=(
+                        "Agent stopped: "
+                        f"{consecutive_tool_errors} tool calls "
+                        "failed back-to-back.  The model is "
+                        "likely retrying a broken tool with the "
+                        "same arguments.  Inspect the last tool "
+                        "errors and either fix the inputs or "
+                        "raise `max_consecutive_tool_errors`."
+                    ),
+                    limit=safety.max_consecutive_tool_errors,
+                    observed=consecutive_tool_errors,
+                    iterations=iteration,
+                )
+                break
+        else:
+            consecutive_tool_errors = 0
+
+    return result_events, tool_results, consecutive_tool_errors, terminated
+
+
+def _should_stop(
+    stop_reason: str,
+    tool_calls: list[Any],
+    config: AgentLoopConfig,
+    messages: list[AgentMessage],
+    tools: list[AgentTool],
+) -> bool:
+    """Return True if the loop should halt after this turn."""
+    if stop_reason in {"error", "aborted"}:
+        return True
+    if config.should_stop_after_turn is not None:
+        fake_ctx = _make_context_snapshot(messages, tools)
+        if config.should_stop_after_turn(fake_ctx):
+            return True
+    return not tool_calls
 
 
 # ---------------------------------------------------------------------------
