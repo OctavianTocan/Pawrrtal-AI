@@ -4,7 +4,7 @@ import { type UseMutationResult, useMutation, useQueryClient } from '@tanstack/r
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
 import { useAuthedQuery } from '@/hooks/use-authed-query';
 import { API_ENDPOINTS } from '@/lib/api';
-import type { PersonalizationProfile } from '../storage';
+import type { PersonalizationProfile } from './storage';
 
 /** Cache key shared by `useGetPersonalization` + the upsert invalidate. */
 const PERSONALIZATION_QUERY_KEY = ['personalization'] as const;

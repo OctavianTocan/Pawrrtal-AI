@@ -7,12 +7,12 @@ import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import {
 	useGetPersonalization,
 	useUpsertPersonalization,
-} from '@/features/personalization/hooks/use-personalization';
+} from '@/lib/personalization/use-personalization';
 import {
 	loadPersonalizationProfile,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
-} from '@/features/personalization/storage';
+} from '@/lib/personalization/storage';
 import { StepContext } from './step-context';
 import { StepIdentity } from './step-identity';
 import { StepMessaging } from './step-messaging';

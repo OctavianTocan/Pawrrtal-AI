@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { PERSONALITY_OPTIONS } from '@/features/personalization/storage';
+import { PERSONALITY_OPTIONS } from '@/lib/personalization/storage';
 import { StepPersonality } from './step-personality';
 
 describe('StepPersonality', () => {
