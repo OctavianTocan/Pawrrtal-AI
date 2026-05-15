@@ -20,7 +20,6 @@
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
-import { WhimsySettingsCard } from '@/features/whimsy';
 import { cn } from '@/lib/utils';
 import {
 	SettingsCard,
@@ -50,6 +49,7 @@ import {
 	THEME_PRESETS,
 	type ThemeMode,
 } from './appearance-helpers';
+import { WhimsySettingsCard } from './WhimsySettingsCard';
 
 /** Top-of-card theme-mode switcher (visual-only). */
 function ThemeModeToggle({
