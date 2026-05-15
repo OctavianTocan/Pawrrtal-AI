@@ -8,6 +8,7 @@ import {
 	updateLastAssistantMessage,
 } from '../chat-reducer';
 import type { ChatStreamEvent } from '../types';
+import type { ChatImageInput } from './use-chat';
 import { useCopyToClipboard } from './use-copy-to-clipboard';
 
 /** Hook input. */
@@ -17,9 +18,15 @@ interface UseChatTurnsConfig {
 	/**
 	 * Async generator that yields {@link ChatStreamEvent}s for one user prompt.
 	 * Provided by the caller so this hook stays decoupled from
-	 * `useChat`/`useAuthedFetch`.
+	 * `useChat`/`useAuthedFetch`. Accepts an optional list of multimodal
+	 * image inputs that ride alongside the prompt on the first turn —
+	 * regenerate intentionally re-runs with text only because images
+	 * aren't persisted on the assistant placeholder yet.
 	 */
-	streamMessage: (prompt: string) => AsyncGenerator<ChatStreamEvent>;
+	streamMessage: (
+		prompt: string,
+		images?: readonly ChatImageInput[]
+	) => AsyncGenerator<ChatStreamEvent>;
 	/**
 	 * Optional side-effect fired the first time a turn is sent. Returns a
 	 * promise the caller awaits before the SSE stream starts so any
@@ -34,7 +41,7 @@ export interface UseChatTurnsReturn {
 	isLoading: boolean;
 	regeneratingIndex: number | null;
 	copiedId: string | null;
-	send: (prompt: string) => Promise<void>;
+	send: (prompt: string, images?: readonly ChatImageInput[]) => Promise<void>;
 	regenerate: (assistantIndex: number) => Promise<void>;
 	copy: (id: string, text: string) => Promise<{ ok: boolean }>;
 }
@@ -69,9 +76,9 @@ export function useChatTurns({
 	 * `failed` status with the error message in `content`.
 	 */
 	const runAssistantTurn = useCallback(
-		async (prompt: string): Promise<void> => {
+		async (prompt: string, images?: readonly ChatImageInput[]): Promise<void> => {
 			try {
-				for await (const event of streamMessage(prompt)) {
+				for await (const event of streamMessage(prompt, images)) {
 					setChatHistory((prev) =>
 						updateLastAssistantMessage(prev, (msg) => applyChatEvent(msg, event))
 					);
@@ -99,7 +106,7 @@ export function useChatTurns({
 	);
 
 	const send = useCallback(
-		async (prompt: string): Promise<void> => {
+		async (prompt: string, images?: readonly ChatImageInput[]): Promise<void> => {
 			if (isSendingRef.current || isLoading) return;
 			isSendingRef.current = true;
 			setIsLoading(true);
@@ -114,7 +121,7 @@ export function useChatTurns({
 					await onFirstSend(prompt);
 				}
 				hasSentRef.current = true;
-				await runAssistantTurn(prompt);
+				await runAssistantTurn(prompt, images);
 			} finally {
 				setIsLoading(false);
 				isSendingRef.current = false;

@@ -14,12 +14,13 @@ import {
 	DEFAULT_REASONING_LEVEL,
 	FALLBACK_TITLE_MAX_LENGTH,
 } from './constants';
-import { useChat } from './hooks/use-chat';
+import { type ChatImageInput, useChat } from './hooks/use-chat';
 import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
 import { type ChatModelOption, useChatModels } from './hooks/use-chat-models';
 import { useChatTurns } from './hooks/use-chat-turns';
 import { useCreateConversation } from './hooks/use-create-conversation';
 import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
+import { extractImageInputs } from './lib/extract-image-inputs';
 import { isCanonicalModelId } from './lib/is-canonical-model-id';
 
 /** Runtime guard for persisted reasoning levels. */
@@ -200,10 +201,12 @@ export default function ChatContainer({
 		validate: isChatReasoningLevel,
 	});
 
-	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
-	// so `useChatTurns` stays decoupled from routing/model concerns.
+	// Adapt the (prompt, conversation, model, images) transport to a
+	// (prompt, images?)-only API so `useChatTurns` stays decoupled from
+	// routing/model concerns.
 	const stream = useCallback(
-		(prompt: string) => streamMessage(prompt, conversationId, selectedModelId),
+		(prompt: string, images?: readonly ChatImageInput[]) =>
+			streamMessage(prompt, conversationId, selectedModelId, images),
 		[conversationId, selectedModelId, streamMessage]
 	);
 
@@ -243,10 +246,16 @@ export default function ChatContainer({
 	const handleSendMessage = useCallback(
 		async (message: ChatComposerMessage): Promise<void> => {
 			const prompt = message.text;
+			// Decode attachments to base64 BEFORE clearing the composer / kicking
+			// off the optimistic placeholders so a slow FileReader doesn't open
+			// a window where the UI looks "sent" but the request hasn't been
+			// shaped yet. `extractImageInputs` is pure / non-throwing — failed
+			// reads silently drop instead of aborting the whole turn.
+			const images = await extractImageInputs(message.attachments);
 			setComposerText('');
 			beginStream(prompt);
 			try {
-				await send(prompt);
+				await send(prompt, images.length > 0 ? images : undefined);
 			} finally {
 				endStream();
 				// Sync the Next.js router after streaming so sidebar router.push works.
