@@ -280,13 +280,12 @@ class ClaudeLLM:
                 force_fresh_session=(used_resume and attempt > 1),
             )
             try:
-                async for message in query(
+                async for event in _stream_events_for_attempt(
                     prompt=_aiter_user_prompt(question, images),
                     options=options,
                 ):
                     any_event_yielded = True
-                    for event in _events_from_message(message):
-                        yield event
+                    yield event
                 return
             except CLINotFoundError as error:
                 logger.exception("Claude CLI binary not found")
@@ -545,6 +544,23 @@ def _merge_agent_tools_into_whitelist(
         if tid not in deduped:
             deduped.append(tid)
     return deduped
+
+
+async def _stream_events_for_attempt(
+    *,
+    prompt: AsyncIterator[dict[str, Any]],
+    options: ClaudeAgentOptions,
+) -> AsyncIterator[StreamEvent]:
+    """Stream ``StreamEvent``s from one ``query()`` call.
+
+    Extracted from :meth:`ClaudeLLM.stream` so the surrounding
+    retry/fallback loop stays under the nesting-depth budget (the
+    ``while → try → async for → for`` chain in stream() reached
+    depth 4, one over the cap). The two loops live here instead.
+    """
+    async for message in query(prompt=prompt, options=options):
+        for event in _events_from_message(message):
+            yield event
 
 
 async def _aiter_user_prompt(
