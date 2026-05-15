@@ -59,6 +59,12 @@ class ChatTurnAggregator:
     The aggregator is intentionally state-machine-light: it just appends to a
     few lists/strings. All semantics (e.g. which timeline entries merge) match
     the frontend reducer so live and rehydrated views are byte-identical.
+
+    PR 04: ``total_input_tokens`` / ``total_output_tokens`` /
+    ``total_cost_usd`` are folded from ``usage`` events emitted by the
+    provider on the terminal turn.  The chat router reads these after
+    the stream completes and writes a ``cost_ledger`` row.  Multiple
+    ``usage`` events sum (some providers emit per-turn, others per-call).
     """
 
     content: str = ""
@@ -67,6 +73,9 @@ class ChatTurnAggregator:
     error_text: str | None = None
     tool_calls: list[_ToolCall] = field(default_factory=list)
     timeline: list[dict[str, Any]] = field(default_factory=list)
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_cost_usd: float = 0.0
 
     def _mark_started(self) -> None:
         if self.started_at_monotonic is None:
@@ -123,6 +132,14 @@ class ChatTurnAggregator:
             return
         if event_type == "error":
             self.error_text = event.get("content") or "Chat stream failed."
+            return
+        if event_type == "usage":
+            # Token / cost accounting (PR 04). Providers emit one
+            # ``usage`` event per turn on their terminal envelope;
+            # multiple turns within a single ``stream()`` call sum.
+            self.total_input_tokens += int(event.get("input_tokens", 0) or 0)
+            self.total_output_tokens += int(event.get("output_tokens", 0) or 0)
+            self.total_cost_usd += float(event.get("cost_usd", 0.0) or 0.0)
 
     def duration_seconds(self) -> int:
         """Whole-second elapsed time since the first delta/thinking/tool event."""

@@ -14,6 +14,12 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.config import settings
+from app.core.governance.cost_tracker import (
+    PostgresCostLedger,
+    record_turn_cost,
+)
+from app.core.providers.model_id import parse_model_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -199,6 +205,15 @@ async def _finalize_turn(
                 message_id=assistant_message_id,
                 **snapshot,
             )
+            # Cost ledger write (PR 04). Same session as the message
+            # persist so a failed commit leaves no orphaned ledger row.
+            # Runs for every surface (web + Telegram) so the per-user
+            # cap applies uniformly.
+            await _record_turn_cost(
+                session=session,
+                turn_input=turn_input,
+                aggregator=aggregator,
+            )
             await session.commit()
     except Exception:
         logger.exception(
@@ -217,3 +232,56 @@ async def _finalize_turn(
         duration_ms,
         extras,
     )
+
+
+async def _record_turn_cost(
+    *,
+    session: AsyncSession,
+    turn_input: ChatTurnInput,
+    aggregator: ChatTurnAggregator,
+) -> None:
+    """Append the turn's spend to ``cost_ledger`` (PR 04).
+
+    No-op when cost tracking is disabled or the aggregator saw zero
+    usage events (early failures, errors before the terminal turn).
+    Catches and logs DB errors so a ledger write failure never leaves
+    the assistant row unpersisted — the caller commits in the same
+    transaction.
+    """
+    if not settings.cost_tracker_enabled:
+        return
+    if (
+        aggregator.total_input_tokens <= 0
+        and aggregator.total_output_tokens <= 0
+        and aggregator.total_cost_usd <= 0
+    ):
+        return
+    model_id = (
+        (turn_input.channel_message.get("model_id") or "") if turn_input.channel_message else ""
+    )
+    surface = (
+        (turn_input.channel_message.get("surface") or "") if turn_input.channel_message else ""
+    )
+    try:
+        provider_slug = parse_model_id(model_id).host.value if model_id else "unknown"
+    except Exception:
+        provider_slug = "unknown"
+    ledger = PostgresCostLedger(session=session)
+    try:
+        await record_turn_cost(
+            ledger,
+            user_id=turn_input.user_id,
+            conversation_id=turn_input.conversation_id,
+            provider=provider_slug,
+            model_id=model_id,
+            input_tokens=aggregator.total_input_tokens,
+            output_tokens=aggregator.total_output_tokens,
+            cost_usd=aggregator.total_cost_usd,
+            surface=surface,
+        )
+    except Exception:
+        logger.exception(
+            "%s_COST_LEDGER_ERR conversation_id=%s",
+            turn_input.log_tag,
+            turn_input.conversation_id,
+        )

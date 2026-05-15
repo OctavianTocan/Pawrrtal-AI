@@ -75,7 +75,20 @@ def _events_from_user(message: UserMessage) -> Iterator[StreamEvent]:
 
 
 def _events_from_result(message: ResultMessage) -> Iterator[StreamEvent]:
-    """Surface SDK-level errors carried on the terminating ``ResultMessage``."""
+    """Surface SDK errors + emit a ``usage`` event for the cost ledger.
+
+    PR 04: ``ResultMessage`` is the SDK's terminating envelope for one
+    turn.  It carries ``total_cost_usd`` (Anthropic's authoritative
+    spend) plus token counts (often nested under ``usage`` —
+    historically these have moved between SDK versions, so we read
+    defensively).  Emit one ``StreamEvent(type="usage")`` per turn so
+    the chat aggregator can fold it into the cost-ledger row without
+    knowing anything about Claude internals.
+    """
+    usage_event = _build_usage_event(message)
+    if usage_event is not None:
+        yield usage_event
+
     if not message.is_error:
         return
     # Log alongside yielding so the failure shows up in
@@ -96,6 +109,49 @@ def _events_from_result(message: ResultMessage) -> Iterator[StreamEvent]:
         "Claude SDK result reported an error. "
         f"stop_reason={message.stop_reason!r} subtype={message.subtype!r}"
     )
+
+
+def _build_usage_event(message: ResultMessage) -> StreamEvent | None:
+    """Pull token / cost numbers off a ``ResultMessage``.
+
+    Returns ``None`` when the SDK didn't carry any usage data — happens
+    on some error paths and on older CLI versions.  ``input_tokens`` and
+    ``output_tokens`` default to 0 (rather than missing keys) so the
+    chat aggregator can fold them in unconditionally.
+    """
+    cost_usd = getattr(message, "total_cost_usd", None)
+    usage_blob = getattr(message, "usage", None)
+    input_tokens = _read_token_count(usage_blob, "input_tokens")
+    output_tokens = _read_token_count(usage_blob, "output_tokens")
+
+    if cost_usd is None and input_tokens == 0 and output_tokens == 0:
+        return None
+
+    return StreamEvent(
+        type="usage",
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=float(cost_usd) if cost_usd is not None else 0.0,
+    )
+
+
+def _read_token_count(usage_blob: object, key: str) -> int:
+    """Read a token count off the SDK's ``usage`` blob (dict or attr).
+
+    The Claude SDK has flipped between exposing usage as a dataclass
+    and as a plain dict across versions; tolerate both.
+    """
+    if usage_blob is None:
+        return 0
+    value = (
+        usage_blob.get(key, 0)
+        if isinstance(usage_blob, dict)
+        else getattr(usage_blob, key, 0)
+    )
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _events_from_rate_limit(message: RateLimitEvent) -> Iterator[StreamEvent]:

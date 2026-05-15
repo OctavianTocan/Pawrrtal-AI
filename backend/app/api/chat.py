@@ -20,6 +20,12 @@ from app.channels.base import ChannelMessage
 from app.channels.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.core.agent_loop.types import PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
+from app.core.config import settings
+from app.core.governance.cost_tracker import (
+    CostBudget,
+    PostgresCostLedger,
+    per_request_reservation_usd,
+)
 from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
@@ -135,6 +141,66 @@ async def _require_workspace_root(
     return root
 
 
+async def _enforce_cost_budget(
+    *,
+    user_id: object,
+    session: AsyncSession,
+    rid: str,
+) -> None:
+    """Pre-flight per-user cost cap.
+
+    Called at the top of the chat handler so a denied request never
+    pays for tool composition or provider resolution.  Fails OPEN on
+    DB errors — the gate is a soft control and the Claude SDK's
+    per-request ``max_budget_usd`` still bounds the worst case.
+    """
+    if not settings.cost_tracker_enabled:
+        return
+    if settings.cost_max_per_user_daily_usd <= 0:
+        return
+
+    budget = CostBudget(
+        max_per_request_usd=float(settings.cost_max_per_request_usd),
+        max_per_user_window_usd=float(settings.cost_max_per_user_daily_usd),
+        window_hours=int(settings.cost_reset_window_hours),
+    )
+    ledger = PostgresCostLedger(session=session)
+    try:
+        cumulative = await ledger.cumulative_window_usd(
+            user_id=user_id,  # type: ignore[arg-type]
+            window_hours=budget.window_hours,
+        )
+    except Exception:
+        logger.exception("CHAT_COST_LOOKUP_FAILED rid=%s user_id=%s", rid, user_id)
+        return
+    reservation = per_request_reservation_usd(budget)
+    if cumulative + reservation <= budget.max_per_user_window_usd:
+        return
+    remaining = max(0.0, budget.max_per_user_window_usd - cumulative)
+    logger.info(
+        "CHAT_COST_DENIED rid=%s user_id=%s cumulative=%.4f limit=%.4f window_hours=%d",
+        rid,
+        user_id,
+        cumulative,
+        budget.max_per_user_window_usd,
+        budget.window_hours,
+    )
+    raise HTTPException(
+        status_code=402,
+        detail={
+            "message": (
+                f"Cost budget exhausted: ${cumulative:.4f} of "
+                f"${budget.max_per_user_window_usd:.2f} used in the last "
+                f"{budget.window_hours} hours."
+            ),
+            "remaining_usd": round(remaining, 4),
+            "current_usd": round(cumulative, 4),
+            "limit_usd": budget.max_per_user_window_usd,
+            "window_hours": budget.window_hours,
+        },
+    )
+
+
 def get_chat_router() -> APIRouter:
     """Build the chat ``APIRouter`` mounted at ``/api/v1/chat``.
 
@@ -233,6 +299,20 @@ def get_chat_router() -> APIRouter:
         # Refuse with 412 (Precondition Failed) so the frontend can route to
         # onboarding instead of pretending we shipped a degraded reply.
         root = await _require_workspace_root(user_id=user.id, session=session, request_id=rid)
+        # Pre-flight per-user cost gate (PR 04).  Refuses with HTTP
+        # 402 when the user's rolling-window spend + a small reservation
+        # would exceed ``cost_max_per_user_daily_usd``.  This sits
+        # *after* the workspace gate (so an onboarding-incomplete user
+        # never sees a confusing 402) and *before* tool composition /
+        # provider resolution (so a denied request is cheap).  The
+        # Claude SDK enforces the per-request cap natively via
+        # ``max_budget_usd``; this gate enforces the per-user cap.
+        await _enforce_cost_budget(
+            user_id=user.id,
+            session=session,
+            rid=rid,
+        )
+
         # Per-turn tool composition lives in `app.core.agent_tools` —
         # the chat router only decides *that* the agent gets tools,
         # not *which* (that's the builder's job, and where future

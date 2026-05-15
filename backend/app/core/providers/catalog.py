@@ -26,6 +26,16 @@ class ModelEntry:
 
     The ``id`` property is the canonical wire form used by the API,
     DB, logs, and frontend.
+
+    Cost-per-mtok rates (PR 04): ``cost_per_mtok_in_usd`` /
+    ``cost_per_mtok_out_usd`` drive Gemini's per-turn USD computation
+    in the chat aggregator.  Claude reports a precise
+    ``total_cost_usd`` on its ``ResultMessage`` so these fields are
+    informational for Claude entries and authoritative for everyone
+    else.  Values are USD per 1M tokens — ``0.0`` means "unknown,
+    skip cost accounting"; the cost ledger still records the token
+    counts so a later catalog backfill can recompute the dollar
+    column.
     """
 
     host: Host
@@ -35,11 +45,35 @@ class ModelEntry:
     short_name: str
     description: str
     is_default: bool
+    cost_per_mtok_in_usd: float = 0.0
+    cost_per_mtok_out_usd: float = 0.0
 
     @property
     def id(self) -> str:
         """Canonical wire string: ``host:vendor/model``."""
         return f"{self.host.value}:{self.vendor.value}/{self.model}"
+
+
+# Cost rates published by Anthropic (input / output USD per 1M tokens
+# at the time of writing).  Sourced from
+# https://docs.anthropic.com/claude/docs/models-overview#model-pricing.
+# Update alongside every model release; the chat aggregator uses these
+# only as a fallback — Claude's own ``ResultMessage.total_cost_usd``
+# wins when available.
+_CLAUDE_OPUS_4_7_IN_USD = 15.00
+_CLAUDE_OPUS_4_7_OUT_USD = 75.00
+_CLAUDE_SONNET_4_6_IN_USD = 3.00
+_CLAUDE_SONNET_4_6_OUT_USD = 15.00
+_CLAUDE_HAIKU_4_5_IN_USD = 0.80
+_CLAUDE_HAIKU_4_5_OUT_USD = 4.00
+
+# Gemini cost rates from
+# https://ai.google.dev/gemini-api/docs/pricing.  Used directly by the
+# Gemini provider (no SDK-reported total) to fill in the cost ledger.
+_GEMINI_3_FLASH_IN_USD = 0.30
+_GEMINI_3_FLASH_OUT_USD = 2.50
+_GEMINI_3_FLASH_LITE_IN_USD = 0.10
+_GEMINI_3_FLASH_LITE_OUT_USD = 0.40
 
 
 MODEL_CATALOG: tuple[ModelEntry, ...] = (
@@ -51,6 +85,8 @@ MODEL_CATALOG: tuple[ModelEntry, ...] = (
         short_name="Claude Opus 4.7",
         description="Most capable for ambitious work",
         is_default=False,
+        cost_per_mtok_in_usd=_CLAUDE_OPUS_4_7_IN_USD,
+        cost_per_mtok_out_usd=_CLAUDE_OPUS_4_7_OUT_USD,
     ),
     ModelEntry(
         host=Host.agent_sdk,
@@ -60,6 +96,8 @@ MODEL_CATALOG: tuple[ModelEntry, ...] = (
         short_name="Claude Sonnet 4.6",
         description="Balanced for everyday tasks",
         is_default=False,
+        cost_per_mtok_in_usd=_CLAUDE_SONNET_4_6_IN_USD,
+        cost_per_mtok_out_usd=_CLAUDE_SONNET_4_6_OUT_USD,
     ),
     ModelEntry(
         host=Host.agent_sdk,
@@ -69,6 +107,8 @@ MODEL_CATALOG: tuple[ModelEntry, ...] = (
         short_name="Claude Haiku 4.5",
         description="Fastest for quick answers",
         is_default=False,
+        cost_per_mtok_in_usd=_CLAUDE_HAIKU_4_5_IN_USD,
+        cost_per_mtok_out_usd=_CLAUDE_HAIKU_4_5_OUT_USD,
     ),
     ModelEntry(
         host=Host.google_ai,
@@ -78,6 +118,8 @@ MODEL_CATALOG: tuple[ModelEntry, ...] = (
         short_name="Gemini 3 Flash",
         description="Google's frontier multimodal",
         is_default=True,
+        cost_per_mtok_in_usd=_GEMINI_3_FLASH_IN_USD,
+        cost_per_mtok_out_usd=_GEMINI_3_FLASH_OUT_USD,
     ),
     ModelEntry(
         host=Host.google_ai,
@@ -87,6 +129,8 @@ MODEL_CATALOG: tuple[ModelEntry, ...] = (
         short_name="Gemini Flash Lite",
         description="Light and fast Gemini",
         is_default=False,
+        cost_per_mtok_in_usd=_GEMINI_3_FLASH_LITE_IN_USD,
+        cost_per_mtok_out_usd=_GEMINI_3_FLASH_LITE_OUT_USD,
     ),
 )
 
