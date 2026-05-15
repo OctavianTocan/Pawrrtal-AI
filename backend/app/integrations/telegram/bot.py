@@ -177,6 +177,7 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
             provider=provider,
             agent_tools=agent_tools,
             workspace_system_prompt=workspace_system_prompt,
+            workspace_root=Path(workspace.path) if workspace is not None else None,
         )
 
     # Cancel any previous stream for this chat before starting the new one.

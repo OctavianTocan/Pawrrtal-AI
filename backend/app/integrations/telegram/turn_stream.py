@@ -6,11 +6,17 @@ import asyncio
 import logging
 import uuid
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from app.channels import ChannelMessage, resolve_channel
 from app.channels.telegram import SURFACE_TELEGRAM
+from app.core.agent_loop.types import PermissionCheckResult
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.governance.permissions import (
+    PermissionContext,
+    build_default_permission_check,
+)
 from app.core.providers.base import AILLM, StreamEvent
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -38,8 +44,17 @@ async def stream_persisted_turn(
     provider: AILLM,
     agent_tools: list[AgentTool],
     workspace_system_prompt: str | None,
+    workspace_root: Path | None = None,
 ) -> None:
-    """Stream a Telegram turn while persisting user and assistant messages."""
+    """Stream a Telegram turn while persisting user and assistant messages.
+
+    ``workspace_root`` is needed to build the per-request
+    :class:`PermissionContext` for the cross-provider permission gate
+    (PR 03b).  It's optional because the gate is a no-op when no
+    workspace is supplied — the callers that *do* have a workspace
+    (the bot's standard plain-message handler) pass it through; the
+    fallback "no workspace yet" path keeps working unchanged.
+    """
     history, assistant_message_id = await _persist_turn_start(
         conversation_id=context.conversation_id,
         user_id=context.nexus_user_id,
@@ -60,6 +75,7 @@ async def stream_persisted_turn(
         agent_tools=agent_tools,
         workspace_system_prompt=workspace_system_prompt,
         assistant_message_id=assistant_message_id,
+        workspace_root=workspace_root,
     )
 
 
@@ -128,11 +144,13 @@ async def _deliver_and_persist_stream(
     agent_tools: list[AgentTool],
     workspace_system_prompt: str | None,
     assistant_message_id: uuid.UUID,
+    workspace_root: Path | None = None,
 ) -> None:
     """Stream a Telegram response and persist the assistant row on completion."""
     channel = resolve_channel(SURFACE_TELEGRAM)
     aggregator = ChatTurnAggregator()
     final_status = "complete"
+    permission_check = _build_permission_check(context, workspace_root)
 
     async def _guarded_stream() -> AsyncIterator[StreamEvent]:
         try:
@@ -143,6 +161,7 @@ async def _deliver_and_persist_stream(
                 history=history,
                 tools=agent_tools or None,
                 system_prompt=workspace_system_prompt,
+                permission_check=permission_check,
             ):
                 aggregator.apply(event)
                 yield event
@@ -168,6 +187,43 @@ async def _deliver_and_persist_stream(
             aggregator=aggregator,
             status=final_status,
         )
+
+
+def _build_permission_check(
+    context: TelegramTurnContext,
+    workspace_root: Path | None,
+):
+    """Return a permission gate bound to this turn's user / workspace.
+
+    The Telegram path mirrors the chat router's wire-up: a per-request
+    :class:`PermissionContext` is fed into
+    :func:`build_default_permission_check` and adapted to the
+    cross-provider ``(tool_name, arguments)`` signature so the loop's
+    permission seam never sees Telegram-specific state.
+
+    Returns ``None`` when no workspace was supplied — the gate has
+    nothing to anchor file / bash boundary checks against, so it stays
+    a no-op rather than denying every tool call.
+    """
+    if workspace_root is None:
+        return None
+    permission_context = PermissionContext(
+        user_id=str(context.nexus_user_id),
+        workspace_root=workspace_root,
+        conversation_id=str(context.conversation_id),
+        surface=SURFACE_TELEGRAM,
+    )
+    gate = build_default_permission_check()
+
+    async def _permission_check(tool_name: str, arguments: dict[str, Any]) -> PermissionCheckResult:
+        decision = await gate(tool_name, arguments, permission_context)
+        return PermissionCheckResult(
+            allow=decision.allow,
+            reason=decision.reason,
+            violation_type=decision.violation_type,
+        )
+
+    return _permission_check
 
 
 async def _finalize_persisted_assistant_message(

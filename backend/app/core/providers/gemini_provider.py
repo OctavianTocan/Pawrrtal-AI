@@ -25,12 +25,13 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.agent_loop.safety_factory import safety_from_settings
-from app.core.agent_loop.types import TextContent, ToolCallContent
+from app.core.agent_loop.types import PermissionCheckFn, TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
 from app.core.config import settings
 from app.core.keys import resolve_api_key
+
 from .base import StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,10 @@ def _build_gemini_contents(
     return contents
 
 
-def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
+def make_gemini_stream_fn(
+    model_id: str,
+    user_id: uuid.UUID | None = None,
+) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
     Args:
@@ -213,15 +217,15 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         content: list[TextContent | ToolCallContent] = []
         if full_text:
             content.append(TextContent(type="text", text=full_text))
-        for tc in tool_calls:
-            content.append(
-                ToolCallContent(
-                    type="toolCall",
-                    tool_call_id=tc["tool_call_id"],
-                    name=tc["name"],
-                    arguments=tc["arguments"],
-                )
+        content.extend(
+            ToolCallContent(
+                type="toolCall",
+                tool_call_id=tc["tool_call_id"],
+                name=tc["name"],
+                arguments=tc["arguments"],
             )
+            for tc in tool_calls
+        )
 
         yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
 
@@ -261,6 +265,7 @@ class GeminiLLM:
         history: list[dict[str, str]] | None = None,
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
 
@@ -276,6 +281,10 @@ class GeminiLLM:
                 workspace AGENTS.md per PR #113).  When ``None`` the
                 provider falls back to ``_FALLBACK_SYSTEM_PROMPT`` so a
                 bare unit test or direct script call still works.
+            permission_check: Optional cross-provider ``can_use_tool`` gate
+                (PR 03b).  Threaded straight into ``AgentLoopConfig`` so the
+                loop's tool dispatch consults it before every tool execution.
+                ``None`` (the default) preserves the previous behaviour.
         """
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
@@ -311,6 +320,7 @@ class GeminiLLM:
         config = AgentLoopConfig(
             convert_to_llm=_identity_convert,
             safety=safety_from_settings(settings),
+            permission_check=permission_check,
         )
 
         try:

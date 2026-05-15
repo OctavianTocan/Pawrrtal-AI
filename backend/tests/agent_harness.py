@@ -58,6 +58,8 @@ from app.core.agent_loop.types import (
     LLMEvent,
     LLMTextDeltaEvent,
     LLMToolCallEvent,
+    PermissionAuditSinkFn,
+    PermissionCheckFn,
     TextContent,
     ToolCallContent,
 )
@@ -350,6 +352,8 @@ async def run_scenario(
     tools: list[AgentTool] | None = None,
     question: str = "go",
     safety: AgentSafetyConfig | None = None,
+    permission_check: PermissionCheckFn | None = None,
+    permission_audit_sink: PermissionAuditSinkFn | None = None,
 ) -> list[AgentEvent]:
     """Run an agent-loop scenario end-to-end and return all emitted events.
 
@@ -362,6 +366,11 @@ async def run_scenario(
             (when you only care about the emitted events).
         tools: Tools available to the agent.  Defaults to an empty list.
         question: The user's question text.
+        safety: Optional safety config; defaults to all-guards-disabled.
+        permission_check: Optional cross-provider permission gate (PR 03b).
+            Plumbed straight into ``AgentLoopConfig`` so loop-level denial
+            tests run through the real seam, not a patch.
+        permission_audit_sink: Optional async sink fired on every denial.
 
     Returns:
         All ``AgentEvent`` instances emitted by ``agent_loop``, in order.
@@ -381,6 +390,8 @@ async def run_scenario(
     cfg = AgentLoopConfig(
         convert_to_llm=identity_convert,
         safety=safety or AgentSafetyConfig.disabled(),
+        permission_check=permission_check,
+        permission_audit_sink=permission_audit_sink,
     )
     prompt = UserMessage(role="user", content=question)
     return [ev async for ev in agent_loop([prompt], ctx, cfg, stream_fn)]

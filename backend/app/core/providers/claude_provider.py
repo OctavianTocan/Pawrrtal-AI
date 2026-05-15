@@ -56,7 +56,7 @@ from claude_agent_sdk import (
     query,
 )
 
-from app.core.agent_loop.types import AgentTool
+from app.core.agent_loop.types import AgentTool, PermissionCheckFn
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
@@ -67,8 +67,8 @@ from ._claude_tool_bridge import (
 )
 from ._claude_tool_bridge import (
     allowed_tool_ids,
-    auto_approve_bridge_tools,
     build_mcp_server,
+    make_can_use_tool,
 )
 from .base import StreamEvent
 
@@ -203,6 +203,7 @@ class ClaudeLLM:
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -223,6 +224,12 @@ class ClaudeLLM:
             system_prompt: Optional system prompt to override the
                 provider-default chat-scoped prompt. Falls back to
                 :data:`DEFAULT_AGENT_SYSTEM_PROMPT` when ``None``.
+            permission_check: Optional cross-provider ``can_use_tool``
+                gate (PR 03b).  Bound into the Claude SDK's
+                ``can_use_tool`` callback via
+                :func:`_claude_tool_bridge.make_can_use_tool` so the
+                same policy applies as the Gemini path.  ``None``
+                preserves the historical namespace-only auto-approval.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -232,6 +239,7 @@ class ClaudeLLM:
             conversation_id,
             system_prompt=system_prompt,
             agent_tools=tools,
+            permission_check=permission_check,
         )
         try:
             # The SDK requires streaming-mode input (an AsyncIterable
@@ -290,6 +298,7 @@ class ClaudeLLM:
         *,
         system_prompt: str | None = None,
         agent_tools: list[AgentTool] | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -307,6 +316,10 @@ class ClaudeLLM:
                 under ``ClaudeAgentOptions.mcp_servers``; the matching
                 ``mcp__ai_nexus__<name>`` IDs are appended to the
                 allowed-tools whitelist so the SDK actually permits
+            permission_check: Optional cross-provider permission gate.
+                When supplied, bound into ``ClaudeAgentOptions.can_use_tool``
+                via :func:`_claude_tool_bridge.make_can_use_tool` so the
+                SDK enforces the same policy as the Gemini path.
                 execution.
         """
         session_id = str(conversation_id)
@@ -351,15 +364,16 @@ class ClaudeLLM:
         }
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
-            # Auto-approve every tool we bridged in.  The whitelist on
-            # ``tools=`` tells the SDK the IDs are *known*; this hook
-            # tells it they're *pre-approved*.  Without it, the SDK
-            # blocks each tool call with "Claude requested permissions
-            # … but you haven't granted it yet" — caught by the new
-            # bridge integration test on PR #131.  The hook denies
-            # anything outside our namespace so a future misconfigured
-            # MCP server can't silently piggy-back on this approval.
-            kwargs["can_use_tool"] = auto_approve_bridge_tools
+            # ``can_use_tool`` is the SDK's per-call permission hook.
+            # When the chat router supplies a cross-provider
+            # ``permission_check`` (PR 03b), we delegate to it so
+            # Claude and Gemini enforce the same policy.  Without
+            # one, the bridge falls back to namespace-only approval
+            # (the historical behaviour from PR #131).  Either way
+            # the whitelist on ``tools=`` is necessary but not
+            # sufficient — without ``can_use_tool`` the SDK blocks
+            # every custom MCP tool call.
+            kwargs["can_use_tool"] = make_can_use_tool(permission_check)
         if self._config.cwd is not None:
             kwargs["cwd"] = self._config.cwd
 

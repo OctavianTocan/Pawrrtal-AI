@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict
 
 if TYPE_CHECKING:
-    from app.core.agent_loop.types import AgentTool
+    from app.core.agent_loop.types import AgentTool, PermissionCheckFn
 
 
 class StreamEvent(TypedDict, total=False):
@@ -42,6 +42,7 @@ class AILLM(Protocol):
         history: list[dict[str, str]] | None = None,
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -67,5 +68,12 @@ class AILLM(Protocol):
                      this parameter.
             system_prompt: Optional override for the provider's default system
                      prompt.  When ``None`` the provider uses its own default.
+            permission_check: Optional async ``(tool_name, arguments)`` gate
+                     (PR 03b).  When supplied, the provider plumbs it into
+                     the cross-provider seam — ``AgentLoopConfig.permission_check``
+                     for Gemini, ``ClaudeAgentOptions.can_use_tool`` (via the
+                     tool bridge) for Claude — so the same policy is enforced
+                     regardless of model.  ``None`` keeps the previous
+                     behaviour: every tool call dispatches without a gate.
         """
         ...

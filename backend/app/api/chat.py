@@ -7,6 +7,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import Any
 
 import anyio
 from fastapi import Depends, Header, HTTPException
@@ -17,8 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
+from app.core.agent_loop.types import PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.governance.permissions import (
+    PermissionContext,
+    build_default_permission_check,
+)
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
@@ -303,6 +309,32 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                 len(workspace_system_prompt),
             )
 
+        # Build the per-request permission gate (PR 03b).  ``PermissionContext``
+        # captures workspace + user + surface so the gate's individual checks
+        # (file-path boundary, bash boundary, workspace allowlist) have the
+        # state they need; the closure below adapts the cross-provider
+        # ``PermissionCheckFn`` signature ``(tool_name, arguments)`` so the
+        # context never leaks into the agent loop.  Both providers consume
+        # the same closure — Claude via the SDK's ``can_use_tool`` hook,
+        # Gemini via ``AgentLoopConfig.permission_check``.
+        permission_context = PermissionContext(
+            user_id=str(user.id),
+            workspace_root=root,
+            conversation_id=str(request.conversation_id),
+            surface=surface,
+        )
+        _gate = build_default_permission_check()
+
+        async def permission_check_for_request(
+            tool_name: str, arguments: dict[str, Any]
+        ) -> PermissionCheckResult:
+            decision = await _gate(tool_name, arguments, permission_context)
+            return PermissionCheckResult(
+                allow=decision.allow,
+                reason=decision.reason,
+                violation_type=decision.violation_type,
+            )
+
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes for each LLM event, then done.
 
@@ -326,6 +358,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                         history=history,
                         tools=agent_tools or None,
                         system_prompt=workspace_system_prompt,
+                        permission_check=permission_check_for_request,
                     ):
                         event_count += 1
                         aggregator.apply(event)
