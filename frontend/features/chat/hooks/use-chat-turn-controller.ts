@@ -5,7 +5,8 @@ import { useCallback, useMemo, useRef } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import type { ChatMessage } from '@/lib/types';
 import { type ChatReasoningLevel, FALLBACK_TITLE_MAX_LENGTH } from '../constants';
-import { useChat } from './use-chat';
+import { extractImageInputs } from '../lib/extract-image-inputs';
+import { type ChatImageInput, useChat } from './use-chat';
 import { useChatBackgroundRecovery } from './use-chat-background-recovery';
 import { useChatTurns } from './use-chat-turns';
 import { useCreateConversation } from './use-create-conversation';
@@ -85,8 +86,8 @@ export function useChatTurnController({
 	const { replace } = useRouter();
 	const hasNavigated = useRef(false);
 	const stream = useCallback(
-		(prompt: string) =>
-			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
+		(prompt: string, images?: readonly ChatImageInput[]) =>
+			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning, images),
 		[conversationId, selectedModelId, selectedReasoning, streamMessage]
 	);
 	const onFirstSend = useCallback(
@@ -118,9 +119,15 @@ export function useChatTurnController({
 	const sendMessage = useCallback(
 		async (message: PromptInputMessage): Promise<void> => {
 			const prompt = message.content;
+			// Decode attachments to base64 BEFORE kicking off the optimistic
+			// placeholders so a slow fetch doesn't open a window where the UI
+			// looks "sent" but the request hasn't been shaped yet.
+			// `extractImageInputs` is non-throwing — failed reads silently drop
+			// instead of aborting the whole turn.
+			const images = await extractImageInputs(message.files);
 			beginStream(prompt);
 			try {
-				await send(prompt);
+				await send(prompt, images.length > 0 ? images : undefined);
 			} finally {
 				endStream();
 				if (hasNavigated.current) replace(`/c/${conversationId}`);
