@@ -43,6 +43,7 @@ from app.integrations.telegram.handlers import (
     handle_plain_message,
     handle_start_command,
     handle_stop_command,
+    handle_verbose_command,
 )
 from app.integrations.telegram.turn_stream import stream_persisted_turn
 
@@ -62,6 +63,44 @@ logger = logging.getLogger(__name__)
 # single-worker deployment; promote to a shared store (e.g. Redis pub/sub)
 # before running multiple uvicorn workers.
 _running_tasks: dict[int, asyncio.Task[None]] = {}
+
+
+async def _maintain_typing_indicator(
+    bot: Bot,
+    chat_id: int,
+    thread_id: int | None,
+) -> None:
+    """Refresh the Telegram typing indicator on a timer until cancelled.
+
+    Telegram clears the "typing…" hint roughly 5 seconds after the
+    last ``sendChatAction`` call.  Refreshing every
+    ``settings.telegram_typing_refresh_seconds`` (default 2.5s) keeps
+    the indicator visible for the whole agent run so the user always
+    sees that the bot is working — matches CCT's persistent-typing
+    behaviour.
+
+    Errors are swallowed: a single failed ``sendChatAction`` should
+    never break the agent run.  The whole task is cancelled by the
+    caller's finally block.
+    """
+    refresh = float(settings.telegram_typing_refresh_seconds)
+    try:
+        while True:
+            try:
+                kwargs: dict[str, object] = {"chat_id": chat_id, "action": "typing"}
+                if thread_id is not None:
+                    kwargs["message_thread_id"] = thread_id
+                await bot.send_chat_action(**kwargs)
+            except Exception:
+                logger.debug(
+                    "TELEGRAM_TYPING_FAILED chat_id=%s thread_id=%s",
+                    chat_id,
+                    thread_id,
+                    exc_info=True,
+                )
+            await asyncio.sleep(refresh)
+    except asyncio.CancelledError:
+        return
 
 
 async def _resolve_provider_with_auto_clear(
@@ -186,6 +225,16 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
     if old_task is not None and not old_task.done():
         old_task.cancel()
 
+    # PR 07: persistent typing indicator. Telegram clears the
+    # "typing…" status after ~5 seconds, so we refresh on a timer
+    # for the whole duration of the agent run. Cancelled in the
+    # finally block alongside the stream task so a chat that
+    # finished (or was /stop'd) doesn't keep the indicator up.
+    typing_task = asyncio.create_task(
+        _maintain_typing_indicator(message.bot, chat_id, context.thread_id),
+        name=f"telegram-typing-{chat_id}",
+    )
+
     task: asyncio.Task[None] = asyncio.create_task(_do_stream())
     _running_tasks[chat_id] = task
     try:
@@ -194,6 +243,9 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
         logger.info("TELEGRAM_STREAM_CANCELLED chat_id=%s", chat_id)
     finally:
         _running_tasks.pop(chat_id, None)
+        typing_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await typing_task
 
     # Auto-title: derive a title from the first user message and
     # rename the Telegram topic thread to match.  Fires once only
@@ -228,7 +280,7 @@ class TelegramService:
         await self.dispatcher.feed_update(self.bot, update)
 
 
-def build_telegram_service() -> TelegramService:
+def build_telegram_service() -> TelegramService:  # noqa: PLR0915 — single dispatcher-registration body; splitting fragments shared `dispatcher` closure
     """Construct the aiogram primitives and register the dispatcher routes.
 
     Raises ``RuntimeError`` if Telegram support is not configured. The
@@ -290,6 +342,18 @@ def build_telegram_service() -> TelegramService:
         sender = _sender_from_message(message)
         async with async_session_maker() as session:
             reply = await handle_model_command(sender=sender, model_arg=model_arg, session=session)
+        await message.answer(reply)
+
+    @dispatcher.message(Command("verbose"))
+    async def _on_verbose(message: Message) -> None:
+        text = message.text or ""
+        parts = text.strip().split(maxsplit=1)
+        level_arg = parts[1].strip() if len(parts) > 1 else ""
+        sender = _sender_from_message(message)
+        async with async_session_maker() as session:
+            reply = await handle_verbose_command(
+                sender=sender, level_arg=level_arg, session=session
+            )
         await message.answer(reply)
 
     @dispatcher.message()

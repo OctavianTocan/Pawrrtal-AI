@@ -49,6 +49,7 @@ from typing import TYPE_CHECKING, Any
 
 from app.core.providers.base import StreamEvent
 from app.core.tools.send_message import SendFn
+from app.integrations.telegram.tool_icons import tool_icon
 
 from .base import ChannelMessage
 
@@ -112,7 +113,27 @@ class TelegramChannel:
         last_edit_at = asyncio.get_event_loop().time()
 
         async for event in stream:
-            if event.get("type") == "delta":
+            event_type = event.get("type")
+            if event_type == "tool_use":
+                # PR 07: inject a one-line glyph + tool name so the
+                # user sees what the agent is doing in real time.  We
+                # don't include the tool input — it can be large or
+                # sensitive — only the name + glyph.  The accumulated
+                # buffer flushes on the next debounce tick.
+                tool_name = event.get("name", "tool")
+                line = f"\n{tool_icon(tool_name)} {tool_name}…"
+                accumulated += line
+                chars_since_edit += len(line)
+                now = asyncio.get_event_loop().time()
+                elapsed = now - last_edit_at
+                if accumulated and (
+                    chars_since_edit >= _EDIT_DEBOUNCE_CHARS or elapsed >= _MAX_EDIT_INTERVAL_S
+                ):
+                    await _safe_edit(bot, chat_id, message_id, accumulated)
+                    chars_since_edit = 0
+                    last_edit_at = now
+                continue
+            if event_type == "delta":
                 chunk: str = event.get("content", "")
                 accumulated += chunk
                 chars_since_edit += len(chunk)
@@ -186,7 +207,7 @@ async def _safe_edit(
 
 
 def make_telegram_sender(
-    bot: "Bot",
+    bot: Bot,
     chat_id: int | str,
     *,
     message_thread_id: int | None = None,

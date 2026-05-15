@@ -12,7 +12,11 @@ from typing import TYPE_CHECKING, Any
 from app.channels import ChannelMessage, resolve_channel
 from app.channels.telegram import SURFACE_TELEGRAM
 from app.core.agent_loop.types import PermissionCheckResult
-from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.chat_aggregator import (
+    ChatTurnAggregator,
+    should_emit_event,
+)
+from app.core.config import settings as _settings
 from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
@@ -152,6 +156,12 @@ async def _deliver_and_persist_stream(
     aggregator = ChatTurnAggregator()
     final_status = "complete"
     permission_check = _build_permission_check(context, workspace_root)
+    # PR 07: per-conversation verbose level governs which events the
+    # Telegram channel renders.  Pulled from the conversation row at
+    # turn dispatch time (handlers.py) and stuffed into ``context.extra``
+    # via ``conversation.verbose_level``; falls back to the configured
+    # default when the row hasn't been set yet.
+    verbose_level = _resolve_verbose_level(context)
 
     async def _guarded_stream() -> AsyncIterator[StreamEvent]:
         try:
@@ -164,8 +174,13 @@ async def _deliver_and_persist_stream(
                 system_prompt=workspace_system_prompt,
                 permission_check=permission_check,
             ):
+                # The aggregator always sees every event so the
+                # persisted row carries the full transcript.  The
+                # downstream renderer (TelegramChannel) sees the
+                # filtered stream only.
                 aggregator.apply(event)
-                yield event
+                if should_emit_event(event, verbose_level):
+                    yield event
         except Exception as exc:
             logger.exception(
                 "TELEGRAM_STREAM_ERR conversation_id=%s",
@@ -188,6 +203,18 @@ async def _deliver_and_persist_stream(
             aggregator=aggregator,
             status=final_status,
         )
+
+
+def _resolve_verbose_level(context: TelegramTurnContext) -> int:
+    """Pick the verbose level for one Telegram turn.
+
+    Per-conversation override wins; falls back to the global default
+    so a deployment can pick "always show tools" or "always quiet"
+    via env var without per-row updates.
+    """
+    if context.verbose_level is not None:
+        return context.verbose_level
+    return int(_settings.telegram_verbose_default)
 
 
 def _build_permission_check(
