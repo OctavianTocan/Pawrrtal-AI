@@ -15,6 +15,7 @@ from fastapi.routing import APIRouter
 from opentelemetry import trace as _otel_trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api._chat_cost_budget import enforce_cost_budget
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
 from app.channels.turn_runner import ChatTurnInput, EventHook, run_turn
@@ -233,6 +234,20 @@ def get_chat_router() -> APIRouter:
         # Refuse with 412 (Precondition Failed) so the frontend can route to
         # onboarding instead of pretending we shipped a degraded reply.
         root = await _require_workspace_root(user_id=user.id, session=session, request_id=rid)
+        # Pre-flight per-user cost gate (PR 04).  Refuses with HTTP
+        # 402 when the user's rolling-window spend + a small reservation
+        # would exceed ``cost_max_per_user_daily_usd``.  This sits
+        # *after* the workspace gate (so an onboarding-incomplete user
+        # never sees a confusing 402) and *before* tool composition /
+        # provider resolution (so a denied request is cheap).  The
+        # Claude SDK enforces the per-request cap natively via
+        # ``max_budget_usd``; this gate enforces the per-user cap.
+        await enforce_cost_budget(
+            user_id=user.id,
+            session=session,
+            rid=rid,
+        )
+
         # Per-turn tool composition lives in `app.core.agent_tools` —
         # the chat router only decides *that* the agent gets tools,
         # not *which* (that's the builder's job, and where future

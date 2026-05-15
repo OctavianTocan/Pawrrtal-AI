@@ -21,12 +21,18 @@ class StreamEvent(TypedDict, total=False):
     carries ``name`` + ``input``).
     """
 
-    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error" | "artifact"
+    type: str  # "delta" | "thinking" | "tool_use" | "tool_result" | "error" | "artifact" | "usage"
     content: str  # for delta and thinking
     name: str  # for tool_use
     input: dict[str, Any]  # for tool_use
     tool_use_id: str  # for tool_result
     artifact: dict[str, Any]  # for artifact (id, title, spec)
+    # Token + cost accounting (PR 04). Emitted by every provider on the
+    # terminal message of a turn so the chat aggregator + cost ledger
+    # have one canonical shape to consume regardless of model.
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
 
 
 class AILLM(Protocol):
