@@ -5,12 +5,12 @@ import type * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
+import { listChannels } from '@/lib/channels';
 import {
 	MESSAGING_CHANNELS,
 	type MessagingChannelId,
 	type PersonalizationProfile,
 } from '@/lib/personalization/storage';
-import { listChannels } from '@/lib/channels';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';
 

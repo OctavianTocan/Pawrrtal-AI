@@ -26,12 +26,7 @@ import type {
 } from '@/lib/types';
 import type { CalendarEventInfo, MemoryResultInfo, WebSourceInfo } from './tool-result-parsers';
 
-export type {
-	AssistantMessageStatus,
-	ChatArtifactPayload,
-	ChatTimelineEntry,
-	ChatToolCallStatus,
-};
+export type { AssistantMessageStatus, ChatArtifactPayload, ChatTimelineEntry, ChatToolCallStatus };
 
 /** Plain text chunk from the assistant's main response. */
 export interface ChatDeltaEvent {

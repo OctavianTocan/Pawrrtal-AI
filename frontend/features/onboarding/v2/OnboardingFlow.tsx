@@ -5,14 +5,14 @@ import { useCallback, useEffect, useReducer } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import {
-	useGetPersonalization,
-	useUpsertPersonalization,
-} from '@/lib/personalization/use-personalization';
-import {
 	loadPersonalizationProfile,
 	type PersonalizationProfile,
 	savePersonalizationProfile,
 } from '@/lib/personalization/storage';
+import {
+	useGetPersonalization,
+	useUpsertPersonalization,
+} from '@/lib/personalization/use-personalization';
 import { StepContext } from './step-context';
 import { StepIdentity } from './step-identity';
 import { StepMessaging } from './step-messaging';
