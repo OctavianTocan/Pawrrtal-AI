@@ -322,6 +322,9 @@ class ChannelBindingRead(BaseModel):
     external_user_id: str
     created_at: datetime
 
+    # Required by Pydantic to convert the database model to a Pydantic model.
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TelegramLinkCodeRead(BaseModel):
     """Response shape from ``POST /api/v1/channels/telegram/link``."""
@@ -330,6 +333,9 @@ class TelegramLinkCodeRead(BaseModel):
     expires_at: datetime
     bot_username: str | None = None
     deep_link: str | None = None
+
+    # Required by Pydantic to convert the database model to a Pydantic model.
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Workspace schemas --------------------------------------------------------
