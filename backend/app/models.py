@@ -26,28 +26,20 @@ class SenderType(Enum):
 class Conversation(Base):
     """Conversation metadata stored in the application database.
 
-    Actual message content is persisted by the Agno library in its own database. The two are linked via ``Conversation.id`` ==
-    Agno's ``session_id``.
+    Renderable message content lives in ``chat_messages``. Provider-native
+    transcript stores are only used as implementation details.
     """
 
     __tablename__ = "conversations"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
-    is_archived: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_flagged: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
-    is_unread: Mapped[bool] = mapped_column(
-        Boolean, default=False, server_default="false"
-    )
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_flagged: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    is_unread: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     status: Mapped[str | None] = mapped_column(
         String(20), nullable=True
     )  # "todo"|"in_progress"|"done"|null
@@ -87,9 +79,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(DateTime)
@@ -245,10 +235,8 @@ class ChatMessage(Base):
     This is the source of truth for what the chat UI renders on a refresh:
     role, plain-text content, thinking/reasoning text, tool invocations and
     their results, the arrival-ordered timeline, and the reasoning duration.
-    Provider-agnostic — both Agno-backed and Claude-backed turns write here.
-
-    Note: Agno also keeps its own message log for context-window plumbing on
-    the next turn. That log is not used for rendering history; this table is.
+    Provider-agnostic turns write here; provider-native transcript stores
+    are not used for rendering history.
     """
 
     __tablename__ = "chat_messages"
@@ -257,9 +245,7 @@ class ChatMessage(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("conversations.id", ondelete="CASCADE"), index=True
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("user.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("user.id", ondelete="CASCADE"))
     # Stable insertion order within a conversation. Only ever increases —
     # regenerate replaces the row in place rather than allocating a new ordinal.
     ordinal: Mapped[int] = mapped_column(Integer)
@@ -269,9 +255,7 @@ class ChatMessage(Base):
     # JSON arrays — None when absent so the column shrinks to NULL on reads.
     tool_calls: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     timeline: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
-    thinking_duration_seconds: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    thinking_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # "streaming" | "complete" | "failed" — only meaningful on assistant rows.
     assistant_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # Workspace-relative path to a file the agent delivered via send_message.
@@ -283,9 +267,11 @@ class ChatMessage(Base):
 
 
 class Workspace(Base):
-    """An agent workspace — a named directory on the host filesystem containing
-    the standard OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md,
-    IDENTITY.md, memory/, skills/, artifacts/).
+    """An agent workspace.
+
+    A named directory on the host filesystem containing the standard
+    OpenClaw-style file structure (AGENTS.md, SOUL.md, USER.md, IDENTITY.md,
+    memory/, skills/, artifacts/).
 
     One user can own many workspaces.  The first workspace created for a user
     is flagged ``is_default=True`` and seeded automatically at the end of the

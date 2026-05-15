@@ -13,6 +13,7 @@ from fastapi_users import schemas
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
 from app.core.config import settings
+from app.core.providers.base import ReasoningEffort
 from app.core.providers.catalog import default_model
 from app.core.providers.model_id import InvalidModelId, parse_model_id
 
@@ -268,14 +269,16 @@ class ChatRequest(BaseModel):
     """Request schema for the ``POST /api/v1/chat`` streaming endpoint.
 
     Attributes:
-        question: The user's message to send to the Agno agent.
+        question: The user's message to send to the selected model.
         conversation_id: UUID linking this message to a conversation.
-        model_id: The ID of the model to use for the agent. (Just Gemini models right now).
+        model_id: The ID of the model to use for the agent.
+        reasoning_effort: Optional reasoning-depth knob from the chat composer.
     """
 
     question: str
     conversation_id: uuid.UUID
     model_id: CanonicalModelId = None
+    reasoning_effort: ReasoningEffort | None = None
 
 
 class ChatResponse(BaseModel):
@@ -294,7 +297,7 @@ class ChatResponse(BaseModel):
 class ChatMessageRead(BaseModel):
     """Single rehydrated chat message returned by ``GET /conversations/:id/messages``.
 
-    Mirrors the `AgnoMessage` shape consumed by the frontend so the chat UI
+    Mirrors the chat message shape consumed by the frontend so the chat UI
     can render past turns with the same chain-of-thought, tool steps, source
     chips, and reasoning duration as the live stream produced.
     """

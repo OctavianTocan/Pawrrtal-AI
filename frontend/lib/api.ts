@@ -8,6 +8,88 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 /**
+ * Backend API key for the X-Pawrrtal-Key header.
+ *
+ * Two sources, resolved at runtime (client-side precedence order):
+ *   1. localStorage `pawrrtal:backend-config` — set via the Settings page when
+ *      a user points at their own backend instance (URL + key stored together).
+ *   2. NEXT_PUBLIC_BACKEND_API_KEY build-time env var — baked into the demo
+ *      build so the demo instance works out-of-the-box without any config.
+ *
+ * When neither is set the header is omitted, which is correct for local dev
+ * (backend has no BACKEND_API_KEY configured either).
+ */
+const BACKEND_CONFIG_STORAGE_KEY = 'pawrrtal:backend-config';
+
+interface BackendConfig {
+	url: string;
+	apiKey: string;
+}
+
+function readBackendConfig(): BackendConfig {
+	const buildTimeKey = process.env.NEXT_PUBLIC_BACKEND_API_KEY ?? '';
+	const defaults: BackendConfig = { url: API_BASE_URL, apiKey: buildTimeKey };
+
+	if (typeof window === 'undefined') return defaults;
+	try {
+		const raw = window.localStorage.getItem(BACKEND_CONFIG_STORAGE_KEY);
+		if (raw) {
+			const parsed = JSON.parse(raw) as Partial<BackendConfig>;
+			return {
+				url: parsed.url ?? defaults.url,
+				apiKey: parsed.apiKey ?? defaults.apiKey,
+			};
+		}
+	} catch {
+		// Malformed storage — fall back to build-time defaults.
+	}
+	return defaults;
+}
+
+/** Persist a new backend config (URL + API key) to localStorage. */
+export function saveBackendConfig(config: BackendConfig): void {
+	try {
+		window.localStorage.setItem(BACKEND_CONFIG_STORAGE_KEY, JSON.stringify(config));
+	} catch {
+		/* quota / private browsing — ignore */
+	}
+}
+
+/** Clear the runtime backend config override (reverts to build-time defaults). */
+export function clearBackendConfig(): void {
+	try {
+		window.localStorage.removeItem(BACKEND_CONFIG_STORAGE_KEY);
+	} catch {
+		/* ignore */
+	}
+}
+
+/**
+ * Drop-in replacement for `fetch` that:
+ *   - Prepends `API_BASE_URL` (or the runtime URL from localStorage) to the path.
+ *   - Adds the `X-Pawrrtal-Key` header when an API key is configured.
+ *
+ * Use this for every backend request instead of calling `fetch` directly so the
+ * key header is applied consistently across the entire frontend.
+ *
+ * @example
+ *   const res = await apiFetch('/api/v1/chat', { method: 'POST', body: JSON.stringify(msg) });
+ */
+export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+	const { url: baseUrl, apiKey } = readBackendConfig();
+	// Only wrap headers in a Headers object when we actually need to inject
+	// X-Pawrrtal-Key.  When no key is configured (local dev, tests) we pass
+	// init through unchanged so callers that stub `fetch` get back the same
+	// plain-object headers they supplied — keeping test assertions simple.
+	if (!apiKey) {
+		return fetch(`${baseUrl}${path}`, init);
+	}
+	const headers = new Headers(init?.headers);
+	headers.set('X-Pawrrtal-Key', apiKey);
+	return fetch(`${baseUrl}${path}`, { ...init, headers });
+}
+
+/**
  * API endpoint definitions for frontend requests.
  * Organized by logical service areas. Use curried functions for endpoints with path params,
  * and plain string properties for static endpoints.

@@ -70,7 +70,7 @@ from ._claude_tool_bridge import (
     auto_approve_bridge_tools,
     build_mcp_server,
 )
-from .base import StreamEvent
+from .base import ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +203,7 @@ class ClaudeLLM:
         | None = None,  # ignored: Claude SDK handles session continuity via `resume`
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -223,6 +224,8 @@ class ClaudeLLM:
             system_prompt: Optional system prompt to override the
                 provider-default chat-scoped prompt. Falls back to
                 :data:`DEFAULT_AGENT_SYSTEM_PROMPT` when ``None``.
+            reasoning_effort: Optional reasoning-depth knob. Forwarded to
+                Claude Code as ``effort`` when set.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
@@ -232,6 +235,7 @@ class ClaudeLLM:
             conversation_id,
             system_prompt=system_prompt,
             agent_tools=tools,
+            reasoning_effort=reasoning_effort,
         )
         try:
             # The SDK requires streaming-mode input (an AsyncIterable
@@ -290,6 +294,7 @@ class ClaudeLLM:
         *,
         system_prompt: str | None = None,
         agent_tools: list[AgentTool] | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -308,6 +313,7 @@ class ClaudeLLM:
                 ``mcp__ai_nexus__<name>`` IDs are appended to the
                 allowed-tools whitelist so the SDK actually permits
                 execution.
+            reasoning_effort: Optional per-turn reasoning-depth knob.
         """
         session_id = str(conversation_id)
 
@@ -349,6 +355,8 @@ class ClaudeLLM:
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
+        if reasoning_effort is not None:
+            kwargs["effort"] = "max" if reasoning_effort == "extra-high" else reasoning_effort
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
             # Auto-approve every tool we bridged in.  The whitelist on

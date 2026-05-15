@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
 
 if TYPE_CHECKING:
     from app.core.agent_loop.types import AgentTool
+
+ReasoningEffort = Literal["low", "medium", "high", "extra-high"]
+"""Reasoning-depth values accepted from the chat UI."""
 
 
 class StreamEvent(TypedDict, total=False):
@@ -42,6 +45,7 @@ class AILLM(Protocol):
         history: list[dict[str, str]] | None = None,
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
+        reasoning_effort: ReasoningEffort | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -67,5 +71,7 @@ class AILLM(Protocol):
                      this parameter.
             system_prompt: Optional override for the provider's default system
                      prompt.  When ``None`` the provider uses its own default.
+            reasoning_effort: Optional reasoning-depth knob selected by the
+                     user. Providers that do not support it may ignore it.
         """
         ...

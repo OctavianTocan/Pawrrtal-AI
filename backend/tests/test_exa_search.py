@@ -1,12 +1,10 @@
-"""Tests for the provider-agnostic Exa web-search core and its Agno adapter.
+"""Tests for the provider-agnostic Exa web-search core.
 
 Coverage layers:
 
 * Core (``app.core.tools.exa_search``) — payload shape, headers, error
   branches, response normalisation, num-results clamping, and the
   Markdown formatter.
-* Agno adapter (``app.core.tools.exa_search_agno``) — Toolkit
-  registration, num-results capping, async-from-sync bridge.
 
 The Claude-specific Exa adapter was removed when tool composition
 moved into the chat router.  Exa now flows through the same
@@ -20,15 +18,6 @@ ever talks to the real Exa API.
 """
 
 from __future__ import annotations
-
-import pytest
-
-# The Agno toolkit imports below pull in the optional ``agno`` dependency,
-# which was removed when the Gemini direct-loop provider replaced the
-# Agno experiment.  Skip the whole module when agno isn't installed so
-# CI passes without a runtime dep, but coverage returns the moment
-# ``agno`` is reinstalled.
-pytest.importorskip("agno", reason="agno is no longer a runtime dependency")
 
 import json
 from collections.abc import Callable
@@ -46,7 +35,6 @@ from app.core.tools.exa_search import (
     exa_search,
     format_results_as_markdown,
 )
-from app.core.tools.exa_search_agno import ExaTools
 
 # ---------------------------------------------------------------------------
 # httpx mock plumbing
@@ -384,51 +372,3 @@ def test_format_results_as_markdown_renders_hits_with_links_and_highlights() -> 
     # Each highlight rendered as a quoted line.
     for snippet in SAMPLE_HIT["highlights"]:
         assert f"> {snippet}" in rendered
-
-
-# ---------------------------------------------------------------------------
-# Agno adapter
-# ---------------------------------------------------------------------------
-
-
-def test_agno_toolkit_registers_exa_search() -> None:
-    toolkit = ExaTools()
-
-    # Toolkit registers callables on `.functions` keyed by name.
-    assert "exa_search" in toolkit.functions
-
-
-def test_agno_exa_search_returns_markdown_for_hits(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": [SAMPLE_HIT]}))
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    rendered = ExaTools().exa_search("hyperloop", num_results=3)
-
-    assert SAMPLE_HIT["title"] in rendered
-    assert SAMPLE_HIT["url"] in rendered
-
-
-def test_agno_exa_search_caps_num_results_before_calling_core(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured = _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "k")
-
-    ExaTools().exa_search("q", num_results=999)
-
-    body = json.loads(captured[0].content)
-    assert body["numResults"] == MAX_NUM_RESULTS
-
-
-def test_agno_exa_search_renders_error_for_missing_key(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _install_mock_transport(monkeypatch, lambda _r: _ok_response({"results": []}))
-    monkeypatch.setattr("app.core.tools.exa_search.settings.exa_api_key", "")
-
-    rendered = ExaTools().exa_search("q")
-
-    assert rendered.startswith("_Web search failed:")
-    assert "EXA_API_KEY" in rendered

@@ -2,9 +2,8 @@
 
 Single async core (:func:`exa_search`) that hits Exa's search API
 (`POST https://api.exa.ai/search`) and returns a compact list of
-``ExaSearchHit`` rows. The Claude Agent SDK and Agno wrappers in
-:mod:`app.core.tools.exa_search_claude` / ``exa_search_agno`` both delegate
-here — the network call lives in exactly one place.
+``ExaSearchHit`` rows. The Claude Agent SDK and agent-loop wrappers both
+delegate here; the network call lives in exactly one place.
 
 Design notes
 ------------
@@ -156,9 +155,7 @@ async def exa_search(
             body_message = str(response.json().get("error") or "")
         except ValueError:
             body_message = response.text
-        logger.warning(
-            "Exa search HTTP %s: %s", response.status_code, body_message or "(no body)"
-        )
+        logger.warning("Exa search HTTP %s: %s", response.status_code, body_message or "(no body)")
         return {
             "query": query,
             "results": [],
@@ -184,9 +181,7 @@ async def exa_search(
 
     return {
         "query": query,
-        "results": [
-            _normalise_hit(row) for row in raw_results if isinstance(row, dict)
-        ],
+        "results": [_normalise_hit(row) for row in raw_results if isinstance(row, dict)],
         "error": None,
     }
 
@@ -216,9 +211,7 @@ def format_results_as_markdown(result: ExaSearchResult) -> str:
         meta_bits = [bit for bit in [author, published] if bit]
         if meta_bits:
             lines.append(f"   _{' · '.join(meta_bits)}_")
-        lines.extend(
-            f"   > {snippet.strip()}" for snippet in hit.get("highlights") or []
-        )
+        lines.extend(f"   > {snippet.strip()}" for snippet in hit.get("highlights") or [])
         if "summary" in hit:
             lines.append(f"   {hit['summary']}")
         lines.append("")

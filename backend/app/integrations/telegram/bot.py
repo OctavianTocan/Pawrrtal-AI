@@ -28,12 +28,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from app.channels import resolve_channel
+from app.channels.base import ChannelMessage
+from app.channels.telegram import SURFACE_TELEGRAM, make_telegram_sender
+from app.channels.turn_runner import ChatTurnInput, run_turn
+from app.core.agent_tools import build_agent_tools
 from app.core.config import settings
 from app.core.providers import resolve_llm
 from app.core.providers.base import AILLM
 from app.core.providers.catalog import default_model, require_known
 from app.core.providers.model_id import InvalidModelId, UnknownModelId
 from app.crud.channel import update_conversation_model
+from app.crud.workspace import get_default_workspace
 from app.db import async_session_maker
 from app.integrations.telegram.handlers import (
     TelegramSender,
@@ -44,7 +50,6 @@ from app.integrations.telegram.handlers import (
     handle_start_command,
     handle_stop_command,
 )
-from app.integrations.telegram.turn_stream import stream_persisted_turn
 
 if TYPE_CHECKING:
     from aiogram import Bot, Dispatcher
@@ -135,14 +140,6 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
         raise RuntimeError("Telegram message has no bot; refusing to stream.")
     thinking_msg = await message.answer("⏳")
 
-    # Resolve the user's default workspace so the agent has filesystem
-    # access.  If onboarding hasn't completed (no workspace), we fall
-    # back to an empty tool list so the turn still works.
-    from app.channels.telegram import make_telegram_sender  # noqa: PLC0415
-    from app.core.agent_tools import build_agent_tools  # noqa: PLC0415
-    from app.core.tools.agents_md import assemble_workspace_prompt  # noqa: PLC0415
-    from app.crud.workspace import get_default_workspace  # noqa: PLC0415
-
     async with async_session_maker() as ws_session:
         workspace = await get_default_workspace(context.nexus_user_id, ws_session)
 
@@ -160,24 +157,39 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
         if workspace is not None
         else []
     )
-    workspace_system_prompt = (
-        assemble_workspace_prompt(Path(workspace.path)) if workspace is not None else None
-    )
 
     provider, warning = await _resolve_provider_with_auto_clear(context)
     if warning is not None:
         await message.answer(warning)
 
+    channel_message: ChannelMessage = {
+        "user_id": context.nexus_user_id,
+        "conversation_id": context.conversation_id,
+        "text": user_text,
+        "surface": SURFACE_TELEGRAM,
+        "model_id": context.model_id,
+        "metadata": {
+            "bot": message.bot,
+            "chat_id": message.chat.id,
+            "message_id": thinking_msg.message_id,
+        },
+    }
+    turn_input = ChatTurnInput(
+        conversation_id=context.conversation_id,
+        user_id=context.nexus_user_id,
+        question=user_text,
+        provider=provider,
+        channel=resolve_channel(SURFACE_TELEGRAM),
+        channel_message=channel_message,
+        workspace_root=Path(workspace.path) if workspace is not None else None,
+        tools=agent_tools,
+        log_tag="TELEGRAM",
+        log_extras={"chat_id": message.chat.id},
+    )
+
     async def _do_stream() -> None:
-        await stream_persisted_turn(
-            message=message,
-            context=context,
-            user_text=user_text,
-            placeholder_message_id=thinking_msg.message_id,
-            provider=provider,
-            agent_tools=agent_tools,
-            workspace_system_prompt=workspace_system_prompt,
-        )
+        async for _ in run_turn(turn_input):
+            pass
 
     # Cancel any previous stream for this chat before starting the new one.
     chat_id = message.chat.id

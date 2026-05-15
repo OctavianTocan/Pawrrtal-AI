@@ -141,8 +141,12 @@ async def _collect(
     question: str,
     conversation_id: UUID,
     user_id: UUID,
+    **stream_kwargs: Any,
 ) -> list[StreamEvent]:
-    return [event async for event in provider.stream(question, conversation_id, user_id)]
+    return [
+        event
+        async for event in provider.stream(question, conversation_id, user_id, **stream_kwargs)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -398,6 +402,27 @@ class TestProviderOptions:
         # (provider-agnostic since PR #131 review).  Real chat traffic
         # gets the workspace's SOUL.md + AGENTS.md instead.
         assert options.system_prompt is not None and "chat application" in options.system_prompt
+
+    @pytest.mark.anyio
+    async def test_reasoning_effort_maps_to_sdk_effort(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        conversation_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """The UI reasoning selector should reach Claude Agent SDK options."""
+        captured = _patch_query(monkeypatch, _async_iter([]))
+        provider = ClaudeLLM("claude-sonnet-4-6")
+
+        await _collect(
+            provider,
+            "hello",
+            conversation_id,
+            user_id,
+            reasoning_effort="extra-high",
+        )
+
+        assert captured[0].effort == "max"
 
     @pytest.mark.anyio
     async def test_first_turn_uses_session_id_not_resume(

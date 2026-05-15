@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { AgnoMessage } from '@/lib/types';
+import type { ChatMessage } from '@/lib/types';
 import {
 	applyChatEvent,
 	computeThinkingDuration,
@@ -13,7 +13,7 @@ import { useCopyToClipboard } from './use-copy-to-clipboard';
 /** Hook input. */
 interface UseChatTurnsConfig {
 	/** Initial chat history hydrated from the server. */
-	initialHistory: Array<AgnoMessage>;
+	initialHistory: Array<ChatMessage>;
 	/**
 	 * Async generator that yields {@link ChatStreamEvent}s for one user prompt.
 	 * Provided by the caller so this hook stays decoupled from
@@ -30,7 +30,7 @@ interface UseChatTurnsConfig {
 
 /** Hook output — passed straight through to {@link import('../ChatView').default}. */
 export interface UseChatTurnsReturn {
-	chatHistory: Array<AgnoMessage>;
+	chatHistory: Array<ChatMessage>;
 	isLoading: boolean;
 	regeneratingIndex: number | null;
 	copiedId: string | null;
@@ -52,7 +52,7 @@ export function useChatTurns({
 	streamMessage,
 	onFirstSend,
 }: UseChatTurnsConfig): UseChatTurnsReturn {
-	const [chatHistory, setChatHistory] = useState<Array<AgnoMessage>>(initialHistory);
+	const [chatHistory, setChatHistory] = useState<Array<ChatMessage>>(initialHistory);
 	const [isLoading, setIsLoading] = useState(false);
 	const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
 	const isSendingRef = useRef(false);
@@ -105,8 +105,8 @@ export function useChatTurns({
 			setIsLoading(true);
 			setChatHistory((prev) => [
 				...prev,
-				{ role: 'user', content: prompt } as AgnoMessage,
-				{ role: 'assistant', content: '' } as AgnoMessage,
+				{ role: 'user', content: prompt } as ChatMessage,
+				{ role: 'assistant', content: '' } as ChatMessage,
 			]);
 
 			try {
@@ -137,7 +137,7 @@ export function useChatTurns({
 			// Reset the assistant slot in place so the row keeps its position.
 			setChatHistory((prev) =>
 				prev.map((msg, i) =>
-					i === assistantIndex ? ({ role: 'assistant', content: '' } as AgnoMessage) : msg
+					i === assistantIndex ? ({ role: 'assistant', content: '' } as ChatMessage) : msg
 				)
 			);
 
