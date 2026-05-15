@@ -2,15 +2,15 @@
  * Authenticated app segment layout: sidebar shell and main content region.
  */
 
-import { AppLayout } from '@/components/app-layout';
+import { AppShell } from '@/features/app-shell/AppShell';
 
 /**
- * Wraps `(app)/*` routes with the persistent {@link AppLayout} chrome.
+ * Wraps `(app)/*` routes with the persistent {@link AppShell} chrome.
  */
-export default function AppLayoutWrapper({
+export default function AppShellWrapper({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
-	return <AppLayout>{children}</AppLayout>;
+	return <AppShell>{children}</AppShell>;
 }

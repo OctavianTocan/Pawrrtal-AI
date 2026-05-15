@@ -2,7 +2,7 @@
  * Tasks route (`/tasks`).
  *
  * Server component that mounts the client {@link TasksContainer} inside the
- * `(app)` route group's existing `AppLayout` chrome. All state, URL parsing,
+ * `(app)` route group's existing `AppShell` chrome. All state, URL parsing,
  * and mock-data lookup happens in the container — this file is purely an
  * entry point so the route has a stable boundary.
  *
