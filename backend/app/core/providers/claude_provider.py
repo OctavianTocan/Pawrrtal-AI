@@ -60,6 +60,7 @@ from app.core.agent_loop.types import AgentTool, PermissionCheckFn
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _DEFAULT_SYSTEM_PROMPT,
 )
+from app.core.config import settings as _settings
 from app.core.keys import resolve_api_key
 
 from ._claude_tool_bridge import (
@@ -362,6 +363,14 @@ class ClaudeLLM:
             # Don't inherit user/project filesystem settings on a server.
             "setting_sources": [],
         }
+        # Per-request cost cap (PR 04). The Claude SDK enforces this
+        # natively — when the agent burns past ``max_budget_usd`` mid-turn,
+        # the SDK terminates with a ``ResultMessage(is_error=True,
+        # subtype="error_max_budget")``. Zero / negative disables (the
+        # SDK treats it as unlimited), so a deployment that doesn't want
+        # the cap can leave ``cost_max_per_request_usd=0``.
+        if _settings.cost_tracker_enabled and _settings.cost_max_per_request_usd > 0:
+            kwargs["max_budget_usd"] = _settings.cost_max_per_request_usd
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
             # ``can_use_tool`` is the SDK's per-call permission hook.

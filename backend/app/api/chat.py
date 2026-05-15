@@ -21,11 +21,20 @@ from app.channels.base import ChannelMessage
 from app.core.agent_loop.types import PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.config import settings
+from app.core.governance.cost_tracker import (
+    CostBudget,
+    PostgresCostLedger,
+    per_request_reservation_usd,
+    record_turn_cost,
+)
 from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
 )
 from app.core.providers import StreamEvent, default_model, resolve_llm
+from app.core.providers.catalog import find as find_catalog_entry
+from app.core.providers.model_id import parse_model_id
 from app.core.request_logging import get_request_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.core.tools.artifact_agent import (
@@ -112,6 +121,116 @@ def _maybe_artifact_event(event: StreamEvent) -> StreamEvent | None:
             # this artifact to the matching tool-call slot if it wants to.
             "tool_use_id": event.get("tool_use_id", ""),
         },
+    )
+
+
+async def _enforce_cost_budget(
+    *,
+    user_id: object,
+    session: AsyncSession,
+    rid: str,
+) -> None:
+    """Pre-flight per-user cost cap.
+
+    Called at the top of the chat handler so a denied request never
+    pays for tool composition or provider resolution.  Fails OPEN on
+    DB errors — the gate is a soft control and the Claude SDK's
+    per-request ``max_budget_usd`` still bounds the worst case.
+    """
+    if not settings.cost_tracker_enabled:
+        return
+    if settings.cost_max_per_user_daily_usd <= 0:
+        return
+
+    budget = CostBudget(
+        max_per_request_usd=float(settings.cost_max_per_request_usd),
+        max_per_user_window_usd=float(settings.cost_max_per_user_daily_usd),
+        window_hours=int(settings.cost_reset_window_hours),
+    )
+    ledger = PostgresCostLedger(session=session)
+    try:
+        cumulative = await ledger.cumulative_window_usd(
+            user_id=user_id,  # type: ignore[arg-type]
+            window_hours=budget.window_hours,
+        )
+    except Exception:
+        logger.exception("CHAT_COST_LOOKUP_FAILED rid=%s user_id=%s", rid, user_id)
+        return
+    reservation = per_request_reservation_usd(budget)
+    if cumulative + reservation <= budget.max_per_user_window_usd:
+        return
+    remaining = max(0.0, budget.max_per_user_window_usd - cumulative)
+    logger.info(
+        "CHAT_COST_DENIED rid=%s user_id=%s cumulative=%.4f limit=%.4f window_hours=%d",
+        rid,
+        user_id,
+        cumulative,
+        budget.max_per_user_window_usd,
+        budget.window_hours,
+    )
+    raise HTTPException(
+        status_code=402,
+        detail={
+            "message": (
+                f"Cost budget exhausted: ${cumulative:.4f} of "
+                f"${budget.max_per_user_window_usd:.2f} used in the last "
+                f"{budget.window_hours} hours."
+            ),
+            "remaining_usd": round(remaining, 4),
+            "current_usd": round(cumulative, 4),
+            "limit_usd": budget.max_per_user_window_usd,
+            "window_hours": budget.window_hours,
+        },
+    )
+
+
+async def _record_chat_turn_cost(
+    *,
+    session: AsyncSession,
+    user_id: object,
+    conversation_id: object,
+    model_id: str,
+    surface: str,
+    aggregator: ChatTurnAggregator,
+) -> None:
+    """Append the turn's spend to ``cost_ledger``.
+
+    No-op when cost tracking is disabled or the aggregator saw zero
+    usage events (early failures, errors before the terminal turn).
+    Catches and logs DB errors so a ledger write failure never leaves
+    the assistant row unpersisted — the message persist commits in
+    the same transaction, and skipping the ledger insert is the
+    lesser harm than orphaning the message.
+    """
+    if not settings.cost_tracker_enabled:
+        return
+    if (
+        aggregator.total_input_tokens <= 0
+        and aggregator.total_output_tokens <= 0
+        and aggregator.total_cost_usd <= 0
+    ):
+        return
+    try:
+        parsed = parse_model_id(model_id)
+    except Exception:
+        provider_slug = "unknown"
+    else:
+        provider_slug = parsed.host.value
+        # Catalog lookup is informational — used by reporting; not
+        # required for ledger insertion.
+        find_catalog_entry(parsed)
+
+    ledger = PostgresCostLedger(session=session)
+    await record_turn_cost(
+        ledger,
+        user_id=user_id,  # type: ignore[arg-type]
+        conversation_id=conversation_id,  # type: ignore[arg-type]
+        provider=provider_slug,
+        model_id=model_id,
+        input_tokens=aggregator.total_input_tokens,
+        output_tokens=aggregator.total_output_tokens,
+        cost_usd=aggregator.total_cost_usd,
+        surface=surface,
     )
 
 
@@ -268,6 +387,20 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                 status_code=412,
                 detail="Workspace directory is missing on disk.  Re-run onboarding.",
             )
+        # Pre-flight per-user cost gate (PR 04).  Refuses with HTTP
+        # 402 when the user's rolling-window spend + a small reservation
+        # would exceed ``cost_max_per_user_daily_usd``.  This sits
+        # *after* the workspace gate (so an onboarding-incomplete user
+        # never sees a confusing 402) and *before* tool composition /
+        # provider resolution (so a denied request is cheap).  The
+        # Claude SDK enforces the per-request cap natively via
+        # ``max_budget_usd``; this gate enforces the per-user cap.
+        await _enforce_cost_budget(
+            user_id=user.id,
+            session=session,
+            rid=rid,
+        )
+
         # Per-turn tool composition lives in `app.core.agent_tools` —
         # the chat router only decides *that* the agent gets tools,
         # not *which* (that's the builder's job, and where future
@@ -416,6 +549,20 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                             persist_session,
                             message_id=assistant_message_id,
                             **snapshot,
+                        )
+                        # Cost ledger write (PR 04). Same session as the
+                        # message persist so a failed commit leaves no
+                        # orphaned ledger row. Fold the aggregator's
+                        # totals — providers emit one ``usage`` event
+                        # per turn; the aggregator sums when there are
+                        # several within one ``stream()`` call.
+                        await _record_chat_turn_cost(
+                            session=persist_session,
+                            user_id=user.id,
+                            conversation_id=request.conversation_id,
+                            model_id=model_id,
+                            surface=surface,
+                            aggregator=aggregator,
                         )
                         await persist_session.commit()
                 except Exception:
