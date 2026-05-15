@@ -29,6 +29,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.50b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
     "opentelemetry-instrumentation-logging>=0.50b0",
+    "markitdown[all]>=0.1.1",
 ]
 
 # Optional voice transcription backends (PR 14). The ``api/stt.py``
@@ -201,7 +202,7 @@ disallow_untyped_defs = false  # test fixtures are fine without explicit types
 
 [[tool.mypy.overrides]]
 # Third-party packages without complete type stubs.
-module = ["sqlalchemy_utils.*", "mcp.*"]
+module = ["sqlalchemy_utils.*", "mcp.*", "markitdown.*"]
 ignore_missing_imports = true
 
 # --- bandit: security scanner ------------------------------------------------
