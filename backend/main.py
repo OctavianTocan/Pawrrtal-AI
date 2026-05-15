@@ -28,6 +28,8 @@ from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.event_bus import EventBus
+from app.core.event_bus.global_bus import set_event_bus
 from app.core.middleware import BackendApiKeyMiddleware
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
@@ -60,6 +62,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
+    # PR 10: spin up the event bus before any request can fire so the
+    # consumer task is ready when the chat router or Telegram dispatcher
+    # publishes the first ``TurnStartedEvent``.  Stashed on
+    # ``app.state`` for handlers that want to publish from inside a route.
+    event_bus = EventBus()
+    await event_bus.start()
+    app.state.event_bus = event_bus
+    set_event_bus(event_bus)
     # Bring the Telegram channel up alongside the HTTP server when a bot
     # token is configured. The context manager yields None and is a no-op
     # when the channel is disabled, so this stays safe for stripped-down
@@ -70,6 +80,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         try:
             yield
         finally:
+            set_event_bus(None)
+            await event_bus.stop()
             shutdown_tracing()
 
 

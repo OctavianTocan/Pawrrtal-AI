@@ -15,6 +15,7 @@ from opentelemetry import trace as _otel_trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api._chat_cost_budget import enforce_cost_budget
+from app.api._chat_events import publish_turn_started
 from app.api._chat_permissions import build_chat_permission_check
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
@@ -332,6 +333,16 @@ def get_chat_router() -> APIRouter:
             },
         )
         hooks: list[EventHook] = [_artifact_hook, _drain_send_queue]
+
+        # PR 10: announce the turn so subscribers (audit, metrics,
+        # webhook delivery) can react.  Fire-and-forget via the global
+        # bus accessor; no-op when the bus is unset.
+        await publish_turn_started(
+            user_id=user.id,
+            conversation_id=request.conversation_id,
+            surface=surface,
+            model_id=model_id,
+        )
 
         async def event_stream() -> AsyncGenerator[bytes]:
             """Yield channel-encoded bytes from the shared turn runner."""
