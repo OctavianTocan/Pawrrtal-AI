@@ -26,14 +26,19 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.channels import resolve_channel
 from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, make_telegram_sender
 from app.channels.turn_runner import ChatTurnInput, run_turn
+from app.core.agent_loop.types import PermissionCheckFn, PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
 from app.core.config import settings
+from app.core.governance.permissions import (
+    PermissionContext,
+    build_default_permission_check,
+)
 from app.core.providers import resolve_llm
 from app.core.providers.base import AILLM
 from app.core.providers.catalog import default_model, require_known
@@ -121,6 +126,43 @@ async def _resolve_provider_with_auto_clear(
     return provider, None
 
 
+def _build_permission_check(
+    context: TelegramTurnContext,
+    workspace_root: Path | None,
+) -> PermissionCheckFn | None:
+    """Return a permission gate bound to this turn's user / workspace.
+
+    The Telegram path mirrors the chat router's wire-up: a per-request
+    :class:`PermissionContext` is fed into
+    :func:`build_default_permission_check` and adapted to the
+    cross-provider ``(tool_name, arguments)`` signature so the loop's
+    permission seam never sees Telegram-specific state.
+
+    Returns ``None`` when no workspace was supplied — the gate has
+    nothing to anchor file / bash boundary checks against, so it stays
+    a no-op rather than denying every tool call.
+    """
+    if workspace_root is None:
+        return None
+    permission_context = PermissionContext(
+        user_id=str(context.nexus_user_id),
+        workspace_root=workspace_root,
+        conversation_id=str(context.conversation_id),
+        surface=SURFACE_TELEGRAM,
+    )
+    gate = build_default_permission_check()
+
+    async def _permission_check(tool_name: str, arguments: dict[str, Any]) -> PermissionCheckResult:
+        decision = await gate(tool_name, arguments, permission_context)
+        return PermissionCheckResult(
+            allow=decision.allow,
+            reason=decision.reason,
+            violation_type=decision.violation_type,
+        )
+
+    return _permission_check
+
+
 async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> None:
     """Drive the LLM streaming pipeline for one Telegram turn.
 
@@ -183,6 +225,10 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
         channel_message=channel_message,
         workspace_root=Path(workspace.path) if workspace is not None else None,
         tools=agent_tools,
+        permission_check=_build_permission_check(
+            context,
+            Path(workspace.path) if workspace is not None else None,
+        ),
         log_tag="TELEGRAM",
         log_extras={"chat_id": message.chat.id},
     )

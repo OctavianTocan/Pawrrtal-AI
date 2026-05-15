@@ -25,7 +25,7 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.agent_loop.safety_factory import safety_from_settings
-from app.core.agent_loop.types import TextContent, ToolCallContent
+from app.core.agent_loop.types import PermissionCheckFn, TextContent, ToolCallContent
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
@@ -263,6 +263,7 @@ class GeminiLLM:
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
         reasoning_effort: ReasoningEffort | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
 
@@ -280,6 +281,10 @@ class GeminiLLM:
                 bare unit test or direct script call still works.
             reasoning_effort: Accepted for protocol parity. Gemini Flash
                 ignores this UI knob for now.
+            permission_check: Optional cross-provider ``can_use_tool`` gate
+                (PR 03b).  Threaded straight into ``AgentLoopConfig`` so the
+                loop's tool dispatch consults it before every tool execution.
+                ``None`` (the default) preserves the previous behaviour.
         """
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
@@ -315,6 +320,7 @@ class GeminiLLM:
         config = AgentLoopConfig(
             convert_to_llm=_identity_convert,
             safety=safety_from_settings(settings),
+            permission_check=permission_check,
         )
 
         try:
