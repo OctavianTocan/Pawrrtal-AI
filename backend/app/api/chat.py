@@ -25,6 +25,7 @@ from app.core.governance.permissions import (
     PermissionContext,
     build_default_permission_check,
 )
+from app.core.governance.workspace_context import load_workspace_context
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
 from app.core.tools.artifact_agent import (
@@ -299,11 +300,15 @@ def get_chat_router() -> APIRouter:
         # context never leaks into the agent loop.  Both providers consume
         # the same closure — Claude via the SDK's ``can_use_tool`` hook,
         # Gemini via ``AgentLoopConfig.permission_check``.
+        # PR 06 — workspace context drives ``enabled_tools`` so the gate
+        # respects ``.claude/settings.json`` allowlists.
+        workspace_ctx = load_workspace_context(root)
         permission_context = PermissionContext(
             user_id=str(user.id),
             workspace_root=root,
             conversation_id=str(request.conversation_id),
             surface=surface,
+            enabled_tools=workspace_ctx.enabled_tools,
         )
         _gate = build_default_permission_check()
 

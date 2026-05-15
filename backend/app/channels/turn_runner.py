@@ -19,6 +19,7 @@ from app.core.governance.cost_tracker import (
     PostgresCostLedger,
     record_turn_cost,
 )
+from app.core.governance.workspace_context import load_workspace_context
 from app.core.providers.model_id import parse_model_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.crud.chat_message import (
@@ -180,9 +181,20 @@ async def _turn_session(turn_input: ChatTurnInput) -> AsyncIterator[AsyncSession
 
 
 def _workspace_system_prompt(workspace_root: Path | None) -> str | None:
-    """Load workspace prompt files when a workspace root is available."""
+    """Load workspace prompt files when a workspace root is available.
+
+    PR 06 — uses :func:`load_workspace_context` so SOUL.md / AGENTS.md /
+    CLAUDE.md and ``.claude/skills/`` are merged into one provider-
+    neutral system prompt. Falls back to the legacy
+    :func:`assemble_workspace_prompt` builder when WorkspaceContext is
+    disabled or returns nothing so existing deployments don't lose
+    their AGENTS.md content.
+    """
     if workspace_root is None:
         return None
+    workspace_ctx = load_workspace_context(workspace_root)
+    if workspace_ctx.system_prompt is not None:
+        return workspace_ctx.system_prompt
     return assemble_workspace_prompt(workspace_root)
 
 

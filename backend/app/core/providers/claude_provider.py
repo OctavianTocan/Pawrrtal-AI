@@ -424,14 +424,22 @@ class ClaudeLLM:
         # AGENTS.md loader) wins over ``self._config.system_prompt``.
         effective_system_prompt = system_prompt or self._config.system_prompt
 
+        # PR 06: when the cross-provider WorkspaceContext loader is
+        # enabled, flip `setting_sources` to ``['project']`` so the
+        # Claude SDK reads CLAUDE.md / .claude/settings.json natively
+        # in addition to our injected system prompt.  Defence in
+        # depth — both surfaces agree on the same source files.
+        # The default stays ``[]`` (full isolation) so a deployment
+        # that hasn't opted into WorkspaceContext sees no behaviour
+        # change.
+        setting_sources: list[str] = ["project"] if _settings.workspace_context_enabled else []
         kwargs: dict[str, Any] = {
             "model": _resolve_sdk_model(self._model_id),
             "tools": local_tools,
             "max_turns": effective_max_turns,
             "permission_mode": self._config.permission_mode,
             "system_prompt": effective_system_prompt,
-            # Don't inherit user/project filesystem settings on a server.
-            "setting_sources": [],
+            "setting_sources": setting_sources,
         }
         if reasoning_effort is not None:
             kwargs["effort"] = "max" if reasoning_effort == "extra-high" else reasoning_effort

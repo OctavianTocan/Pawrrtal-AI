@@ -395,7 +395,12 @@ class TestProviderOptions:
         assert captured, "query() must be invoked exactly once"
         options = captured[0]
         assert options.tools == []
-        assert options.setting_sources == []
+        # PR 06: when ``workspace_context_enabled`` (default True), the
+        # provider opts into the SDK's ``project`` setting source so a
+        # workspace's CLAUDE.md / .claude/settings.json is read by the
+        # SDK natively (defense in depth alongside our system-prompt
+        # injection).  Disabled deployments still see ``[]``.
+        assert options.setting_sources == ["project"]
         assert options.permission_mode == "default"
         assert options.max_turns == 1
         # Default falls back to the shared `DEFAULT_AGENT_SYSTEM_PROMPT`
