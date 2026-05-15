@@ -397,3 +397,23 @@ class WorkspaceFileWrite(BaseModel):
     """Payload for writing a workspace file."""
 
     content: str
+
+
+# --- Governance + ops platform schemas ---------------------------------------
+#
+# Implementations live in :mod:`app.governance_schemas` to keep this
+# file under the project's 500-line budget. Re-exported here so
+# existing imports (``from app.schemas import AuditEventRead``) keep
+# working.
+
+from .governance_schemas import (  # noqa: E402,F401
+    DEFAULT_GOVERNANCE_PAGE_SIZE,
+    MAX_GOVERNANCE_PAGE_SIZE,
+    AuditEventRead,
+    CostLedgerRead,
+    CostSummaryRead,
+    ScheduledJobCreate,
+    ScheduledJobRead,
+    ScheduledJobUpdate,
+    WebhookEventRead,
+)

@@ -10,6 +10,7 @@ dependencies = [
     "alembic>=1.13.0",
     "aiosqlite>=0.22.1",
     "anyio>=4.0.0",
+    "apscheduler>=3.10.0",
     "claude-agent-sdk",
     "fastapi-users[sqlalchemy]>=15.0.3",
     "fastapi[standard]>=0.136.0",
@@ -20,6 +21,7 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy-utils>=0.42.1",
+    "structlog>=24.0.0",
     "opentelemetry-api>=1.29.0",
     "opentelemetry-sdk>=1.29.0",
     "opentelemetry-exporter-otlp-proto-http>=1.29.0",
@@ -27,6 +29,16 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.50b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
     "opentelemetry-instrumentation-logging>=0.50b0",
+]
+
+# Optional voice transcription backends (PR 14). The ``api/stt.py``
+# xAI proxy is in the core dependencies; these are needed only when
+# ``VOICE_PROVIDER`` is ``mistral`` or ``openai``. Local whisper.cpp
+# uses subprocess calls and needs no Python package.
+[project.optional-dependencies]
+voice = [
+    "mistralai>=1.0.0",
+    "openai>=1.0.0",
 ]
 
 [dependency-groups]

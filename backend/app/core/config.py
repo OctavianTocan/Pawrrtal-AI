@@ -179,6 +179,128 @@ class Settings(BaseSettings):
     # private deploys are never accidentally demo-shaped.
     demo_mode: bool = False
 
+    # ── Governance: cost tracking + audit log (PRs 02, 04) ───────────────
+    # When False, the cost middleware short-circuits and the per-turn
+    # ledger writes are skipped — useful for local dev and tests.
+    cost_tracker_enabled: bool = True
+    # Per-request hard cap forwarded to the Claude SDK as
+    # ``max_budget_usd``; the agent loop's pre-turn safety check mirrors
+    # it for Gemini. Zero disables (the SDK treats 0 as unlimited).
+    cost_max_per_request_usd: float = 1.0
+    # Per-user rolling window cap enforced by ``CostBudgetMiddleware``.
+    # Zero disables the user-level cap; the per-request cap still applies.
+    cost_max_per_user_daily_usd: float = 10.0
+    # Length of the rolling window (hours) used for the per-user cap.
+    cost_reset_window_hours: int = 24
+
+    # When False, the audit logger no-ops and the audit API returns 404.
+    # The dashboard query still works against historical rows.
+    audit_log_enabled: bool = True
+    # Retention for audit rows. The purge job runs from the scheduler
+    # lifespan (PR 12); zero disables the purge so rows live forever.
+    audit_log_retention_days: int = 90
+
+    # Master switch for the secret-redaction pass over log lines and
+    # persisted tool inputs (PR 02). Off only for adversarial test runs.
+    secret_redaction_enabled: bool = True
+
+    # ── Governance: Claude SDK options (PR 05) ───────────────────────────
+    # When True, the Claude provider passes the SDK's ``sandbox`` option
+    # to the bundled CLI subprocess. The CLI's macOS Seatbelt sandbox
+    # is the strongest containment for the agent's filesystem reach.
+    claude_sandbox_enabled: bool = False
+    # When True, Bash invocations are auto-allowed inside the sandbox.
+    # Pairs with the can_use_tool gate (PR 03) so we never auto-allow
+    # commands that escape the workspace.
+    claude_sandbox_auto_allow_bash: bool = True
+    # Comma-separated bash commands the SDK should exclude from the
+    # sandbox auto-allow list (e.g. ``sudo,ssh``). Parsed lazily so the
+    # env var stays a single-line string.
+    claude_sandbox_excluded_commands: str = "sudo,ssh,scp,rsync"
+
+    # ── Governance: retry-with-backoff (PR 05) ───────────────────────────
+    # Mirrors CCT's transient-error retry. Capped to keep a single turn
+    # from spending minutes on a flapping network.
+    claude_retry_max_attempts: int = 3
+    claude_retry_base_delay_seconds: float = 1.0
+    claude_retry_max_delay_seconds: float = 30.0
+    claude_retry_backoff_factor: float = 2.0
+
+    # ── Governance: workspace context (PR 06) ────────────────────────────
+    # When True, the chat router calls
+    # ``governance.workspace_context.load_workspace_context`` to read
+    # CLAUDE.md/AGENTS.md/SOUL.md + skills/ + settings.json and assemble
+    # the unified system prompt + tool allowlist.
+    workspace_context_enabled: bool = True
+    # Workspace-relative path to the skills directory. Each subdirectory
+    # is expected to contain a ``SKILL.md`` file.
+    workspace_skills_dir_name: str = ".claude/skills"
+    # Workspace-relative path to the Claude Code-compatible settings
+    # file. When present, ``permissions.allow``/``deny`` shape the
+    # ``can_use_tool`` gate.
+    workspace_settings_filename: str = ".claude/settings.json"
+
+    # ── Ops platform: webhooks (PR 11) ───────────────────────────────────
+    # When False the POST /webhooks routes return 503 with a clear
+    # "not configured" message. Setting either secret to a non-empty
+    # value implicitly enables the matching provider.
+    webhook_api_enabled: bool = False
+    # Shared bearer token for non-GitHub providers.
+    webhook_api_secret: str = ""
+    # HMAC-SHA256 shared secret for GitHub deliveries.
+    github_webhook_secret: str = ""
+
+    # ── Ops platform: scheduler (PR 12) ──────────────────────────────────
+    # When False the scheduler lifespan task never starts; the API
+    # routes still serve historical job rows but disable mutate verbs.
+    scheduler_enabled: bool = False
+    # When True, APScheduler uses ``SQLAlchemyJobStore`` against the
+    # configured database. When False, jobs live in memory only and are
+    # lost on restart (fine for tests).
+    scheduler_persistent_jobstore: bool = True
+
+    # ── Telegram polish (PR 07) ──────────────────────────────────────────
+    # Default verbose level for new Telegram conversations.
+    # 0 = quiet, 1 = normal (tool names live), 2 = detailed (+ thinking).
+    telegram_verbose_default: Literal[0, 1, 2] = 1
+    # How often the persistent typing indicator is refreshed. Telegram
+    # auto-clears typing after ~5 s so the refresh must be faster.
+    telegram_typing_refresh_seconds: float = 2.5
+    # When True, the Telegram channel uses Bot API 9.3+ ``sendMessageDraft``
+    # for animated streaming. Falls back to ``editMessageText`` when
+    # aiogram doesn't expose the binding.
+    telegram_use_draft_streaming: bool = False
+
+    # ── Voice transcription (PR 14) ──────────────────────────────────────
+    # Selects which STT backend the voice handler routes to. The
+    # historical ``xai`` value still works — the existing
+    # ``api/stt.py`` proxy is kept as one option among many.
+    voice_provider: Literal["xai", "mistral", "openai", "local"] = "xai"
+    voice_mistral_api_key: str = ""
+    voice_openai_api_key: str = ""
+    # When ``voice_provider == "local"``: path to the whisper.cpp binary
+    # and the GGML model file. Both auto-detected from PATH /
+    # ``~/.cache/whisper-cpp/`` when left empty.
+    voice_whisper_cpp_binary: str = ""
+    voice_whisper_cpp_model: str = "base"
+    # Maximum voice file size accepted, in MB.
+    voice_max_size_mb: int = 25
+
+    @property
+    def claude_sandbox_excluded_commands_list(self) -> list[str]:
+        """Parsed view of ``claude_sandbox_excluded_commands``."""
+        if not self.claude_sandbox_excluded_commands:
+            return []
+        return [
+            cmd.strip() for cmd in self.claude_sandbox_excluded_commands.split(",") if cmd.strip()
+        ]
+
+    @property
+    def voice_max_size_bytes(self) -> int:
+        """Voice size cap in bytes (the handler validates against this)."""
+        bytes_per_mb = 1024 * 1024
+        return self.voice_max_size_mb * bytes_per_mb
+
     @field_validator("telegram_bot_username", mode="before")
     @classmethod
     def _strip_telegram_at_prefix(cls, value: object) -> object:

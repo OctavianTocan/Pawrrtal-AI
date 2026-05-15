@@ -5,7 +5,7 @@ at import time. All other domain models are defined here.
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -14,6 +14,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
 from .db import Base
+
+
+def _utcnow() -> datetime:
+    """Timezone-aware UTC now.
+
+    ``datetime.utcnow()`` is deprecated in Python 3.13 (returns a naive
+    datetime that lies about its timezone). Centralised so every model
+    default uses the same callable rather than re-importing UTC at the
+    column site.
+    """
+    return datetime.now(UTC)
 
 
 class SenderType(Enum):
@@ -65,6 +76,11 @@ class Conversation(Base):
     # Lifecycle marker for the auto-title feature:
     # NULL = not yet titled, "auto" = generated, "user" = user-edited.
     title_set_by: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Per-conversation verbose level for streaming UX (PR 07):
+    # 0 = quiet (only deltas + errors), 1 = normal (+ tool_use names),
+    # 2 = detailed (+ thinking + tool inputs). NULL inherits
+    # settings.telegram_verbose_default (or 1 if unset).
+    verbose_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class Project(Base):
@@ -296,4 +312,37 @@ class Workspace(Base):
     path: Mapped[str] = mapped_column(String(4096), nullable=False)
     # Exactly one workspace per user should be the default at any given time.
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+
+
+# ---------------------------------------------------------------------------
+# Governance + ops platform (PRs 01-12)
+#
+# Implementations live in :mod:`app.governance_models` to keep this file
+# under the project's 500-line budget. Re-exported here so existing
+# imports (`from app.models import AuditEvent`) keep working.
+# ---------------------------------------------------------------------------
+
+from .governance_models import (  # noqa: E402
+    AuditEvent,
+    CostLedger,
+    ScheduledJob,
+    WebhookEventRecord,
+)
+
+__all__ = [
+    "AuditEvent",
+    "ChannelBinding",
+    "ChannelLinkCode",
+    "ChatMessage",
+    "Conversation",
+    "CostLedger",
+    "Project",
+    "ScheduledJob",
+    "SenderType",
+    "UserAppearance",
+    "UserPersonalization",
+    "UserPreferences",
+    "WebhookEventRecord",
+    "Workspace",
+]
