@@ -108,6 +108,18 @@ export default function RootLayout({
 						defaultTheme: 'system',
 						enableSystem: true,
 					}}
+					search={{
+						// preload=false keeps the SearchDialog (and its Radix Dialog
+						// tree) out of the server render and initial hydration. With
+						// the default preload=true, fumadocs renders <Dialog
+						// open={false}> on every page; once Radix's `aria-hidden`
+						// package marks elements as `data-aria-hidden` (e.g. via a
+						// sibling dialog opening), the next hydration on a docs
+						// route surfaces an `aria-hidden` attribute mismatch on the
+						// SearchDialogFooter div. Mounting only on first invocation
+						// (Cmd/Ctrl+K) avoids the SSR/CSR divergence entirely.
+						preload: false,
+					}}
 				>
 					<Providers>{children}</Providers>
 					{process.env.NODE_ENV === 'development' && <Agentation />}
