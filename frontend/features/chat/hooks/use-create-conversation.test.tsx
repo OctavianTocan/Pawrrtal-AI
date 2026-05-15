@@ -57,6 +57,7 @@ describe('useCreateConversation', (): void => {
 					'content-type': 'application/json',
 				},
 				credentials: 'include',
+				cache: 'no-store',
 			}
 		);
 	});

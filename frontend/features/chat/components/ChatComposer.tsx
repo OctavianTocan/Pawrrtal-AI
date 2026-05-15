@@ -29,6 +29,15 @@ import {
 import { ConnectAppsStrip } from './ConnectAppsStrip';
 import { type ChatReasoningLevel, ModelSelectorPopover } from './ModelSelectorPopover';
 
+/**
+ * Discriminated state for the model-catalog request.
+ *
+ * Mirrors {@link import('../ChatView').CatalogStatus}; redeclared here so
+ * this component file has no dependency on the consumer module. Replaces
+ * the older independent `isCatalogLoading` + `isCatalogError` booleans.
+ */
+export type CatalogStatus = 'loading' | 'error' | 'ready';
+
 /** Props for the Codex-like chat composer island. */
 export type ChatComposerProps = {
 	/** The current message being composed by the user. */
@@ -37,10 +46,8 @@ export type ChatComposerProps = {
 	isLoading?: boolean;
 	/** Catalog entries from `useChatModels()` — passed down by the container. */
 	models: readonly ChatModelOption[];
-	/** True while the model catalog request is still in flight. */
-	isCatalogLoading?: boolean;
-	/** True when the model catalog request failed or returned invalid rows. */
-	isCatalogError?: boolean;
+	/** Discriminated catalog fetch state — see {@link CatalogStatus}. */
+	catalogStatus: CatalogStatus;
 	/** Selected chat model ID in canonical wire form (`host:vendor/model`). */
 	selectedModelId: string;
 	/** Selected reasoning level. */
@@ -171,8 +178,7 @@ function AnimatedComposerPlaceholder({
 interface ComposerSendClusterProps {
 	state: ComposerSendClusterState;
 	models: ChatComposerProps['models'];
-	isCatalogLoading: ChatComposerProps['isCatalogLoading'];
-	isCatalogError: ChatComposerProps['isCatalogError'];
+	catalogStatus: ChatComposerProps['catalogStatus'];
 	selectedModelId: ChatComposerProps['selectedModelId'];
 	selectedReasoning: ChatComposerProps['selectedReasoning'];
 	onSelectModel: ChatComposerProps['onSelectModel'];
@@ -198,8 +204,7 @@ interface ComposerSendClusterState {
 function ComposerSendCluster({
 	state,
 	models,
-	isCatalogLoading,
-	isCatalogError,
+	catalogStatus,
 	selectedModelId,
 	selectedReasoning,
 	onSelectModel,
@@ -217,8 +222,8 @@ function ComposerSendCluster({
 				selectedReasoning={selectedReasoning}
 				onSelectModel={onSelectModel}
 				onSelectReasoning={onSelectReasoning}
-				isError={isCatalogError}
-				isLoading={isCatalogLoading}
+				isError={catalogStatus === 'error'}
+				isLoading={catalogStatus === 'loading'}
 			/>
 			<ComposerTooltip
 				content={isTranscribing ? 'Transcribing...' : 'Click to dictate or hold ^M'}
@@ -268,8 +273,7 @@ export function ChatComposer({
 	message,
 	isLoading,
 	models,
-	isCatalogLoading,
-	isCatalogError,
+	catalogStatus,
 	selectedModelId,
 	selectedReasoning,
 	className,
@@ -417,8 +421,7 @@ export function ChatComposer({
 							isTranscribing,
 						}}
 						models={models}
-						isCatalogLoading={isCatalogLoading}
-						isCatalogError={isCatalogError}
+						catalogStatus={catalogStatus}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
 						onSelectModel={onSelectModel}

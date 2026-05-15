@@ -87,6 +87,7 @@ describe('useChat', (): void => {
 				Accept: 'text/event-stream',
 			},
 			credentials: 'include',
+			cache: 'no-store',
 		});
 	});
 
