@@ -233,3 +233,94 @@ def test_resolve_api_key_two_users_are_isolated(
 
     assert keys.resolve_api_key(uid_a, "EXA_API_KEY") == "user-a-exa"
     assert keys.resolve_api_key(uid_b, "EXA_API_KEY") == "gateway-exa"
+
+
+# ---------------------------------------------------------------------------
+# Settings.allowed_emails_set — new PR property
+# ---------------------------------------------------------------------------
+
+
+def test_allowed_emails_set_empty_string_returns_empty_frozenset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty allowed_emails string yields an empty frozenset (open mode)."""
+    monkeypatch.setattr(settings, "allowed_emails", "")
+    assert settings.allowed_emails_set == frozenset()
+
+
+def test_allowed_emails_set_single_email(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A single email address is returned as a one-element frozenset."""
+    monkeypatch.setattr(settings, "allowed_emails", "alice@example.com")
+    result = settings.allowed_emails_set
+    assert result == frozenset({"alice@example.com"})
+
+
+def test_allowed_emails_set_multiple_emails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Comma-separated emails are each included in the set."""
+    monkeypatch.setattr(settings, "allowed_emails", "alice@example.com,bob@example.com")
+    result = settings.allowed_emails_set
+    assert result == frozenset({"alice@example.com", "bob@example.com"})
+
+
+def test_allowed_emails_set_lowercases_uppercase_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Upper-case email addresses are normalised to lowercase."""
+    monkeypatch.setattr(settings, "allowed_emails", "Alice@Example.COM")
+    result = settings.allowed_emails_set
+    assert "alice@example.com" in result
+
+
+def test_allowed_emails_set_strips_whitespace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Whitespace around email addresses is stripped."""
+    monkeypatch.setattr(settings, "allowed_emails", "  alice@example.com , bob@example.com  ")
+    result = settings.allowed_emails_set
+    assert "alice@example.com" in result
+    assert "bob@example.com" in result
+
+
+def test_allowed_emails_set_filters_empty_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trailing commas or double commas don't produce empty-string entries."""
+    monkeypatch.setattr(settings, "allowed_emails", "alice@example.com,,")
+    result = settings.allowed_emails_set
+    assert "" not in result
+    assert len(result) == 1
+
+
+def test_allowed_emails_set_returns_frozenset_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The return type is always a frozenset (immutable for thread safety)."""
+    monkeypatch.setattr(settings, "allowed_emails", "a@b.com")
+    result = settings.allowed_emails_set
+    assert isinstance(result, frozenset)
+
+
+# ---------------------------------------------------------------------------
+# ReasoningEffort type — new PR addition
+# ---------------------------------------------------------------------------
+
+
+def test_reasoning_effort_is_exported_from_providers_package() -> None:
+    """ReasoningEffort is publicly accessible from app.core.providers."""
+    from app.core.providers import ReasoningEffort  # noqa: F401 (just checking importability)
+
+    assert ReasoningEffort is not None
+
+
+def test_reasoning_effort_valid_values() -> None:
+    """All four documented literal values are accepted by the type."""
+    from typing import get_args
+
+    from app.core.providers.base import ReasoningEffort
+
+    valid_values = get_args(ReasoningEffort)
+    assert set(valid_values) == {"low", "medium", "high", "extra-high"}

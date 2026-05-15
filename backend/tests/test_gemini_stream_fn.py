@@ -9,6 +9,8 @@ from ``safety_from_settings`` through ``agent_loop`` to the SSE output.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -312,3 +314,185 @@ async def test_gemini_provider_accumulates_tool_result_in_context(
 
     # Second call's message list includes the tool result.
     assert "toolResult" in second_call_roles
+
+
+# ---------------------------------------------------------------------------
+# _resolve_gemini_api_key — new PR helper
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_gemini_api_key_no_user_returns_settings_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With user_id=None, the function returns settings.google_api_key."""
+    from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+    monkeypatch.setattr("app.core.providers.gemini_provider.settings.google_api_key", "gw-key-123")
+    result = _resolve_gemini_api_key(None)
+    assert result == "gw-key-123"
+
+
+def test_resolve_gemini_api_key_user_with_no_override_returns_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With a user_id but no workspace override, resolve_api_key returns None → ''."""
+    from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+    uid = uuid4()
+    monkeypatch.setattr(
+        "app.core.providers.gemini_provider.resolve_api_key",
+        lambda user_id, key_name: None,
+    )
+    result = _resolve_gemini_api_key(uid)
+    assert result == ""
+
+
+def test_resolve_gemini_api_key_user_with_override_returns_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the user has a workspace override, that value is returned."""
+    from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+    uid = uuid4()
+    monkeypatch.setattr(
+        "app.core.providers.gemini_provider.resolve_api_key",
+        lambda user_id, key_name: "personal-gemini-key",
+    )
+    result = _resolve_gemini_api_key(uid)
+    assert result == "personal-gemini-key"
+
+
+# ---------------------------------------------------------------------------
+# _tool_calls_from_chunk — new PR helper
+# ---------------------------------------------------------------------------
+
+
+def _make_chunk(candidates: list | None) -> SimpleNamespace:
+    """Build a minimal fake Gemini streaming chunk."""
+    return SimpleNamespace(candidates=candidates)
+
+
+def _make_function_call_part(name: str, args: dict | None = None) -> SimpleNamespace:
+    """Build a fake Gemini Part with a function_call."""
+    fc = SimpleNamespace(name=name, args=args or {})
+    return SimpleNamespace(function_call=fc)
+
+
+def _make_text_part() -> SimpleNamespace:
+    """Build a fake Gemini Part without a function_call."""
+    return SimpleNamespace(function_call=None)
+
+
+def _make_candidate(parts: list) -> SimpleNamespace:
+    """Build a fake Gemini Candidate with parts."""
+    content = SimpleNamespace(parts=parts)
+    return SimpleNamespace(content=content)
+
+
+def test_tool_calls_from_chunk_no_candidates_returns_empty() -> None:
+    """A chunk with candidates=None returns an empty list."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    chunk = _make_chunk(None)
+    assert _tool_calls_from_chunk(chunk, 0) == []
+
+
+def test_tool_calls_from_chunk_empty_candidates_returns_empty() -> None:
+    """A chunk with candidates=[] returns an empty list."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    chunk = _make_chunk([])
+    assert _tool_calls_from_chunk(chunk, 0) == []
+
+
+def test_tool_calls_from_chunk_candidate_no_content_returns_empty() -> None:
+    """A candidate without content is skipped."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    candidate = SimpleNamespace(content=None)
+    chunk = _make_chunk([candidate])
+    assert _tool_calls_from_chunk(chunk, 0) == []
+
+
+def test_tool_calls_from_chunk_candidate_no_parts_returns_empty() -> None:
+    """A candidate with empty parts is skipped."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    candidate = SimpleNamespace(content=SimpleNamespace(parts=None))
+    chunk = _make_chunk([candidate])
+    assert _tool_calls_from_chunk(chunk, 0) == []
+
+
+def test_tool_calls_from_chunk_text_only_part_returns_empty() -> None:
+    """A chunk with only text parts (no function_call) returns an empty list."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    parts = [_make_text_part()]
+    chunk = _make_chunk([_make_candidate(parts)])
+    assert _tool_calls_from_chunk(chunk, 0) == []
+
+
+def test_tool_calls_from_chunk_single_function_call() -> None:
+    """A single function call part produces one entry with correct fields."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    parts = [_make_function_call_part("my_tool", {"key": "val"})]
+    chunk = _make_chunk([_make_candidate(parts)])
+    result = _tool_calls_from_chunk(chunk, 0)
+
+    assert len(result) == 1
+    assert result[0]["name"] == "my_tool"
+    assert result[0]["arguments"] == {"key": "val"}
+    assert result[0]["tool_call_id"] == "call-my_tool-0"
+
+
+def test_tool_calls_from_chunk_start_index_offsets_id() -> None:
+    """start_index shifts the numeric suffix in tool_call_id."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    parts = [_make_function_call_part("search")]
+    chunk = _make_chunk([_make_candidate(parts)])
+    result = _tool_calls_from_chunk(chunk, start_index=5)
+
+    assert result[0]["tool_call_id"] == "call-search-5"
+
+
+def test_tool_calls_from_chunk_multiple_parts_consecutive_ids() -> None:
+    """Multiple function-call parts in one candidate get consecutive IDs."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    parts = [
+        _make_function_call_part("tool_a", {"x": 1}),
+        _make_function_call_part("tool_b", {"y": 2}),
+    ]
+    chunk = _make_chunk([_make_candidate(parts)])
+    result = _tool_calls_from_chunk(chunk, start_index=0)
+
+    assert len(result) == 2
+    assert result[0]["tool_call_id"] == "call-tool_a-0"
+    assert result[1]["tool_call_id"] == "call-tool_b-1"
+
+
+def test_tool_calls_from_chunk_no_args_defaults_to_empty_dict() -> None:
+    """A function call with no args gets an empty dict as arguments."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    fc = SimpleNamespace(name="no_args_tool", args=None)
+    part = SimpleNamespace(function_call=fc)
+    chunk = _make_chunk([_make_candidate([part])])
+    result = _tool_calls_from_chunk(chunk, 0)
+
+    assert result[0]["arguments"] == {}
+
+
+def test_tool_calls_from_chunk_none_name_defaults_to_empty_string() -> None:
+    """A function call with name=None gets '' as the name."""
+    from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+    fc = SimpleNamespace(name=None, args={})
+    part = SimpleNamespace(function_call=fc)
+    chunk = _make_chunk([_make_candidate([part])])
+    result = _tool_calls_from_chunk(chunk, 0)
+
+    assert result[0]["name"] == ""
+    assert result[0]["tool_call_id"] == "call--0"
