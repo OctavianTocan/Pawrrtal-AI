@@ -26,8 +26,8 @@ to ``await`` for no benefit.
 
 from __future__ import annotations
 
-from pathlib import Path
 import uuid
+from pathlib import Path
 
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
@@ -44,6 +44,7 @@ def build_agent_tools(
     workspace_root: Path,
     user_id: uuid.UUID | None = None,
     send_fn: SendFn | None = None,
+    surface: str | None = None,
 ) -> list[AgentTool]:
     """Return the full ``AgentTool`` list for one chat turn.
 
@@ -67,6 +68,11 @@ def build_agent_tools(
             web path (via a per-request asyncio queue drained into the
             SSE stream) and the Telegram path supply one; the distinction
             is purely in how the callback delivers — not whether it exists.
+        surface: Optional channel surface ("web", "telegram", "electron").
+            When set to "telegram", PR 13's CCT-shaped capability tools
+            (``send_image_to_user`` / ``send_voice_to_user`` /
+            ``send_document_to_user``) are appended so a workspace
+            authored against CCT's MCP names runs unchanged here.
 
     Returns:
         A fresh list of :class:`AgentTool` ready to hand to a provider.
@@ -117,8 +123,18 @@ def build_agent_tools(
     # and Telegram (MIME-aware bot API calls).  The mechanism differs;
     # the tool contract is identical.
     if send_fn is not None:
-        tools.append(
-            make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn)
-        )
+        tools.append(make_send_message_tool(workspace_root=workspace_root, send_fn=send_fn))
+        # PR 13: when the surface is Telegram, also surface the
+        # CCT-shaped capability tools (``send_image_to_user`` etc.)
+        # so a workspace authored against CCT's MCP names runs
+        # unchanged here.  These are thin wrappers over the same
+        # ``SendFn``; the model gets a richer tool catalogue without
+        # the rest of the chat router learning about Telegram.
+        if surface == "telegram":
+            from app.core.tools.telegram_tools import (  # noqa: PLC0415 — local import keeps the cross-channel tool surface lazy
+                make_telegram_capability_tools,
+            )
+
+            tools.extend(make_telegram_capability_tools(send_fn))
 
     return tools

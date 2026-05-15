@@ -267,7 +267,12 @@ def get_chat_router() -> APIRouter:
                 event["mime"] = mime
             await _web_send_queue.put(event)
 
-        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
+        agent_tools = build_agent_tools(
+            workspace_root=root,
+            user_id=user.id,
+            send_fn=_web_send_fn,
+            surface=surface,
+        )
 
         def _artifact_hook(event: StreamEvent) -> list[StreamEvent]:
             extra = _maybe_artifact_event(event)
