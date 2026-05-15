@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -86,11 +86,10 @@ async def run_turn(
                 counter.value += 1
                 aggregator.apply(event)
                 yield event
-                for hook in hooks:
-                    for extra in hook(event):
-                        counter.value += 1
-                        aggregator.apply(extra)
-                        yield extra
+                for extra in _expand_hook_events(event, hooks):
+                    counter.value += 1
+                    aggregator.apply(extra)
+                    yield extra
         except Exception as exc:
             logger.exception(
                 "%s_STREAM_ERR conversation_id=%s after %d events",
@@ -116,6 +115,15 @@ async def run_turn(
             started_at=started_at,
             event_count=counter.value,
         )
+
+
+def _expand_hook_events(
+    event: StreamEvent,
+    hooks: list[EventHook],
+) -> Iterator[StreamEvent]:
+    """Yield extra events produced by each hook for the upstream event."""
+    for hook in hooks:
+        yield from hook(event)
 
 
 async def _load_history_and_persist(
