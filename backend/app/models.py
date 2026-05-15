@@ -13,7 +13,7 @@ from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Uui
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
-from .db import Base
+from app.db import Base
 
 
 class SenderType(Enum):
@@ -201,6 +201,15 @@ class ChannelBinding(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     # Created at timestamp.
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # The UUID of the active conversation from the conversation table, so we can make sure we always have a conversation for the channel, and thus we can even show it in the UI on the web app.
+    active_conversation_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("conversations.id", ondelete="SET NULL")
+    )
+    # Whether the Telegram chat has Topics (forum threads) enabled.
+    # TODO: This is not a great way to do this, because the topics can be turned on and off at any time, and we don't want to lose the conversation history for the channel.
+    has_topics_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
 
 class ChatMessage(Base):

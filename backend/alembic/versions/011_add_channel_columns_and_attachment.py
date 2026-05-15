@@ -1,13 +1,11 @@
 """add channel columns and attachment fields
 
-Adds three groups of new nullable / defaulted columns:
+Adds two groups of new nullable / defaulted columns:
 
-1. ``conversations``: topic routing (``telegram_thread_id``) and
-   auto-title lifecycle tracking (``origin_channel``, ``title_set_by``).
-2. ``channel_bindings``: optional active-conversation pointer
+1. ``channel_bindings``: optional active-conversation pointer
    (``active_conversation_id``) and topics-enabled flag
    (``has_topics_enabled``).
-3. ``chat_messages``: workspace-relative attachment path and its MIME
+2. ``chat_messages``: workspace-relative attachment path and its MIME
    type (``attachment``, ``attachment_mime``), needed by the
    ``send_message`` agent tool introduced in migration 011.
 
@@ -30,25 +28,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── conversations ─────────────────────────────────────────────────────
-    # Which channel spawned the conversation (e.g. "telegram", "web").
-    op.add_column(
-        "conversations",
-        sa.Column("origin_channel", sa.String(32), nullable=True),
-    )
-    # Telegram Bot API 9.3+ topic thread ID — NULL for non-topic DMs.
-    op.add_column(
-        "conversations",
-        sa.Column("telegram_thread_id", sa.Integer(), nullable=True),
-    )
-    # Who set the title: NULL = never set, "auto" = auto-generated,
-    # "user" = user edited.  The auto-title job checks for NULL and only
-    # fires once.
-    op.add_column(
-        "conversations",
-        sa.Column("title_set_by", sa.String(16), nullable=True),
-    )
-
     # ── channel_bindings ──────────────────────────────────────────────────
     # Pointer to the currently active conversation for non-topic DMs.
     # NULL until the first message creates a conversation.  ON DELETE SET
@@ -88,6 +67,3 @@ def downgrade() -> None:
     op.drop_column("chat_messages", "attachment")
     op.drop_column("channel_bindings", "has_topics_enabled")
     op.drop_column("channel_bindings", "active_conversation_id")
-    op.drop_column("conversations", "title_set_by")
-    op.drop_column("conversations", "telegram_thread_id")
-    op.drop_column("conversations", "origin_channel")
