@@ -25,6 +25,7 @@ the bus + agent handler split lives outside ``providers/``.
 """
 
 from app.core.event_bus.bus import Event, EventBus, EventHandler
+from app.core.event_bus.handlers import AgentHandler, NotificationService
 from app.core.event_bus.types import (
     AgentResponseEvent,
     ScheduledEvent,
@@ -34,10 +35,12 @@ from app.core.event_bus.types import (
 )
 
 __all__ = [
+    "AgentHandler",
     "AgentResponseEvent",
     "Event",
     "EventBus",
     "EventHandler",
+    "NotificationService",
     "ScheduledEvent",
     "TurnCompletedEvent",
     "TurnStartedEvent",

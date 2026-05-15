@@ -29,7 +29,7 @@ from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
-from app.core.event_bus import EventBus
+from app.core.event_bus import AgentHandler, EventBus, NotificationService
 from app.core.event_bus.global_bus import set_event_bus
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
@@ -89,6 +89,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # `app.state` so the webhook route can hand updates to aiogram.
     async with telegram_lifespan() as telegram_service:
         app.state.telegram_service = telegram_service
+        # Follow-on: register the agent + notification subscribers AFTER the
+        # Telegram service is up so the notification service has a live
+        # bot instance.  Both are no-ops when the relevant pieces are
+        # disabled (no bot → notifications skip; no default user → agent
+        # handler logs + skips).
+        agent_handler = AgentHandler()
+        agent_handler.register(event_bus)
+        notification_service = NotificationService(
+            telegram_bot=telegram_service.bot if telegram_service is not None else None
+        )
+        notification_service.register(event_bus)
         try:
             yield
         finally:
