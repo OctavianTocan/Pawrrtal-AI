@@ -264,6 +264,7 @@ class GeminiLLM:
         system_prompt: str | None = None,
         reasoning_effort: ReasoningEffort | None = None,
         permission_check: PermissionCheckFn | None = None,
+        images: list[dict[str, str]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Run the agent loop and translate AgentEvents → StreamEvents for the frontend.
 
@@ -285,7 +286,19 @@ class GeminiLLM:
                 (PR 03b).  Threaded straight into ``AgentLoopConfig`` so the
                 loop's tool dispatch consults it before every tool execution.
                 ``None`` (the default) preserves the previous behaviour.
+            images: Optional multimodal image inputs (PR 05 protocol
+                parity).  Accepted for ``AILLM`` protocol parity with
+                Claude; the Gemini-side wiring lands in PR 09 alongside
+                the frontend composer.  For now a non-empty list is
+                logged and ignored so callers can switch on it
+                conditionally without a runtime error.
         """
+        if images:
+            logger.debug(
+                "GEMINI_IMAGES_IGNORED conversation_id=%s count=%d",
+                conversation_id,
+                len(images),
+            )
         # AgentMessage is a union alias (not callable); construct the correct TypedDict by role.
         prior: list[AgentMessage] = []
         for m in history or []:
