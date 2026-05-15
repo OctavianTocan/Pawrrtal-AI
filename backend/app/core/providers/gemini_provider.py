@@ -105,10 +105,10 @@ def _build_gemini_contents(
     return contents
 
 
-def _resolve_gemini_api_key(user_id: uuid.UUID | None) -> str:
+def _resolve_gemini_api_key(workspace_id: uuid.UUID | None) -> str:
     """Resolve the Gemini API key for this request."""
-    if user_id is not None:
-        return resolve_api_key(user_id, "GEMINI_API_KEY") or ""
+    if workspace_id is not None:
+        return resolve_api_key(workspace_id, "GEMINI_API_KEY") or ""
     return settings.google_api_key
 
 
@@ -134,16 +134,16 @@ def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]
     return calls
 
 
-def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> StreamFn:
+def make_gemini_stream_fn(model_id: str, workspace_id: uuid.UUID | None = None) -> StreamFn:
     """Build a StreamFn backed by the google-genai SDK.
 
     Args:
         model_id: Gemini model identifier (e.g. ``"gemini-3.1-flash-lite-preview"``).
-        user_id: Authenticated user UUID, used to resolve a per-workspace
+        workspace_id: Active workspace UUID, used to resolve a per-workspace
             ``GEMINI_API_KEY`` override. When ``None`` the gateway-global
             ``settings.google_api_key`` is used directly, matching
-            ``ClaudeLLM``'s optional ``user_id`` contract for unauthenticated
-            background work (e.g. utility agents).
+            ``ClaudeLLM``'s optional ``workspace_id`` contract for
+            unauthenticated background work (e.g. utility agents).
 
     Returns:
         An async generator factory that yields ``LLMEvent``s. The generator
@@ -154,7 +154,7 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         messages: list[AgentMessage],
         tools: list[AgentTool],
     ) -> AsyncIterator[LLMEvent]:
-        client = genai.Client(api_key=_resolve_gemini_api_key(user_id))
+        client = genai.Client(api_key=_resolve_gemini_api_key(workspace_id))
         contents = _build_gemini_contents(messages)
         # ``GenerateContentConfig.tools`` is typed as the wider union
         # ``list[Tool | Callable | mcp.Tool | ClientSession] | None``;
@@ -241,18 +241,18 @@ class GeminiLLM:
     chat.py).  Tools are injected per-request via the AgentContext.
     """
 
-    def __init__(self, model_id: str, *, user_id: uuid.UUID | None = None) -> None:
+    def __init__(self, model_id: str, *, workspace_id: uuid.UUID | None = None) -> None:
         """Construct a Gemini provider.
 
         Args:
             model_id: Gemini model identifier.
-            user_id: Authenticated user UUID, optional. When supplied, a
-                per-workspace ``GEMINI_API_KEY`` override is honoured;
+            workspace_id: Active workspace UUID, optional. When supplied,
+                a per-workspace ``GEMINI_API_KEY`` override is honoured;
                 otherwise the gateway-global key is used. Optional to match
                 ``ClaudeLLM``'s contract for unauthenticated callers.
         """
         self._model_id = model_id
-        self._stream_fn = make_gemini_stream_fn(model_id, user_id)
+        self._stream_fn = make_gemini_stream_fn(model_id, workspace_id)
 
     async def stream(
         self,

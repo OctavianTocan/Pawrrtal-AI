@@ -226,8 +226,6 @@ def get_chat_router() -> APIRouter:
                 session=session,
             )
 
-        provider = resolve_llm(model_id, user_id=user.id)
-
         # Resolve the user's default workspace.  A workspace is created as
         # part of onboarding, so its absence means the user hasn't finished
         # that flow yet — the agent should not run at all in that state.
@@ -236,6 +234,10 @@ def get_chat_router() -> APIRouter:
         workspace_id, root = await _require_workspace(
             user_id=user.id, session=session, request_id=rid
         )
+
+        # Provider construction must happen *after* workspace resolution so
+        # workspace-scoped API-key overrides (Gemini/Claude) take effect.
+        provider = resolve_llm(model_id, workspace_id=workspace_id)
         # Per-turn tool composition lives in `app.core.agent_tools` —
         # the chat router only decides *that* the agent gets tools,
         # not *which* (that's the builder's job, and where future

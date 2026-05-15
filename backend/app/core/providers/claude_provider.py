@@ -174,7 +174,7 @@ class ClaudeLLM:
         model_id: str,
         *,
         config: ClaudeLLMConfig | None = None,
-        user_id: uuid.UUID | None = None,
+        workspace_id: uuid.UUID | None = None,
     ) -> None:
         """Construct a Claude provider bound to a specific model slug.
 
@@ -187,12 +187,13 @@ class ClaudeLLM:
             config: Optional Claude-specific config (OAuth token,
                 ``max_turns``, extra env). Defaults are read by the
                 factory from ``settings``.
-            user_id: App-level user UUID. When set, ``stream()`` resolves
-                per-workspace API-key overrides for this user.
+            workspace_id: Active workspace UUID. When set, ``stream()``
+                resolves per-workspace API-key overrides through
+                :func:`app.core.keys.resolve_api_key`.
         """
         self._model_id = model_id
         self._config = config or ClaudeLLMConfig()
-        self._user_id = user_id
+        self._workspace_id = workspace_id
 
     async def stream(
         self,
@@ -387,8 +388,8 @@ class ClaudeLLM:
     def _build_env(self) -> dict[str, str]:
         """Compose the env dict forwarded to the CLI subprocess."""
         env: dict[str, str] = dict(self._config.extra_env)
-        if self._user_id:
-            token = resolve_api_key(self._user_id, "CLAUDE_CODE_OAUTH_TOKEN")
+        if self._workspace_id:
+            token = resolve_api_key(self._workspace_id, "CLAUDE_CODE_OAUTH_TOKEN")
             if token:
                 env["CLAUDE_CODE_OAUTH_TOKEN"] = token
         elif self._config.oauth_token:

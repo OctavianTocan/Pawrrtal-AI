@@ -538,7 +538,7 @@ class TestResolveProviderWithAutoClear:
                 new=fake_session_maker,
             ),
         ):
-            provider, warning = await _resolve_provider_with_auto_clear(context)
+            provider, warning = await _resolve_provider_with_auto_clear(context, workspace_id=None)
 
         # Warning was produced and mentions the bad ID + the default.
         assert warning is not None
@@ -582,7 +582,7 @@ class TestResolveProviderWithAutoClear:
                 new=update_mock,
             ),
         ):
-            provider, warning = await _resolve_provider_with_auto_clear(context)
+            provider, warning = await _resolve_provider_with_auto_clear(context, workspace_id=None)
 
         # Clean path: no warning, no clear.
         assert warning is None

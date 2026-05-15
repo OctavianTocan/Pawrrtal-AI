@@ -98,12 +98,12 @@ def build_agent_tools(
     # so a single call is sufficient. The unauthenticated fallback (no
     # `user_id` — e.g. background jobs) reads `settings.exa_api_key`
     # directly.
-    if user_id is not None:
-        exa_key = resolve_api_key(user_id, "EXA_API_KEY")
+    if workspace_id is not None:
+        exa_key = resolve_api_key(workspace_id, "EXA_API_KEY")
     else:
         exa_key = settings.exa_api_key or None
     if exa_key:
-        tools.append(make_exa_search_tool(user_id=user_id))
+        tools.append(make_exa_search_tool(workspace_id=workspace_id))
 
     # Artifact rendering.  Always present — the wire shape is purely
     # structural and the catalog of safe components is enforced on the
@@ -115,12 +115,12 @@ def build_agent_tools(
     # Image generation — pure tool: generates PNG, saves to workspace,
     # returns path.  The agent decides whether to send it via send_message.
     # Capability-gated on OPENAI_CODEX_OAUTH_TOKEN being resolvable.
-    if user_id is not None:
-        codex_token = resolve_api_key(user_id, "OPENAI_CODEX_OAUTH_TOKEN")
+    if workspace_id is not None:
+        codex_token = resolve_api_key(workspace_id, "OPENAI_CODEX_OAUTH_TOKEN")
     else:
         codex_token = None
     if codex_token:
-        tools.append(make_image_gen_tool(workspace_root=workspace_root, user_id=user_id))
+        tools.append(make_image_gen_tool(workspace_root=workspace_root, workspace_id=workspace_id))
 
     # Channel delivery — present for both web (asyncio-queue SSE drain)
     # and Telegram (MIME-aware bot API calls).  The mechanism differs;
