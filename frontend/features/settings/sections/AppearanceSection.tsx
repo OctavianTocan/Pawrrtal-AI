@@ -20,7 +20,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
-import { WhimsySettingsCard } from '@/features/whimsy';
+import { WhimsySettingsCard } from './WhimsySettingsCard';
 import { cn } from '@/lib/utils';
 import {
 	SettingsCard,
