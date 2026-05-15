@@ -13,9 +13,9 @@ from fastapi import Depends
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+from app.db_base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +24,6 @@ RETRY_DELAY_SECONDS = 5
 
 
 engine_kwargs = {"connect_args": {"check_same_thread": False}} if settings.is_sqlite else {}
-
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy ORM models."""
-
-    pass
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -45,15 +39,15 @@ async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 async def create_db_and_tables() -> None:
     """Create all tables on application startup.
 
-    Imports app.models to ensure every ORM model is registered with
-    ``Base.metadata`` before issuing CREATE TABLE statements.
-    Includes retry logic to survive cold-starts from serverless database providers.
+    Every ORM class registers itself with `Base.metadata` the moment its
+    module loads. By the time the FastAPI lifespan reaches this call,
+    `main.py` has already imported every api/* router (which in turn
+    imports `app.models.*`), so the metadata is complete. Alembic and
+    pytest take care of model loading via their own explicit `from app
+    import models` side-effect imports (`alembic/env.py:21`,
+    `backend/tests/conftest.py:18`). Includes retry logic to survive
+    cold-starts from serverless database providers.
     """
-    # Lazy import: must run before ``Base.metadata.create_all`` so every
-    # mapped class registers itself, but importing at module top would create
-    # a circular import (models.py depends on Base from this module).
-    from app import models  # noqa: F401, PLC0415 — side-effect import to register models
-
     for attempt in range(MAX_RETRIES):
         try:
             async with engine.begin() as conn:

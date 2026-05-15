@@ -7,13 +7,11 @@
 # lower-order layers DOWN to higher-order layers, never the reverse.
 
 [constraints]
-# 1 pre-existing cycle: app/db.py and app/models.py form an SCC because
-# db.py's `init_db()` does a lazy `from app import models` to register
-# every SQLAlchemy table, while models.py imports `Base` from db.py.
-# Extracting `Base` into its own module (e.g. app/db_base.py) would close
-# this cycle and recover ~5000 quality-signal points (acyclicity raw 1 → 0).
-# Until that lands, the budget stays at 1.
-max_cycles = 1
+# `Base` lives in `backend/app/db_base.py` so models.py and db.py both
+# pull from it without back-referencing each other. The previous SCC
+# (db.py's lazy `from app import models` ↔ models.py's `from .db import
+# Base`) is closed; cycle budget stays at 0.
+max_cycles = 0
 max_coupling = "C"
 max_cc = 30
 no_god_files = true

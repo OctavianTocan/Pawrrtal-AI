@@ -39,13 +39,7 @@ layers =
     api : users : integrations
     crud
     models : schemas
-    core : db : logger_setup : channels
-; The lazy `from app import models` inside `init_db()` (db.py:55) is the
-; one cycle sentrux also tolerates via `max_cycles = 1`. Fixing it (by
-; extracting `Base` into its own module) recovers ~5000 quality points.
-; Tracked in beans `pawrrtal-ey9p` → see `.beans/`.
-ignore_imports =
-    app.db -> app.models
+    core : db : logger_setup : channels : db_base
 
 ; --- Contract 2: the legacy db ↔ models cycle is the one cycle sentrux
 ; allows (max_cycles = 1). Pin it explicitly so any *new* cycle fails CI. -
