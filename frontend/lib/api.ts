@@ -20,36 +20,93 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost
  * (backend has no BACKEND_API_KEY configured either).
  */
 const BACKEND_CONFIG_STORAGE_KEY = 'pawrrtal:backend-config';
+export const BACKEND_CONFIG_CHANGED_EVENT = 'pawrrtal:backend-config-changed';
 
-interface BackendConfig {
+export interface BackendConfig {
 	url: string;
 	apiKey: string;
+}
+
+function readStoredBackendConfig(): BackendConfig | null {
+	if (typeof window === 'undefined') {
+		return null;
+	}
+	try {
+		const raw = window.localStorage.getItem(BACKEND_CONFIG_STORAGE_KEY);
+		if (!raw) {
+			return null;
+		}
+		const parsed = JSON.parse(raw) as Partial<BackendConfig>;
+		return {
+			url: parsed.url ?? '',
+			apiKey: parsed.apiKey ?? '',
+		};
+	} catch {
+		return null;
+	}
+}
+
+function normalizeBackendConfigUrl(url: string): string {
+	if (!url.trim()) {
+		return API_BASE_URL;
+	}
+	try {
+		const parsed = new URL(url);
+		return parsed.toString();
+	} catch {
+		return url.trim();
+	}
 }
 
 function readBackendConfig(): BackendConfig {
 	const buildTimeKey = process.env.NEXT_PUBLIC_BACKEND_API_KEY ?? '';
 	const defaults: BackendConfig = { url: API_BASE_URL, apiKey: buildTimeKey };
-
-	if (typeof window === 'undefined') return defaults;
-	try {
-		const raw = window.localStorage.getItem(BACKEND_CONFIG_STORAGE_KEY);
-		if (raw) {
-			const parsed = JSON.parse(raw) as Partial<BackendConfig>;
-			return {
-				url: parsed.url ?? defaults.url,
-				apiKey: parsed.apiKey ?? defaults.apiKey,
-			};
-		}
-	} catch {
-		// Malformed storage — fall back to build-time defaults.
+	const stored = readStoredBackendConfig();
+	if (stored) {
+		return stored;
 	}
 	return defaults;
+}
+
+/**
+ * True when the runtime backend config has been explicitly configured in this
+ * browser profile. This is the authoritative readiness signal for onboarding.
+ */
+export function hasBackendConfig(): boolean {
+	const config = readStoredBackendConfig();
+	return Boolean(config?.url && config.url.trim());
+}
+
+/** Stable identifier for the active backend target. */
+export function getBackendConfigFingerprint(): string {
+	const { url, apiKey } = readBackendConfig();
+	const normalizedUrl = normalizeBackendConfigUrl(url);
+	return `${normalizedUrl}::${stableConfigKey(apiKey)}`;
+}
+
+function stableConfigKey(apiKey: string): string {
+	if (!apiKey) {
+		return 'key:none';
+	}
+	let hash = 5381;
+	for (let i = 0; i < apiKey.length; i += 1) {
+		hash = (hash * 33) ^ apiKey.charCodeAt(i);
+	}
+	return `key:${hash >>> 0}`;
+}
+
+function emitBackendConfigChange(): void {
+	if (typeof window === 'undefined') {
+		return;
+	}
+	window.dispatchEvent(new Event(BACKEND_CONFIG_CHANGED_EVENT));
 }
 
 /** Persist a new backend config (URL + API key) to localStorage. */
 export function saveBackendConfig(config: BackendConfig): void {
 	try {
 		window.localStorage.setItem(BACKEND_CONFIG_STORAGE_KEY, JSON.stringify(config));
+		emitBackendConfigChange();
 	} catch {
 		/* quota / private browsing — ignore */
 	}
@@ -59,6 +116,7 @@ export function saveBackendConfig(config: BackendConfig): void {
 export function clearBackendConfig(): void {
 	try {
 		window.localStorage.removeItem(BACKEND_CONFIG_STORAGE_KEY);
+		emitBackendConfigChange();
 	} catch {
 		/* ignore */
 	}
@@ -263,6 +321,8 @@ export const API_ENDPOINTS = {
 	workspace: {
 		/** Read the workspace env vars. */
 		env: '/api/v1/workspace/env',
+		/** Read onboarding readiness (default workspace existence + metadata). */
+		onboardingStatus: '/api/v1/workspaces/onboarding-status',
 	},
 	/** Third-party messaging channels (Telegram today; more later). */
 	channels: {

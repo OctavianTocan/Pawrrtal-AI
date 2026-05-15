@@ -13,8 +13,8 @@
  * props-driven and never consults a static module-level catalog.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatModelOption } from '../hooks/use-chat-models';
 import { CHAT_REASONING_LEVELS, ModelSelectorPopover } from './ModelSelectorPopover';
 
@@ -53,6 +53,16 @@ const FIXTURE_MODELS: ChatModelOption[] = [
 		description: "Google's frontier multimodal",
 		is_default: true,
 	},
+	{
+		id: 'google-ai:google/gemini-3.1-flash-lite-preview',
+		host: 'google-ai',
+		vendor: 'google',
+		model: 'gemini-3.1-flash-lite-preview',
+		display_name: 'Gemini 3.1 Flash Lite Preview',
+		short_name: 'Gemini 3.1 Flash Lite',
+		description: "Google's fast preview model",
+		is_default: false,
+	},
 ];
 
 // Canonical ID of the default fixture model (Gemini 3 Flash) — typed as a
@@ -68,7 +78,19 @@ const DEFAULT_PROPS = {
 	onSelectReasoning: vi.fn(),
 } as const;
 
+const DOTTED_GEMINI_ID = 'google-ai:google/gemini-3.1-flash-lite-preview';
+
+function closestButton(element: HTMLElement): HTMLButtonElement {
+	const button = element.closest('button');
+	if (!button) throw new Error('Expected the element to be inside a button.');
+	return button;
+}
+
 describe('ModelSelectorPopover', () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
 	it('renders the trigger button with the selected model short name', () => {
 		render(<ModelSelectorPopover {...DEFAULT_PROPS} />);
 		// The trigger label shows the model's short_name, not its full name.
@@ -115,6 +137,52 @@ describe('ModelSelectorPopover', () => {
 		expect(trigger).toBeTruthy();
 	});
 
+	it('selects a dotted Gemini model from the vendor submenu on pointer-down', () => {
+		vi.useFakeTimers();
+		const onSelectModel = vi.fn();
+		render(<ModelSelectorPopover {...DEFAULT_PROPS} onSelectModel={onSelectModel} />);
+
+		fireEvent.click(screen.getByRole('button', { name: /select model/i }));
+		const googleRow = closestButton(screen.getByText('Google'));
+		fireEvent.pointerEnter(googleRow);
+		act(() => {
+			vi.advanceTimersByTime(120);
+		});
+
+		const dottedGeminiRow = closestButton(screen.getByText('Gemini 3.1 Flash Lite'));
+		fireEvent.pointerDown(dottedGeminiRow, { button: 0 });
+		fireEvent.click(dottedGeminiRow);
+
+		expect(onSelectModel).toHaveBeenCalledTimes(1);
+		expect(onSelectModel).toHaveBeenCalledWith(DOTTED_GEMINI_ID);
+	});
+
+	it('selects a reasoning level from the thinking submenu on pointer-down', () => {
+		vi.useFakeTimers();
+		const onSelectReasoning = vi.fn();
+		render(
+			<ModelSelectorPopover
+				{...DEFAULT_PROPS}
+				onSelectReasoning={onSelectReasoning}
+				selectedReasoning="medium"
+			/>
+		);
+
+		fireEvent.click(screen.getByRole('button', { name: /select model/i }));
+		const thinkingRow = closestButton(screen.getByText('Thinking: Medium'));
+		fireEvent.pointerEnter(thinkingRow);
+		act(() => {
+			vi.advanceTimersByTime(120);
+		});
+
+		const highRow = closestButton(screen.getByText('High'));
+		fireEvent.pointerDown(highRow, { button: 0 });
+		fireEvent.click(highRow);
+
+		expect(onSelectReasoning).toHaveBeenCalledTimes(1);
+		expect(onSelectReasoning).toHaveBeenCalledWith('high');
+	});
+
 	it('renders without throwing for every model in the fixture catalog', () => {
 		for (const model of FIXTURE_MODELS) {
 			const { unmount } = render(
@@ -143,12 +211,34 @@ describe('ModelSelectorPopover', () => {
 		}
 	});
 
+	it('ignores malformed vendor values instead of crashing', () => {
+		const firstModel = FIXTURE_MODELS[0];
+		if (!firstModel) throw new Error('Missing model selector fixture.');
+		const malformedModel = {
+			...firstModel,
+			id: 'broken-model',
+			vendor: undefined,
+		} as unknown as ChatModelOption;
+
+		render(
+			<ModelSelectorPopover
+				{...DEFAULT_PROPS}
+				selectedModelId={firstModel.id}
+				models={[firstModel, malformedModel]}
+				onSelectModel={vi.fn()}
+			/>
+		);
+
+		expect(screen.getByRole('button', { name: /select model/i })).toBeTruthy();
+		expect(screen.getByText('Claude Sonnet 4.6')).toBeTruthy();
+	});
+
 	it('renders the loading placeholder when isLoading is true', () => {
 		render(<ModelSelectorPopover {...DEFAULT_PROPS} isLoading />);
 		expect(screen.getByText('Loading…')).toBeTruthy();
 	});
 
-	it('falls back to the loading placeholder when the selected id is unknown', () => {
+	it('falls back to the neutral selector placeholder when the selected id is unknown', () => {
 		// A stale localStorage id that no longer matches any catalog entry — the
 		// trigger renders the placeholder instead of crashing.
 		render(
@@ -158,7 +248,7 @@ describe('ModelSelectorPopover', () => {
 				onSelectModel={vi.fn()}
 			/>
 		);
-		expect(screen.getByText('Loading…')).toBeTruthy();
+		expect(screen.getByText('Select model')).toBeTruthy();
 		expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
 	});
 

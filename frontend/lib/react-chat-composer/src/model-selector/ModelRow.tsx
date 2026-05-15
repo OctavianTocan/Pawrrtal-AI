@@ -10,6 +10,7 @@
 
 import { useDropdownContext } from '@octavian-tocan/react-dropdown';
 import { CheckIcon } from 'lucide-react';
+import { usePointerDownCommit } from '../hooks/usePointerDownCommit';
 import type { ChatModelOption } from '../types';
 
 /** Props for {@link ModelRow}. */
@@ -29,15 +30,17 @@ export interface ModelRowProps {
  */
 export function ModelRow({ model, isSelected, onSelect }: ModelRowProps): React.JSX.Element {
 	const { closeDropdown } = useDropdownContext();
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => {
+		onSelect(model.id);
+		closeDropdown();
+	});
+
 	return (
 		<button
 			type="button"
 			className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_4%,transparent)]"
-			onPointerDown={(e) => {
-				e.preventDefault();
-				onSelect(model.id);
-				closeDropdown();
-			}}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
 		>
 			<div className="flex min-w-0 flex-1 flex-col text-left">
 				<span className="truncate text-[var(--color-chat-foreground)]">{model.shortName}</span>

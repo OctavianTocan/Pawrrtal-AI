@@ -1,9 +1,14 @@
 'use client';
-import type { ChatComposerMessage } from '@octavian-tocan/react-chat-composer';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
+import { useOnboardingReadiness } from '@/features/onboarding/hooks/use-onboarding-readiness';
+import {
+	OPEN_ONBOARDING_FLOW_EVENT,
+	OPEN_ONBOARDING_SERVER_STEP_EVENT,
+} from '@/features/onboarding/v2/OnboardingFlow';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { ChatMessage } from '@/lib/types';
 import ChatView from './ChatView';
@@ -70,10 +75,26 @@ interface UseSelectedChatModelResult {
 	models: readonly ChatModelOption[];
 	/** Currently selected canonical model ID — empty string while the catalog loads. */
 	selectedModelId: string;
-	/** Setter that writes the new selection through `usePersistedState`. */
-	setPersistedModelId: (value: string | ((prev: string) => string)) => void;
+	/** Selects a catalog model immediately and then persists it. */
+	selectModel: (modelId: string) => void;
 	/** True until the first catalog response lands. */
 	isCatalogLoading: boolean;
+	/** True when catalog fetch or validation failed. */
+	isCatalogError: boolean;
+	/** True when at least one valid catalog entry is available. */
+	hasCatalog: boolean;
+	/** True when the catalog includes a default model. */
+	hasDefaultModel: boolean;
+	/** Backend target used for this catalog request. */
+	backendConfigFingerprint: string;
+}
+
+/** Return shape for {@link useSelectedReasoning}. */
+interface UseSelectedReasoningResult {
+	/** Currently selected reasoning level. */
+	selectedReasoning: ChatReasoningLevel;
+	/** Selects a reasoning level immediately and then persists it. */
+	selectReasoning: (reasoning: ChatReasoningLevel) => void;
 }
 
 /**
@@ -87,7 +108,15 @@ interface UseSelectedChatModelResult {
  * back to the catalog default on first read.
  */
 function useSelectedChatModel(): UseSelectedChatModelResult {
-	const { models, default: defaultModel, isLoading: isCatalogLoading } = useChatModels();
+	const {
+		models,
+		default: defaultModel,
+		isLoading: isCatalogLoading,
+		isError: isCatalogError,
+		hasCatalog,
+		hasDefaultModel,
+		backendConfigFingerprint,
+	} = useChatModels();
 
 	const [persistedModelId, setPersistedModelId] = usePersistedState<string>({
 		storageKey: CHAT_STORAGE_KEYS.selectedModelId,
@@ -99,8 +128,63 @@ function useSelectedChatModel(): UseSelectedChatModelResult {
 		() => resolveSelectedModelId(persistedModelId, models, defaultModel),
 		[persistedModelId, models, defaultModel]
 	);
+	const [immediateSelectedModelId, setImmediateSelectedModelId] = useState(selectedModelId);
 
-	return { models, selectedModelId, setPersistedModelId, isCatalogLoading };
+	useEffect(() => {
+		setImmediateSelectedModelId((currentModelId) => {
+			const currentModelExists = models.some((model): boolean => model.id === currentModelId);
+			if (currentModelExists && currentModelId === persistedModelId) return currentModelId;
+			return selectedModelId;
+		});
+	}, [models, persistedModelId, selectedModelId]);
+
+	const selectModel = useCallback(
+		(modelId: string): void => {
+			const modelExists = models.some((model): boolean => model.id === modelId);
+			if (!modelExists) return;
+			setImmediateSelectedModelId(modelId);
+			setPersistedModelId(modelId);
+		},
+		[models, setPersistedModelId]
+	);
+
+	return {
+		models,
+		selectedModelId: immediateSelectedModelId,
+		selectModel,
+		isCatalogLoading,
+		isCatalogError,
+		hasCatalog,
+		hasDefaultModel,
+		backendConfigFingerprint,
+	};
+}
+
+function useSelectedReasoning(): UseSelectedReasoningResult {
+	const [persistedReasoning, setPersistedReasoning] = usePersistedState<ChatReasoningLevel>({
+		storageKey: CHAT_STORAGE_KEYS.selectedReasoning,
+		defaultValue: DEFAULT_REASONING_LEVEL,
+		validate: isChatReasoningLevel,
+	});
+	const [immediateReasoning, setImmediateReasoning] = useState(persistedReasoning);
+
+	useEffect(() => {
+		setImmediateReasoning(persistedReasoning);
+	}, [persistedReasoning]);
+
+	const selectReasoning = useCallback(
+		(reasoning: ChatReasoningLevel): void => {
+			if (!isChatReasoningLevel(reasoning)) return;
+			setImmediateReasoning(reasoning);
+			setPersistedReasoning(reasoning);
+		},
+		[setPersistedReasoning]
+	);
+
+	return {
+		selectedReasoning: immediateReasoning,
+		selectReasoning,
+	};
 }
 
 /**
@@ -146,6 +230,47 @@ function buildInitialConversationTitle(content: string): string {
 	return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
 }
 
+interface ComposerBlockReason {
+	backendConfigFingerprint: string;
+	hasBackendConfig: boolean;
+	hasCatalog: boolean;
+	hasDefaultModel: boolean;
+	hasWorkspaceReady: boolean;
+	isCatalogError: boolean;
+	isCatalogLoading: boolean;
+	isModelUnavailable: boolean;
+	isOnboardingReadinessLoading: boolean;
+}
+
+function buildComposerBlockedMessage({
+	backendConfigFingerprint,
+	hasBackendConfig,
+	hasCatalog,
+	hasDefaultModel,
+	hasWorkspaceReady,
+	isCatalogError,
+	isCatalogLoading,
+	isModelUnavailable,
+	isOnboardingReadinessLoading,
+}: ComposerBlockReason): string | undefined {
+	if (isOnboardingReadinessLoading) return 'Checking workspace setup before sending.';
+	if (!hasBackendConfig) return 'Connect a backend server to send messages.';
+	if (!hasWorkspaceReady) return 'Finish workspace onboarding before sending messages.';
+	if (isCatalogLoading) return 'Loading model catalog.';
+	if (isCatalogError && process.env.NODE_ENV === 'production') {
+		return 'Model catalog unavailable. Check backend connection.';
+	}
+	if (isCatalogError) {
+		return `Model catalog unavailable from ${backendConfigFingerprint}. Check backend connection.`;
+	}
+	if (!hasCatalog) return 'No models are available from the connected backend.';
+	if (!hasDefaultModel && isModelUnavailable) {
+		return 'Model catalog has no default. Select a model before sending.';
+	}
+	if (isModelUnavailable) return 'Select a model before sending.';
+	return undefined;
+}
+
 /**
  * Props for the {@link ChatContainer} component.
  */
@@ -154,6 +279,157 @@ interface ChatContainerProps {
 	conversationId: string;
 	/** Pre-fetched messages to hydrate the chat on load (e.g. when opening an existing conversation). */
 	initialChatHistory?: Array<ChatMessage>;
+}
+
+interface ChatTurnControllerArgs {
+	conversationId: string;
+	initialChatHistory?: Array<ChatMessage>;
+	selectedModelId: string;
+	selectedReasoning: ChatReasoningLevel;
+}
+
+interface ChatTurnControllerResult {
+	chatHistory: Array<ChatMessage>;
+	copiedId: string | null;
+	isLoading: boolean;
+	regeneratingIndex: number | null;
+	copyMessage: (id: string, text: string) => void;
+	regenerateMessage: (assistantIndex: number) => Promise<void>;
+	sendMessage: (message: PromptInputMessage) => Promise<void>;
+}
+
+function useChatTurnController({
+	conversationId,
+	initialChatHistory,
+	selectedModelId,
+	selectedReasoning,
+}: ChatTurnControllerArgs): ChatTurnControllerResult {
+	const { streamMessage } = useChat();
+	const createConversationMutation = useCreateConversation(conversationId);
+	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
+	const { replace } = useRouter();
+	const hasNavigated = useRef(false);
+	const stream = useCallback(
+		(prompt: string) =>
+			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
+		[conversationId, selectedModelId, selectedReasoning, streamMessage]
+	);
+	const onFirstSend = useCallback(
+		async (prompt: string): Promise<void> => {
+			await createConversationMutation.mutateAsync({
+				title: buildInitialConversationTitle(prompt),
+			});
+			generateConversationTitleMutation.mutateAsync(prompt).catch(() => undefined);
+			window.history.replaceState(null, '', `/c/${conversationId}`);
+			hasNavigated.current = true;
+		},
+		[conversationId, createConversationMutation, generateConversationTitleMutation]
+	);
+	const initialHistory = useMemo(() => initialChatHistory ?? [], [initialChatHistory]);
+	const { chatHistory, isLoading, regeneratingIndex, copiedId, send, regenerate, copy } =
+		useChatTurns({
+			initialHistory,
+			streamMessage: stream,
+			onFirstSend,
+		});
+	const { beginStream, endStream } = useChatBackgroundRecovery({
+		chatHistory,
+		conversationId,
+		isLoading,
+		onRecover: (prompt) => {
+			void send(prompt);
+		},
+	});
+	const sendMessage = useCallback(
+		async (message: PromptInputMessage): Promise<void> => {
+			const prompt = message.content;
+			beginStream(prompt);
+			try {
+				await send(prompt);
+			} finally {
+				endStream();
+				if (hasNavigated.current) replace(`/c/${conversationId}`);
+			}
+		},
+		[beginStream, conversationId, endStream, replace, send]
+	);
+	const chatHistoryRef = useRef(chatHistory);
+	chatHistoryRef.current = chatHistory;
+	const regenerateMessage = useCallback(
+		async (assistantIndex: number): Promise<void> => {
+			const userMessage = chatHistoryRef.current[assistantIndex - 1];
+			if (userMessage?.role === 'user') beginStream(userMessage.content);
+			try {
+				await regenerate(assistantIndex);
+			} finally {
+				endStream();
+			}
+		},
+		[beginStream, endStream, regenerate]
+	);
+	const copyMessage = useCallback(
+		(id: string, text: string): void => {
+			void copy(id, text);
+		},
+		[copy]
+	);
+	return {
+		chatHistory,
+		copiedId,
+		isLoading,
+		regeneratingIndex,
+		copyMessage,
+		regenerateMessage,
+		sendMessage,
+	};
+}
+
+interface ComposerGateArgs {
+	model: UseSelectedChatModelResult;
+	hasBackendConfig: boolean;
+	hasWorkspaceReady: boolean;
+	isOnboardingReadinessLoading: boolean;
+}
+
+interface ComposerGateResult {
+	composerBlockedMessage: string | undefined;
+	isComposerBlocked: boolean;
+	openSetup: () => void;
+}
+
+function useComposerGate({
+	model,
+	hasBackendConfig,
+	hasWorkspaceReady,
+	isOnboardingReadinessLoading,
+}: ComposerGateArgs): ComposerGateResult {
+	const isModelUnavailable = model.selectedModelId.length === 0;
+	const isComposerBlocked =
+		isOnboardingReadinessLoading ||
+		!hasBackendConfig ||
+		!hasWorkspaceReady ||
+		model.isCatalogLoading ||
+		model.isCatalogError ||
+		isModelUnavailable;
+	const composerBlockedMessage = buildComposerBlockedMessage({
+		backendConfigFingerprint: model.backendConfigFingerprint,
+		hasBackendConfig,
+		hasCatalog: model.hasCatalog,
+		hasDefaultModel: model.hasDefaultModel,
+		hasWorkspaceReady,
+		isCatalogError: model.isCatalogError,
+		isCatalogLoading: model.isCatalogLoading,
+		isModelUnavailable,
+		isOnboardingReadinessLoading,
+	});
+	const openSetup = useCallback(() => {
+		const shouldOpenServerStep = !hasBackendConfig || model.isCatalogError;
+		const event = shouldOpenServerStep
+			? new Event(OPEN_ONBOARDING_SERVER_STEP_EVENT)
+			: new Event(OPEN_ONBOARDING_FLOW_EVENT);
+		window.dispatchEvent(event);
+	}, [hasBackendConfig, model.isCatalogError]);
+	return { composerBlockedMessage, isComposerBlocked, openSetup };
 }
 
 /**
@@ -178,136 +454,65 @@ export default function ChatContainer({
 	conversationId,
 	initialChatHistory,
 }: ChatContainerProps): React.JSX.Element | null {
-	const { streamMessage } = useChat();
-	const createConversationMutation = useCreateConversation(conversationId);
-	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
-	const { replace } = useRouter();
-	const hasNavigated = useRef(false);
-
-	// Server-owned model catalog (`GET /api/v1/models`). The hook resolves the
-	// persisted selection against the live catalog so this function stays
-	// under the per-function line budget. Render is gated on
-	// `isCatalogLoading` below so streaming can never fire on `''`.
-	const { models, selectedModelId, setPersistedModelId, isCatalogLoading } =
-		useSelectedChatModel();
-
-	// Composer textarea — controlled string so the container can reset it on
-	// send + write into it from suggestion clicks.
+	const {
+		hasBackendConfig,
+		hasWorkspaceReady,
+		isLoading: isOnboardingReadinessLoading,
+	} = useOnboardingReadiness();
+	const model = useSelectedChatModel();
+	const reasoning = useSelectedReasoning();
 	const [composerText, setComposerText] = useState('');
-	const [selectedReasoning, setSelectedReasoning] = usePersistedState<ChatReasoningLevel>({
-		storageKey: CHAT_STORAGE_KEYS.selectedReasoning,
-		defaultValue: DEFAULT_REASONING_LEVEL,
-		validate: isChatReasoningLevel,
-	});
-
-	// Adapt the (prompt, conversation, model) transport to a (prompt)-only API
-	// so `useChatTurns` stays decoupled from routing/model concerns.
-	const stream = useCallback(
-		(prompt: string) =>
-			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
-		[conversationId, selectedModelId, selectedReasoning, streamMessage]
-	);
-
-	// First-send: persist the conversation, fire title gen, swap URL without
-	// interrupting the in-flight stream. Router sync happens after streaming.
-	const onFirstSend = useCallback(
-		async (prompt: string): Promise<void> => {
-			await createConversationMutation.mutateAsync({
-				title: buildInitialConversationTitle(prompt),
-			});
-			generateConversationTitleMutation.mutateAsync(prompt).catch(() => undefined);
-			window.history.replaceState(null, '', `/c/${conversationId}`);
-			hasNavigated.current = true;
-		},
-		[conversationId, createConversationMutation, generateConversationTitleMutation]
-	);
-
-	const initialHistory = useMemo(() => initialChatHistory ?? [], [initialChatHistory]);
-	const { chatHistory, isLoading, regeneratingIndex, copiedId, send, regenerate, copy } =
-		useChatTurns({
-			initialHistory,
-			streamMessage: stream,
-			onFirstSend,
-		});
-
-	// Detect interrupted assistant turns left behind by a previous mount and
-	// resume them when the user reloads / navigates back to the conversation.
-	const { beginStream, endStream } = useChatBackgroundRecovery({
-		chatHistory,
+	const chat = useChatTurnController({
 		conversationId,
-		isLoading,
-		onRecover: (prompt) => {
-			void send(prompt);
-		},
+		initialChatHistory,
+		selectedModelId: model.selectedModelId,
+		selectedReasoning: reasoning.selectedReasoning,
 	});
-
+	const gate = useComposerGate({
+		model,
+		hasBackendConfig,
+		hasWorkspaceReady,
+		isOnboardingReadinessLoading,
+	});
 	const handleSendMessage = useCallback(
-		async (message: ChatComposerMessage): Promise<void> => {
-			const prompt = message.text;
+		async (message: PromptInputMessage): Promise<void> => {
+			if (gate.isComposerBlocked) {
+				gate.openSetup();
+				return;
+			}
 			setComposerText('');
-			beginStream(prompt);
-			try {
-				await send(prompt);
-			} finally {
-				endStream();
-				// Sync the Next.js router after streaming so sidebar router.push works.
-				if (hasNavigated.current) replace(`/c/${conversationId}`);
-			}
+			await chat.sendMessage(message);
 		},
-		[beginStream, conversationId, endStream, replace, send]
+		[chat.sendMessage, gate]
 	);
-
-	// Read chatHistory through a ref so the callback identity doesn't churn
-	// on every streamed event — we only need the current value at click time.
-	const chatHistoryRef = useRef(chatHistory);
-	chatHistoryRef.current = chatHistory;
-	const handleRegenerate = useCallback(
-		async (assistantIndex: number): Promise<void> => {
-			const userMessage = chatHistoryRef.current[assistantIndex - 1];
-			if (userMessage?.role === 'user') beginStream(userMessage.content);
-			try {
-				await regenerate(assistantIndex);
-			} finally {
-				endStream();
-			}
-		},
-		[beginStream, endStream, regenerate]
-	);
-
-	const handleCopy = useCallback(
-		(id: string, text: string) => {
-			void copy(id, text);
-		},
-		[copy]
-	);
-
 	const handleSelectSuggestion = useCallback((prompt: string) => {
 		setComposerText(prompt);
 	}, []);
 
-	useChatActivitySync(conversationId, chatHistory, isLoading);
-
-	// Gate render on the catalog so streaming can never fire on an empty
-	// model ID — see `useSelectedChatModel`. Keeps dev-console-smoke clean.
-	if (isCatalogLoading || selectedModelId === '') return null;
+	useChatActivitySync(conversationId, chat.chatHistory, chat.isLoading);
 
 	return (
 		<ChatView
-			chatHistory={chatHistory}
+			chatHistory={chat.chatHistory}
 			composerText={composerText}
-			copiedMessageId={copiedId}
-			isLoading={isLoading}
-			models={models}
+			copiedMessageId={chat.copiedId}
+			isCatalogError={model.isCatalogError}
+			isCatalogLoading={model.isCatalogLoading}
+			isLoading={chat.isLoading}
+			models={model.models}
 			onChangeComposerText={setComposerText}
-			onCopy={handleCopy}
-			onRegenerate={handleRegenerate}
-			onSelectModel={setPersistedModelId}
-			onSelectReasoning={setSelectedReasoning}
+			onCopy={chat.copyMessage}
+			onRegenerate={chat.regenerateMessage}
+			onSelectModel={model.selectModel}
+			onSelectReasoning={reasoning.selectReasoning}
 			onSelectSuggestion={handleSelectSuggestion}
+			isComposerBlocked={gate.isComposerBlocked}
+			composerBlockedMessage={gate.composerBlockedMessage}
+			onOpenOnboarding={gate.openSetup}
 			onSendMessage={handleSendMessage}
-			regeneratingIndex={regeneratingIndex}
-			selectedModelId={selectedModelId}
-			selectedReasoning={selectedReasoning}
+			regeneratingIndex={chat.regeneratingIndex}
+			selectedModelId={model.selectedModelId}
+			selectedReasoning={reasoning.selectedReasoning}
 		/>
 	);
 }

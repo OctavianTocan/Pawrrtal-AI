@@ -12,10 +12,9 @@ Mounted at: /api/v1/workspaces
 
 from __future__ import annotations
 
+import mimetypes
 import uuid
 from pathlib import Path
-
-import mimetypes
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -26,6 +25,7 @@ from app.crud.workspace import get_default_workspace, list_workspaces
 from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
+    OnboardingStatus,
     WorkspaceFileContent,
     WorkspaceFileNode,
     WorkspaceFileWrite,
@@ -126,6 +126,18 @@ def get_workspace_router() -> APIRouter:
         """Return all workspaces owned by the authenticated user."""
         workspaces = await list_workspaces(user.id, session)
         return [WorkspaceRead.model_validate(ws) for ws in workspaces]
+
+    @router.get("/onboarding-status", response_model=OnboardingStatus)
+    async def get_onboarding_status(
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> OnboardingStatus:
+        """Return whether the user has a default workspace ready."""
+        workspace = await get_default_workspace(user.id, session)
+        return OnboardingStatus(
+            has_workspace_ready=workspace is not None,
+            workspace=WorkspaceRead.model_validate(workspace) if workspace else None,
+        )
 
     # ------------------------------------------------------------------
     # File tree
@@ -283,9 +295,7 @@ def get_workspace_router() -> APIRouter:
         target = _safe_child(root, file_path)
 
         if not target.exists():
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="File not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
         if target.is_dir():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

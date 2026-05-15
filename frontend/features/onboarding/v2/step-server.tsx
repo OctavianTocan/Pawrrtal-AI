@@ -6,6 +6,7 @@ import { useCallback, useId, useReducer } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PersonalizationProfile } from '@/features/personalization/storage';
+import { API_BASE_URL, saveBackendConfig } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';
 
@@ -14,7 +15,6 @@ export interface StepServerProps {
 	profile: PersonalizationProfile;
 	onPatch: (patch: Partial<PersonalizationProfile>) => void;
 	onContinue: () => void;
-	onSkip: () => void;
 }
 
 type ServerMode = 'hosted' | 'self-hosted';
@@ -231,12 +231,7 @@ function ServerUrlField({
 	);
 }
 
-export function StepServer({
-	profile,
-	onPatch,
-	onContinue,
-	onSkip,
-}: StepServerProps): React.JSX.Element {
+export function StepServer({ profile, onPatch, onContinue }: StepServerProps): React.JSX.Element {
 	const serverUrlId = useId();
 	const [state, dispatchStepServer] = useReducer(
 		stepServerReducer,
@@ -288,6 +283,10 @@ export function StepServer({
 
 	const handleContinue = useCallback(() => {
 		if (mode === 'hosted') {
+			saveBackendConfig({
+				url: API_BASE_URL,
+				apiKey: process.env.NEXT_PUBLIC_BACKEND_API_KEY ?? '',
+			});
 			onPatch({ remoteServerUrl: '' });
 			onContinue();
 			return;
@@ -298,6 +297,7 @@ export function StepServer({
 			dispatchStepServer({ type: 'verification-failed', message: error });
 			return;
 		}
+		saveBackendConfig({ url: url.trim(), apiKey: '' });
 		onPatch({ remoteServerUrl: url.trim() });
 		onContinue();
 	}, [mode, url, onPatch, onContinue]);
@@ -310,25 +310,16 @@ export function StepServer({
 			title="Where is your Nexus?"
 			subtitle="AI Nexus can run hosted or on your own server. Pick what fits your setup."
 			footer={
-				<>
-					<Button
-						className="h-11 w-full max-w-sm cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal disabled:pointer-events-none disabled:opacity-50"
-						disabled={!canContinue}
-						onClick={handleContinue}
-						size="lg"
-						type="button"
-					>
-						Continue
-						<ArrowRight aria-hidden="true" className="ml-1 size-4" />
-					</Button>
-					<button
-						className="cursor-pointer text-sm text-muted-foreground hover:text-foreground"
-						onClick={onSkip}
-						type="button"
-					>
-						Skip for now
-					</button>
-				</>
+				<Button
+					className="h-11 w-full max-w-sm cursor-pointer rounded-control bg-foreground px-8 text-sm font-semibold text-background shadow-none hover:bg-foreground/90 hover:shadow-minimal disabled:pointer-events-none disabled:opacity-50"
+					disabled={!canContinue}
+					onClick={handleContinue}
+					size="lg"
+					type="button"
+				>
+					Continue
+					<ArrowRight aria-hidden="true" className="ml-1 size-4" />
+				</Button>
 			}
 		>
 			<div className="flex w-full max-w-md flex-col gap-6">

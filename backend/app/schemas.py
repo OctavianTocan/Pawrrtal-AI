@@ -363,6 +363,13 @@ class WorkspaceRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OnboardingStatus(BaseModel):
+    """Onboarding readiness response for authenticated users."""
+
+    has_workspace_ready: bool
+    workspace: WorkspaceRead | None = None
+
+
 class WorkspaceFileNode(BaseModel):
     """A single node in a workspace file-tree response."""
 

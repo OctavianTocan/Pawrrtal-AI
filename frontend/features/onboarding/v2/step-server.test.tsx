@@ -15,17 +15,15 @@ const blankProfile = {};
 function renderStep(overrides: Partial<Parameters<typeof StepServer>[0]> = {}) {
 	const onContinue = vi.fn();
 	const onPatch = vi.fn();
-	const onSkip = vi.fn();
 	const { unmount } = render(
 		<StepServer
 			onContinue={onContinue}
 			onPatch={onPatch}
-			onSkip={onSkip}
 			profile={blankProfile}
 			{...overrides}
 		/>
 	);
-	return { onContinue, onPatch, onSkip, unmount };
+	return { onContinue, onPatch, unmount };
 }
 
 // ---------------------------------------------------------------------------
@@ -120,10 +118,9 @@ describe('StepServer', () => {
 	});
 
 	describe('Skip button', () => {
-		it('fires onSkip when clicked', () => {
-			const { onSkip } = renderStep();
-			fireEvent.click(screen.getByText('Skip for now'));
-			expect(onSkip).toHaveBeenCalled();
+		it('does not render a skip control in the mandatory path', () => {
+			renderStep();
+			expect(screen.queryByText('Skip for now')).toBeNull();
 		});
 	});
 

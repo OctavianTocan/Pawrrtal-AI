@@ -20,6 +20,7 @@ import { DropdownMenu } from '@octavian-tocan/react-dropdown';
 import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
+import { usePointerDownCommit } from '@/hooks/use-pointer-down-commit';
 import { cn } from '@/lib/utils';
 
 /** A single picker option. `id` is what gets passed to `onSelect`. */
@@ -52,6 +53,50 @@ export interface SelectButtonProps {
 /** Display label fallback used by the keyboard type-ahead. */
 function displayFor(option: SelectButtonOption): string {
 	return typeof option.label === 'string' ? option.label : option.id;
+}
+
+interface SelectButtonRowProps {
+	option: SelectButtonOption;
+	isActive: boolean;
+	onSelect: (option: SelectButtonOption) => void;
+}
+
+/** Single selectable option row for {@link SelectButton}. */
+function SelectButtonRow({ option, isActive, onSelect }: SelectButtonRowProps): React.JSX.Element {
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => onSelect(option));
+
+	return (
+		<button
+			type="button"
+			className={cn(
+				// Compact-but-readable Codex rhythm: ~36 px tall rows
+				// (py-2 + line-height) with a slightly chunkier corner
+				// radius so the hover/active fill reads as its own pill
+				// rather than a thin highlight strip.
+				'flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-3 py-2 text-sm hover:bg-foreground/[0.04]',
+				isActive && 'bg-foreground/[0.06]'
+			)}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
+		>
+			{option.leading ? (
+				<span aria-hidden="true" className="flex items-center">
+					{option.leading}
+				</span>
+			) : null}
+			<div className="flex min-w-0 flex-1 flex-col text-left">
+				<span className="truncate text-sm text-foreground">{option.label}</span>
+				{option.description ? (
+					<span className="truncate text-pretty text-xs text-muted-foreground">
+						{option.description}
+					</span>
+				) : null}
+			</div>
+			{isActive ? (
+				<CheckIcon aria-hidden="true" className="size-3.5 shrink-0 text-foreground" />
+			) : null}
+		</button>
+	);
 }
 
 /**
@@ -105,38 +150,7 @@ export function SelectButton({
 			renderItem={(option, _isSelected, onItemSelect) => {
 				const isActive = activeId === option.id;
 				return (
-					<button
-						type="button"
-						className={cn(
-							// Compact-but-readable Codex rhythm: ~36 px tall rows
-							// (py-2 + line-height) with a slightly chunkier corner
-							// radius so the hover/active fill reads as its own pill
-							// rather than a thin highlight strip.
-							'flex w-full cursor-pointer items-center gap-2.5 rounded-[8px] px-3 py-2 text-sm hover:bg-foreground/[0.04]',
-							isActive && 'bg-foreground/[0.06]'
-						)}
-						onClick={() => onItemSelect(option)}
-					>
-						{option.leading ? (
-							<span aria-hidden="true" className="flex items-center">
-								{option.leading}
-							</span>
-						) : null}
-						<div className="flex min-w-0 flex-1 flex-col text-left">
-							<span className="truncate text-sm text-foreground">{option.label}</span>
-							{option.description ? (
-								<span className="truncate text-pretty text-xs text-muted-foreground">
-									{option.description}
-								</span>
-							) : null}
-						</div>
-						{isActive ? (
-							<CheckIcon
-								aria-hidden="true"
-								className="size-3.5 shrink-0 text-foreground"
-							/>
-						) : null}
-					</button>
+					<SelectButtonRow isActive={isActive} onSelect={onItemSelect} option={option} />
 				);
 			}}
 		/>

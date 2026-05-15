@@ -18,6 +18,7 @@ import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePersistedState } from '@/hooks/use-persisted-state';
+import { usePointerDownCommit } from '@/hooks/use-pointer-down-commit';
 import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 import {
@@ -356,6 +357,7 @@ function SafetyModeMenuItem({
 	onSelect,
 }: SafetyModeMenuItemProps): React.JSX.Element {
 	const { label, Icon, colorClass, bgClass } = SAFETY_MODE_META[mode];
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => onSelect(mode));
 
 	return (
 		<button
@@ -363,7 +365,8 @@ function SafetyModeMenuItem({
 				'flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
 				isSelected && 'bg-foreground/[0.06]'
 			)}
-			onClick={() => onSelect(mode)}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
 			type="button"
 		>
 			<span className="flex items-center gap-2">

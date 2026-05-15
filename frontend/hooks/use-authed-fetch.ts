@@ -28,6 +28,7 @@ export function useAuthedFetch() {
 				...options,
 				// Include the session token in the request. (HTTPOnly Cookie)
 				credentials: 'include',
+				cache: 'no-store',
 			});
 
 			// Handle expired cookies. (User is not authenticated.)

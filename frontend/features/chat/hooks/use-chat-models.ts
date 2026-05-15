@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { z } from 'zod';
 import { useAuthedFetch } from '@/hooks/use-authed-fetch';
-import { API_ENDPOINTS } from '@/lib/api';
+import { API_ENDPOINTS, getBackendConfigFingerprint } from '@/lib/api';
 
 /**
  * Query key used by {@link useChatModels} and any cache mutator that
  * needs to invalidate the catalog (e.g. an admin tool flipping a
  * `is_default` flag).
  */
-export const CHAT_MODELS_QUERY_KEY = ['models'] as const;
+export const CHAT_MODELS_QUERY_KEY = 'models' as const;
 
 /** One entry from `GET /api/v1/models`. */
 export interface ChatModelOption {
@@ -39,6 +39,14 @@ export interface UseChatModelsResult {
 	default: ChatModelOption | null;
 	/** True until the first response (success or error) lands. */
 	isLoading: boolean;
+	/** True when the model catalog request failed or returned an invalid payload. */
+	isError: boolean;
+	/** True when at least one valid model row is available. */
+	hasCatalog: boolean;
+	/** True when the valid catalog includes a server-declared default model. */
+	hasDefaultModel: boolean;
+	/** Stable identifier for the backend target used by this catalog request. */
+	backendConfigFingerprint: string;
 	/** Latest fetch / validation error, or `null` when healthy. */
 	error: Error | null;
 }
@@ -61,8 +69,23 @@ const ModelOptionSchema = z.object({
 
 /** Zod schema for the `GET /api/v1/models` response envelope. */
 const ModelsResponseSchema = z.object({
-	models: z.array(ModelOptionSchema),
+	models: z.array(z.unknown()),
 });
+
+/** Parse one catalog entry and log a warning when its shape is unexpected. */
+function parseCatalogModel(entry: unknown, index: number): ChatModelOption | null {
+	const result = ModelOptionSchema.safeParse(entry);
+	if (result.success) {
+		return result.data;
+	}
+	if (process.env.NODE_ENV !== 'production') {
+		console.warn(
+			`Model catalog row #${index} was ignored due to schema mismatch:`,
+			result.error.format()
+		);
+	}
+	return null;
+}
 
 /**
  * Fetches the backend model catalog via TanStack Query.
@@ -83,16 +106,33 @@ const ModelsResponseSchema = z.object({
  */
 export function useChatModels(): UseChatModelsResult {
 	const authedFetch = useAuthedFetch();
+	const backendConfigFingerprint = getBackendConfigFingerprint();
 
 	const query = useQuery<{ models: ChatModelOption[] }>({
-		queryKey: CHAT_MODELS_QUERY_KEY,
+		queryKey: [CHAT_MODELS_QUERY_KEY, backendConfigFingerprint],
 		staleTime: Number.POSITIVE_INFINITY,
 		queryFn: async (): Promise<{ models: ChatModelOption[] }> => {
-			// `useAuthedFetch` throws on non-OK responses, so we only need to
-			// parse the body here.
-			const response = await authedFetch(API_ENDPOINTS.chat.models);
+			// Disable browser caching for this call so revalidation never returns 304
+			// with an empty body (which would otherwise break JSON parsing).
+			const response = await authedFetch(API_ENDPOINTS.chat.models, {
+				cache: 'no-store',
+			});
+
+			if (response.status === 304 || response.status === 204) {
+				throw new Error(`Model catalog response returned status ${response.status}`);
+			}
+
 			const raw: unknown = await response.json();
-			return ModelsResponseSchema.parse(raw);
+			const parsed = ModelsResponseSchema.parse(raw);
+			const models = parsed.models
+				.map((entry, index) => parseCatalogModel(entry, index))
+				.filter((model): model is ChatModelOption => model !== null);
+
+			if (models.length === 0) {
+				throw new Error('Model catalog response has no valid entries.');
+			}
+
+			return { models };
 		},
 	});
 
@@ -106,6 +146,10 @@ export function useChatModels(): UseChatModelsResult {
 		models,
 		default: defaultEntry,
 		isLoading: query.isLoading,
+		isError: query.isError,
+		hasCatalog: models.length > 0,
+		hasDefaultModel: defaultEntry !== null,
+		backendConfigFingerprint,
 		error: query.error ?? null,
 	};
 }

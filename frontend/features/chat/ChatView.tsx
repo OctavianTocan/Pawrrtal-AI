@@ -1,31 +1,19 @@
 'use client';
 
-import {
-	ChatComposer,
-	type ChatComposerMessage,
-	ChatPromptSuggestions,
-	type ChatModelOption as PackageChatModelOption,
-} from '@octavian-tocan/react-chat-composer';
+import { ChatPromptSuggestions } from '@octavian-tocan/react-chat-composer';
 import type * as React from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useStickToBottomContext } from 'use-stick-to-bottom';
+import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useWhimsyTile } from '@/features/whimsy';
-import { usePersistedState } from '@/hooks/use-persisted-state';
 import type { ChatMessage } from '@/lib/types';
 import { Conversation, ConversationContent } from '../../components/ai-elements/conversation';
 import { AssistantMessage } from './components/AssistantMessage';
+import { ChatComposer } from './components/ChatComposer';
 import { ConnectAppsStrip } from './components/ConnectAppsStrip';
-import { PlanButton } from './components/PlanButton';
-import { SafetyModeSelector } from './components/SafetyModeSelector';
 import { UserMessage } from './components/UserMessage';
-import {
-	CHAT_REASONING_LEVELS,
-	CHAT_STORAGE_KEYS,
-	type ChatReasoningLevel,
-	DEFAULT_PLAN_MODE_VISIBLE,
-} from './constants';
+import type { ChatReasoningLevel } from './constants';
 import type { ChatModelOption } from './hooks/use-chat-models';
-import { useTranscribeAudioCallback } from './hooks/use-transcribe-audio-callback';
 
 /** Empty-state suggestion rows shown when no conversation has begun. */
 const PROMPT_SUGGESTIONS = [
@@ -48,13 +36,15 @@ type ChatProps = {
 	/** Callback fired when the composer's textarea content changes. */
 	onChangeComposerText: (text: string) => void;
 	/** Callback fired when the user submits a composer message. */
-	onSendMessage: (message: ChatComposerMessage) => void;
+	onSendMessage: (message: PromptInputMessage) => void;
 	/** The full conversation history to render. */
 	chatHistory: Array<ChatMessage>;
 	/** Live model catalog from `useChatModels()`, hoisted by the container. */
 	models: readonly ChatModelOption[];
 	/** True until the first model-catalog response lands. */
 	isCatalogLoading?: boolean;
+	/** True when the model-catalog request failed or returned invalid rows. */
+	isCatalogError?: boolean;
 	/** Selected canonical model ID (`host:vendor/model`) used for new chat requests. */
 	selectedModelId: string;
 	/** The selected reasoning level shown in the composer. */
@@ -73,6 +63,12 @@ type ChatProps = {
 	onCopy?: (id: string, text: string) => void;
 	/** Re-run the assistant turn at the given history index. */
 	onRegenerate?: (assistantIndex: number) => void;
+	/** Whether composer submission is blocked by onboarding readiness state. */
+	isComposerBlocked?: boolean;
+	/** Message shown inside composer when message submit is blocked. */
+	composerBlockedMessage?: string;
+	/** Open onboarding from composer when setup is blocked. */
+	onOpenOnboarding?: () => void;
 };
 
 /**
@@ -85,51 +81,6 @@ function ChatScrollAnchor({ track: _track }: { track: number }): React.JSX.Eleme
 		scrollToBottom();
 	}, [scrollToBottom]);
 	return null;
-}
-
-/** Runtime guard for the persisted Plan-mode visibility boolean. */
-function isBoolean(value: unknown): value is boolean {
-	return typeof value === 'boolean';
-}
-
-/**
- * Persisted Plan-mode visibility. Owned by the host (not the package)
- * because the Plan button itself is a pawrrtal-specific affordance rendered
- * in the composer's `footerActions` slot.
- */
-function usePlanModeVisible(): readonly [
-	boolean,
-	(next: boolean | ((prev: boolean) => boolean)) => void,
-] {
-	return usePersistedState<boolean>({
-		storageKey: CHAT_STORAGE_KEYS.planModeVisible,
-		defaultValue: DEFAULT_PLAN_MODE_VISIBLE,
-		validate: isBoolean,
-	});
-}
-
-/**
- * Wires the host's Shift+Tab keybinding to a `setIsPlanVisible` toggle.
- *
- * The package's `ChatComposer` previously exposed an `onKeyDown` callback
- * the host used for this; that hook now lives inside the package, so the
- * host listens at document level and scopes the binding to the textarea
- * so it only fires while the composer has focus.
- */
-function useShiftTabPlanToggle(
-	setIsPlanVisible: (next: boolean | ((prev: boolean) => boolean)) => void
-): void {
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent): void => {
-			if (event.key !== 'Tab' || !event.shiftKey) return;
-			const target = event.target;
-			if (!(target instanceof HTMLElement) || target.tagName !== 'TEXTAREA') return;
-			event.preventDefault();
-			setIsPlanVisible((visible) => !visible);
-		};
-		document.addEventListener('keydown', handleKeyDown);
-		return () => document.removeEventListener('keydown', handleKeyDown);
-	}, [setIsPlanVisible]);
 }
 
 /**
@@ -172,36 +123,21 @@ function WhimsyOverlay(): React.JSX.Element | null {
 interface ComposerRowProps {
 	composerText: string;
 	isLoading?: boolean;
-	/** Model catalog in the package's `ChatModelOption` shape — pre-mapped by `ChatView`. */
-	models: readonly PackageChatModelOption[];
+	/** Backend model catalog in the shape returned by `useChatModels()`. */
+	models: readonly ChatModelOption[];
+	isCatalogLoading?: boolean;
+	isCatalogError?: boolean;
 	/** Canonical model-ID wire form (`host:vendor/model`). */
 	selectedModelId: string;
 	selectedReasoning: ChatReasoningLevel;
 	onChangeComposerText: (text: string) => void;
-	onSendMessage: (message: ChatComposerMessage) => void;
+	onSendMessage: (message: PromptInputMessage) => void;
 	/** Emits the canonical wire form. */
 	onSelectModel: (modelId: string) => void;
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
-	footerActions: React.ReactNode;
-	transcribeAudio: (audio: Blob, mimeType: string) => Promise<string>;
-}
-
-/**
- * Map a backend catalog entry to the package's `ChatModelOption` shape.
- *
- * The backend exposes `display_name` / `short_name` / `vendor`; the package
- * expects `name` / `shortName` / `provider`. Kept as a pure helper so the
- * mapping can be tested in isolation and re-used if other surfaces ever
- * need the package shape too.
- */
-function toPackageModelOption(entry: ChatModelOption): PackageChatModelOption {
-	return {
-		id: entry.id,
-		shortName: entry.short_name,
-		name: entry.display_name,
-		provider: entry.vendor,
-		description: entry.description,
-	};
+	isComposerBlocked?: boolean;
+	composerBlockedMessage?: string;
+	onOpenOnboarding?: () => void;
 }
 
 /**
@@ -212,6 +148,8 @@ function LandingState({
 	composerText,
 	isLoading,
 	models,
+	isCatalogLoading,
+	isCatalogError,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -219,8 +157,9 @@ function LandingState({
 	onSelectReasoning,
 	onSelectSuggestion,
 	onSendMessage,
-	footerActions,
-	transcribeAudio,
+	isComposerBlocked,
+	composerBlockedMessage,
+	onOpenOnboarding,
 }: ComposerRowProps & {
 	onSelectSuggestion: (prompt: string) => void;
 }): React.JSX.Element {
@@ -233,20 +172,26 @@ function LandingState({
 				<div className="relative flex w-full max-w-[48.75rem] flex-col">
 					<ChatComposer
 						className="relative z-10"
-						footerActions={footerActions}
 						isLoading={isLoading}
+						isCatalogError={isCatalogError}
+						isCatalogLoading={isCatalogLoading}
 						models={[...models]}
-						onChange={onChangeComposerText}
+						message={{
+							content: composerText,
+							files: [],
+						}}
+						onUpdateMessage={(event) => onChangeComposerText(event.target.value)}
 						onSelectModel={onSelectModel}
 						onSelectReasoning={(level) =>
 							onSelectReasoning(level as ChatReasoningLevel)
 						}
-						onSubmit={onSendMessage}
-						onTranscribeAudio={transcribeAudio}
-						reasoningLevels={[...CHAT_REASONING_LEVELS]}
+						onSendMessage={onSendMessage}
+						isSubmitBlocked={isComposerBlocked}
+						blockedMessage={composerBlockedMessage}
+						onOpenOnboarding={onOpenOnboarding}
+						onReplaceMessageContent={onChangeComposerText}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
-						value={composerText}
 					/>
 					<ConnectAppsStrip />
 				</div>
@@ -323,6 +268,8 @@ function ActiveConversationState({
 	composerText,
 	isLoading,
 	models,
+	isCatalogLoading,
+	isCatalogError,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -333,8 +280,9 @@ function ActiveConversationState({
 	copiedMessageId,
 	onCopy,
 	onRegenerate,
-	footerActions,
-	transcribeAudio,
+	isComposerBlocked,
+	composerBlockedMessage,
+	onOpenOnboarding,
 }: ComposerRowProps & {
 	chatHistory: Array<ChatMessage>;
 	regeneratingIndex?: number | null;
@@ -372,19 +320,25 @@ function ActiveConversationState({
 			<div className="mx-auto flex w-full max-w-[60rem] shrink-0 justify-center pb-4">
 				<ChatComposer
 					className="w-full max-w-[48.75rem]"
-					footerActions={footerActions}
 					isLoading={isLoading}
+					isCatalogError={isCatalogError}
+					isCatalogLoading={isCatalogLoading}
 					models={[...models]}
-					onChange={onChangeComposerText}
+					message={{
+						content: composerText,
+						files: [],
+					}}
+					onUpdateMessage={(event) => onChangeComposerText(event.target.value)}
 					onSelectModel={onSelectModel}
 					onSelectReasoning={(level) => onSelectReasoning(level as ChatReasoningLevel)}
-					onSubmit={onSendMessage}
-					onTranscribeAudio={transcribeAudio}
-					placeholder="Ask a follow up"
-					reasoningLevels={[...CHAT_REASONING_LEVELS]}
-					selectedModelId={selectedModelId}
+					onSendMessage={onSendMessage}
+					onReplaceMessageContent={onChangeComposerText}
+					isSubmitBlocked={isComposerBlocked}
+					blockedMessage={composerBlockedMessage}
+					onOpenOnboarding={onOpenOnboarding}
+					placeholderOverride="Ask a follow up"
 					selectedReasoning={selectedReasoning}
-					value={composerText}
+					selectedModelId={selectedModelId}
 				/>
 			</div>
 		</div>
@@ -407,6 +361,8 @@ function ChatView({
 	isLoading,
 	chatHistory,
 	models,
+	isCatalogLoading,
+	isCatalogError,
 	selectedModelId,
 	selectedReasoning,
 	onSendMessage,
@@ -418,38 +374,25 @@ function ChatView({
 	copiedMessageId,
 	onCopy,
 	onRegenerate,
+	isComposerBlocked,
+	composerBlockedMessage,
+	onOpenOnboarding,
 }: ChatProps): React.JSX.Element {
-	const transcribeAudio = useTranscribeAudioCallback();
-	const [isPlanVisible, setIsPlanVisible] = usePlanModeVisible();
-	useShiftTabPlanToggle(setIsPlanVisible);
-
-	// Map the backend catalog onto the package's `ChatModelOption` shape once
-	// per catalog change. The `useChatModels` hook returns a stable array
-	// reference, so `useMemo` keyed on it avoids re-mapping on unrelated
-	// re-renders (composer text, loading flips, etc.).
-	const packageModels = useMemo<readonly PackageChatModelOption[]>(
-		() => models.map(toPackageModelOption),
-		[models]
-	);
-
-	const footerActions = (
-		<>
-			{isPlanVisible ? <PlanButton /> : null}
-			<SafetyModeSelector />
-		</>
-	);
 	const rowProps = {
 		composerText,
 		isLoading,
-		models: packageModels,
+		models,
+		isCatalogLoading,
+		isCatalogError,
 		selectedModelId,
 		selectedReasoning,
 		onChangeComposerText,
 		onSendMessage,
 		onSelectModel,
 		onSelectReasoning,
-		footerActions,
-		transcribeAudio,
+		isComposerBlocked,
+		composerBlockedMessage,
+		onOpenOnboarding,
 	};
 
 	// Chat panel reads `--background-elevated` directly via inline style

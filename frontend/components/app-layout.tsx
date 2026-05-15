@@ -35,8 +35,13 @@ import React from 'react';
 import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity-context';
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';
+import { useOnboardingReadiness } from '@/features/onboarding/hooks/use-onboarding-readiness';
 import { OnboardingModal, OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
-import { OnboardingFlow } from '@/features/onboarding/v2/OnboardingFlow';
+import {
+	OnboardingFlow,
+	OPEN_ONBOARDING_FLOW_EVENT,
+	OPEN_ONBOARDING_SERVER_STEP_EVENT,
+} from '@/features/onboarding/v2/OnboardingFlow';
 import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
@@ -528,6 +533,28 @@ function ResizableSidebarContent({ children }: { children: React.ReactNode }): R
  * Wraps everything in focus-zone and chat-activity providers.
  */
 export function AppLayout({ children }: { children: React.ReactNode }): React.JSX.Element {
+	const onboardingReadiness = useOnboardingReadiness();
+	const isAppReady =
+		!onboardingReadiness.isLoading &&
+		onboardingReadiness.hasBackendConfig &&
+		onboardingReadiness.hasWorkspaceReady;
+
+	React.useEffect(() => {
+		if (onboardingReadiness.isLoading) return;
+
+		if (!onboardingReadiness.hasBackendConfig) {
+			window.dispatchEvent(new Event(OPEN_ONBOARDING_SERVER_STEP_EVENT));
+			return;
+		}
+		if (!onboardingReadiness.hasWorkspaceReady) {
+			window.dispatchEvent(new Event(OPEN_ONBOARDING_FLOW_EVENT));
+		}
+	}, [
+		onboardingReadiness.hasBackendConfig,
+		onboardingReadiness.hasWorkspaceReady,
+		onboardingReadiness.isLoading,
+	]);
+
 	return (
 		<SidebarProvider>
 			<SidebarFocusProvider>
@@ -547,7 +574,7 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 						 * Components → personalization-modal. Dismissing closes
 						 * for the session only; a browser refresh re-opens it.
 						 */}
-						<OnboardingFlow initialOpen />
+						<OnboardingFlow initialOpen={false} />
 						{/*
 						 * Workspace onboarding (Welcome → Create workspace →
 						 * Local workspace) is event-driven only — opens when
@@ -555,12 +582,16 @@ export function AppLayout({ children }: { children: React.ReactNode }): React.JS
 						 * dropdown. Never opens automatically.
 						 */}
 						<OnboardingModal initialOpen={false} listenForOpenEvent />
-						<ResizableSidebarContent>
-							<SidebarInset className="h-full min-h-0 min-w-0">
-								<div className="min-h-0 min-w-0 flex-1">{children}</div>
-							</SidebarInset>
-						</ResizableSidebarContent>
-						<AppHeader />
+						{isAppReady ? (
+							<>
+								<ResizableSidebarContent>
+									<SidebarInset className="h-full min-h-0 min-w-0">
+										<div className="min-h-0 min-w-0 flex-1">{children}</div>
+									</SidebarInset>
+								</ResizableSidebarContent>
+								<AppHeader />
+							</>
+						) : null}
 					</div>
 				</ChatActivityProvider>
 			</SidebarFocusProvider>

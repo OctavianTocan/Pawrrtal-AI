@@ -9,6 +9,7 @@
 
 import { useDropdownContext } from '@octavian-tocan/react-dropdown';
 import { CheckIcon } from 'lucide-react';
+import { usePointerDownCommit } from '../hooks/usePointerDownCommit';
 import type { ChatReasoningLevel } from '../types';
 
 /** Props for {@link ReasoningRow}. */
@@ -28,15 +29,17 @@ export interface ReasoningRowProps {
  */
 export function ReasoningRow({ level, isSelected, onSelect }: ReasoningRowProps): React.JSX.Element {
 	const { closeDropdown } = useDropdownContext();
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => {
+		onSelect(level);
+		closeDropdown();
+	});
+
 	return (
 		<button
 			type="button"
 			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_4%,transparent)]"
-			onPointerDown={(e) => {
-				e.preventDefault();
-				onSelect(level);
-				closeDropdown();
-			}}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
 		>
 			<span>{level}</span>
 			{isSelected ? (

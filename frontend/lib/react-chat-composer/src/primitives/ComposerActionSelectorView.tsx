@@ -18,6 +18,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from '../ui/Tooltip';
+import { usePointerDownCommit } from '../hooks/usePointerDownCommit';
 import { cn } from '../utils/cn';
 
 /** Item entry rendered inside the selector. */
@@ -54,6 +55,52 @@ export interface ComposerActionSelectorViewProps {
 	onMenuOpenChange: (open: boolean) => void;
 	/** Fired by Radix when the tooltip opens or closes. */
 	onTooltipOpenChange: (open: boolean) => void;
+}
+
+interface ComposerActionSelectorRowProps {
+	item: ComposerActionSelectorItem;
+	selectedId: string;
+	onSelect: (item: ComposerActionSelectorItem) => void;
+}
+
+/** Single selectable row for {@link ComposerActionSelectorView}. */
+function ComposerActionSelectorRow({
+	item,
+	selectedId,
+	onSelect,
+}: ComposerActionSelectorRowProps): React.JSX.Element {
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => onSelect(item));
+
+	return (
+		<button
+			type="button"
+			className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_4%,transparent)]"
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
+		>
+			<span className="flex items-center gap-2">
+				{item.icon ? (
+					<span
+						aria-hidden="true"
+						className={cn(
+							'inline-flex size-5 items-center justify-center rounded-[var(--radius-chat-sm)]',
+							item.bgClass,
+							item.colorClass
+						)}
+					>
+						{item.icon}
+					</span>
+				) : null}
+				{item.label}
+			</span>
+			{item.id === selectedId ? (
+				<CheckIcon
+					aria-hidden="true"
+					className="size-3.5 text-[var(--color-chat-foreground)]"
+				/>
+			) : null}
+		</button>
+	);
 }
 
 /**
@@ -106,33 +153,11 @@ export function ComposerActionSelectorView({
 			onOpenChange={onMenuOpenChange}
 			onSelect={(item) => onSelect(item.id)}
 			renderItem={(item, _isSelected, handleSelect) => (
-				<button
-					type="button"
-					className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-[color:color-mix(in_oklch,var(--color-chat-foreground)_4%,transparent)]"
-					onClick={() => handleSelect(item)}
-				>
-					<span className="flex items-center gap-2">
-						{item.icon ? (
-							<span
-								aria-hidden="true"
-								className={cn(
-									'inline-flex size-5 items-center justify-center rounded-[var(--radius-chat-sm)]',
-									item.bgClass,
-									item.colorClass,
-								)}
-							>
-								{item.icon}
-							</span>
-						) : null}
-						{item.label}
-					</span>
-					{item.id === selectedId ? (
-						<CheckIcon
-							aria-hidden="true"
-							className="size-3.5 text-[var(--color-chat-foreground)]"
-						/>
-					) : null}
-				</button>
+				<ComposerActionSelectorRow
+					item={item}
+					onSelect={handleSelect}
+					selectedId={selectedId}
+				/>
 			)}
 			trigger={triggerButton}
 		/>

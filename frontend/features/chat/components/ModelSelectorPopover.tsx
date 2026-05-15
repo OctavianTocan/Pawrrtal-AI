@@ -11,6 +11,7 @@ import { ChevronDownIcon } from 'lucide-react';
 import type * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePointerDownCommit } from '@/hooks/use-pointer-down-commit';
 import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';
 import { cn } from '@/lib/utils';
 import type { ChatModelOption } from '../hooks/use-chat-models';
@@ -37,9 +38,11 @@ const REASONING_OPTIONS: ReasoningOption[] = [
 ];
 
 /** Title-case label rendered for a vendor row. */
-function vendorLabel(vendor: string): string {
+function vendorLabel(vendor?: string): string {
+	if (typeof vendor !== 'string' || vendor.length === 0) {
+		return 'Unknown provider';
+	}
 	if (vendor === 'openai') return 'OpenAI';
-	if (vendor.length === 0) return vendor;
 	return vendor.charAt(0).toUpperCase() + vendor.slice(1);
 }
 
@@ -67,10 +70,15 @@ export interface ModelSelectorPopoverProps {
 	onSelectReasoning: (reasoning: ChatReasoningLevel) => void;
 	/** When `true`, the trigger renders a neutral placeholder while the catalog loads. */
 	isLoading?: boolean;
+	/** When `true`, the trigger renders a catalog failure state. */
+	isError?: boolean;
 }
 
 /** Placeholder label rendered while the catalog is still in flight. */
 const LOADING_MODEL_LABEL = 'Loading…';
+const MODEL_ERROR_LABEL = 'Models unavailable';
+const NO_MODELS_LABEL = 'No models';
+const SELECT_MODEL_LABEL = 'Select model';
 
 function findModel(models: readonly ChatModelOption[], modelId: string): ChatModelOption | null {
 	return models.find((model) => model.id === modelId) ?? null;
@@ -78,6 +86,23 @@ function findModel(models: readonly ChatModelOption[], modelId: string): ChatMod
 
 function getReasoningLabel(reasoning: ChatReasoningLevel): string {
 	return REASONING_OPTIONS.find((option) => option.id === reasoning)?.label ?? 'Medium';
+}
+
+function getTriggerLabel({
+	isError,
+	isLoading,
+	modelCount,
+	selectedModel,
+}: {
+	isError: boolean;
+	isLoading: boolean;
+	modelCount: number;
+	selectedModel: ChatModelOption | null;
+}): string {
+	if (isLoading) return LOADING_MODEL_LABEL;
+	if (isError) return MODEL_ERROR_LABEL;
+	if (modelCount === 0) return NO_MODELS_LABEL;
+	return selectedModel?.short_name ?? SELECT_MODEL_LABEL;
 }
 
 /** Models grouped by vendor, preserving the catalog's declaration order. */
@@ -88,6 +113,9 @@ function groupModelsByVendor(
 	const order: string[] = [];
 	const buckets = new Map<string, ChatModelOption[]>();
 	for (const model of models) {
+		if (typeof model.vendor !== 'string' || model.vendor.length === 0) {
+			continue;
+		}
 		const bucket = buckets.get(model.vendor);
 		if (bucket) {
 			bucket.push(model);
@@ -131,6 +159,11 @@ function ModelRow({
 	onSelect: (modelId: string) => void;
 }): React.JSX.Element {
 	const { closeDropdown } = useDropdownContext();
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => {
+		onSelect(model.id);
+		closeDropdown();
+	});
+
 	return (
 		<button
 			type="button"
@@ -138,10 +171,8 @@ function ModelRow({
 				'flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
 				isSelected && 'bg-foreground/[0.07] font-medium'
 			)}
-			onClick={() => {
-				onSelect(model.id);
-				closeDropdown();
-			}}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
 		>
 			<div className="flex min-w-0 flex-1 flex-col text-left">
 				<span className="truncate text-foreground">{model.short_name}</span>
@@ -169,6 +200,11 @@ function ReasoningRow({
 	onSelect: (reasoning: ChatReasoningLevel) => void;
 }): React.JSX.Element {
 	const { closeDropdown } = useDropdownContext();
+	const commitSelection = usePointerDownCommit<HTMLButtonElement>(() => {
+		onSelect(option.id);
+		closeDropdown();
+	});
+
 	return (
 		<button
 			type="button"
@@ -176,10 +212,8 @@ function ReasoningRow({
 				'flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-foreground/[0.04]',
 				isSelected && 'bg-foreground/[0.07]'
 			)}
-			onClick={() => {
-				onSelect(option.id);
-				closeDropdown();
-			}}
+			onClick={commitSelection.onClick}
+			onPointerDown={commitSelection.onPointerDown}
 		>
 			<span>{option.label}</span>
 		</button>
@@ -209,6 +243,7 @@ export function ModelSelectorPopover({
 	onSelectModel,
 	onSelectReasoning,
 	isLoading = false,
+	isError = false,
 }: ModelSelectorPopoverProps): React.JSX.Element {
 	const selectedModel = findModel(models, selectedModelId);
 	const reasoningLabel = getReasoningLabel(selectedReasoning);
@@ -229,9 +264,12 @@ export function ModelSelectorPopover({
 		return row.kind === 'vendor' ? vendorLabel(row.vendor) : 'Thinking';
 	}
 
-	const triggerLabel = isLoading
-		? LOADING_MODEL_LABEL
-		: (selectedModel?.short_name ?? LOADING_MODEL_LABEL);
+	const triggerLabel = getTriggerLabel({
+		isError,
+		isLoading,
+		modelCount: models.length,
+		selectedModel,
+	});
 
 	return (
 		<TooltipProvider disableHoverableContent>

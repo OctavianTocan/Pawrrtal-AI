@@ -39,6 +39,8 @@ export type ChatComposerProps = {
 	models: readonly ChatModelOption[];
 	/** True while the model catalog request is still in flight. */
 	isCatalogLoading?: boolean;
+	/** True when the model catalog request failed or returned invalid rows. */
+	isCatalogError?: boolean;
 	/** Selected chat model ID in canonical wire form (`host:vendor/model`). */
 	selectedModelId: string;
 	/** Selected reasoning level. */
@@ -57,6 +59,12 @@ export type ChatComposerProps = {
 	onSendMessage: (message: PromptInputMessage) => void;
 	/** Callback fired when voice transcription should replace the draft content. */
 	onReplaceMessageContent: (content: string) => void;
+	/** Block submit when onboarding readiness is incomplete. */
+	isSubmitBlocked?: boolean;
+	/** Helper text shown below the composer while submit is blocked. */
+	blockedMessage?: string;
+	/** Open onboarding flow when user clicks the unblock CTA. */
+	onOpenOnboarding?: () => void;
 	/** Callback fired when the selected model changes. Emits the canonical wire form. */
 	onSelectModel: (modelId: string) => void;
 	/** Callback fired when the selected reasoning level changes. */
@@ -164,6 +172,7 @@ interface ComposerSendClusterProps {
 	state: ComposerSendClusterState;
 	models: ChatComposerProps['models'];
 	isCatalogLoading: ChatComposerProps['isCatalogLoading'];
+	isCatalogError: ChatComposerProps['isCatalogError'];
 	selectedModelId: ChatComposerProps['selectedModelId'];
 	selectedReasoning: ChatComposerProps['selectedReasoning'];
 	onSelectModel: ChatComposerProps['onSelectModel'];
@@ -176,6 +185,7 @@ interface ComposerSendClusterState {
 	isTranscribing: boolean;
 	isLoading: ChatComposerProps['isLoading'];
 	hasContent: boolean;
+	isSubmitBlocked: boolean;
 	/** When true, both Plan and Send buttons share a yellow accent. */
 	isPlanMode: boolean;
 }
@@ -189,13 +199,16 @@ function ComposerSendCluster({
 	state,
 	models,
 	isCatalogLoading,
+	isCatalogError,
 	selectedModelId,
 	selectedReasoning,
 	onSelectModel,
 	onSelectReasoning,
 	onStartRecording,
 }: ComposerSendClusterProps): React.JSX.Element {
-	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing } = state;
+	const { hasContent, isLoading, isPlanMode, isRecording, isTranscribing, isSubmitBlocked } =
+		state;
+	const isDisabled = isSubmitBlocked || !hasContent || isLoading || isTranscribing;
 	return (
 		<div className={cn('ml-auto flex shrink-0 items-center gap-1', isRecording && 'hidden')}>
 			<ModelSelectorPopover
@@ -204,6 +217,7 @@ function ComposerSendCluster({
 				selectedReasoning={selectedReasoning}
 				onSelectModel={onSelectModel}
 				onSelectReasoning={onSelectReasoning}
+				isError={isCatalogError}
 				isLoading={isCatalogLoading}
 			/>
 			<ComposerTooltip
@@ -233,7 +247,7 @@ function ComposerSendCluster({
 							? 'bg-info text-background hover:bg-info/90 disabled:bg-foreground/20 disabled:text-background/60'
 							: 'bg-accent text-primary-foreground hover:bg-accent/90 disabled:bg-foreground/20 disabled:text-background/60'
 					)}
-					disabled={!hasContent || isLoading || isTranscribing}
+					disabled={isDisabled}
 					status={isLoading ? 'streaming' : 'ready'}
 				>
 					{isLoading ? (
@@ -255,6 +269,7 @@ export function ChatComposer({
 	isLoading,
 	models,
 	isCatalogLoading,
+	isCatalogError,
 	selectedModelId,
 	selectedReasoning,
 	className,
@@ -262,6 +277,9 @@ export function ChatComposer({
 	onUpdateMessage,
 	onSendMessage,
 	onReplaceMessageContent,
+	isSubmitBlocked,
+	blockedMessage,
+	onOpenOnboarding,
 	onSelectModel,
 	onSelectReasoning,
 	onDismissConnectApps,
@@ -273,6 +291,7 @@ export function ChatComposer({
 	const [recordingSeconds, setRecordingSeconds] = useState(0);
 	/** When false, the Plan control is hidden (toggle with Shift+Tab from the composer). */
 	const [isPlanTagVisible, setIsPlanTagVisible] = usePlanModeVisible();
+	const isSubmitBlockedResolved = isSubmitBlocked ?? false;
 	const hasContent = message.content.trim().length > 0;
 	const rotatingPlaceholder = useRotatingPlaceholder(hasContent);
 	// `placeholderOverride` (e.g. "Ask a follow up") wins over the rotating
@@ -392,12 +411,14 @@ export function ChatComposer({
 						state={{
 							hasContent,
 							isLoading,
+							isSubmitBlocked: isSubmitBlockedResolved,
 							isPlanMode: isPlanTagVisible,
 							isRecording,
 							isTranscribing,
 						}}
 						models={models}
 						isCatalogLoading={isCatalogLoading}
+						isCatalogError={isCatalogError}
 						selectedModelId={selectedModelId}
 						selectedReasoning={selectedReasoning}
 						onSelectModel={onSelectModel}
@@ -406,6 +427,22 @@ export function ChatComposer({
 					/>
 				</PromptInputFooter>
 			</PromptInput>
+			{isSubmitBlockedResolved && blockedMessage ? (
+				<div className="mt-2 flex items-center justify-between gap-3 rounded-sm border border-info/30 bg-info/[0.08] px-2.5 py-1.5 text-[12px] text-foreground/85">
+					<p className="leading-snug">{blockedMessage}</p>
+					{onOpenOnboarding ? (
+						<Button
+							className="h-6 cursor-pointer rounded-full px-3 text-[12px] font-medium"
+							onClick={onOpenOnboarding}
+							size="sm"
+							type="button"
+							variant="outline"
+						>
+							Open setup
+						</Button>
+					) : null}
+				</div>
+			) : null}
 			{showConnectAppsStrip ? <ConnectAppsStrip onDismiss={onDismissConnectApps} /> : null}
 		</div>
 	);
