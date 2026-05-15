@@ -6,7 +6,6 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any
 
 import anyio
 from fastapi import Depends, Header, HTTPException
@@ -16,16 +15,11 @@ from opentelemetry import trace as _otel_trace
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api._chat_cost_budget import enforce_cost_budget
+from app.api._chat_permissions import build_chat_permission_check
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
 from app.channels.turn_runner import ChatTurnInput, EventHook, run_turn
-from app.core.agent_loop.types import PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
-from app.core.governance.permissions import (
-    PermissionContext,
-    build_default_permission_check,
-)
-from app.core.governance.workspace_context import load_workspace_context
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
 from app.core.tools.artifact_agent import (
@@ -292,35 +286,19 @@ def get_chat_router() -> APIRouter:
             "model_id": model_id,
             "metadata": {},
         }
-        # Build the per-request permission gate (PR 03b).  ``PermissionContext``
-        # captures workspace + user + surface so the gate's individual checks
-        # (file-path boundary, bash boundary, workspace allowlist) have the
-        # state they need; the closure below adapts the cross-provider
-        # ``PermissionCheckFn`` signature ``(tool_name, arguments)`` so the
-        # context never leaks into the agent loop.  Both providers consume
-        # the same closure — Claude via the SDK's ``can_use_tool`` hook,
-        # Gemini via ``AgentLoopConfig.permission_check``.
-        # PR 06 — workspace context drives ``enabled_tools`` so the gate
-        # respects ``.claude/settings.json`` allowlists.
-        workspace_ctx = load_workspace_context(root)
-        permission_context = PermissionContext(
-            user_id=str(user.id),
+        # Build the per-request permission gate (PR 03b + PR 06).  The
+        # helper bundles workspace-context loading, ``PermissionContext``
+        # construction, and the cross-provider closure that adapts
+        # ``(tool_name, arguments)`` so the context never leaks into the
+        # agent loop. Both providers consume the same closure — Claude
+        # via the SDK's ``can_use_tool`` hook, Gemini via
+        # ``AgentLoopConfig.permission_check``.
+        permission_check_for_request = build_chat_permission_check(
+            user_id=user.id,
             workspace_root=root,
-            conversation_id=str(request.conversation_id),
+            conversation_id=request.conversation_id,
             surface=surface,
-            enabled_tools=workspace_ctx.enabled_tools,
         )
-        _gate = build_default_permission_check()
-
-        async def permission_check_for_request(
-            tool_name: str, arguments: dict[str, Any]
-        ) -> PermissionCheckResult:
-            decision = await _gate(tool_name, arguments, permission_context)
-            return PermissionCheckResult(
-                allow=decision.allow,
-                reason=decision.reason,
-                violation_type=decision.violation_type,
-            )
 
         turn_input = ChatTurnInput(
             conversation_id=request.conversation_id,
