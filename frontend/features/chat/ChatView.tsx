@@ -15,6 +15,17 @@ import { UserMessage } from './components/UserMessage';
 import type { ChatReasoningLevel } from './constants';
 import type { ChatModelOption } from './hooks/use-chat-models';
 
+/**
+ * Discriminated state for the model-catalog request.
+ *
+ * Replaces independent `isCatalogLoading` + `isCatalogError` booleans so the
+ * surfacing components ({@link LandingState}, {@link ConversationView}) stay
+ * under React Doctor's "stacked boolean flags" warning threshold. The three
+ * states are mutually exclusive: a catalog request can be in flight, can
+ * have failed, or can have succeeded — never two at once.
+ */
+export type CatalogStatus = 'loading' | 'error' | 'ready';
+
 /** Empty-state suggestion rows shown when no conversation has begun. */
 const PROMPT_SUGGESTIONS = [
 	{
@@ -41,10 +52,8 @@ type ChatProps = {
 	chatHistory: Array<ChatMessage>;
 	/** Live model catalog from `useChatModels()`, hoisted by the container. */
 	models: readonly ChatModelOption[];
-	/** True until the first model-catalog response lands. */
-	isCatalogLoading?: boolean;
-	/** True when the model-catalog request failed or returned invalid rows. */
-	isCatalogError?: boolean;
+	/** Discriminated catalog fetch state — replaces independent loading/error flags. */
+	catalogStatus: CatalogStatus;
 	/** Selected canonical model ID (`host:vendor/model`) used for new chat requests. */
 	selectedModelId: string;
 	/** The selected reasoning level shown in the composer. */
@@ -125,8 +134,8 @@ interface ComposerRowProps {
 	isLoading?: boolean;
 	/** Backend model catalog in the shape returned by `useChatModels()`. */
 	models: readonly ChatModelOption[];
-	isCatalogLoading?: boolean;
-	isCatalogError?: boolean;
+	/** Discriminated catalog fetch state — see {@link CatalogStatus}. */
+	catalogStatus: CatalogStatus;
 	/** Canonical model-ID wire form (`host:vendor/model`). */
 	selectedModelId: string;
 	selectedReasoning: ChatReasoningLevel;
@@ -148,8 +157,7 @@ function LandingState({
 	composerText,
 	isLoading,
 	models,
-	isCatalogLoading,
-	isCatalogError,
+	catalogStatus,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -173,8 +181,8 @@ function LandingState({
 					<ChatComposer
 						className="relative z-10"
 						isLoading={isLoading}
-						isCatalogError={isCatalogError}
-						isCatalogLoading={isCatalogLoading}
+						isCatalogError={catalogStatus === 'error'}
+						isCatalogLoading={catalogStatus === 'loading'}
 						models={[...models]}
 						message={{
 							content: composerText,
@@ -268,8 +276,7 @@ function ActiveConversationState({
 	composerText,
 	isLoading,
 	models,
-	isCatalogLoading,
-	isCatalogError,
+	catalogStatus,
 	selectedModelId,
 	selectedReasoning,
 	onChangeComposerText,
@@ -321,8 +328,8 @@ function ActiveConversationState({
 				<ChatComposer
 					className="w-full max-w-[48.75rem]"
 					isLoading={isLoading}
-					isCatalogError={isCatalogError}
-					isCatalogLoading={isCatalogLoading}
+					isCatalogError={catalogStatus === 'error'}
+					isCatalogLoading={catalogStatus === 'loading'}
 					models={[...models]}
 					message={{
 						content: composerText,
@@ -361,8 +368,7 @@ function ChatView({
 	isLoading,
 	chatHistory,
 	models,
-	isCatalogLoading,
-	isCatalogError,
+	catalogStatus,
 	selectedModelId,
 	selectedReasoning,
 	onSendMessage,
@@ -382,8 +388,7 @@ function ChatView({
 		composerText,
 		isLoading,
 		models,
-		isCatalogLoading,
-		isCatalogError,
+		catalogStatus,
 		selectedModelId,
 		selectedReasoning,
 		onChangeComposerText,

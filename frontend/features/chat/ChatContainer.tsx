@@ -1,7 +1,6 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { useOnboardingReadiness } from '@/features/onboarding/hooks/use-onboarding-readiness';
@@ -17,14 +16,9 @@ import {
 	CHAT_STORAGE_KEYS,
 	type ChatReasoningLevel,
 	DEFAULT_REASONING_LEVEL,
-	FALLBACK_TITLE_MAX_LENGTH,
 } from './constants';
-import { useChat } from './hooks/use-chat';
-import { useChatBackgroundRecovery } from './hooks/use-chat-background-recovery';
 import { type ChatModelOption, useChatModels } from './hooks/use-chat-models';
-import { useChatTurns } from './hooks/use-chat-turns';
-import { useCreateConversation } from './hooks/use-create-conversation';
-import { useGenerateConversationTitle } from './hooks/use-generate-conversation-title';
+import { useChatTurnController } from './hooks/use-chat-turn-controller';
 import { isCanonicalModelId } from './lib/is-canonical-model-id';
 
 /** Runtime guard for persisted reasoning levels. */
@@ -213,23 +207,6 @@ function useChatActivitySync(
 	);
 }
 
-/**
- * Sidebar-safe fallback title before async LLM titling returns: trimmed first line, ellipsized.
- */
-function buildInitialConversationTitle(content: string): string {
-	const collapsedContent = content.trim().replace(/\s+/g, ' ');
-
-	if (!collapsedContent) {
-		return 'New Conversation';
-	}
-
-	if (collapsedContent.length <= FALLBACK_TITLE_MAX_LENGTH) {
-		return collapsedContent;
-	}
-
-	return `${collapsedContent.slice(0, FALLBACK_TITLE_MAX_LENGTH - 3).trimEnd()}...`;
-}
-
 interface ComposerBlockReason {
 	backendConfigFingerprint: string;
 	hasBackendConfig: boolean;
@@ -279,109 +256,6 @@ interface ChatContainerProps {
 	conversationId: string;
 	/** Pre-fetched messages to hydrate the chat on load (e.g. when opening an existing conversation). */
 	initialChatHistory?: Array<ChatMessage>;
-}
-
-interface ChatTurnControllerArgs {
-	conversationId: string;
-	initialChatHistory?: Array<ChatMessage>;
-	selectedModelId: string;
-	selectedReasoning: ChatReasoningLevel;
-}
-
-interface ChatTurnControllerResult {
-	chatHistory: Array<ChatMessage>;
-	copiedId: string | null;
-	isLoading: boolean;
-	regeneratingIndex: number | null;
-	copyMessage: (id: string, text: string) => void;
-	regenerateMessage: (assistantIndex: number) => Promise<void>;
-	sendMessage: (message: PromptInputMessage) => Promise<void>;
-}
-
-function useChatTurnController({
-	conversationId,
-	initialChatHistory,
-	selectedModelId,
-	selectedReasoning,
-}: ChatTurnControllerArgs): ChatTurnControllerResult {
-	const { streamMessage } = useChat();
-	const createConversationMutation = useCreateConversation(conversationId);
-	const generateConversationTitleMutation = useGenerateConversationTitle(conversationId);
-	const { replace } = useRouter();
-	const hasNavigated = useRef(false);
-	const stream = useCallback(
-		(prompt: string) =>
-			streamMessage(prompt, conversationId, selectedModelId, selectedReasoning),
-		[conversationId, selectedModelId, selectedReasoning, streamMessage]
-	);
-	const onFirstSend = useCallback(
-		async (prompt: string): Promise<void> => {
-			await createConversationMutation.mutateAsync({
-				title: buildInitialConversationTitle(prompt),
-			});
-			generateConversationTitleMutation.mutateAsync(prompt).catch(() => undefined);
-			window.history.replaceState(null, '', `/c/${conversationId}`);
-			hasNavigated.current = true;
-		},
-		[conversationId, createConversationMutation, generateConversationTitleMutation]
-	);
-	const initialHistory = useMemo(() => initialChatHistory ?? [], [initialChatHistory]);
-	const { chatHistory, isLoading, regeneratingIndex, copiedId, send, regenerate, copy } =
-		useChatTurns({
-			initialHistory,
-			streamMessage: stream,
-			onFirstSend,
-		});
-	const { beginStream, endStream } = useChatBackgroundRecovery({
-		chatHistory,
-		conversationId,
-		isLoading,
-		onRecover: (prompt) => {
-			void send(prompt);
-		},
-	});
-	const sendMessage = useCallback(
-		async (message: PromptInputMessage): Promise<void> => {
-			const prompt = message.content;
-			beginStream(prompt);
-			try {
-				await send(prompt);
-			} finally {
-				endStream();
-				if (hasNavigated.current) replace(`/c/${conversationId}`);
-			}
-		},
-		[beginStream, conversationId, endStream, replace, send]
-	);
-	const chatHistoryRef = useRef(chatHistory);
-	chatHistoryRef.current = chatHistory;
-	const regenerateMessage = useCallback(
-		async (assistantIndex: number): Promise<void> => {
-			const userMessage = chatHistoryRef.current[assistantIndex - 1];
-			if (userMessage?.role === 'user') beginStream(userMessage.content);
-			try {
-				await regenerate(assistantIndex);
-			} finally {
-				endStream();
-			}
-		},
-		[beginStream, endStream, regenerate]
-	);
-	const copyMessage = useCallback(
-		(id: string, text: string): void => {
-			void copy(id, text);
-		},
-		[copy]
-	);
-	return {
-		chatHistory,
-		copiedId,
-		isLoading,
-		regeneratingIndex,
-		copyMessage,
-		regenerateMessage,
-		sendMessage,
-	};
 }
 
 interface ComposerGateArgs {
@@ -496,8 +370,9 @@ export default function ChatContainer({
 			chatHistory={chat.chatHistory}
 			composerText={composerText}
 			copiedMessageId={chat.copiedId}
-			isCatalogError={model.isCatalogError}
-			isCatalogLoading={model.isCatalogLoading}
+			catalogStatus={
+				model.isCatalogLoading ? 'loading' : model.isCatalogError ? 'error' : 'ready'
+			}
 			isLoading={chat.isLoading}
 			models={model.models}
 			onChangeComposerText={setComposerText}
