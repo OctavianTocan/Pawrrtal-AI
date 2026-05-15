@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.config import settings
+from app.core.event_bus import TurnCompletedEvent
+from app.core.event_bus.global_bus import publish_if_available
 from app.core.governance.cost_tracker import (
     PostgresCostLedger,
     record_turn_cost,
@@ -249,6 +251,27 @@ async def _finalize_turn(
         event_count,
         duration_ms,
         extras,
+    )
+    # PR 10: announce completion (success / failure both surface here
+    # because the caller wraps run_turn in a try/finally).  Subscribers
+    # can react to spend, latency, etc.
+    surface = (
+        (turn_input.channel_message.get("surface") or "") if turn_input.channel_message else ""
+    )
+    model_id = (
+        (turn_input.channel_message.get("model_id") or "") if turn_input.channel_message else ""
+    )
+    await publish_if_available(
+        TurnCompletedEvent(
+            user_id=turn_input.user_id,
+            conversation_id=turn_input.conversation_id,
+            surface=surface,
+            model_id=model_id,
+            status=final_status,
+            duration_ms=duration_ms,
+            cost_usd=aggregator.total_cost_usd,
+            source=turn_input.log_tag.lower(),
+        )
     )
 
 
