@@ -112,16 +112,23 @@ export function getModelOption(
 }
 
 /**
- * Resolves a reasoning level to a display label. Reasoning levels are
- * already strings so the label is the level itself unless the consumer has
- * supplied an override map (which the package does not implement today —
- * call this with a custom mapper at the consumer site if needed).
+ * Resolves a reasoning level (e.g. `'extra-high'`) to a human-readable
+ * display label (`'Extra High'`). Splits on hyphens and title-cases each
+ * segment so consumers can pass kebab-case identifiers without the package
+ * needing a per-value override map. Empty/undefined input returns `''`.
  *
  * @param reasoning - The selected reasoning level, if any.
- * @returns The reasoning label, or `''` when nothing is selected.
+ * @returns The display label, or `''` when nothing is selected.
  */
 export function getReasoningLabel(reasoning: string | undefined): string {
-	return reasoning ?? '';
+	if (!reasoning) return '';
+	return reasoning
+		.split('-')
+		.map((segment) => {
+			const head = segment.charAt(0);
+			return head ? head.toUpperCase() + segment.slice(1) : segment;
+		})
+		.join(' ');
 }
 
 /**

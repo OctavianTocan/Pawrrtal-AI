@@ -14,7 +14,7 @@ import {
 	DropdownSubmenuContent,
 	DropdownSubmenuTrigger,
 } from '@octavian-tocan/react-dropdown';
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon } from 'lucide-react';
 import type { ChatModelOption, ChatReasoningLevel } from '../types';
 import { Button } from '../ui/Button';
 import {
@@ -138,17 +138,17 @@ export function ModelSelectorPopoverView({
 												<span className="min-w-0 flex-1 truncate text-left">
 													{providerLabel(row.provider)}
 												</span>
+												{/* Active provider shows a check; inactive rows
+												    show nothing on the right — the chevron we
+												    used to render here read as a selection cue
+												    and conflicted with the check. The submenu
+												    still opens on hover/ArrowRight. */}
 												{isActiveProvider ? (
 													<CheckIcon
 														aria-hidden="true"
 														className="size-3.5 shrink-0 text-[var(--color-chat-foreground)]"
 													/>
-												) : (
-													<ChevronRightIcon
-														aria-hidden="true"
-														className="size-3.5 shrink-0 text-[var(--color-chat-muted)]"
-													/>
-												)}
+												) : null}
 											</DropdownSubmenuTrigger>
 											<DropdownSubmenuContent className="p-1 min-w-64 rounded-[var(--radius-chat-lg)] bg-[var(--color-chat-bg-elevated)] border border-[color:color-mix(in_oklch,var(--color-chat-border)_50%,transparent)] shadow-[var(--shadow-chat-minimal)]">
 												{providerModels.map((model) => (
