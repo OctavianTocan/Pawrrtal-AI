@@ -38,6 +38,7 @@ Notable design decisions:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from collections.abc import AsyncIterator
@@ -115,6 +116,16 @@ _TOOL_ENABLED_MAX_TURNS = 6
 # cosmetic. We pick "default" rather than "bypassPermissions" so that
 # enabling a tool in the future fails closed instead of open.
 _DEFAULT_PERMISSION_MODE: PermissionMode = "default"
+
+# Last N CLI stderr lines kept in the rolling buffer for diagnostics
+# on a ``ProcessError``.  Bounded so a chatty subprocess can't grow
+# the buffer without bound.
+_STDERR_TAIL_LINES = 20
+
+# Cap on the per-retry sleep — even with the configured exponential
+# backoff we don't want a single transient blip to wedge the request
+# for minutes.
+_RETRY_SLEEP_CEILING_SECONDS = 30.0
 
 # System prompt scoped to a chat product. We deliberately do NOT use
 # Claude Code's default preset, which steers the model toward software
@@ -194,6 +205,9 @@ class ClaudeLLM:
         self._model_id = model_id
         self._config = config or ClaudeLLMConfig()
         self._user_id = user_id
+        # PR 05: rolling buffer for the last few CLI stderr lines so a
+        # ``ProcessError`` can surface useful diagnostic context.
+        self._stderr_buffer: list[str] = []
 
     async def stream(
         self,
@@ -205,6 +219,7 @@ class ClaudeLLM:
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
         permission_check: PermissionCheckFn | None = None,
+        images: list[dict[str, str]] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream a single assistant response for ``question``.
 
@@ -231,65 +246,110 @@ class ClaudeLLM:
                 :func:`_claude_tool_bridge.make_can_use_tool` so the
                 same policy applies as the Gemini path.  ``None``
                 preserves the historical namespace-only auto-approval.
+            images: Optional list of multimodal image inputs (PR 05).
+                Each dict has ``data`` (base64 string) and ``media_type``
+                (e.g. ``image/png``); they're rendered as Claude SDK
+                content blocks alongside the text question.
 
         Yields:
             ``StreamEvent`` dictionaries — text/thinking deltas, tool
             events, an optional rate-limit warning, and any error events.
         """
-        options = self._build_options(
-            conversation_id,
-            system_prompt=system_prompt,
-            agent_tools=tools,
-            permission_check=permission_check,
-        )
-        try:
-            # The SDK requires streaming-mode input (an AsyncIterable
-            # of message dicts) whenever ``can_use_tool`` is set on the
-            # options.  We always emit a single user-message envelope
-            # so the path is uniform regardless of whether bridged
-            # tools are mounted; uniform path means one shape to test
-            # and reason about.
-            async for message in query(prompt=_aiter_user_prompt(question), options=options):
-                for event in _events_from_message(message):
-                    yield event
-        except CLINotFoundError as error:
-            # `exception` (not `error`) gives us the stacktrace in the
-            # log — required by ruff TRY400 and useful for diagnosing
-            # PATH issues that vary across machines.
-            logger.exception("Claude CLI binary not found")
-            yield _error_event(
-                "Claude Code CLI binary is not installed in this environment. "
-                "Install it with `npm i -g @anthropic-ai/claude-code` and ensure "
-                "the executable is on PATH, or set ClaudeAgentOptions.cli_path. "
-                f"Underlying error: {error}",
+        # PR 05: retry-with-backoff for transient connection blips +
+        # resume-failure auto-fallback to a fresh session.  Both are
+        # gated on whether we've already yielded any event to the
+        # caller — once events are on the wire we can't safely retry
+        # without producing duplicates, so the inner generator
+        # propagates as before.
+        any_event_yielded = False
+        attempt = 0
+        max_attempts = max(1, _settings.claude_retry_max_attempts)
+        used_resume = _session_exists(str(conversation_id), self._config.cwd)
+
+        while True:
+            attempt += 1
+            options = self._build_options(
+                conversation_id,
+                system_prompt=system_prompt,
+                agent_tools=tools,
+                permission_check=permission_check,
+                force_fresh_session=(used_resume and attempt > 1),
             )
-        except CLIConnectionError as error:
-            logger.warning("Claude CLI subprocess connection lost: %s", error)
-            yield _error_event(
-                f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
-            )
-        except ProcessError as error:
-            exit_code = getattr(error, "exit_code", "n/a")
-            stderr = getattr(error, "stderr", "")
-            logger.exception(
-                "Claude CLI subprocess exited: exit_code=%s stderr=%r",
-                exit_code,
-                stderr,
-            )
-            yield _error_event(
-                "Claude Code CLI exited with an error. Verify CLAUDE_CODE_OAUTH_TOKEN "
-                "is configured and your account has access to the requested model. "
-                f"Exit code: {exit_code}. stderr: {stderr!r}",
-            )
-        except CLIJSONDecodeError:
-            logger.exception("Claude CLI returned non-JSON message")
-            yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
-        except ClaudeSDKError as error:
-            # `exception` (not `error`) so the traceback lands in the log
-            # — broad SDK errors are the bucket where new failure modes
-            # show up, and a stacktrace is the only way to attribute them.
-            logger.exception("Claude SDK error during stream")
-            yield _error_event(f"Claude SDK error: {error}")
+            try:
+                async for message in query(
+                    prompt=_aiter_user_prompt(question, images),
+                    options=options,
+                ):
+                    any_event_yielded = True
+                    for event in _events_from_message(message):
+                        yield event
+                return
+            except CLINotFoundError as error:
+                logger.exception("Claude CLI binary not found")
+                yield _error_event(
+                    "Claude Code CLI binary is not installed in this environment. "
+                    "Install it with `npm i -g @anthropic-ai/claude-code` and ensure "
+                    "the executable is on PATH, or set ClaudeAgentOptions.cli_path. "
+                    f"Underlying error: {error}",
+                )
+                return
+            except CLIConnectionError as error:
+                # Resume-failure fallback: an error on a `resume=` call
+                # often means the SDK lost the prior session transcript
+                # (CLI version drift, transcript file removed, etc.).
+                # Try again with `session_id=` so the conversation
+                # restarts in place rather than 500ing the user.
+                if used_resume and attempt == 1 and not any_event_yielded:
+                    logger.warning(
+                        "Claude resume failed for session %s; falling back to fresh session: %s",
+                        conversation_id,
+                        error,
+                    )
+                    continue
+                if (
+                    _is_retryable_cli_connection(error)
+                    and attempt < max_attempts
+                    and not any_event_yielded
+                ):
+                    delay = _retry_backoff_seconds(attempt)
+                    logger.warning(
+                        "Claude CLI transient connection error (attempt %d/%d); retrying in %.1fs: %s",
+                        attempt,
+                        max_attempts,
+                        delay,
+                        error,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                logger.warning("Claude CLI subprocess connection lost: %s", error)
+                yield _error_event(
+                    f"Lost connection to the Claude Code CLI subprocess. Underlying error: {error}",
+                )
+                return
+            except ProcessError as error:
+                exit_code = getattr(error, "exit_code", "n/a")
+                stderr = getattr(error, "stderr", "")
+                stderr_tail = "\n".join(self._stderr_buffer[-_STDERR_TAIL_LINES:])
+                logger.exception(
+                    "Claude CLI subprocess exited: exit_code=%s stderr=%r captured_tail=%r",
+                    exit_code,
+                    stderr,
+                    stderr_tail,
+                )
+                yield _error_event(
+                    "Claude Code CLI exited with an error. Verify CLAUDE_CODE_OAUTH_TOKEN "
+                    "is configured and your account has access to the requested model. "
+                    f"Exit code: {exit_code}. stderr: {stderr or stderr_tail!r}",
+                )
+                return
+            except CLIJSONDecodeError:
+                logger.exception("Claude CLI returned non-JSON message")
+                yield _error_event("Failed to parse a JSON message from the Claude Code CLI.")
+                return
+            except ClaudeSDKError as error:
+                logger.exception("Claude SDK error during stream")
+                yield _error_event(f"Claude SDK error: {error}")
+                return
 
     # -- internal --------------------------------------------------------
 
@@ -300,6 +360,7 @@ class ClaudeLLM:
         system_prompt: str | None = None,
         agent_tools: list[AgentTool] | None = None,
         permission_check: PermissionCheckFn | None = None,
+        force_fresh_session: bool = False,
     ) -> ClaudeAgentOptions:
         """Build per-request options, picking ``session_id`` vs ``resume``.
 
@@ -321,6 +382,10 @@ class ClaudeLLM:
                 When supplied, bound into ``ClaudeAgentOptions.can_use_tool``
                 via :func:`_claude_tool_bridge.make_can_use_tool` so the
                 SDK enforces the same policy as the Gemini path.
+            force_fresh_session: When True, skips the resume probe and
+                seeds a brand-new SDK session.  Used by the resume-failure
+                fallback path in :meth:`stream` so a single conversation
+                can recover from a missing transcript without 500ing.
                 execution.
         """
         session_id = str(conversation_id)
@@ -371,6 +436,23 @@ class ClaudeLLM:
         # the cap can leave ``cost_max_per_request_usd=0``.
         if _settings.cost_tracker_enabled and _settings.cost_max_per_request_usd > 0:
             kwargs["max_budget_usd"] = _settings.cost_max_per_request_usd
+        # Claude SDK sandbox (PR 05). Off by default; flip
+        # ``CLAUDE_SANDBOX_ENABLED=true`` to wrap the bundled CLI in
+        # the SDK's macOS Seatbelt sandbox. ``excludedCommands`` is
+        # parsed from the comma-separated env var via
+        # ``settings.claude_sandbox_excluded_commands_list``.
+        if _settings.claude_sandbox_enabled:
+            kwargs["sandbox"] = {
+                "enabled": True,
+                "autoAllowBashIfSandboxed": _settings.claude_sandbox_auto_allow_bash,
+                "excludedCommands": _settings.claude_sandbox_excluded_commands_list,
+            }
+        # Stderr tail capture (PR 05). The SDK lets us subscribe to
+        # CLI stderr via a callback; we keep the last
+        # ``_STDERR_TAIL_LINES`` lines in a ring buffer so a
+        # ``ProcessError`` can surface a useful diagnostic instead
+        # of just the exit code.
+        kwargs["stderr"] = self._capture_stderr_line
         if mcp_servers:
             kwargs["mcp_servers"] = mcp_servers
             # ``can_use_tool`` is the SDK's per-call permission hook.
@@ -391,13 +473,27 @@ class ClaudeLLM:
             kwargs["env"] = env
 
         # First turn: seed a brand-new SDK session that uses the same UUID
-        # as our conversation. Subsequent turns: resume it.
-        if _session_exists(session_id, self._config.cwd):
+        # as our conversation. Subsequent turns: resume it.  ``force_fresh_session``
+        # (PR 05) skips the resume probe so the resume-failure fallback path
+        # in :meth:`stream` can re-issue the same conversation as a fresh session.
+        if not force_fresh_session and _session_exists(session_id, self._config.cwd):
             kwargs["resume"] = session_id
         else:
             kwargs["session_id"] = session_id
 
         return ClaudeAgentOptions(**kwargs)
+
+    def _capture_stderr_line(self, line: str) -> None:
+        """Push one CLI stderr line onto the rolling diagnostic buffer.
+
+        Called by the SDK on every line the CLI subprocess writes to
+        stderr.  Bounded to ``_STDERR_TAIL_LINES`` so a chatty
+        subprocess can't grow the buffer without bound.
+        """
+        buffer = self._stderr_buffer
+        buffer.append(line)
+        if len(buffer) > _STDERR_TAIL_LINES:
+            del buffer[0 : len(buffer) - _STDERR_TAIL_LINES]
 
     def _build_env(self) -> dict[str, str]:
         """Compose the env dict forwarded to the CLI subprocess."""
@@ -443,7 +539,10 @@ def _merge_agent_tools_into_whitelist(
     return deduped
 
 
-async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
+async def _aiter_user_prompt(
+    question: str,
+    images: list[dict[str, str]] | None = None,
+) -> AsyncIterator[dict[str, Any]]:
     """Wrap a single user message as the streaming-mode input the SDK expects.
 
     The Claude SDK accepts either a plain string *or* an
@@ -452,11 +551,62 @@ async def _aiter_user_prompt(question: str) -> AsyncIterator[dict[str, Any]]:
     is registered — which we now always do via the bridge.  Yielding
     one envelope keeps every call site uniform regardless of whether
     tools were mounted on this turn.
+
+    PR 05: when ``images`` is supplied, the user message becomes a
+    multimodal content list (images first, then the text question)
+    matching Claude's `messages.content` shape:
+
+        [{"type": "image", "source": {"type": "base64", "media_type": ..., "data": ...}},
+         {"type": "text", "text": question}]
     """
+    if not images:
+        yield {
+            "type": "user",
+            "message": {"role": "user", "content": question},
+        }
+        return
+    blocks: list[dict[str, Any]] = [
+        {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": image.get("media_type", "image/png"),
+                "data": image["data"],
+            },
+        }
+        for image in images
+        if "data" in image
+    ]
+    blocks.append({"type": "text", "text": question})
     yield {
         "type": "user",
-        "message": {"role": "user", "content": question},
+        "message": {"role": "user", "content": blocks},
     }
+
+
+def _is_retryable_cli_connection(error: BaseException) -> bool:
+    """Decide whether a ``CLIConnectionError`` should trigger a retry.
+
+    MCP-related connection errors are NOT retryable — they almost
+    always indicate a configuration problem (a bridge server crashed,
+    a tool wasn't mounted, …) and retrying just delays the visible
+    failure.  Plain network / subprocess hiccups are retryable.
+    """
+    msg = str(error).lower()
+    return "mcp" not in msg
+
+
+def _retry_backoff_seconds(attempt: int) -> float:
+    """Exponential backoff capped at :data:`_RETRY_SLEEP_CEILING_SECONDS`.
+
+    ``attempt`` is 1-indexed (first failure is attempt 1, second is 2…)
+    so a base of 1.0 with factor 2.0 produces 1, 2, 4, 8, … seconds.
+    """
+    base = float(_settings.claude_retry_base_delay_seconds)
+    factor = float(_settings.claude_retry_backoff_factor)
+    ceiling = float(_settings.claude_retry_max_delay_seconds)
+    raw = base * (factor ** max(0, attempt - 1))
+    return min(raw, ceiling, _RETRY_SLEEP_CEILING_SECONDS)
 
 
 def _resolve_sdk_model(model_id: str) -> str:
