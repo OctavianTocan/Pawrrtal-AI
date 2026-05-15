@@ -35,6 +35,7 @@ from app.core.request_logging import RequestLoggingMiddleware
 from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
+from app.integrations.webhooks import get_webhooks_router
 from app.logger_setup import (
     configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
 )
@@ -162,6 +163,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_exports_router(),
+    )
+    fastapi_app.include_router(
+        get_webhooks_router(),
     )
     fastapi_app.include_router(
         get_health_router(),
