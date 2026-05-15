@@ -17,7 +17,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import metadata from the app models so autogenerate can detect changes.
-from app.db import Base
+from app.db_base import Base
 from app import models  # noqa: F401  — registers all ORM models
 
 target_metadata = Base.metadata

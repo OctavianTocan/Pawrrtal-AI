@@ -39,20 +39,13 @@ layers =
     api : users : integrations
     crud
     models : schemas
-    core : db : logger_setup
+    core : db : logger_setup : db_base
 ; `app.channels` is intentionally NOT in any layer here:
 ; `channels/base.py` + `channels/registry.py` are foundational, but
 ; `channels/turn_runner.py` (added in #204) is orchestration that
 ; pulls `app.crud.*` and `app.db`. The directory mixes layers and
 ; should be split — tracked as a follow-up. Until then it stays
 ; unlayered (sentrux ignores unlayered files).
-;
-; The lazy `from app import models` inside `init_db()` (db.py:55) is the
-; one cycle sentrux also tolerates via `max_cycles = 1`. Fixing it (by
-; extracting `Base` into its own module) recovers ~5000 quality points.
-; Tracked in beans `pawrrtal-ey9p` → see `.beans/`.
-ignore_imports =
-    app.db -> app.models
 
 ; --- Contract 2: the legacy db ↔ models cycle is the one cycle sentrux
 ; allows (max_cycles = 1). Pin it explicitly so any *new* cycle fails CI. -

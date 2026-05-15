@@ -13,7 +13,7 @@ from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Uui
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
-from .db import Base
+from .db_base import Base
 
 
 class SenderType(Enum):
