@@ -93,6 +93,21 @@ pre-commit-all:
 sentrux:
     bash scripts/sentrux-check.sh
 
+# Enforce backend layer ordering + boundaries (mirrors sentrux's Pro-gated
+# rules). Config: backend/.importlinter
+arch-be:
+    cd backend && uv run lint-imports --config .importlinter
+
+# Enforce frontend layer ordering + boundaries (mirrors sentrux's Pro-gated
+# rules). Config: frontend/.dependency-cruiser.cjs
+arch-fe:
+    cd frontend && bun run arch:check
+
+# Full architectural gate: sentrux (quality + 4 OSS rules) + the 13 rules
+# OSS sentrux can't enforce (split between import-linter for be + depcruise
+# for fe). Run this before opening a PR.
+arch: sentrux arch-be arch-fe
+
 # TSDoc coverage audit — report exported declarations missing JSDoc comments
 # Usage: just check-docs [path-prefix]  e.g. just check-docs frontend/lib
 check-docs *ARGS:
