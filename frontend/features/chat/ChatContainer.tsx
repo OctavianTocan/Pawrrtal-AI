@@ -118,25 +118,20 @@ function useSelectedChatModel(): UseSelectedChatModelResult {
 		validate: isCanonicalModelId,
 	});
 
+	// Derive during render: `usePersistedState` is backed by
+	// `useSyncExternalStore` so the next render sees the updated value
+	// synchronously after `setPersistedModelId`. The old "immediate" copy
+	// + useEffect sync was redundant (and tripped react-doctor's
+	// `no-derived-state-effect` rule).
 	const selectedModelId = useMemo(
 		() => resolveSelectedModelId(persistedModelId, models, defaultModel),
 		[persistedModelId, models, defaultModel]
 	);
-	const [immediateSelectedModelId, setImmediateSelectedModelId] = useState(selectedModelId);
-
-	useEffect(() => {
-		setImmediateSelectedModelId((currentModelId) => {
-			const currentModelExists = models.some((model): boolean => model.id === currentModelId);
-			if (currentModelExists && currentModelId === persistedModelId) return currentModelId;
-			return selectedModelId;
-		});
-	}, [models, persistedModelId, selectedModelId]);
 
 	const selectModel = useCallback(
 		(modelId: string): void => {
 			const modelExists = models.some((model): boolean => model.id === modelId);
 			if (!modelExists) return;
-			setImmediateSelectedModelId(modelId);
 			setPersistedModelId(modelId);
 		},
 		[models, setPersistedModelId]
@@ -144,7 +139,7 @@ function useSelectedChatModel(): UseSelectedChatModelResult {
 
 	return {
 		models,
-		selectedModelId: immediateSelectedModelId,
+		selectedModelId,
 		selectModel,
 		isCatalogLoading,
 		isCatalogError,
@@ -160,23 +155,17 @@ function useSelectedReasoning(): UseSelectedReasoningResult {
 		defaultValue: DEFAULT_REASONING_LEVEL,
 		validate: isChatReasoningLevel,
 	});
-	const [immediateReasoning, setImmediateReasoning] = useState(persistedReasoning);
-
-	useEffect(() => {
-		setImmediateReasoning(persistedReasoning);
-	}, [persistedReasoning]);
 
 	const selectReasoning = useCallback(
 		(reasoning: ChatReasoningLevel): void => {
 			if (!isChatReasoningLevel(reasoning)) return;
-			setImmediateReasoning(reasoning);
 			setPersistedReasoning(reasoning);
 		},
 		[setPersistedReasoning]
 	);
 
 	return {
-		selectedReasoning: immediateReasoning,
+		selectedReasoning: persistedReasoning,
 		selectReasoning,
 	};
 }
