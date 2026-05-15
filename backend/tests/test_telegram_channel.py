@@ -24,7 +24,9 @@ from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
 from app.core.providers.base import StreamEvent
 from app.core.providers.catalog import default_model
-from app.integrations.telegram.bot import _resolve_provider_with_auto_clear
+from app.integrations.telegram.bot_provider_resolution import (
+    resolve_provider_with_auto_clear as _resolve_provider_with_auto_clear,
+)
 from app.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
