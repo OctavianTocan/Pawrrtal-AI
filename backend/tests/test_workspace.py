@@ -82,14 +82,101 @@ class TestSeedWorkspace:
         assert (root / "skills").is_dir()
         assert (root / "artifacts").is_dir()
 
-    def test_creates_gitkeep_in_each_subdir(self, tmp_path: Path) -> None:
+    def test_creates_memory_sublayers(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
         with patch("app.core.workspace.settings") as mock_settings:
             mock_settings.workspace_base_dir = str(tmp_path)
             root = seed_workspace(ws_id)
 
-        for subdir in ("memory", "skills", "artifacts"):
-            assert (root / subdir / ".gitkeep").exists()
+        for layer in ("personal", "working", "episodic", "semantic"):
+            assert (root / "memory" / layer).is_dir()
+
+    def test_creates_protocols_dir(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "protocols").is_dir()
+
+    def test_creates_gitkeep_in_episodic_and_artifacts(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "memory" / "episodic" / ".gitkeep").exists()
+        assert (root / "artifacts" / ".gitkeep").exists()
+
+    def test_seeds_skills_index_md(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        index = (root / "skills" / "_index.md").read_text()
+        assert "Skill Map" in index
+        assert "read_file" in index
+
+    def test_seeds_manifest_as_empty_file(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        manifest = root / "skills" / "_manifest.jsonl"
+        assert manifest.exists()
+        assert manifest.read_text() == ""
+
+    def test_seeds_memory_personal_preferences(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "memory" / "personal" / "PREFERENCES.md").exists()
+
+    def test_seeds_memory_working_workspace(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "memory" / "working" / "WORKSPACE.md").exists()
+        assert (root / "memory" / "working" / "REVIEW_QUEUE.md").exists()
+
+    def test_seeds_semantic_memory_files(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "memory" / "semantic" / "LESSONS.md").exists()
+        assert (root / "memory" / "semantic" / "DECISIONS.md").exists()
+
+    def test_seeds_protocols_files(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        assert (root / "protocols" / "permissions.md").exists()
+        assert (root / "protocols" / "delegation.md").exists()
+
+    def test_does_not_overwrite_existing_skills_index(self, tmp_path: Path) -> None:
+        ws_id = uuid.uuid4()
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            root = seed_workspace(ws_id)
+
+        custom = "# My custom skill index\n"
+        (root / "skills" / "_index.md").write_text(custom)
+
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            seed_workspace(ws_id)
+
+        assert (root / "skills" / "_index.md").read_text() == custom
 
     def test_writes_agents_md(self, tmp_path: Path) -> None:
         ws_id = uuid.uuid4()
@@ -559,3 +646,48 @@ class TestWorkspaceAPI:
         resp = await client.get(f"/api/v1/workspaces/{ws.id}/files/../../../etc/passwd")
         # Either 400 (traversal blocked) or 404 (path normalised to inside workspace).
         assert resp.status_code in (400, 404)
+
+    @pytest.mark.anyio
+    async def test_skills_endpoint_returns_empty_for_fresh_workspace(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user: User,
+        tmp_path: Path,
+    ) -> None:
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            ws = await create_workspace(test_user.id, db_session)
+            await db_session.commit()
+
+        resp = await client.get(f"/api/v1/workspaces/{ws.id}/skills")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    @pytest.mark.anyio
+    async def test_skills_endpoint_discovers_skill_after_write(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_user: User,
+        tmp_path: Path,
+    ) -> None:
+        with patch("app.core.workspace.settings") as mock_settings:
+            mock_settings.workspace_base_dir = str(tmp_path)
+            ws = await create_workspace(test_user.id, db_session)
+            await db_session.commit()
+
+        # Write a skill via the existing file endpoint.
+        skill_content = "---\nname: my-skill\ntrigger: when testing\nsummary: run tests\n---\n\n# My Skill\n"
+        put_resp = await client.put(
+            f"/api/v1/workspaces/{ws.id}/files/skills/my-skill/SKILL.md",
+            json={"content": skill_content},
+        )
+        assert put_resp.status_code == 200
+
+        resp = await client.get(f"/api/v1/workspaces/{ws.id}/skills")
+        assert resp.status_code == 200
+        skills = resp.json()
+        assert len(skills) == 1
+        assert skills[0]["name"] == "my-skill"
+        assert skills[0]["has_skill_md"] is True
