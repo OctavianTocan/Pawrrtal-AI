@@ -496,6 +496,17 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                 """Wrap the provider stream with error capture + aggregation."""
                 nonlocal event_count
                 try:
+                    # PR 09: forward multimodal image inputs from the
+                    # request body straight to the provider.  Each
+                    # provider then bridges these into its native
+                    # content-block shape — Claude as `messages.content`
+                    # image blocks (PR 05), Gemini as Part.from_bytes
+                    # (PR 09 follow-on once the Gemini SDK wiring lands).
+                    image_inputs = (
+                        [{"data": img.data, "media_type": img.media_type} for img in request.images]
+                        if request.images
+                        else None
+                    )
                     async for event in provider.stream(
                         request.question,
                         request.conversation_id,
@@ -504,6 +515,7 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                         tools=agent_tools or None,
                         system_prompt=workspace_system_prompt,
                         permission_check=permission_check_for_request,
+                        images=image_inputs,
                     ):
                         event_count += 1
                         aggregator.apply(event)
