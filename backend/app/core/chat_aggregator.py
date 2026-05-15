@@ -52,6 +52,37 @@ class _ToolCall:
         return payload
 
 
+# Verbose levels (PR 07).  Filter applied to events before the
+# aggregator persists them and before the Telegram channel renders
+# inline tool glyphs.  Mirrors CCT's ``/verbose 0|1|2`` semantics.
+VERBOSE_QUIET = 0
+VERBOSE_NORMAL = 1
+VERBOSE_DETAILED = 2
+
+
+def should_emit_event(event: StreamEvent, verbose_level: int) -> bool:
+    """Return ``True`` when the event survives the configured verbose filter.
+
+    Level semantics (matches CCT):
+    * ``0`` (quiet) — only ``delta`` (final answer) + ``error`` + ``usage``
+      survive.  Tool calls and thinking are dropped.
+    * ``1`` (normal, default) — adds ``tool_use`` + ``tool_result`` +
+      ``artifact`` + ``message`` so the user sees what the agent is
+      doing inline.  Thinking still suppressed.
+    * ``2`` (detailed) — adds ``thinking`` so chain-of-thought is
+      visible.  Everything passes through.
+    """
+    event_type = event.get("type")
+    if verbose_level >= VERBOSE_DETAILED:
+        return True
+    if event_type == "thinking":
+        return False
+    if verbose_level >= VERBOSE_NORMAL:
+        return True
+    # Quiet: only deltas + errors + usage.
+    return event_type in {"delta", "error", "usage"}
+
+
 @dataclass
 class ChatTurnAggregator:
     """Fold provider stream events into the persisted assistant-turn shape.

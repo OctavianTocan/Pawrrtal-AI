@@ -39,6 +39,7 @@ from app.crud.channel import (
     get_user_id_for_external,
     redeem_link_code,
     update_conversation_model,
+    update_conversation_verbose_level,
 )
 
 # Loose match for the link-code shape (8 chars from the look-alike-free
@@ -85,6 +86,24 @@ _MODEL_FAIL_MESSAGE = "Couldn't update model — please try again."
 _NEW_NOT_BOUND_MESSAGE = "Connect your account first before starting a new conversation."
 _NEW_OK_MESSAGE = "✨ New conversation started. What's on your mind?"
 
+# /verbose handler copy
+_VERBOSE_USAGE_MESSAGE = (
+    "Usage: <code>/verbose 0|1|2</code>\n\n"
+    "0 = quiet (final answer only)\n"
+    "1 = normal (show tool calls inline)\n"
+    "2 = detailed (show tool calls + chain-of-thought)"
+)
+_VERBOSE_NOT_BOUND_MESSAGE = "Connect your account first before changing the verbose level."
+_VERBOSE_OK_MESSAGE = "Verbose level set to {level} ({label})."
+_VERBOSE_FAIL_MESSAGE = "Couldn't update verbose level — please try again."
+
+# Human-readable labels used in the /verbose reply.
+_VERBOSE_LABELS: dict[int, str] = {
+    0: "quiet",
+    1: "normal",
+    2: "detailed",
+}
+
 
 @dataclass(frozen=True)
 class TelegramSender:
@@ -122,6 +141,10 @@ class TelegramTurnContext:
 
     thread_id: int | None = None
     """Telegram topic thread ID, forwarded from the sender. None for plain DMs."""
+
+    verbose_level: int | None = None
+    """Per-conversation verbose level (PR 07): None inherits the global
+    default ``settings.telegram_verbose_default``; 0/1/2 override."""
 
 
 async def handle_start_command(
@@ -242,6 +265,7 @@ async def handle_plain_message(
         conversation_id=conversation.id,
         model_id=model_id,
         thread_id=sender.thread_id,
+        verbose_level=conversation.verbose_level,
     )
 
 
@@ -391,3 +415,69 @@ async def handle_model_command(
         canonical_id,
     )
     return _MODEL_OK_MESSAGE.format(model_id=canonical_id)
+
+
+async def handle_verbose_command(
+    *,
+    sender: TelegramSender,
+    level_arg: str,
+    session: AsyncSession,
+) -> str:
+    """Process a ``/verbose <0|1|2>`` command and persist the override.
+
+    Mirrors CCT's ``/verbose`` semantics — see
+    :func:`app.core.chat_aggregator.should_emit_event` for the
+    filtering applied at each level.
+
+    Args:
+        sender: Normalized sender identity.
+        level_arg: Whitespace-stripped text after ``/verbose``.  An
+            empty string triggers the usage hint.
+        session: Async database session.
+
+    Returns:
+        Reply string the bot should send immediately.
+    """
+    raw = level_arg.strip()
+    if raw == "":
+        return _VERBOSE_USAGE_MESSAGE
+    try:
+        level = int(raw)
+    except ValueError:
+        return _VERBOSE_USAGE_MESSAGE
+    if level not in _VERBOSE_LABELS:
+        return _VERBOSE_USAGE_MESSAGE
+
+    nexus_user_id = await get_user_id_for_external(
+        provider=PROVIDER,
+        external_user_id=str(sender.user_id),
+        session=session,
+    )
+    if nexus_user_id is None:
+        return _VERBOSE_NOT_BOUND_MESSAGE
+
+    conversation = await get_or_create_telegram_conversation_full(
+        user_id=nexus_user_id,
+        session=session,
+        thread_id=sender.thread_id,
+    )
+    updated = await update_conversation_verbose_level(
+        conversation_id=conversation.id,
+        verbose_level=level,
+        session=session,
+    )
+    if not updated:
+        logger.warning(
+            "TELEGRAM_VERBOSE_UPDATE_FAILED conversation_id=%s level=%d",
+            conversation.id,
+            level,
+        )
+        return _VERBOSE_FAIL_MESSAGE
+
+    logger.info(
+        "TELEGRAM_VERBOSE_SET user_id=%s conversation_id=%s level=%d",
+        nexus_user_id,
+        conversation.id,
+        level,
+    )
+    return _VERBOSE_OK_MESSAGE.format(level=level, label=_VERBOSE_LABELS[level])
