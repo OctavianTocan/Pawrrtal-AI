@@ -528,15 +528,15 @@ class TestResolveProviderWithAutoClear:
 
         with (
             patch(
-                "app.integrations.telegram.bot.resolve_llm",
+                "app.integrations.telegram.bot_provider_resolution.resolve_llm",
                 new=resolve_mock,
             ),
             patch(
-                "app.integrations.telegram.bot.update_conversation_model",
+                "app.integrations.telegram.bot_provider_resolution.update_conversation_model",
                 new=update_mock,
             ),
             patch(
-                "app.integrations.telegram.bot.async_session_maker",
+                "app.integrations.telegram.bot_provider_resolution.async_session_maker",
                 new=fake_session_maker,
             ),
         ):
@@ -576,11 +576,11 @@ class TestResolveProviderWithAutoClear:
 
         with (
             patch(
-                "app.integrations.telegram.bot.resolve_llm",
+                "app.integrations.telegram.bot_provider_resolution.resolve_llm",
                 new=resolve_mock,
             ),
             patch(
-                "app.integrations.telegram.bot.update_conversation_model",
+                "app.integrations.telegram.bot_provider_resolution.update_conversation_model",
                 new=update_mock,
             ),
         ):
