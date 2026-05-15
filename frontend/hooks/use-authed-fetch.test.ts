@@ -28,6 +28,7 @@ describe('useAuthedFetch', (): void => {
 		expect(fetch).toHaveBeenCalledWith('http://localhost:8000/api/v1/conversations', {
 			method: 'GET',
 			credentials: 'include',
+			cache: 'no-store',
 		});
 	});
 
