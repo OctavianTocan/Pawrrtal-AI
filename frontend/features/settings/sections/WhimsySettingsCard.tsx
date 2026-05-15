@@ -22,16 +22,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
-import {
-	SettingsCard,
-	SettingsRow,
-	SettingsSectionHeader,
-	Slider,
-	Switch,
-} from '@/features/settings/primitives';
-import { cn } from '@/lib/utils';
-import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
-import { WHIMSY_THEMES, type WhimsyThemeName } from '@/lib/whimsy-tile';
+import { SettingsCard, SettingsRow, SettingsSectionHeader, Slider, Switch } from '../primitives';
 import {
 	DEFAULT_WHIMSY_CONFIG,
 	isWhimsyThemeName,
@@ -42,7 +33,10 @@ import {
 	type WhimsyColor,
 	type WhimsyConfig,
 	type WhimsyMode,
-} from './config';
+} from '@/features/whimsy/config';
+import { cn } from '@/lib/utils';
+import { WHIMSY_PRESETS, whimsyPresetUrl } from '@/lib/whimsy-presets';
+import { WHIMSY_THEMES, type WhimsyThemeName } from '@/lib/whimsy-tile';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Module-local labels + options
