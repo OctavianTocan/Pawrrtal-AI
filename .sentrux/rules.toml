@@ -7,8 +7,12 @@
 # lower-order layers DOWN to higher-order layers, never the reverse.
 
 [constraints]
-# 1 pre-existing cycle: be-models (app/models.py) imports be-core (app/core/config)
-# via app.core.config. This is a known legacy cycle that pre-dates layer enforcement.
+# 1 pre-existing cycle: app/db.py and app/models.py form an SCC because
+# db.py's `init_db()` does a lazy `from app import models` to register
+# every SQLAlchemy table, while models.py imports `Base` from db.py.
+# Extracting `Base` into its own module (e.g. app/db_base.py) would close
+# this cycle and recover ~5000 quality-signal points (acyclicity raw 1 → 0).
+# Until that lands, the budget stays at 1.
 max_cycles = 1
 max_coupling = "C"
 max_cc = 30
@@ -46,6 +50,10 @@ name = "fe-lib"
 paths = ["frontend/lib/*", "frontend/hooks/*"]
 order = 4
 
+# `frontend/packages/` doesn't currently exist in the repo — workspace
+# packages live under `frontend/lib/react-{dropdown,overlay,chat-composer}/`
+# and are covered by `fe-lib`. The `fe-vendor` layer is reserved for the
+# day workspace packages move under `frontend/packages/`.
 [[layers]]
 name = "fe-vendor"
 paths = ["frontend/packages/*"]
@@ -60,7 +68,7 @@ order = 0
 
 [[layers]]
 name = "be-api"
-paths = ["backend/app/api/*", "backend/app/users.py"]
+paths = ["backend/app/api/*", "backend/app/users.py", "backend/app/integrations/*"]
 order = 1
 
 [[layers]]
@@ -75,7 +83,7 @@ order = 3
 
 [[layers]]
 name = "be-core"
-paths = ["backend/app/core/*", "backend/app/db.py", "backend/app/logger_setup.py"]
+paths = ["backend/app/core/*", "backend/app/channels/*", "backend/app/db.py", "backend/app/logger_setup.py"]
 order = 4
 
 # --- Boundaries (deny lists) ---
