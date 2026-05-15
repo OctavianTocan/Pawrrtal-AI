@@ -35,12 +35,12 @@ STT_TIMEOUT_SECONDS = 60.0
 HTTP_ERROR_STATUS_FLOOR = 400
 
 
-def get_stt_router() -> APIRouter:
+def get_stt_router() -> APIRouter:  # noqa: C901 — single cohesive STT route + dispatch shim
     """Build the STT proxy router."""
     router = APIRouter(prefix="/api/v1/stt", tags=["stt"])
 
     @router.post("")
-    async def transcribe_audio(
+    async def transcribe_audio(  # noqa: C901 — xAI legacy path + alt-backend dispatch live in one route
         file: UploadFile = File(...),
         language: str | None = Form(default=None),
         format: bool = Form(default=True),  # noqa: A002
@@ -57,7 +57,32 @@ def get_stt_router() -> APIRouter:
         access to ``text``, ``duration``, and the optional ``words`` array.
         """
         # `resolve_api_key` already falls back to `settings.xai_api_key`, so
-        # the caller doesn't need a manual `or settings.x` suffix.
+        # PR 14: when the operator selected a non-xAI backend, dispatch
+        # to the configured ``Transcriber`` (Mistral / OpenAI / local
+        # whisper.cpp).  The xAI proxy below is the historical default
+        # and stays the path when ``settings.voice_provider == "xai"``.
+        from app.integrations.voice import (  # noqa: PLC0415 — local import keeps the route light when voice extras unused
+            TranscriptionError,
+            resolve_transcriber,
+        )
+
+        transcriber = resolve_transcriber()
+        if transcriber is not None:
+            audio_bytes_alt = await file.read(MAX_AUDIO_BYTES + 1)
+            if len(audio_bytes_alt) > MAX_AUDIO_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Audio exceeds the {MAX_AUDIO_BYTES // (1024 * 1024)} MB upload cap.",
+                )
+            if not audio_bytes_alt:
+                raise HTTPException(status_code=422, detail="Audio file is empty.")
+            try:
+                text = await transcriber.transcribe(audio_bytes_alt)
+            except TranscriptionError as exc:
+                logger.warning("VOICE_TRANSCRIBE_FAILED provider=%s", "alt", exc_info=exc)
+                raise HTTPException(status_code=502, detail=str(exc)) from exc
+            return JSONResponse(content={"text": text})
+
         api_key = resolve_api_key(user.id, "XAI_API_KEY")
         if not api_key:
             raise HTTPException(
@@ -104,12 +129,8 @@ def get_stt_router() -> APIRouter:
                     files=upstream_files,
                 )
         except httpx.TimeoutException as error:
-            logger.warning(
-                "xAI STT timeout after %ss", STT_TIMEOUT_SECONDS, exc_info=error
-            )
-            raise HTTPException(
-                status_code=504, detail="Transcription timed out."
-            ) from error
+            logger.warning("xAI STT timeout after %ss", STT_TIMEOUT_SECONDS, exc_info=error)
+            raise HTTPException(status_code=504, detail="Transcription timed out.") from error
         except httpx.RequestError as error:
             logger.warning("xAI STT request failed: %s", error)
             raise HTTPException(
