@@ -181,8 +181,7 @@ function LandingState({
 					<ChatComposer
 						className="relative z-10"
 						isLoading={isLoading}
-						isCatalogError={catalogStatus === 'error'}
-						isCatalogLoading={catalogStatus === 'loading'}
+						catalogStatus={catalogStatus}
 						models={[...models]}
 						message={{
 							content: composerText,
@@ -328,8 +327,7 @@ function ActiveConversationState({
 				<ChatComposer
 					className="w-full max-w-[48.75rem]"
 					isLoading={isLoading}
-					isCatalogError={catalogStatus === 'error'}
-					isCatalogLoading={catalogStatus === 'loading'}
+					catalogStatus={catalogStatus}
 					models={[...models]}
 					message={{
 						content: composerText,
