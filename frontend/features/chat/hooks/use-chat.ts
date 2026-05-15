@@ -14,6 +14,21 @@ import type { ChatStreamEvent } from '../types';
 /** Sentinel returned by {@link parseSseFrame} when the stream signals completion. */
 const STREAM_DONE = Symbol('STREAM_DONE');
 
+/**
+ * Wire shape for one multimodal image attached to a chat request.
+ *
+ * Mirrors the backend's `ChatImageInput` schema (PR 09): a base64-encoded
+ * blob (no `data:` URL prefix) plus an explicit MIME type the provider
+ * bridge translates into a multimodal content block. Kept narrow to the
+ * image MIME types the provider bridge actually supports.
+ */
+export type ChatImageInput = {
+	/** Base64-encoded image bytes, with the `data:<mime>;base64,` prefix stripped. */
+	data: string;
+	/** Allowed image MIME types — must match the backend `ChatImageInput.media_type` literal union. */
+	media_type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+};
+
 /** Allowed `type` field values for chat SSE events. */
 const CHAT_EVENT_TYPES = [
 	'delta',
@@ -113,7 +128,8 @@ export function useChat(): {
 		message: string,
 		conversationId: string,
 		modelId: string,
-		reasoningEffort: ChatReasoningLevel
+		reasoningEffort: ChatReasoningLevel,
+		images?: readonly ChatImageInput[]
 	) => AsyncGenerator<ChatStreamEvent>;
 } {
 	const fetcher = useAuthedFetch();
@@ -122,7 +138,8 @@ export function useChat(): {
 		message: string,
 		conversationId: string,
 		modelId: string,
-		reasoningEffort: ChatReasoningLevel
+		reasoningEffort: ChatReasoningLevel,
+		images?: readonly ChatImageInput[]
 	): AsyncGenerator<ChatStreamEvent> {
 		const response = await fetcher(API_ENDPOINTS.chat.messages, {
 			method: 'POST',
@@ -131,6 +148,10 @@ export function useChat(): {
 				conversation_id: conversationId,
 				model_id: modelId,
 				reasoning_effort: reasoningEffort,
+				// Only include `images` when the user actually attached one — keeps
+				// the wire payload identical to the pre-multimodal contract for
+				// the common text-only path.
+				...(images && images.length > 0 ? { images } : {}),
 			}),
 			headers: {
 				'Content-Type': 'application/json',

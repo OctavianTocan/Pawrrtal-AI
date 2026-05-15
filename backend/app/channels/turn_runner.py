@@ -60,6 +60,11 @@ class ChatTurnInput:
     # ClaudeAgentOptions.can_use_tool (Claude) so the same policy
     # applies regardless of model.
     permission_check: PermissionCheckFn | None = None
+    # PR 09 — multimodal image inputs forwarded to the provider.  Each
+    # entry is ``{"data": <base64>, "media_type": "image/<mime>"}`` —
+    # the same wire shape ``ChatRequest.images`` carries on the API
+    # boundary.  ``None`` (the default) is the legacy text-only path.
+    images: list[dict[str, str]] | None = None
     history_window: int = 20
     log_tag: str = "TURN"
     log_extras: dict[str, Any] = field(default_factory=dict)
@@ -96,6 +101,7 @@ async def run_turn(
                 system_prompt=system_prompt,
                 reasoning_effort=turn_input.reasoning_effort,
                 permission_check=turn_input.permission_check,
+                images=turn_input.images,
             ):
                 counter.value += 1
                 aggregator.apply(event)
