@@ -195,6 +195,7 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
             workspace_root=Path(workspace.path),
             user_id=context.nexus_user_id,
             send_fn=tg_sender,
+            surface="telegram",
         )
         if workspace is not None
         else []

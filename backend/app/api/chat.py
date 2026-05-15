@@ -430,7 +430,12 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                 event["mime"] = mime
             await _web_send_queue.put(event)
 
-        agent_tools = build_agent_tools(workspace_root=root, user_id=user.id, send_fn=_web_send_fn)
+        agent_tools = build_agent_tools(
+            workspace_root=root,
+            user_id=user.id,
+            send_fn=_web_send_fn,
+            surface=surface,
+        )
 
         # PR 06: cross-provider WorkspaceContext.  Reads SOUL.md +
         # AGENTS.md + CLAUDE.md + ``.claude/skills/`` + ``.claude/settings.json``
