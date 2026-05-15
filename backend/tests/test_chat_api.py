@@ -27,6 +27,7 @@ class FakeProvider:
         history: object = None,
         tools: object = None,
         system_prompt: object = None,
+        reasoning_effort: object = None,
     ) -> AsyncIterator[dict[str, str]]:
         for event in self.events:
             yield event
@@ -87,6 +88,58 @@ async def test_chat_streams_provider_events(
     assert response.status_code == 200
     assert 'data: {"type": "delta", "content": "hello"}' in response.text
     assert "data: [DONE]" in response.text
+
+
+@pytest.mark.anyio
+async def test_chat_forwards_reasoning_effort(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: Workspace,
+) -> None:
+    """Chat forwards the selected reasoning level to the provider."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "Reasoning"})
+    captured: dict[str, object] = {}
+
+    class CapturingProvider(FakeProvider):
+        async def stream(
+            self,
+            question: str,
+            conversation_id: object,
+            user_id: object,
+            history: object = None,
+            tools: object = None,
+            system_prompt: object = None,
+            reasoning_effort: object = None,
+        ) -> AsyncIterator[dict[str, str]]:
+            captured["reasoning_effort"] = reasoning_effort
+            async for event in super().stream(
+                question,
+                conversation_id,
+                user_id,
+                history=history,
+                tools=tools,
+                system_prompt=system_prompt,
+                reasoning_effort=reasoning_effort,
+            ):
+                yield event
+
+    monkeypatch.setattr(
+        "app.api.chat.resolve_llm",
+        lambda _model_id, **_kwargs: CapturingProvider([{"type": "delta", "content": "ok"}]),
+    )
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={
+            "question": "hello",
+            "conversation_id": str(conversation_id),
+            "reasoning_effort": "extra-high",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured["reasoning_effort"] == "extra-high"
 
 
 @pytest.mark.anyio
@@ -179,6 +232,7 @@ async def test_chat_stream_converts_provider_exception_to_error_event(
             history: object = None,
             tools: object = None,
             system_prompt: object = None,
+            reasoning_effort: object = None,
         ) -> AsyncIterator[dict[str, str]]:
             raise RuntimeError("provider failed")
             yield {"type": "delta", "content": "unreachable"}
@@ -314,3 +368,91 @@ async def test_chat_safety_layer_fires_and_surfaces_agent_terminated(
     assert "data: [DONE]" in response.text
     # Safety fired at exactly 3 — not earlier, not later.
     assert script.call_count == 3
+
+
+@pytest.mark.anyio
+async def test_chat_returns_412_when_workspace_dir_is_missing_on_disk(
+    client: AsyncClient,
+    db_session: object,
+    test_user: object,
+    seeded_default_workspace: object,
+) -> None:
+    """Chat returns 412 when the workspace row exists but the directory is gone.
+
+    This is the ``_require_workspace_root`` branch: workspace DB row is present
+    but the on-disk directory was deleted (e.g. volume wipe, manual rm).
+    The gate must return 412 Precondition Failed so the frontend routes to
+    re-onboarding rather than attempting to run the agent.
+    """
+    import shutil
+
+    from app.models import Workspace
+
+    # Remove the workspace directory from disk so the anyio.Path.exists() check fails.
+    workspace: Workspace = seeded_default_workspace  # type: ignore[assignment]
+    shutil.rmtree(workspace.path, ignore_errors=True)
+
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "GoneWS"})
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={"question": "hello", "conversation_id": str(conversation_id)},
+    )
+
+    assert response.status_code == 412
+    detail = response.json()["detail"].lower()
+    assert "missing" in detail or "re-run" in detail or "onboarding" in detail
+
+
+@pytest.mark.anyio
+async def test_chat_request_accepts_reasoning_effort_field(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: object,
+) -> None:
+    """ChatRequest.reasoning_effort is accepted in all valid Literal forms."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "RE"})
+    monkeypatch.setattr(
+        "app.api.chat.resolve_llm",
+        lambda _model_id, **_kwargs: FakeProvider([{"type": "delta", "content": "ok"}]),
+    )
+
+    for effort in ("low", "medium", "high", "extra-high"):
+        response = await client.post(
+            "/api/v1/chat/",
+            json={
+                "question": "hi",
+                "conversation_id": str(conversation_id),
+                "reasoning_effort": effort,
+            },
+        )
+        assert response.status_code == 200, (
+            f"reasoning_effort={effort!r} was rejected with {response.status_code}"
+        )
+
+
+@pytest.mark.anyio
+async def test_chat_request_accepts_null_reasoning_effort(
+    client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+    seeded_default_workspace: object,
+) -> None:
+    """ChatRequest.reasoning_effort=null is accepted (optional field)."""
+    conversation_id = uuid4()
+    await client.post(f"/api/v1/conversations/{conversation_id}", json={"title": "RE-null"})
+    monkeypatch.setattr(
+        "app.api.chat.resolve_llm",
+        lambda _model_id, **_kwargs: FakeProvider([{"type": "delta", "content": "ok"}]),
+    )
+
+    response = await client.post(
+        "/api/v1/chat/",
+        json={
+            "question": "hi",
+            "conversation_id": str(conversation_id),
+            "reasoning_effort": None,
+        },
+    )
+    assert response.status_code == 200
