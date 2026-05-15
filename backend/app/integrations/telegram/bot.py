@@ -69,6 +69,26 @@ logger = logging.getLogger(__name__)
 _running_tasks: dict[int, asyncio.Task[None]] = {}
 
 
+async def _send_one_typing_action(
+    bot: Bot,
+    chat_id: int,
+    thread_id: int | None,
+) -> None:
+    """Best-effort single ``sendChatAction`` — log and swallow on failure."""
+    kwargs: dict[str, object] = {"chat_id": chat_id, "action": "typing"}
+    if thread_id is not None:
+        kwargs["message_thread_id"] = thread_id
+    try:
+        await bot.send_chat_action(**kwargs)
+    except Exception:
+        logger.debug(
+            "TELEGRAM_TYPING_FAILED chat_id=%s thread_id=%s",
+            chat_id,
+            thread_id,
+            exc_info=True,
+        )
+
+
 async def _maintain_typing_indicator(
     bot: Bot,
     chat_id: int,
@@ -83,25 +103,14 @@ async def _maintain_typing_indicator(
     sees that the bot is working — matches CCT's persistent-typing
     behaviour.
 
-    Errors are swallowed: a single failed ``sendChatAction`` should
-    never break the agent run.  The whole task is cancelled by the
-    caller's finally block.
+    Per-iteration errors are swallowed inside ``_send_one_typing_action``
+    so a single failed ``sendChatAction`` never breaks the agent run.
+    The whole task is cancelled by the caller's finally block.
     """
     refresh = float(settings.telegram_typing_refresh_seconds)
     try:
         while True:
-            try:
-                kwargs: dict[str, object] = {"chat_id": chat_id, "action": "typing"}
-                if thread_id is not None:
-                    kwargs["message_thread_id"] = thread_id
-                await bot.send_chat_action(**kwargs)
-            except Exception:
-                logger.debug(
-                    "TELEGRAM_TYPING_FAILED chat_id=%s thread_id=%s",
-                    chat_id,
-                    thread_id,
-                    exc_info=True,
-                )
+            await _send_one_typing_action(bot, chat_id, thread_id)
             await asyncio.sleep(refresh)
     except asyncio.CancelledError:
         return
