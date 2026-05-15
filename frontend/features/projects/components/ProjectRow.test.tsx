@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { CONVERSATION_DRAG_MIME } from '../constants';
+import { CONVERSATION_DRAG_MIME } from '@/lib/conversations/drag';
 import { ProjectRow } from './ProjectRow';
 
 describe('ProjectRow', () => {
