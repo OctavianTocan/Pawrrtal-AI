@@ -9,7 +9,7 @@ import { KnowledgeContainer } from '@/features/knowledge/KnowledgeContainer';
  * inside a `Suspense` boundary so `useSearchParams` (which requires Suspense
  * in the App Router) works without a CSR bailout warning.
  *
- * The `(app)` segment layout already wraps this in `AppLayout`, so the
+ * The `(app)` segment layout already wraps this in `AppShell`, so the
  * global sidebar and header are present without any extra plumbing here.
  */
 export default function KnowledgePage(): ReactNode {
