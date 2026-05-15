@@ -22,6 +22,8 @@ from app.core.agent_loop.types import PermissionCheckResult
 from app.core.agent_tools import build_agent_tools
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.config import settings
+from app.core.event_bus import TurnCompletedEvent, TurnStartedEvent
+from app.core.event_bus.global_bus import publish_if_available
 from app.core.governance.cost_tracker import (
     CostBudget,
     PostgresCostLedger,
@@ -491,6 +493,18 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
             stream_start = time.perf_counter()
             event_count = 0
             aggregator = ChatTurnAggregator()
+            # PR 10: announce the turn so subscribers (audit, metrics,
+            # future webhook delivery) can react.  Fire-and-forget
+            # via the global bus accessor; no-op when the bus is unset.
+            await publish_if_available(
+                TurnStartedEvent(
+                    user_id=user.id,
+                    conversation_id=request.conversation_id,
+                    surface=surface,
+                    model_id=model_id,
+                    source="chat",
+                )
+            )
 
             async def _guarded_stream():
                 """Wrap the provider stream with error capture + aggregation."""
@@ -603,6 +617,21 @@ def get_chat_router() -> APIRouter:  # noqa: C901, PLR0915
                     surface,
                     event_count,
                     duration_ms,
+                )
+                # PR 10: announce completion (success / failure both
+                # surface here because the finally block runs on every
+                # path).  Subscribers can react to spend, latency, etc.
+                await publish_if_available(
+                    TurnCompletedEvent(
+                        user_id=user.id,
+                        conversation_id=request.conversation_id,
+                        surface=surface,
+                        model_id=model_id,
+                        status=final_status,
+                        duration_ms=duration_ms,
+                        cost_usd=aggregator.total_cost_usd,
+                        source="chat",
+                    )
                 )
 
         return StreamingResponse(
