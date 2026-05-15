@@ -1,0 +1,85 @@
+; import-linter contracts — Pawrrtal backend
+;
+; Mirrors the layer ordering defined in `.sentrux/rules.toml`. Sentrux's OSS
+; build only evaluates 4 of the 17 rules in that file; this config plugs the
+; gap by enforcing the layered architecture and the frontend↔backend
+; boundary that Pro-only sentrux rules cover.
+;
+; Layer ordering: top of the list is the highest in the stack (the
+; consumer). Modules in a higher layer can import from any lower layer but
+; never from a higher one. Modules separated by `:` share the same layer
+; and may import each other (non-independent siblings). The `|` separator
+; means independent siblings — same level, but cannot import each other.
+;
+; Run:    cd backend && uv run lint-imports
+; CI:     `.github/workflows/sentrux.yml` runs both sentrux + import-linter
+;         on every PR to development/main.
+
+[importlinter]
+root_package = app
+; `frontend` is treated as an external package by import-linter (it's not
+; a Python module). The boundary contract below needs it visible to the
+; resolver so it can be marked forbidden.
+include_external_packages = True
+
+; --- Contract 1: layered architecture (mirrors sentrux fe/be layers) ------
+
+; `backend/main.py` is a sibling launcher (not under `app/`), so it can't sit
+; inside the `app` container. It's a leaf — nothing imports it — so it
+; doesn't need its own contract. The cli package below covers the rest of
+; the be-entry layer.
+
+[importlinter:contract:backend-layers]
+name = Backend layered architecture (sentrux mirror)
+type = layers
+containers =
+    app
+layers =
+    cli
+    api : users : integrations
+    crud
+    models : schemas
+    core : db : logger_setup
+; `app.channels` is intentionally NOT in any layer here:
+; `channels/base.py` + `channels/registry.py` are foundational, but
+; `channels/turn_runner.py` (added in #204) is orchestration that
+; pulls `app.crud.*` and `app.db`. The directory mixes layers and
+; should be split — tracked as a follow-up. Until then it stays
+; unlayered (sentrux ignores unlayered files).
+;
+; The lazy `from app import models` inside `init_db()` (db.py:55) is the
+; one cycle sentrux also tolerates via `max_cycles = 1`. Fixing it (by
+; extracting `Base` into its own module) recovers ~5000 quality points.
+; Tracked in beans `pawrrtal-ey9p` → see `.beans/`.
+ignore_imports =
+    app.db -> app.models
+
+; --- Contract 2: the legacy db ↔ models cycle is the one cycle sentrux
+; allows (max_cycles = 1). Pin it explicitly so any *new* cycle fails CI. -
+
+[importlinter:contract:no-other-cycles]
+name = No new import cycles outside the known db ↔ models pair
+type = forbidden
+source_modules =
+    app.api
+    app.crud
+    app.core
+    app.integrations
+forbidden_modules =
+    app.main
+    app.cli
+allow_indirect_imports = False
+ignore_imports =
+    ; (none — entry points should never be imported by lower layers)
+
+; --- Contract 3: nothing in the codebase should import `frontend.*`.
+; The frontend lives in a sibling directory and is not a Python package, so
+; this contract is largely a safety net for accidental tooling glue. -----
+
+[importlinter:contract:no-frontend-imports]
+name = Backend must not import the frontend
+type = forbidden
+source_modules =
+    app
+forbidden_modules =
+    frontend
