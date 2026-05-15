@@ -71,7 +71,17 @@ def _otel_enabled() -> bool:
     return bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"))
 
 
-def setup_tracing(app: "FastAPI" | None = None) -> None:
+def _workshop_url() -> str:
+    """Return the Raindrop Workshop OTLP base URL, or empty string when unset.
+
+    Workshop runs on port 5899 by default.  Reads ``RAINDROP_WORKSHOP_URL``
+    so local dev can point at Workshop without touching the production
+    ``OTEL_EXPORTER_OTLP_ENDPOINT``.
+    """
+    return os.environ.get("RAINDROP_WORKSHOP_URL", "").rstrip("/")
+
+
+def setup_tracing(app: FastAPI | None = None) -> None:
     """Install the OTel TracerProvider + autoinstrumenters.
 
     Idempotent — safe to call multiple times.  When OTel is disabled
@@ -83,11 +93,12 @@ def setup_tracing(app: "FastAPI" | None = None) -> None:
             ``None`` when only SQLAlchemy + httpx instrumentation is
             needed (e.g. cron jobs).
     """
-    global _initialised, _tracer_provider
+    global _initialised, _tracer_provider  # noqa: PLW0603 — idempotency singleton
 
     if _initialised:
         return
-    if not _otel_enabled():
+    workshop_url = _workshop_url()
+    if not _otel_enabled() and not workshop_url:
         logger.info("TELEMETRY_DISABLED reason=no_otel_endpoint")
         _initialised = True
         return
@@ -97,22 +108,21 @@ def setup_tracing(app: "FastAPI" | None = None) -> None:
     # but didn't install the extras we want a loud failure here, not
     # a silent one.
     try:
-        from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        from opentelemetry import trace  # noqa: PLC0415
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # noqa: PLC0415
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-        from opentelemetry.instrumentation.logging import LoggingInstrumentor
-        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-        from opentelemetry.sdk.resources import Resource
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    except ImportError as exc:
-        logger.error(
-            "TELEMETRY_INSTALL_MISSING %s — set OTEL_EXPORTER_OTLP_ENDPOINT only "
+        from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor  # noqa: PLC0415
+        from opentelemetry.instrumentation.logging import LoggingInstrumentor  # noqa: PLC0415
+        from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor  # noqa: PLC0415
+        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415
+        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415
+    except ImportError:
+        logger.exception(
+            "TELEMETRY_INSTALL_MISSING — set OTEL_EXPORTER_OTLP_ENDPOINT only "
             "after installing the OTel extras (`uv pip install -e .[otel]` or "
             "add the opentelemetry-* packages to your image).",
-            exc,
         )
         return
 
@@ -126,19 +136,32 @@ def setup_tracing(app: "FastAPI" | None = None) -> None:
     )
 
     provider = TracerProvider(resource=resource)
-    # OTLP/HTTP picks the endpoint + headers up from standard env vars
-    # (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS,
-    # OTEL_EXPORTER_OTLP_PROTOCOL).  We don't pass them explicitly so
-    # operators can configure with the convention every collector
-    # expects, including custom protocols + headers.
-    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+
+    if _otel_enabled():
+        # OTLP/HTTP picks the endpoint + headers up from standard env vars
+        # (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_HEADERS,
+        # OTEL_EXPORTER_OTLP_PROTOCOL).  We don't pass them explicitly so
+        # operators can configure with the convention every collector
+        # expects, including custom protocols + headers.
+        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+
+    if workshop_url:
+        # Mirror every span to the local Raindrop Workshop debugger.
+        # Workshop accepts standard OTLP/HTTP at /v1/traces, so no auth
+        # header is needed — it only binds to localhost.
+        workshop_traces_endpoint = f"{workshop_url}/v1/traces"
+        provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=workshop_traces_endpoint))
+        )
+        logger.info("TELEMETRY_WORKSHOP_MIRROR endpoint=%s", workshop_traces_endpoint)
+
     trace.set_tracer_provider(provider)
 
     # Auto-instrument the three layers worth one-line wins:
     if app is not None:
         # FastAPI instrumentor must be imported lazily to avoid pulling
         # starlette internals before the app is constructed.
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # noqa: PLC0415
 
         FastAPIInstrumentor.instrument_app(
             app,
@@ -156,10 +179,12 @@ def setup_tracing(app: "FastAPI" | None = None) -> None:
 
     _tracer_provider = provider
     _initialised = True
+    primary_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "<none>")
     logger.info(
-        "TELEMETRY_ENABLED service=%s endpoint=%s",
+        "TELEMETRY_ENABLED service=%s endpoint=%s workshop=%s",
         service_name,
-        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        primary_endpoint,
+        workshop_url or "<none>",
     )
 
 
@@ -170,12 +195,12 @@ def shutdown_tracing() -> None:
     the BatchSpanProcessor so spans buffered at the moment uvicorn
     receives SIGTERM still make it to the collector.
     """
-    global _initialised, _tracer_provider
+    global _initialised, _tracer_provider  # noqa: PLW0603 — idempotency singleton
     if _tracer_provider is None:
         return
     try:
         _tracer_provider.shutdown()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("TELEMETRY_SHUTDOWN_FAILED", exc_info=True)
     finally:
         _tracer_provider = None
@@ -190,6 +215,6 @@ def get_tracer(name: str | None = None):
     tracer that swallows ``start_as_current_span`` calls without
     overhead.
     """
-    from opentelemetry import trace
+    from opentelemetry import trace  # noqa: PLC0415
 
     return trace.get_tracer(name or "pawrrtal")

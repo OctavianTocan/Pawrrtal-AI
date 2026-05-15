@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.raindrop import track_ai_turn
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -209,4 +210,14 @@ async def _finalize_turn(
         event_count,
         duration_ms,
         extras,
+    )
+
+    track_ai_turn(
+        model_id=turn_input.channel_message.get("model_id") or "",
+        question=turn_input.question,
+        response=aggregator.content,
+        conversation_id=str(turn_input.conversation_id),
+        user_id=str(turn_input.user_id),
+        tool_calls=[tc.to_dict() for tc in aggregator.tool_calls],
+        duration_ms=duration_ms,
     )

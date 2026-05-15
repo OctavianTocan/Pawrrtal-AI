@@ -84,6 +84,18 @@ class Settings(BaseSettings):
     # Base backoff (seconds) between LLM retries; doubles each retry,
     # capped at 30s inside the loop.  Set 0 for instant retry.
     agent_llm_retry_backoff_seconds: float = 1.0
+
+    # --- Raindrop Workshop / Analytics --------------------------------------
+    # API key for Raindrop AI (https://raindrop.sh). When set, every completed
+    # AI turn emits a structured ``track_ai()`` event for analytics.
+    # Leave empty to disable (default for local dev).
+    raindrop_api_key: str = ""
+    # Base URL of the local Raindrop Workshop debugger. When set, all OTel spans
+    # (FastAPI, SQLAlchemy, httpx) are mirrored to ``<url>/v1/traces`` in
+    # addition to any primary OTEL_EXPORTER_OTLP_ENDPOINT.
+    # Workshop runs on port 5899 by default: http://localhost:5899
+    raindrop_workshop_url: str = ""
+
     # Admin user credentials (for testing).
     admin_email: str | None = None
     admin_password: str | None = None

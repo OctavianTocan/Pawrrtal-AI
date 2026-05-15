@@ -26,6 +26,7 @@ from app.api.workspace_env import get_workspace_env_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
 from app.core.middleware import BackendApiKeyMiddleware
+from app.core.raindrop import setup_raindrop, shutdown_raindrop
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.telemetry import setup_tracing, shutdown_tracing
@@ -50,9 +51,14 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Run startup tasks (database table creation) before the app begins serving."""
+    # Raindrop analytics init.  No-op when RAINDROP_API_KEY is unset.
+    # Must run before setup_tracing so the raindrop SDK does not interfere
+    # with our OTel TracerProvider (we call it with tracing_enabled=False).
+    setup_raindrop()
     # OpenTelemetry tracing bootstrap.  No-op when OTEL_EXPORTER_OTLP_ENDPOINT
     # is unset, so dev environments are unaffected.  Must run before any
     # outbound httpx call so the autoinstrumenter wraps the global client.
+    # Also adds a Workshop mirror exporter when RAINDROP_WORKSHOP_URL is set.
     setup_tracing(app)
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
@@ -68,6 +74,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
             yield
         finally:
             shutdown_tracing()
+            shutdown_raindrop()
 
 
 # --- App & Middleware --------------------------------------------------------
