@@ -8,6 +8,45 @@ Thin glue between aiogram and the framework-free handlers. Two boot
 modes (polling for laptops, webhook for prod) share the same handlers.
 """
 
+# Bot token can be obtained via https://t.me/BotFather
+import logging
+
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from aiogram.types import Message
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+# We need to import the token from the config file
+if not settings.telegram_bot_token:
+    logger.info("TELEGRAM_BOT_TOKEN is not set, Telegram bot will not be started.")
+
+# We need to set the token to the dispatcher.
+TOKEN = settings.telegram_bot_token
+
+# All handlers should be attached to the Router (or Dispatcher)
+router = Router()
+
+dispatcher = Dispatcher()
+dispatcher.include_router(router)
+
+
+# The 'F' here is aiogram's filter syntax that allows us to match on the message text.
+@router.message(F.text)
+async def handle_text(message: Message) -> None:
+    """Handle the text message."""
+    await message.answer("Hello, world! You said: " + (message.text or "nothing"))
+
+
+async def start_telegram_bot_polling() -> None:
+    """Main function to run the Telegram bot."""
+    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    await dispatcher.start_polling(bot, handle_signals=False)
+
+
 # TODO(pawrrtal-obsd): in-flight stream tracking is a module-level dict
 #   keyed by chat_id. It exists so /stop can cancel and so a new
 #   message can cancel-then-replace the in-flight task. This is

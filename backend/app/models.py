@@ -159,8 +159,36 @@ class UserAppearance(Base):
 # TODO(pawrrtal-j8o1): two ORM classes go here. Tables already exist in
 #   the DB (migrations 007 + 011) — match those column types exactly.
 #   One has a unique constraint that prevents the same external identity
-#   from mapping to two Nexus users; the other uses a hashed column as
+#   from mapping to two Pawrrtal users; the other uses a hashed column as
 #   its primary key.
+
+
+class ChannelLinkCode(Base):
+    """A short-lived one-time-use code for linking a Pawrrtal user to a third-party channel."""
+
+    __tablename__ = "channel_link_codes"
+
+    # This is the HMAC-SHA-256 hex-encoded hash of the code. It's what the user sees and pastes into the channel.
+    code_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
+
+
+class ChannelBinding(Base):
+    """A binding between a Pawrrtal user and a third-party channel."""
+
+    __tablename__ = "channel_bindings"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+
+    # The Pawrrtal user ID.
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # The third-party channel ID.
+    external_user_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    # The third-party provider.
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Created at timestamp.
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class ChatMessage(Base):

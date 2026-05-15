@@ -3,6 +3,8 @@
 Defines all API routes, configures middleware, and wires up authentication.
 """
 
+import asyncio
+import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -28,6 +30,7 @@ from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db import create_db_and_tables
+from app.integrations.telegram.bot import start_telegram_bot_polling
 from app.logger_setup import (
     configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
 )
@@ -54,6 +57,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await create_db_and_tables()
     # This creates the admin user on every startup, but the UserManager will check if it already exists and skip creation if so, so it's idempotent and safe to run every time.
     await seed_admin_user()
+
+    # Start the Telegram polling loop.
+    telegram_polling_task = asyncio.create_task(start_telegram_bot_polling())
+
     # TODO(pawrrtal-obsd): wrap the rest of the lifespan in
     #   `async with telegram_lifespan() as service:` once Phase 11 ships.
     #   The webhook route reads `app.state.telegram_service`, so stash it
@@ -62,6 +69,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         yield
     finally:
         shutdown_tracing()
+        # Cancel the Telegram polling loop.
+        telegram_polling_task.cancel()
+        # We're waiting for the task to cancel, and catching the error to avoid it being propagated to the main process, which would cause the app to crash.
+        with contextlib.suppress(asyncio.CancelledError):
+            await telegram_polling_task
 
 
 # --- App & Middleware --------------------------------------------------------

@@ -179,6 +179,8 @@ The curated reading list for the highest-signal rules in this stack lives at [`d
 - Custom React hooks use consistent `use-*` naming for modules and exports (for example `use-login-mutations.ts`).
 - When adding or extending GitHub Actions workflows, follow the repository pattern of running jobs on the team’s custom GitHub runner rather than assuming default hosted runners only.
 - Git `pre-commit` runs via `backend/.venv/bin/python3 -m pre_commit`; keep `pre-commit` in the backend `pyproject.toml` dev dependency group and run `cd backend && uv sync --group dev` so hooks do not fail with `No module named pre_commit`.
+- If the checkout was moved or renamed, `backend/.venv` scripts can keep a stale shebang (hook spawn fails with “no such file” even when `pre-commit` exists). Remove `backend/.venv` and run `uv sync --project backend --group dev` or `just install` to recreate the environment.
+- Telegram bot is meant to start and stop with the API via `telegram_lifespan()` nested in FastAPI lifespan in `backend/main.py` (Phase 11 bean); stash the service on `app.state` for webhook mode, use `start_polling(..., handle_signals=False)` for polling, and do not run `asyncio.run` at import time in `backend/app/integrations/telegram/bot.py`.
 - From `frontend/`, run scoped Vitest with `bun run test -- <file-or-pattern>` so paths are passed after `--` (avoid `bun run test --run <path>`, which does not match how Vitest is wired here).
 
 <claude-mem-context>
