@@ -5,7 +5,7 @@ import type * as React from 'react';
 import { useState } from 'react';
 import { SidebarNavRow } from '@/components/ui/sidebar-nav-row';
 import { cn } from '@/lib/utils';
-import { CONVERSATION_DRAG_MIME } from '../constants';
+import { CONVERSATION_DRAG_MIME } from '@/lib/conversations/drag';
 
 /** Props for {@link ProjectRow}. */
 export interface ProjectRowProps {
