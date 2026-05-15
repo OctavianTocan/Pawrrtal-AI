@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
 
 if TYPE_CHECKING:
-    from app.core.agent_loop.types import AgentTool
+    from app.core.agent_loop.types import AgentTool, PermissionCheckFn
 
 ReasoningEffort = Literal["low", "medium", "high", "extra-high"]
 """Reasoning-depth values accepted from the chat UI."""
@@ -46,6 +46,7 @@ class AILLM(Protocol):
         tools: list[AgentTool] | None = None,
         system_prompt: str | None = None,
         reasoning_effort: ReasoningEffort | None = None,
+        permission_check: PermissionCheckFn | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream response events for a user message.
 
@@ -73,5 +74,12 @@ class AILLM(Protocol):
                      prompt.  When ``None`` the provider uses its own default.
             reasoning_effort: Optional reasoning-depth knob selected by the
                      user. Providers that do not support it may ignore it.
+            permission_check: Optional async ``(tool_name, arguments)`` gate
+                     (PR 03b).  When supplied, the provider plumbs it into
+                     the cross-provider seam — ``AgentLoopConfig.permission_check``
+                     for Gemini, ``ClaudeAgentOptions.can_use_tool`` (via the
+                     tool bridge) for Claude — so the same policy is enforced
+                     regardless of model.  ``None`` keeps the previous
+                     behaviour: every tool call dispatches without a gate.
         """
         ...
