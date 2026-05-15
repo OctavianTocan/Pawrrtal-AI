@@ -8,9 +8,30 @@
  * {@link import('@/lib/types').ChatMessage} that the UI can render —
  * reasoning panel above the body, chronologically-ordered tool rows, source
  * chips, and a reply-action toolbar.
+ *
+ * The generic message-shape types (`ChatToolCallBase`, `ChatTimelineEntry`,
+ * `AssistantMessageStatus`, `ChatArtifactPayload`, `ChatToolCallStatus`)
+ * live in `@/lib/types` so the chat layer doesn't sit above its own data
+ * model. We re-export them here so existing importers (`chat-reducer`,
+ * `AssistantMessage`, the artifact components) keep working without
+ * rewriting their imports.
  */
 
+import type {
+	AssistantMessageStatus,
+	ChatArtifactPayload,
+	ChatTimelineEntry,
+	ChatToolCallBase,
+	ChatToolCallStatus,
+} from '@/lib/types';
 import type { CalendarEventInfo, MemoryResultInfo, WebSourceInfo } from './tool-result-parsers';
+
+export type {
+	AssistantMessageStatus,
+	ChatArtifactPayload,
+	ChatTimelineEntry,
+	ChatToolCallStatus,
+};
 
 /** Plain text chunk from the assistant's main response. */
 export interface ChatDeltaEvent {
@@ -58,35 +79,6 @@ export interface ChatAgentTerminatedEvent {
 	content: string;
 }
 
-/**
- * Structured `render_artifact` payload — emitted as a sibling of the
- * matching `tool_use` so the frontend can render an inline preview card
- * without round-tripping the spec back through the LLM. The catalog of
- * allowed component `type` strings is enforced inside the renderer
- * (see {@link ./artifacts/components}); unknown names render a
- * fallback placeholder rather than the model's free text.
- */
-export interface ChatArtifactPayload {
-	/** Server-minted id, e.g. `art_3f9b2e1a8c01`. */
-	id: string;
-	/** Short label shown on the preview card and dialog header. */
-	title: string;
-	/** json-render flat-spec object — `{ root, elements }`. */
-	spec: {
-		root: string;
-		elements: Record<
-			string,
-			{
-				type: string;
-				props?: Record<string, unknown>;
-				children?: string[];
-			}
-		>;
-	};
-	/** The originating tool_use_id; useful for correlating with chain-of-thought. */
-	tool_use_id: string;
-}
-
 /** Sibling event emitted whenever the agent calls `render_artifact`. */
 export interface ChatArtifactEvent {
 	type: 'artifact';
@@ -103,27 +95,15 @@ export type ChatStreamEvent =
 	| ChatErrorEvent
 	| ChatAgentTerminatedEvent;
 
-/** Lifecycle of a single tool invocation as observed from the SSE stream. */
-export type ChatToolCallStatus = 'pending' | 'completed' | 'failed';
-
 /**
- * A tool invocation captured during streaming.
+ * A tool invocation captured during streaming, enriched with pre-parsed
+ * source chips so the renderer doesn't reparse `result` on every frame.
  *
- * Starts as `pending` when the assistant emits a `tool_use` event and flips
- * to `completed` once the matching `tool_result` arrives. Carries pre-parsed
- * source chips so the renderer doesn't reparse on every frame.
+ * Extends the transport-level {@link ChatToolCallBase} from `@/lib/types`
+ * — assignable into `AgnoMessage.tool_calls` (which uses the base type)
+ * while the chat reducer and renderer keep using the richer fields.
  */
-export interface ChatToolCall {
-	/** Stable id supplied by the backend (`tool_use.id`) — used to match results. */
-	id: string;
-	/** Tool name as declared by the assistant. */
-	name: string;
-	/** Input arguments the assistant passed to the tool. */
-	input: Record<string, unknown>;
-	/** Tool result text (only present once the tool has finished). */
-	result?: string;
-	/** Whether the result has arrived yet. */
-	status: ChatToolCallStatus;
+export interface ChatToolCall extends ChatToolCallBase {
 	/** Web result chips parsed from `result` for `web_search`. */
 	webSources?: WebSourceInfo[];
 	/** Calendar event chips parsed from `result` for `calendar_search`. */
@@ -131,20 +111,3 @@ export interface ChatToolCall {
 	/** Memory chips parsed from `result` for memory-flavoured tools. */
 	memoryResults?: MemoryResultInfo[];
 }
-
-/**
- * One slot in the chain-of-thought timeline.
- *
- * The container records every thinking burst and tool invocation in arrival
- * order so the chain-of-thought view can render them chronologically instead
- * of bucketing all thinking text above all tool steps.
- */
-export type ChatTimelineEntry =
-	| { kind: 'thinking'; text: string }
-	| { kind: 'tool'; toolCallId: string };
-
-/**
- * Whether an assistant message is currently failed (so the UI can offer a
- * retry button) — separate from `status` on individual tool calls.
- */
-export type AssistantMessageStatus = 'streaming' | 'complete' | 'failed';
