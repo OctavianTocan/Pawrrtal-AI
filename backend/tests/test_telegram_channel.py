@@ -155,7 +155,7 @@ class TestTelegramChannelDeliver:
         assert last_call.kwargs["text"] == "Hello, world"
 
     async def test_non_delta_events_ignored(self) -> None:
-        """Only ``type: delta`` events accumulate text; others are silently skipped."""
+        """``type: thinking`` is skipped; ``tool_use`` injects an inline glyph (PR 07)."""
         bot = _make_bot()
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
@@ -169,7 +169,12 @@ class TestTelegramChannelDeliver:
             pass
 
         last_call = bot.edit_message_text.call_args_list[-1]
-        assert last_call.kwargs["text"] == "answer"
+        # PR 07: tool_use surfaces a one-line glyph + tool name so the
+        # user can see what the agent is doing in real time. Thinking
+        # is still silenced.
+        assert last_call.kwargs["text"].startswith("answer")
+        assert "search" in last_call.kwargs["text"]
+        assert "reasoning..." not in last_call.kwargs["text"]
 
     async def test_not_modified_error_swallowed(self) -> None:
         """TelegramBadRequest: message is not modified must not propagate."""

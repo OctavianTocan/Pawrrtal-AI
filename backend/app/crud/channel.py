@@ -304,6 +304,38 @@ async def update_conversation_model(
     return True
 
 
+async def update_conversation_verbose_level(
+    *,
+    conversation_id: uuid.UUID,
+    verbose_level: int | None,
+    session: AsyncSession,
+) -> bool:
+    """Persist a per-conversation verbose-level override (PR 07).
+
+    Used by the ``/verbose <0|1|2>`` Telegram command.  ``None``
+    clears the override so the next turn falls back to
+    ``settings.telegram_verbose_default``.
+
+    Args:
+        conversation_id: The conversation to update.
+        verbose_level: 0 (quiet), 1 (normal), 2 (detailed), or
+            ``None`` to clear the override.
+        session: Async database session.
+
+    Returns:
+        ``True`` when the row was found and updated, ``False``
+        when no such conversation exists.
+    """
+    from app.models import Conversation  # noqa: PLC0415
+
+    row = await session.get(Conversation, conversation_id)
+    if row is None:
+        return False
+    row.verbose_level = verbose_level
+    await session.commit()
+    return True
+
+
 async def _get_or_create_telegram_conv_row(
     *,
     user_id: uuid.UUID,
