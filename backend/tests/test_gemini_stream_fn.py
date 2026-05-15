@@ -312,3 +312,246 @@ async def test_gemini_provider_accumulates_tool_result_in_context(
 
     # Second call's message list includes the tool result.
     assert "toolResult" in second_call_roles
+
+
+# ---------------------------------------------------------------------------
+# Tests for extracted helpers: _resolve_gemini_api_key and _tool_calls_from_chunk
+# (added in this PR to improve testability by extracting inline logic)
+# ---------------------------------------------------------------------------
+
+
+class TestResolveGeminiApiKey:
+    """:func:`_resolve_gemini_api_key` should route key resolution correctly."""
+
+    def test_returns_settings_key_when_user_id_is_none(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When user_id is None (unauthenticated call), use settings.google_api_key."""
+        from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+        monkeypatch.setattr("app.core.providers.gemini_provider.settings.google_api_key", "gw-key")
+        result = _resolve_gemini_api_key(None)
+        assert result == "gw-key"
+
+    def test_returns_resolve_api_key_result_when_user_id_provided(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When user_id is provided, resolve_api_key is called for GEMINI_API_KEY."""
+        from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+        uid = uuid4()
+        monkeypatch.setattr(
+            "app.core.providers.gemini_provider.resolve_api_key",
+            lambda user_id, key: "workspace-key" if user_id == uid else None,
+        )
+        result = _resolve_gemini_api_key(uid)
+        assert result == "workspace-key"
+
+    def test_returns_empty_string_when_user_has_no_override(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When the user has no per-workspace key, returns '' (not None)."""
+        from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+        monkeypatch.setattr(
+            "app.core.providers.gemini_provider.resolve_api_key",
+            lambda user_id, key: None,
+        )
+        result = _resolve_gemini_api_key(uuid4())
+        # resolve_api_key returned None → the function applies `or ""`.
+        assert result == ""
+
+    def test_user_id_none_does_not_call_resolve_api_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """resolve_api_key must NOT be called when user_id is None."""
+        from app.core.providers.gemini_provider import _resolve_gemini_api_key
+
+        called: list[bool] = []
+
+        def _should_not_be_called(user_id: object, key: object) -> str:
+            called.append(True)
+            return "unexpected"
+
+        monkeypatch.setattr(
+            "app.core.providers.gemini_provider.resolve_api_key",
+            _should_not_be_called,
+        )
+        monkeypatch.setattr("app.core.providers.gemini_provider.settings.google_api_key", "gw")
+        _resolve_gemini_api_key(None)
+        assert called == []
+
+
+class TestToolCallsFromChunk:
+    """:func:`_tool_calls_from_chunk` should extract function-call parts correctly."""
+
+    def _make_chunk(self, function_calls: list[tuple[str, dict]] | None = None) -> object:
+        """Build a minimal Gemini chunk-like object with optional function_call parts."""
+        from types import SimpleNamespace
+
+        if not function_calls:
+            return SimpleNamespace(candidates=[])
+
+        parts = []
+        for name, args in function_calls:
+            fc = SimpleNamespace(name=name, args=args)
+            parts.append(SimpleNamespace(function_call=fc))
+
+        content = SimpleNamespace(parts=parts)
+        candidate = SimpleNamespace(content=content)
+        return SimpleNamespace(candidates=[candidate])
+
+    def test_empty_candidates_returns_empty_list(self) -> None:
+        """A chunk with no candidates yields no tool calls."""
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = self._make_chunk()
+        assert _tool_calls_from_chunk(chunk, 0) == []
+
+    def test_none_candidates_returns_empty_list(self) -> None:
+        """A chunk with candidates=None yields no tool calls."""
+        from types import SimpleNamespace
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = SimpleNamespace(candidates=None)
+        assert _tool_calls_from_chunk(chunk, 0) == []
+
+    def test_candidate_with_no_function_call_parts_returns_empty(self) -> None:
+        """Parts without function_call attributes are ignored."""
+        from types import SimpleNamespace
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        text_part = SimpleNamespace(function_call=None)
+        content = SimpleNamespace(parts=[text_part])
+        candidate = SimpleNamespace(content=content)
+        chunk = SimpleNamespace(candidates=[candidate])
+
+        assert _tool_calls_from_chunk(chunk, 0) == []
+
+    def test_single_function_call_returns_one_tool_call(self) -> None:
+        """A single function_call part is returned as one dict with correct fields."""
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = self._make_chunk([("my_tool", {"param": "value"})])
+        calls = _tool_calls_from_chunk(chunk, 0)
+
+        assert len(calls) == 1
+        call = calls[0]
+        assert call["name"] == "my_tool"
+        assert call["arguments"] == {"param": "value"}
+        assert call["tool_call_id"] == "call-my_tool-0"
+
+    def test_tool_call_id_uses_start_index_offset(self) -> None:
+        """tool_call_id must be call-<name>-<start_index + position>."""
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = self._make_chunk([("search", {"q": "test"})])
+        calls = _tool_calls_from_chunk(chunk, start_index=3)
+
+        assert calls[0]["tool_call_id"] == "call-search-3"
+
+    def test_multiple_function_calls_get_sequential_ids(self) -> None:
+        """Multiple function calls in one chunk get sequential IDs."""
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = self._make_chunk([("tool_a", {}), ("tool_b", {"x": 1})])
+        calls = _tool_calls_from_chunk(chunk, start_index=0)
+
+        assert len(calls) == 2
+        assert calls[0]["name"] == "tool_a"
+        assert calls[0]["tool_call_id"] == "call-tool_a-0"
+        assert calls[1]["name"] == "tool_b"
+        assert calls[1]["tool_call_id"] == "call-tool_b-1"
+
+    def test_start_index_offsets_all_ids(self) -> None:
+        """Start index shifts all generated IDs by the given amount."""
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        chunk = self._make_chunk([("alpha", {}), ("beta", {})])
+        calls = _tool_calls_from_chunk(chunk, start_index=5)
+
+        assert calls[0]["tool_call_id"] == "call-alpha-5"
+        assert calls[1]["tool_call_id"] == "call-beta-6"
+
+    def test_empty_args_become_empty_dict(self) -> None:
+        """When fc.args is falsy, arguments should be an empty dict, not None."""
+        from types import SimpleNamespace
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        fc = SimpleNamespace(name="no_args_tool", args=None)
+        part = SimpleNamespace(function_call=fc)
+        content = SimpleNamespace(parts=[part])
+        candidate = SimpleNamespace(content=content)
+        chunk = SimpleNamespace(candidates=[candidate])
+
+        calls = _tool_calls_from_chunk(chunk, 0)
+        assert calls[0]["arguments"] == {}
+
+    def test_nameless_function_call_uses_empty_string(self) -> None:
+        """A function_call with name=None should yield empty string as tool name."""
+        from types import SimpleNamespace
+        from app.core.providers.gemini_provider import _tool_calls_from_chunk
+
+        fc = SimpleNamespace(name=None, args={})
+        part = SimpleNamespace(function_call=fc)
+        content = SimpleNamespace(parts=[part])
+        candidate = SimpleNamespace(content=content)
+        chunk = SimpleNamespace(candidates=[candidate])
+
+        calls = _tool_calls_from_chunk(chunk, 0)
+        assert calls[0]["name"] == ""
+        assert calls[0]["tool_call_id"] == "call--0"
+
+
+class TestGeminiStreamReasoningEffort:
+    """GeminiLLM.stream() accepts reasoning_effort for protocol parity."""
+
+    @pytest.mark.anyio
+    async def test_reasoning_effort_accepted_without_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """GeminiLLM.stream() must not raise when reasoning_effort is set.
+
+        Gemini ignores the value but the protocol requires accepting it.
+        """
+        from app.core.providers.gemini_provider import GeminiLLM
+
+        provider = GeminiLLM("gemini-test")
+        monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("ok")]))
+
+        events: list[object] = []
+        async for event in provider.stream(
+            question="Hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+            reasoning_effort="extra-high",
+        ):
+            events.append(event)
+
+        # The stream completed without error.
+        assert len(events) >= 1
+
+    @pytest.mark.anyio
+    async def test_reasoning_effort_none_is_same_as_omitted(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Passing reasoning_effort=None should behave identically to not passing it."""
+        from app.core.providers.gemini_provider import GeminiLLM
+        from app.core.providers.base import StreamEvent
+
+        provider = GeminiLLM("gemini-test")
+        monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("hi")]))
+
+        events_with_none: list[StreamEvent] = []
+        async for event in provider.stream(
+            question="Hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            reasoning_effort=None,
+        ):
+            events_with_none.append(event)
+
+        assert any(e.get("type") == "delta" for e in events_with_none)
