@@ -19,7 +19,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import { useTelegramBinding } from '@/features/channels/use-telegram-binding';
-import { MESSAGING_CHANNELS } from '@/features/personalization/storage';
+import { MESSAGING_CHANNELS } from '@/lib/personalization/storage';
 
 export function ChannelsSection(): React.JSX.Element {
 	const telegram = useTelegramBinding();

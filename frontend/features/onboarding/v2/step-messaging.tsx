@@ -9,7 +9,7 @@ import {
 	MESSAGING_CHANNELS,
 	type MessagingChannelId,
 	type PersonalizationProfile,
-} from '@/features/personalization/storage';
+} from '@/lib/personalization/storage';
 import { listChannels } from '@/lib/channels';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';
