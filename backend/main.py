@@ -23,6 +23,7 @@ from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
+from app.api.scheduled_jobs import get_scheduled_jobs_router
 from app.api.stt import get_stt_router
 from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
@@ -33,6 +34,7 @@ from app.core.event_bus.global_bus import set_event_bus
 from app.core.middleware import BackendApiKeyMiddleware
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
+from app.core.scheduler import JobScheduler
 from app.core.telemetry import setup_tracing, shutdown_tracing
 from app.db import create_db_and_tables
 from app.integrations.telegram import telegram_lifespan
@@ -71,6 +73,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await event_bus.start()
     app.state.event_bus = event_bus
     set_event_bus(event_bus)
+    # PR 12: spin up the cron scheduler after the bus so re-hydrated
+    # jobs that fire on startup have a publisher to land on.  No-op
+    # when ``SCHEDULER_ENABLED=false``.
+    scheduler: JobScheduler | None = None
+    if settings.scheduler_enabled:
+        scheduler = JobScheduler()
+        await scheduler.start()
+        app.state.scheduler = scheduler
+    else:
+        app.state.scheduler = None
     # Bring the Telegram channel up alongside the HTTP server when a bot
     # token is configured. The context manager yields None and is a no-op
     # when the channel is disabled, so this stays safe for stripped-down
@@ -81,6 +93,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         try:
             yield
         finally:
+            if scheduler is not None:
+                await scheduler.stop()
             set_event_bus(None)
             await event_bus.stop()
             shutdown_tracing()
@@ -170,6 +184,9 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_webhooks_router(),
+    )
+    fastapi_app.include_router(
+        get_scheduled_jobs_router(),
     )
     fastapi_app.include_router(
         get_health_router(),
