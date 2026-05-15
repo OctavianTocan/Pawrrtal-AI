@@ -51,6 +51,7 @@ from app.core.providers.base import StreamEvent
 from app.core.tools.send_message import SendFn
 
 from .base import ChannelMessage
+from .telegram_html import md_to_telegram_html
 
 if TYPE_CHECKING:
     from aiogram import Bot
@@ -157,15 +158,17 @@ async def _safe_edit(
         message_id: ID of the message to edit.
         text: Full text to set (not a delta — always the accumulated string).
     """
+    html = md_to_telegram_html(text)
+
     # Truncate to Telegram's hard limit; future work can paginate.
-    if len(text) > _MAX_MESSAGE_LEN:
-        text = text[: _MAX_MESSAGE_LEN - 1] + "…"
+    if len(html) > _MAX_MESSAGE_LEN:
+        html = html[: _MAX_MESSAGE_LEN - 1] + "…"
 
     try:
         await bot.edit_message_text(
             chat_id=chat_id,
             message_id=message_id,
-            text=text,
+            text=html,
         )
     except Exception as exc:
         err_str = str(exc).lower()
@@ -186,7 +189,7 @@ async def _safe_edit(
 
 
 def make_telegram_sender(
-    bot: "Bot",
+    bot: Bot,
     chat_id: int | str,
     *,
     message_thread_id: int | None = None,
@@ -231,7 +234,7 @@ def make_telegram_sender(
             # Text-only delivery.
             await bot.send_message(
                 chat_id=chat_id,
-                text=text or "",
+                text=md_to_telegram_html(text or ""),
                 **thread_kwargs,
             )
             return
@@ -239,7 +242,7 @@ def make_telegram_sender(
         from aiogram.types import FSInputFile  # noqa: PLC0415 — lazy import; aiogram optional
 
         file = FSInputFile(file_path)
-        caption = text or None
+        caption = md_to_telegram_html(text) if text else None
         m = (mime or "").lower()
 
         if m.startswith("image/"):
