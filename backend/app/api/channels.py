@@ -6,6 +6,31 @@ The frontend depends on the response shapes here. Don't ship from
 imagination; look at what ``frontend/lib/channels.ts`` reads.
 """
 
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio.session import AsyncSession
+
+from app.crud.channel import get_channel_bindings_service
+from app.db import User, get_async_session
+from app.schemas import ChannelBindingRead
+from app.users import get_allowed_user
+
+
+def get_channels_router() -> APIRouter:
+    """Build the channels router (mounted at ``/api/v1/channels``)."""
+    router = APIRouter(prefix="/api/v1/channels", tags=["channels"])
+
+    @router.get("", response_model=list[ChannelBindingRead])
+    async def list_channels(
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> list[ChannelBindingRead]:
+        """List the authenticated user's channel bindings."""
+        bindings = await get_channel_bindings_service(user.id, session)
+        return [ChannelBindingRead.model_validate(binding) for binding in bindings]
+
+    return router
+
+
 # TODO(pawrrtal-1irw): two response schemas live in `app/schemas.py`,
 #   not here. Re-add them there alongside this file's rebuild.
 

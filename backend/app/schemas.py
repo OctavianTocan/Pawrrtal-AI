@@ -315,6 +315,21 @@ class ChatMessageRead(BaseModel):
 #   binding row, and the response shape for the link-code endpoint. The
 #   frontend reads both; keep field names stable. Look at what
 #   `frontend/lib/channels.ts` deserializes before naming things.
+class ChannelBindingRead(BaseModel):
+    """Public shape returned by ``GET /api/v1/channels``."""
+
+    provider: str
+    external_user_id: str
+    created_at: datetime
+
+
+class TelegramLinkCodeRead(BaseModel):
+    """Response shape from ``POST /api/v1/channels/telegram/link``."""
+
+    code: str
+    expires_at: datetime
+    bot_username: str | None = None
+    deep_link: str | None = None
 
 
 # --- Workspace schemas --------------------------------------------------------

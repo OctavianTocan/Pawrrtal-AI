@@ -170,6 +170,18 @@ class ChannelLinkCode(Base):
 
     # This is the HMAC-SHA-256 hex-encoded hash of the code. It's what the user sees and pastes into the channel.
     code_hash: Mapped[str] = mapped_column(String(128), primary_key=True)
+    # The Pawrrtal user ID.
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # The third-party provider.
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Created at timestamp.
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # Expires at timestamp.
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # Has this been used to create a binding?
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ChannelBinding(Base):

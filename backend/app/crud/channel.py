@@ -7,6 +7,26 @@ handshake; (2) the persistent identity map plus the conversation routing
 the bot reads on every inbound message.
 """
 
+import uuid
+
+from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.sql import select
+
+from app.models import ChannelBinding
+
+
+async def get_channel_bindings_service(
+    user_id: uuid.UUID, session: AsyncSession
+) -> list[ChannelBinding]:
+    """Return all channel bindings owned by the user, oldest first."""
+    result = await session.execute(
+        select(ChannelBinding)
+        .where(ChannelBinding.user_id == user_id)
+        .order_by(ChannelBinding.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 # TODO(pawrrtal-ei4l): codes are short and from a small alphabet — short
 #   enough to type, small enough to brute-force offline if you store
 #   them naively. Pick the storage primitive that defeats offline

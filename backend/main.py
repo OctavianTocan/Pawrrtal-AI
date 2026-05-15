@@ -14,6 +14,7 @@ from starlette.types import ASGIApp
 
 from app.api.appearance import get_appearance_router
 from app.api.auth import get_auth_router
+from app.api.channels import get_channels_router
 from app.api.chat import get_chat_router
 from app.api.conversations import get_conversations_router
 from app.api.health import get_health_router
@@ -136,6 +137,10 @@ def create_app() -> FastAPI:
     )
     fastapi_app.include_router(
         get_oauth_router(),
+    )
+    # Channels router, which tells us about the user's channel bindings.
+    fastapi_app.include_router(
+        get_channels_router(),
     )
     # TODO(pawrrtal-1irw): include `get_channels_router()` here once
     #   Phase 4 ships. Don't forget the import at the top of this file.
