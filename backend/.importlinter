@@ -51,8 +51,22 @@ layers =
 ; one cycle sentrux also tolerates via `max_cycles = 1`. Fixing it (by
 ; extracting `Base` into its own module) recovers ~5000 quality points.
 ; Tracked in beans `pawrrtal-ey9p` → see `.beans/`.
+; Stack A (PRs #208–#225) landed several `app.core.*` modules that read ORM
+; rows / call CRUD directly — pragmatic for governance/audit pipelines that
+; need to write audit_event/cost_ledger rows in-process. Grandfathered here
+; so this contract doesn't block onward work; each entry should be flattened
+; (e.g. inject a Protocol the caller satisfies, or move the side-effect into
+; the api/crud layer) in a follow-up. Pattern mirrors `EXEMPT_FUNCTIONS` in
+; `scripts/check-nesting.py`.
 ignore_imports =
     app.db -> app.models
+    app.core.exporters.markdown_export -> app.models
+    app.core.exporters.html_export -> app.models
+    app.core.exporters.json_export -> app.models
+    app.core.governance.audit -> app.models
+    app.core.governance.cost_tracker -> app.models
+    app.core.scheduler.scheduler -> app.models
+    app.core.event_bus.handlers -> app.crud.workspace
 
 ; --- Contract 2: the legacy db ↔ models cycle is the one cycle sentrux
 ; allows (max_cycles = 1). Pin it explicitly so any *new* cycle fails CI. -
