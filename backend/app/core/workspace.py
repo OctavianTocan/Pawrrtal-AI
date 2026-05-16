@@ -44,11 +44,33 @@ from __future__ import annotations
 import logging
 import uuid
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from app.core.config import settings
-from app.models import UserPersonalization
 
 log = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class PersonalizationFields(Protocol):
+    """Subset of ``UserPersonalization`` attributes the workspace seeders read.
+
+    Declared here (in ``app.core``) so the seeder stays in the architectural
+    core layer without importing from ``app.models`` — that import would
+    invert the sentrux layer ordering (``be-core`` must not depend on
+    ``be-models``). Any ORM instance with matching attributes — notably
+    ``UserPersonalization`` — satisfies this protocol via duck typing, so
+    callers in higher layers can keep passing the model directly.
+    """
+
+    name: str | None
+    role: str | None
+    company_website: str | None
+    linkedin: str | None
+    goals: list[str] | None
+    personality: str | None
+    custom_instructions: str | None
+
 
 # ---------------------------------------------------------------------------
 # Directory layout constants
@@ -335,7 +357,7 @@ false confidence.  You are here to be genuinely useful.
 _DEFAULT_SOUL = _PERSONALITY_SOULS["balanced"]
 
 
-def _build_user_md(p: UserPersonalization | None) -> str:
+def _build_user_md(p: PersonalizationFields | None) -> str:
     if p is None:
         return "# USER.md — About You\n\n_(Fill in your details here.)_\n"
 
@@ -365,7 +387,7 @@ def _build_user_md(p: UserPersonalization | None) -> str:
     return "\n".join(lines)
 
 
-def _build_soul_md(p: UserPersonalization | None) -> str:
+def _build_soul_md(p: PersonalizationFields | None) -> str:
     if p is None or not p.personality:
         return _DEFAULT_SOUL
     return _PERSONALITY_SOULS.get(p.personality.lower(), _DEFAULT_SOUL)
@@ -383,7 +405,7 @@ def _workspace_path(workspace_id: uuid.UUID) -> Path:
 
 def seed_workspace(
     workspace_id: uuid.UUID,
-    personalization: UserPersonalization | None = None,
+    personalization: PersonalizationFields | None = None,
 ) -> Path:
     """Create the workspace directory tree and write seed files.
 
