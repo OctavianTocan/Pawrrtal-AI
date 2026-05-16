@@ -21,11 +21,13 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tools.skills import read_skill_manifest
 from app.crud.workspace import get_default_workspace, list_workspaces
 from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
     OnboardingStatus,
+    SkillRead,
     WorkspaceFileContent,
     WorkspaceFileNode,
     WorkspaceFileWrite,
@@ -253,6 +255,39 @@ def get_workspace_router() -> APIRouter:
             )
 
         target.unlink()
+
+    # ------------------------------------------------------------------
+    # List skills
+    # ------------------------------------------------------------------
+
+    @router.get("/{workspace_id}/skills", response_model=list[SkillRead])
+    async def list_workspace_skills(
+        workspace_id: uuid.UUID,
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> list[SkillRead]:
+        """Return the skill list for a workspace.
+
+        Reads ``skills/_manifest.jsonl`` and falls back to directory discovery.
+        Returns an empty list (not 404) when the workspace has no skills yet.
+        """
+        ws = await _get_owned_workspace(workspace_id, user, session)
+        root = Path(ws.path)
+        if not root.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace directory not found on disk",
+            )
+        entries = read_skill_manifest(root)
+        return [
+            SkillRead(
+                name=e.name,
+                trigger=e.trigger,
+                summary=e.summary,
+                has_skill_md=e.has_skill_md,
+            )
+            for e in entries
+        ]
 
     # ------------------------------------------------------------------
     # Serve binary file from the default workspace

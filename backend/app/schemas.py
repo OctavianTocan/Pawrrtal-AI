@@ -422,6 +422,15 @@ class WorkspaceFileWrite(BaseModel):
     content: str
 
 
+class SkillRead(BaseModel):
+    """A single skill entry returned by GET /{workspace_id}/skills."""
+
+    name: str
+    trigger: str
+    summary: str
+    has_skill_md: bool
+
+
 # --- Governance + ops platform schemas ---------------------------------------
 #
 # Implementations live in :mod:`app.governance_schemas` to keep this

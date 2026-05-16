@@ -26,17 +26,19 @@ log = logging.getLogger(__name__)
 
 _AGENTS_MD = "AGENTS.md"
 _SOUL_MD = "SOUL.md"
+_SKILLS_INDEX_MD = "skills/_index.md"
 _MAX_BYTES = 64_000  # 64 KB — generous but keeps the context window sane
+_SKILLS_INDEX_MAX_BYTES = 32_000  # 32 KB — index only, not skill bodies
 
-# Files at the workspace root that the agent must NEVER be able to
-# delete or rename.  Used by the workspace_files write tool — see
-# `app/core/tools/workspace_files.py::is_protected_path`.
+# Files the agent must NEVER be able to delete or rename.  Used by the
+# workspace_files write tool — see `app/core/tools/workspace_files.py::is_protected_path`.
 PROTECTED_FILENAMES: frozenset[str] = frozenset(
     {
         _AGENTS_MD,
         _SOUL_MD,
         "USER.md",
         "IDENTITY.md",
+        _SKILLS_INDEX_MD,
     }
 )
 
@@ -56,21 +58,29 @@ def read_soul_md(workspace_root: Path) -> str | None:
     return read_capped_utf8(workspace_root / _SOUL_MD, max_bytes=_MAX_BYTES)
 
 
-def assemble_workspace_prompt(workspace_root: Path) -> str | None:
-    """Return the concatenated SOUL.md + AGENTS.md, or ``None`` if both missing.
+def read_skills_index(workspace_root: Path) -> str | None:
+    """Return the text of *workspace_root*/skills/_index.md, or ``None`` on failure."""
+    return read_capped_utf8(workspace_root / _SKILLS_INDEX_MD, max_bytes=_SKILLS_INDEX_MAX_BYTES)
 
-    Order: SOUL.md first ("who you are"), then a separator, then
-    AGENTS.md ("how to operate here").  Either may be missing
-    independently; the missing section is omitted with no trace in the
-    output so the agent doesn't see "(file missing)" placeholders.
+
+def assemble_workspace_prompt(workspace_root: Path) -> str | None:
+    """Return SOUL.md + AGENTS.md + skills/_index.md, or ``None`` if all missing.
+
+    Order: SOUL.md ("who you are"), AGENTS.md ("how to operate here"), then
+    skills/_index.md ("what skills are available").  Any section may be absent
+    independently; missing sections are omitted with no placeholder text so the
+    agent doesn't see "(file missing)" noise.
     """
     soul = read_soul_md(workspace_root)
     agents = read_agents_md(workspace_root)
-    if soul is None and agents is None:
+    skills_index = read_skills_index(workspace_root)
+    if soul is None and agents is None and skills_index is None:
         return None
     parts: list[str] = []
     if soul is not None:
         parts.append(soul)
     if agents is not None:
         parts.append(agents)
+    if skills_index is not None:
+        parts.append(skills_index)
     return "\n\n---\n\n".join(parts)
