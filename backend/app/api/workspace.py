@@ -16,6 +16,7 @@ import mimetypes
 import uuid
 from pathlib import Path
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -67,11 +68,11 @@ def _safe_child(root: Path, relative: str) -> Path:
     resolved = (root / relative).resolve()
     try:
         resolved.relative_to(root.resolve())
-    except ValueError:
+    except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Path must be inside the workspace",
-        )
+        ) from exc
     return resolved
 
 
@@ -115,10 +116,16 @@ def _build_tree(root: Path, relative_root: Path | None = None) -> list[Workspace
 def get_workspace_router() -> APIRouter:
     """Build the workspace router (mounted at /api/v1/workspaces)."""
     router = APIRouter(prefix="/api/v1/workspaces", tags=["workspaces"])
+    _register_listing_routes(router)
+    _register_tree_route(router)
+    _register_file_routes(router)
+    _register_skills_route(router)
+    _register_serve_route(router)
+    return router
 
-    # ------------------------------------------------------------------
-    # List workspaces
-    # ------------------------------------------------------------------
+
+def _register_listing_routes(router: APIRouter) -> None:
+    """Register the workspace listing + onboarding-status endpoints."""
 
     @router.get("", response_model=list[WorkspaceRead])
     async def list_user_workspaces(
@@ -141,9 +148,9 @@ def get_workspace_router() -> APIRouter:
             workspace=WorkspaceRead.model_validate(workspace) if workspace else None,
         )
 
-    # ------------------------------------------------------------------
-    # File tree
-    # ------------------------------------------------------------------
+
+def _register_tree_route(router: APIRouter) -> None:
+    """Register the workspace file-tree endpoint."""
 
     @router.get("/{workspace_id}/tree", response_model=WorkspaceTreeResponse)
     async def get_workspace_tree(
@@ -154,7 +161,7 @@ def get_workspace_router() -> APIRouter:
         """Return the full file tree of a workspace as a flat node list."""
         ws = await _get_owned_workspace(workspace_id, user, session)
         root = Path(ws.path)
-        if not root.exists():
+        if not await anyio.Path(root).exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace directory not found on disk",
@@ -164,9 +171,9 @@ def get_workspace_router() -> APIRouter:
             nodes=_build_tree(root),
         )
 
-    # ------------------------------------------------------------------
-    # Read file
-    # ------------------------------------------------------------------
+
+def _register_file_routes(router: APIRouter) -> None:
+    """Register the per-file read/write/delete endpoints."""
 
     @router.get("/{workspace_id}/files/{file_path:path}", response_model=WorkspaceFileContent)
     async def read_workspace_file(
@@ -189,17 +196,13 @@ def get_workspace_router() -> APIRouter:
 
         try:
             content = target.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="File is not valid UTF-8 text",
-            )
+            ) from exc
 
         return WorkspaceFileContent(path=file_path, content=content)
-
-    # ------------------------------------------------------------------
-    # Write file
-    # ------------------------------------------------------------------
 
     @router.put(
         "/{workspace_id}/files/{file_path:path}",
@@ -228,10 +231,6 @@ def get_workspace_router() -> APIRouter:
 
         return WorkspaceFileContent(path=file_path, content=payload.content)
 
-    # ------------------------------------------------------------------
-    # Delete file
-    # ------------------------------------------------------------------
-
     @router.delete(
         "/{workspace_id}/files/{file_path:path}",
         status_code=status.HTTP_204_NO_CONTENT,
@@ -256,9 +255,9 @@ def get_workspace_router() -> APIRouter:
 
         target.unlink()
 
-    # ------------------------------------------------------------------
-    # List skills
-    # ------------------------------------------------------------------
+
+def _register_skills_route(router: APIRouter) -> None:
+    """Register the workspace skill listing endpoint."""
 
     @router.get("/{workspace_id}/skills", response_model=list[SkillRead])
     async def list_workspace_skills(
@@ -273,7 +272,7 @@ def get_workspace_router() -> APIRouter:
         """
         ws = await _get_owned_workspace(workspace_id, user, session)
         root = Path(ws.path)
-        if not root.exists():
+        if not await anyio.Path(root).exists():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Workspace directory not found on disk",
@@ -289,9 +288,9 @@ def get_workspace_router() -> APIRouter:
             for e in entries
         ]
 
-    # ------------------------------------------------------------------
-    # Serve binary file from the default workspace
-    # ------------------------------------------------------------------
+
+def _register_serve_route(router: APIRouter) -> None:
+    """Register the default-workspace binary file serving endpoint."""
 
     @router.get(
         "/default/serve/{file_path:path}",
@@ -315,6 +314,8 @@ def get_workspace_router() -> APIRouter:
 
         Args:
             file_path: Workspace-relative path (e.g. ``artifacts/chart.png``).
+            user: Authenticated user (injected by FastAPI).
+            session: Database session (injected by FastAPI).
 
         Returns:
             The file streamed with the appropriate ``Content-Type`` header.
@@ -326,7 +327,7 @@ def get_workspace_router() -> APIRouter:
                 detail="No default workspace found.  Complete onboarding first.",
             )
 
-        root = Path(ws.path).resolve()
+        root = await anyio.to_thread.run_sync(Path(ws.path).resolve)
         target = _safe_child(root, file_path)
 
         if not target.exists():
@@ -343,5 +344,3 @@ def get_workspace_router() -> APIRouter:
             media_type=mime or "application/octet-stream",
             filename=target.name,
         )
-
-    return router

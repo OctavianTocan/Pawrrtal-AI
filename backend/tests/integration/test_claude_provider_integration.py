@@ -32,21 +32,21 @@ async def _drain(
     provider: ClaudeLLM, prompt: str, *, tools: list[AgentTool] | None = None
 ) -> list[StreamEvent]:
     """Run one turn against the provider and collect every emitted event."""
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        prompt,
-        conversation_id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
-        tools=tools,
-        # Override the default system prompt to keep the model's reply
-        # short and predictable — costs less, lower variance.
-        system_prompt=(
-            "You are a smoke-test fixture.  Reply briefly and follow "
-            "the user's instructions exactly."
-        ),
-    ):
-        events.append(event)
-    return events
+    return [
+        event
+        async for event in provider.stream(
+            prompt,
+            conversation_id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            tools=tools,
+            # Override the default system prompt to keep the model's reply
+            # short and predictable — costs less, lower variance.
+            system_prompt=(
+                "You are a smoke-test fixture.  Reply briefly and follow "
+                "the user's instructions exactly."
+            ),
+        )
+    ]
 
 
 async def test_provider_streams_text_deltas_for_basic_prompt(
@@ -96,9 +96,7 @@ async def test_agent_tool_round_trips_through_claude_bridge(
         ),
         parameters={
             "type": "object",
-            "properties": {
-                "message": {"type": "string", "description": "Verbatim user message."}
-            },
+            "properties": {"message": {"type": "string", "description": "Verbatim user message."}},
             "required": ["message"],
         },
         execute=_execute,
@@ -120,6 +118,4 @@ async def test_agent_tool_round_trips_through_claude_bridge(
     # frontend can render it.  Don't assert on the body (Claude
     # picks the wording); just on the presence.
     tool_results = [e for e in events if e["type"] == "tool_result"]
-    assert tool_results, (
-        f"no tool_result events emitted; got types {[e['type'] for e in events]}"
-    )
+    assert tool_results, f"no tool_result events emitted; got types {[e['type'] for e in events]}"

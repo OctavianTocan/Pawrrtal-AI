@@ -32,8 +32,8 @@
 import { cpSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-const buildEnv = process.env['ELECTROBUN_BUILD_ENV'] ?? 'dev';
-const buildDir = process.env['ELECTROBUN_BUILD_DIR'];
+const buildEnv = process.env.ELECTROBUN_BUILD_ENV ?? 'dev';
+const buildDir = process.env.ELECTROBUN_BUILD_DIR;
 
 // ── Dev builds ────────────────────────────────────────────────────────────────
 // In dev mode Next.js runs as a separate process (PAWRRTAL_REPO_ROOT). Nothing

@@ -76,6 +76,7 @@ class InMemoryWindow(RateLimitStorage):
         self._windows: dict[str, deque[float]] = {}
 
     def record_and_count(self, key: str, now: float, window: float) -> tuple[int, float]:
+        """Append *now* to *key*'s rolling window and return its current size."""
         bucket = self._windows.setdefault(key, deque())
         cutoff = now - window
         while bucket and bucket[0] < cutoff:
@@ -119,6 +120,7 @@ class ChatRateLimitMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        """Apply the per-user rate limit, returning 429 when the window is full."""
         limit = settings.chat_rate_limit_per_minute
         if limit <= 0:
             return await call_next(request)

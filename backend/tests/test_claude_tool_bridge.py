@@ -120,9 +120,7 @@ def test_provider_options_mount_server_and_whitelist_for_agent_tools() -> None:
         config=ClaudeLLMConfig(oauth_token=None),
     )
 
-    options = provider._build_options(
-        uuid4(), agent_tools=[_make_agent_tool("read_file")]
-    )
+    options = provider._build_options(uuid4(), agent_tools=[_make_agent_tool("read_file")])
 
     assert isinstance(options.mcp_servers, dict)
     assert MCP_SERVER_NAME in options.mcp_servers

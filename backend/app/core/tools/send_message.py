@@ -135,7 +135,7 @@ def make_send_message_tool(
     """
     root = Path(workspace_root).resolve()
 
-    async def execute(tool_call_id: str, **kwargs: Any) -> str:  # noqa: ARG001
+    async def execute(tool_call_id: str, **kwargs: Any) -> str:
         text: str | None = kwargs.get("text") or None
         attachment: str | None = kwargs.get("attachment") or None
 
@@ -157,7 +157,7 @@ def make_send_message_tool(
 
         try:
             await send_fn(text, file_path, mime)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning("SEND_MESSAGE_FAILED attachment=%s error=%s", attachment, exc)
             return f'{{"sent": false, "error": "{exc}"}}'
 

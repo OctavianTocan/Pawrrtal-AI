@@ -148,12 +148,14 @@ async def test_consecutive_tool_errors_reset_on_success():
     Sequence: bad → ok (resets) → bad → done.
     Counter never reaches 2, so no termination.
     """
-    script = ScriptedStreamFn([
-        tool_call_turn("bad", {}, "tc-0"),
-        tool_call_turn("ok", {}, "tc-1"),
-        tool_call_turn("bad", {}, "tc-2"),
-        text_turn("done"),
-    ])
+    script = ScriptedStreamFn(
+        [
+            tool_call_turn("bad", {}, "tc-0"),
+            tool_call_turn("ok", {}, "tc-1"),
+            tool_call_turn("bad", {}, "tc-2"),
+            text_turn("done"),
+        ]
+    )
 
     events = await run_scenario(
         script,

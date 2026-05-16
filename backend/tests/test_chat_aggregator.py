@@ -80,9 +80,7 @@ def test_persisted_shape_complete_keeps_streamed_content() -> None:
     agg = ChatTurnAggregator()
     agg.apply({"type": "delta", "content": "All done."})
     agg.apply({"type": "thinking", "content": "Let me check."})
-    agg.apply(
-        {"type": "tool_use", "tool_use_id": "t1", "name": "web_search", "input": {}}
-    )
+    agg.apply({"type": "tool_use", "tool_use_id": "t1", "name": "web_search", "input": {}})
     agg.apply({"type": "tool_result", "tool_use_id": "t1", "content": "ok"})
 
     snapshot = agg.to_persisted_shape(status="complete")

@@ -54,9 +54,16 @@ class TestReadSkillManifest:
         skills_dir = tmp_path / "skills"
         skills_dir.mkdir()
         _make_skill_dir(skills_dir, "tdd")
-        _write_manifest(skills_dir, [
-            {"name": "tdd", "trigger": "when writing tests", "summary": "red-green-refactor loop"},
-        ])
+        _write_manifest(
+            skills_dir,
+            [
+                {
+                    "name": "tdd",
+                    "trigger": "when writing tests",
+                    "summary": "red-green-refactor loop",
+                },
+            ],
+        )
 
         result = read_skill_manifest(tmp_path)
 

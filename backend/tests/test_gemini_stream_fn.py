@@ -46,14 +46,15 @@ async def test_gemini_provider_yields_delta_events_from_loop(
     provider = GeminiLLM("gemini-test")
     monkeypatch.setattr(provider, "_stream_fn", ScriptedStreamFn([text_turn("hello")]))
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="Hi",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        event
+        async for event in provider.stream(
+            question="Hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+        )
+    ]
 
     delta_events = [e for e in events if e["type"] == "delta"]
     assert len(delta_events) >= 1
@@ -128,9 +129,9 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
         executed.append(str(kwargs.get("value", "")))
         return f"echoed: {kwargs.get('value', '')}"
 
-    from app.core.agent_loop.types import AgentTool as AT
+    from app.core.agent_loop.types import AgentTool
 
-    echo = AT(
+    echo = AgentTool(
         name="echo",
         description="Echo",
         parameters={
@@ -153,15 +154,16 @@ async def test_gemini_provider_emits_tool_use_and_result_events(
         ),
     )
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="Echo hi",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-        tools=[echo],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        event
+        async for event in provider.stream(
+            question="Echo hi",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+            tools=[echo],
+        )
+    ]
 
     # The real tool executed.
     assert executed == ["hi"]
@@ -213,15 +215,16 @@ async def test_gemini_provider_surfaces_agent_terminated_from_safety_config(
         ),
     )
 
-    events: list[StreamEvent] = []
-    async for event in provider.stream(
-        question="go",
-        conversation_id=uuid4(),
-        user_id=uuid4(),
-        history=[],
-        tools=[echo_tool("ping")],
-    ):
-        events.append(event)
+    events: list[StreamEvent] = [
+        event
+        async for event in provider.stream(
+            question="go",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+            tools=[echo_tool("ping")],
+        )
+    ]
 
     # The termination event surfaces as a StreamEvent.
     terminated = [e for e in events if e["type"] == "agent_terminated"]

@@ -34,6 +34,20 @@ Just set ``OTEL_EXPORTER_OTLP_ENDPOINT`` + ``OTEL_EXPORTER_OTLP_HEADERS``
 per the backend's docs.  The optional ``OTEL_SERVICE_NAME`` defaults
 to ``pawrrtal-backend``.
 
+Suppressions
+------------
+- ``PLC0415`` (lazy imports inside functions): the OTel packages are
+  *optional* extras; importing them at module load would force every
+  install to pull the SDK + instrumentors even when tracing is off.
+  The imports are intentionally deferred to the ``setup_tracing`` /
+  ``get_tracer`` call sites where the ``ImportError`` branch can
+  surface a clear "install the [otel] extras" message.
+- ``PLW0603`` (module-level globals): the tracer provider is a true
+  process-wide singleton with an idempotent setup + shutdown
+  lifecycle owned by FastAPI's lifespan. Wrapping it in a class
+  would just relocate the mutable state without changing the
+  invariants, so the globals stay.
+
 Coexistence with PR #155 (Grafana Sigil)
 ----------------------------------------
 PR #155 adds Sigil-specific provider spans (Gemini stream chunks,
@@ -47,6 +61,8 @@ guard), so the explicit lifespan order in ``main.py`` is what matters.
 
 from __future__ import annotations
 
+# ruff: noqa: PLC0415, PLW0603
+# See module docstring → "Suppressions" for rationale.
 import logging
 import os
 from typing import TYPE_CHECKING
@@ -71,7 +87,7 @@ def _otel_enabled() -> bool:
     return bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"))
 
 
-def setup_tracing(app: "FastAPI" | None = None) -> None:
+def setup_tracing(app: FastAPI | None = None) -> None:
     """Install the OTel TracerProvider + autoinstrumenters.
 
     Idempotent — safe to call multiple times.  When OTel is disabled
@@ -107,12 +123,11 @@ def setup_tracing(app: "FastAPI" | None = None) -> None:
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    except ImportError as exc:
-        logger.error(
-            "TELEMETRY_INSTALL_MISSING %s — set OTEL_EXPORTER_OTLP_ENDPOINT only "
+    except ImportError:
+        logger.exception(
+            "TELEMETRY_INSTALL_MISSING — set OTEL_EXPORTER_OTLP_ENDPOINT only "
             "after installing the OTel extras (`uv pip install -e .[otel]` or "
             "add the opentelemetry-* packages to your image).",
-            exc,
         )
         return
 
@@ -175,7 +190,7 @@ def shutdown_tracing() -> None:
         return
     try:
         _tracer_provider.shutdown()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.warning("TELEMETRY_SHUTDOWN_FAILED", exc_info=True)
     finally:
         _tracer_provider = None

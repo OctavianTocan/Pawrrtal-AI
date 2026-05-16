@@ -23,9 +23,7 @@ from app.db import User
 from app.models import Conversation
 
 
-async def _make_conversation(
-    session: AsyncSession, user: User, *, when: datetime
-) -> Conversation:
+async def _make_conversation(session: AsyncSession, user: User, *, when: datetime) -> Conversation:
     """Insert a conversation row with a fixed ``updated_at`` so we can compare."""
     conv = Conversation(
         id=uuid.uuid4(),

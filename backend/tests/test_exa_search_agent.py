@@ -265,14 +265,18 @@ class TestGeminiToolPassthrough:
             ),
             patch.object(provider, "_stream_fn", script),
         ):
-            async for event in provider.stream(
-                "Search for python",
-                uuid.uuid4(),
-                uuid.uuid4(),
-                history=[],
-                tools=[exa_tool],
-            ):
-                events.append(event)
+            events.extend(
+                [
+                    event
+                    async for event in provider.stream(
+                        "Search for python",
+                        uuid.uuid4(),
+                        uuid.uuid4(),
+                        history=[],
+                        tools=[exa_tool],
+                    )
+                ]
+            )
 
         # The tool error becomes a tool_result event (not an uncaught exception).
         tool_results = [e for e in events if e["type"] == "tool_result"]

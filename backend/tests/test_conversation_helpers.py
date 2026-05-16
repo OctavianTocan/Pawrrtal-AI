@@ -9,9 +9,7 @@ from app.models import ChatMessage
 
 def test_normalize_generated_title_collapses_valid_title() -> None:
     """Generated titles are stripped, unquoted, and whitespace-normalized."""
-    assert (
-        _normalize_generated_title('"  Build   a test suite  "') == "Build a test suite"
-    )
+    assert _normalize_generated_title('"  Build   a test suite  "') == "Build a test suite"
 
 
 def test_normalize_generated_title_rejects_provider_error_text() -> None:
@@ -34,9 +32,7 @@ def test_serialize_chat_message_passes_through_optional_fields() -> None:
         role="assistant",
         content="hello",
         thinking="reasoning",
-        tool_calls=[
-            {"id": "t1", "name": "web_search", "input": {}, "status": "completed"}
-        ],
+        tool_calls=[{"id": "t1", "name": "web_search", "input": {}, "status": "completed"}],
         timeline=[
             {"kind": "thinking", "text": "reasoning"},
             {"kind": "tool", "toolCallId": "t1"},

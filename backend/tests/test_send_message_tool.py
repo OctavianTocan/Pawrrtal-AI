@@ -26,23 +26,21 @@ Part 2 — make_telegram_sender MIME routing (``app.channels.telegram``)
 
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.channels.telegram import make_telegram_sender
-from app.core.tools.send_message import _detect_mime, _resolve_attachment, make_send_message_tool
 from app.core.tools.errors import ToolError, ToolErrorCode
-
+from app.core.tools.send_message import _detect_mime, _resolve_attachment, make_send_message_tool
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def workspace(tmp_path: Path) -> Path:
     """Return a temporary workspace root with a few test files."""
     (tmp_path / "artifacts").mkdir()
@@ -154,7 +152,11 @@ class TestSendMessageTool:
         tool = make_send_message_tool(workspace_root=workspace, send_fn=send_fn)
         result = await tool.execute("tc5")
         send_fn.assert_not_awaited()
-        assert "least one" in result.lower() or "required" in result.lower() or "invalid" in result.lower()
+        assert (
+            "least one" in result.lower()
+            or "required" in result.lower()
+            or "invalid" in result.lower()
+        )
 
     async def test_send_fn_exception_returns_error_json(self, workspace: Path) -> None:
         send_fn = AsyncMock(side_effect=RuntimeError("Telegram flood control"))

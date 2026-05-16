@@ -1,4 +1,4 @@
-"""HTTP endpoints for the third-party messaging channel binding flow.
+r"""HTTP endpoints for the third-party messaging channel binding flow.
 
 Mounted at ``/api/v1/channels``. Owned by the authenticated web user
 (via the existing FastAPI-Users session cookie); the bot adapter does

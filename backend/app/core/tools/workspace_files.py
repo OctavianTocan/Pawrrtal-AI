@@ -28,6 +28,8 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
+import anyio
+
 from app.core.agent_loop.types import AgentTool
 from app.core.tools.errors import ToolError, ToolErrorCode
 
@@ -37,6 +39,8 @@ log = logging.getLogger(__name__)
 _MAX_READ_BYTES = 128_000  # 128 KB
 # Maximum number of entries list_dir will return.
 _MAX_LIST_ENTRIES = 200
+# 1024-byte step we use to step through B / KB / MB / GB labels.
+_BYTES_PER_KIB = 1024
 
 
 # ---------------------------------------------------------------------------
@@ -163,9 +167,9 @@ def _resolve_safe(root: Path, rel_path: str) -> Path:
 
 def _fmt_size(n: int) -> str:
     for unit in ("B", "KB", "MB", "GB"):
-        if n < 1024:
+        if n < _BYTES_PER_KIB:
             return f"{n}{unit}"
-        n //= 1024
+        n //= _BYTES_PER_KIB
     return f"{n}TB"
 
 
@@ -222,7 +226,7 @@ def _wrap_workspace_tool(
 # ---------------------------------------------------------------------------
 
 
-async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
+def _read_file_sync(target: Path, raw_path: str) -> str:
     if not target.exists():
         raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
     if not target.is_file():
@@ -233,7 +237,7 @@ async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
     raw = target.read_bytes()
     if len(raw) > _MAX_READ_BYTES:
         raw = raw[:_MAX_READ_BYTES]
-        suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // 1024} KB]"
+        suffix = f"\n\n[truncated — file exceeds {_MAX_READ_BYTES // _BYTES_PER_KIB} KB]"
     else:
         suffix = ""
     try:
@@ -245,7 +249,11 @@ async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
         ) from exc
 
 
-async def _write_file_body(*, target: Path, raw_path: str, content: str = "", **_: Any) -> str:
+async def _read_file_body(*, target: Path, raw_path: str, **_: Any) -> str:
+    return await anyio.to_thread.run_sync(_read_file_sync, target, raw_path)
+
+
+def _write_file_sync(target: Path, raw_path: str, content: str) -> str:
     if target.is_dir():
         raise ToolError(
             ToolErrorCode.WRONG_KIND,
@@ -256,7 +264,11 @@ async def _write_file_body(*, target: Path, raw_path: str, content: str = "", **
     return f"Written {len(content)} characters to '{raw_path}'."
 
 
-async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -> str:
+async def _write_file_body(*, target: Path, raw_path: str, content: str = "", **_: Any) -> str:
+    return await anyio.to_thread.run_sync(_write_file_sync, target, raw_path, content)
+
+
+def _list_dir_sync(target: Path, raw_path: str, root: Path) -> str:
     if not target.exists():
         raise ToolError(ToolErrorCode.NOT_FOUND, f"'{raw_path}' does not exist.")
     if not target.is_dir():
@@ -280,6 +292,10 @@ async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -
     if len(entries) > _MAX_LIST_ENTRIES:
         lines.append(f"... and {len(entries) - _MAX_LIST_ENTRIES} more entries")
     return "\n".join(lines)
+
+
+async def _list_dir_body(*, target: Path, raw_path: str, root: Path, **_: Any) -> str:
+    return await anyio.to_thread.run_sync(_list_dir_sync, target, raw_path, root)
 
 
 # ---------------------------------------------------------------------------

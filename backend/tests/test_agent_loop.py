@@ -163,9 +163,9 @@ async def test_agent_loop_streams_text_deltas() -> None:
     config = AgentLoopConfig(convert_to_llm=identity_converter)
     stream_fn = make_mock_stream(make_assistant_message([make_text_content("Hello world")]))
 
-    events: list[AgentEvent] = []
-    async for event in agent_loop([prompt], context, config, stream_fn):
-        events.append(event)
+    events: list[AgentEvent] = [
+        event async for event in agent_loop([prompt], context, config, stream_fn)
+    ]
 
     text_deltas = [e for e in events if e["type"] == "text_delta"]
     assert len(text_deltas) >= 1
@@ -299,9 +299,9 @@ async def test_agent_loop_respects_should_stop_after_turn() -> None:
         make_assistant_message([make_text_content("Turn 2 — should not reach")]),
     )
 
-    events: list[AgentEvent] = []
-    async for event in agent_loop([prompt], context, config, stream_fn):
-        events.append(event)
+    events: list[AgentEvent] = [
+        event async for event in agent_loop([prompt], context, config, stream_fn)
+    ]
 
     turn_starts = [e for e in events if e["type"] == "turn_start"]
     assert len(turn_starts) == 1  # stopped after first turn

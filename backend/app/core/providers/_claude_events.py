@@ -143,11 +143,7 @@ def _read_token_count(usage_blob: object, key: str) -> int:
     """
     if usage_blob is None:
         return 0
-    value = (
-        usage_blob.get(key, 0)
-        if isinstance(usage_blob, dict)
-        else getattr(usage_blob, key, 0)
-    )
+    value = usage_blob.get(key, 0) if isinstance(usage_blob, dict) else getattr(usage_blob, key, 0)
     try:
         return int(value)
     except (TypeError, ValueError):

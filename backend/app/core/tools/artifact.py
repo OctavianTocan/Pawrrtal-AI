@@ -53,6 +53,11 @@ from __future__ import annotations
 import uuid
 from typing import Any, TypedDict
 
+# Cap the artifact title at a length that fits comfortably in a preview card
+# header without truncation and rejects accidental "title is the whole post"
+# inputs from the LLM.
+_MAX_TITLE_LENGTH = 200
+
 
 class ArtifactValidationError(ValueError):
     """Raised when a render_artifact call has a malformed top-level shape."""
@@ -93,9 +98,9 @@ def build_artifact(*, title: str, spec: dict[str, Any]) -> ArtifactPayload:
     cleaned_title = (title or "").strip()
     if not cleaned_title:
         raise ArtifactValidationError("title must be a non-empty string")
-    if len(cleaned_title) > 200:
+    if len(cleaned_title) > _MAX_TITLE_LENGTH:
         raise ArtifactValidationError(
-            f"title must be ≤200 chars (got {len(cleaned_title)})"
+            f"title must be ≤{_MAX_TITLE_LENGTH} chars (got {len(cleaned_title)})"
         )
 
     if not isinstance(spec, dict):
@@ -110,27 +115,17 @@ def build_artifact(*, title: str, spec: dict[str, Any]) -> ArtifactPayload:
         raise ArtifactValidationError("spec.elements must be a non-empty object")
 
     if root not in elements:
-        raise ArtifactValidationError(
-            f"spec.root '{root}' is not present in spec.elements"
-        )
+        raise ArtifactValidationError(f"spec.root '{root}' is not present in spec.elements")
 
     for element_id, element in elements.items():
         if not isinstance(element, dict):
-            raise ArtifactValidationError(
-                f"spec.elements['{element_id}'] must be an object"
-            )
+            raise ArtifactValidationError(f"spec.elements['{element_id}'] must be an object")
         if not isinstance(element.get("type"), str):
-            raise ArtifactValidationError(
-                f"spec.elements['{element_id}'].type must be a string"
-            )
+            raise ArtifactValidationError(f"spec.elements['{element_id}'].type must be a string")
         if "props" in element and not isinstance(element["props"], dict):
-            raise ArtifactValidationError(
-                f"spec.elements['{element_id}'].props must be an object"
-            )
+            raise ArtifactValidationError(f"spec.elements['{element_id}'].props must be an object")
         children = element.get("children", [])
-        if not isinstance(children, list) or not all(
-            isinstance(c, str) for c in children
-        ):
+        if not isinstance(children, list) or not all(isinstance(c, str) for c in children):
             raise ArtifactValidationError(
                 f"spec.elements['{element_id}'].children must be an array of strings"
             )

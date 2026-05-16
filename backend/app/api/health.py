@@ -65,7 +65,7 @@ def get_health_router() -> APIRouter:
                 "ok": scalar == 1,
                 "detail": None if scalar == 1 else "select-1 returned unexpected value",
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("readiness: database check failed")
             checks["database"] = {"ok": False, "detail": str(exc)}
 
