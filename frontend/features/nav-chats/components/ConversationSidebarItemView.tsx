@@ -22,7 +22,7 @@ import { EntityRow } from '@/components/ui/entity-row';
 import { useMenuComponents } from '@/components/ui/menu-context';
 import { SidebarMenuItem } from '@/components/ui/sidebar';
 import { NAV_CHATS_LABELS } from '@/features/nav-chats/constants';
-import { CONVERSATION_DRAG_MIME } from '@/features/projects/constants';
+import { CONVERSATION_DRAG_MIME } from '@/lib/conversations/drag';
 import { TOAST_IDS, toast } from '@/lib/toast';
 import type { ConversationStatus } from '@/lib/types';
 import { ConversationStatusGlyph, STATUS_SUBMENU } from './ConversationStatusGlyph';
