@@ -75,6 +75,14 @@ bun dev
 
 Frontend runs at [http://localhost:3001](http://localhost:3001), backend at [http://localhost:8000](http://localhost:8000).
 
+### Logs
+
+Backend writes a combined log to `backend/app.log` (rotated in-place). Tail it while debugging streaming, Telegram, or agent-loop issues:
+
+```bash
+tail -f backend/app.log
+```
+
 ## Environment Variables
 
 ### Backend (`backend/.env`)

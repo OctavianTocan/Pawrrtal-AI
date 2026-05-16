@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from collections import Counter
 from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -74,9 +75,21 @@ class ChatTurnInput:
 
 @dataclass
 class _EventCounter:
-    """Mutable counter shared with the nested provider-stream wrapper."""
+    """Mutable counter shared with the nested provider-stream wrapper.
+
+    ``value`` is the total event count (kept for backwards-compatible logs).
+    ``by_type`` is the per-event-type breakdown so the postmortem log line
+    can answer "what kinds of 51 events did this turn produce?" — invaluable
+    when debugging stuck Telegram placeholders or runaway tool loops.
+    """
 
     value: int = 0
+    by_type: Counter[str] = field(default_factory=Counter)
+
+    def record(self, event: StreamEvent) -> None:
+        """Increment both the total and the per-type bucket for *event*."""
+        self.value += 1
+        self.by_type[event.get("type", "unknown")] += 1
 
 
 async def run_turn(
@@ -105,11 +118,11 @@ async def run_turn(
                 permission_check=turn_input.permission_check,
                 images=turn_input.images,
             ):
-                counter.value += 1
+                counter.record(event)
                 aggregator.apply(event)
                 yield event
                 for extra in _expand_hook_events(event, hooks):
-                    counter.value += 1
+                    counter.record(extra)
                     aggregator.apply(extra)
                     yield extra
         except Exception as exc:
@@ -120,6 +133,7 @@ async def run_turn(
                 counter.value,
             )
             error_event: StreamEvent = {"type": "error", "content": str(exc)}
+            counter.record(error_event)
             aggregator.apply(error_event)
             yield error_event
 
@@ -136,6 +150,7 @@ async def run_turn(
             assistant_message_id=assistant_message_id,
             started_at=started_at,
             event_count=counter.value,
+            event_breakdown=counter.by_type,
         )
 
 
@@ -213,6 +228,7 @@ async def _finalize_turn(
     assistant_message_id: uuid.UUID,
     started_at: float,
     event_count: int,
+    event_breakdown: Counter[str],
 ) -> None:
     """Patch the assistant placeholder with the final aggregated stream state."""
     duration_ms = (time.perf_counter() - started_at) * 1000
@@ -244,12 +260,16 @@ async def _finalize_turn(
         )
 
     extras = " ".join(f"{key}={value}" for key, value in turn_input.log_extras.items())
+    breakdown = (
+        " ".join(f"{name}={count}" for name, count in sorted(event_breakdown.items())) or "none"
+    )
     logger.info(
-        "%s_OUT conversation_id=%s events=%d duration_ms=%.1f %s",
+        "%s_OUT conversation_id=%s events=%d duration_ms=%.1f breakdown=[%s] %s",
         turn_input.log_tag,
         turn_input.conversation_id,
         event_count,
         duration_ms,
+        breakdown,
         extras,
     )
     # PR 10: announce completion (success / failure both surface here

@@ -111,14 +111,24 @@ class TestTelegramChannelDeliver:
         ]
         assert chunks == []
 
-    async def test_empty_stream_no_edits(self) -> None:
-        """No edits should be sent when the stream produces nothing."""
+    async def test_empty_stream_emits_fallback_edit(self) -> None:
+        """An empty stream must replace the ⏳ placeholder with a fallback notice.
+
+        Without this, a model turn that produces zero events (rare but real —
+        e.g. provider crash before the first chunk) would leave the ⏳ stuck
+        in the chat forever and the user would have no signal that the turn
+        ended.
+        """
         bot = _make_bot()
-        msg = _make_channel_message(bot)
+        msg = _make_channel_message(bot, chat_id=123, message_id=456)
         channel = TelegramChannel()
         async for _ in channel.deliver(_stream(), msg):
             pass
-        bot.edit_message_text.assert_not_called()
+        bot.edit_message_text.assert_called_once()
+        call = bot.edit_message_text.call_args
+        assert call.kwargs["chat_id"] == 123
+        assert call.kwargs["message_id"] == 456
+        assert "agent finished without producing any text" in call.kwargs["text"]
 
     async def test_final_edit_always_sent(self) -> None:
         """Even a single small delta below the debounce threshold gets a final edit."""
@@ -175,6 +185,61 @@ class TestTelegramChannelDeliver:
         assert last_call.kwargs["text"].startswith("answer")
         assert "search" in last_call.kwargs["text"]
         assert "reasoning..." not in last_call.kwargs["text"]
+
+    async def test_agent_terminated_replaces_placeholder(self) -> None:
+        """``agent_terminated`` without any text must show the warning to the user."""
+        bot = _make_bot()
+        msg = _make_channel_message(bot, chat_id=11, message_id=22)
+        channel = TelegramChannel()
+
+        events: list[StreamEvent] = [
+            {
+                "type": "agent_terminated",
+                "content": "Agent stopped: hit max_iterations cap of 25.",
+            },
+        ]
+        async for _ in channel.deliver(_stream(*events), msg):
+            pass
+
+        bot.edit_message_text.assert_called_once()
+        text = bot.edit_message_text.call_args.kwargs["text"]
+        # The ⚠️ prefix is markdown-converted to HTML, so we check for the
+        # human-readable copy and the chat_id/message_id routing.
+        assert "max_iterations" in text
+        assert bot.edit_message_text.call_args.kwargs["chat_id"] == 11
+        assert bot.edit_message_text.call_args.kwargs["message_id"] == 22
+
+    async def test_agent_terminated_appended_after_partial_text(self) -> None:
+        """If the agent produced some text before termination, both are shown."""
+        bot = _make_bot()
+        msg = _make_channel_message(bot)
+        channel = TelegramChannel()
+
+        events: list[StreamEvent] = [
+            {"type": "delta", "content": "Partial answer."},
+            {"type": "agent_terminated", "content": "Stopped: max_iterations."},
+        ]
+        async for _ in channel.deliver(_stream(*events), msg):
+            pass
+
+        last_text = bot.edit_message_text.call_args_list[-1].kwargs["text"]
+        assert "Partial answer." in last_text
+        assert "max_iterations" in last_text
+
+    async def test_error_event_replaces_placeholder(self) -> None:
+        """A bare ``error`` event must surface the error text in the chat."""
+        bot = _make_bot()
+        msg = _make_channel_message(bot)
+        channel = TelegramChannel()
+
+        events: list[StreamEvent] = [
+            {"type": "error", "content": "Gemini provider error: rate limited"},
+        ]
+        async for _ in channel.deliver(_stream(*events), msg):
+            pass
+
+        bot.edit_message_text.assert_called_once()
+        assert "rate limited" in bot.edit_message_text.call_args.kwargs["text"]
 
     async def test_not_modified_error_swallowed(self) -> None:
         """TelegramBadRequest: message is not modified must not propagate."""

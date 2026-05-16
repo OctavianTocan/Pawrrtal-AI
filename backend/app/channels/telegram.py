@@ -31,6 +31,23 @@ either ``_EDIT_DEBOUNCE_CHARS`` new characters have accumulated **or**
 edit is always sent after the stream ends to ensure the user sees the
 complete text.
 
+Non-text outcomes
+-----------------
+The stream may end without ever emitting a ``delta`` (e.g. the agent loop's
+safety layer tripped ``max_iterations`` because the model looped on tool
+calls, or the provider raised). In those cases the placeholder ⏳ would
+otherwise sit forever — the user has no signal the turn ended. To prevent
+that, the channel watches for two structured terminal events and reports
+them in-chat:
+
+- ``agent_terminated`` → placeholder is replaced with the loop's human copy
+  prefixed by ``⚠️``.
+- ``error`` → placeholder is replaced with the error content prefixed by
+  ``❌``.
+
+If neither text nor a terminal event arrives, a fallback message is shown
+pointing the user at the server log.
+
 Error handling
 --------------
 ``TelegramBadRequest: message is not modified`` is swallowed — it's benign
@@ -72,6 +89,19 @@ _MAX_EDIT_INTERVAL_S = 3.0
 # splitting is a future concern.
 _MAX_MESSAGE_LEN = 4096
 
+# Prefix glyphs for non-text outcomes so the user can spot terminations and
+# errors at a glance in their chat.  These are deliberately short so they
+# don't crowd out the actual message body.
+_AGENT_TERMINATED_PREFIX = "⚠️ "
+_ERROR_PREFIX = "❌ "
+
+# Fallback copy used when a turn produces neither text nor a structured
+# termination/error event.  Without this the ⏳ placeholder would sit forever
+# and the user would never know the turn ended.
+_EMPTY_RESPONSE_FALLBACK = (
+    "⚠️ The agent finished without producing any text. Check `backend/app.log` for the turn trace."
+)
+
 
 class TelegramChannel:
     """``Channel`` implementation for Telegram, using aiogram message edits.
@@ -112,37 +142,27 @@ class TelegramChannel:
         chars_since_edit = 0
         last_edit_at = asyncio.get_event_loop().time()
 
-        async for event in stream:
-            event_type = event.get("type")
-            if event_type == "tool_use":
-                # PR 07: inject a one-line glyph + tool name so the
-                # user sees what the agent is doing in real time.  We
-                # don't include the tool input — it can be large or
-                # sensitive — only the name + glyph.  The accumulated
-                # buffer flushes on the next debounce tick.
-                tool_name = event.get("name", "tool")
-                # Lazy import: ``app.integrations.telegram.tool_icons``
-                # lives inside the Telegram package whose ``__init__``
-                # eagerly imports ``bot.py``, which in turn imports
-                # ``app.channels``. Importing it at module scope creates
-                # a circular import during ``app.channels`` init.
-                from app.integrations.telegram.tool_icons import (  # noqa: PLC0415
-                    tool_icon,
-                )
+        # Captured terminal outcomes — flushed after the stream ends so they
+        # don't race the in-flight debounced edits for ``delta`` chunks.
+        terminal_message: str | None = None
+        terminal_prefix: str = ""
 
-                line = f"\n{tool_icon(tool_name)} {tool_name}…"
-                accumulated += line
-                chars_since_edit += len(line)
-                now = asyncio.get_event_loop().time()
-                elapsed = now - last_edit_at
-                if accumulated and (
-                    chars_since_edit >= _EDIT_DEBOUNCE_CHARS or elapsed >= _MAX_EDIT_INTERVAL_S
-                ):
-                    await _safe_edit(bot, chat_id, message_id, accumulated)
-                    chars_since_edit = 0
-                    last_edit_at = now
+        async for event in stream:
+            etype = event.get("type")
+
+            if etype == "tool_use":
+                accumulated, chars_since_edit, last_edit_at = await _handle_tool_use(
+                    event=event,
+                    bot=bot,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    accumulated=accumulated,
+                    chars_since_edit=chars_since_edit,
+                    last_edit_at=last_edit_at,
+                )
                 continue
-            if event_type == "delta":
+
+            if etype == "delta":
                 chunk: str = event.get("content", "")
                 accumulated += chunk
                 chars_since_edit += len(chunk)
@@ -157,12 +177,53 @@ class TelegramChannel:
                     await _safe_edit(bot, chat_id, message_id, accumulated)
                     chars_since_edit = 0
                     last_edit_at = now
+                continue
 
-        # Final edit — always flush whatever text remains so the user sees the
-        # complete response even if the last chunk didn't cross the debounce
-        # threshold.
-        if accumulated:
-            await _safe_edit(bot, chat_id, message_id, accumulated)
+            if etype == "agent_terminated":
+                # Safety layer tripped (max_iterations, consecutive_tool_errors,
+                # wall_clock).  Keep the human-readable copy so the user sees
+                # *why* the turn ended instead of an eternal ⏳.
+                terminal_message = event.get("content", "Agent terminated.")
+                terminal_prefix = _AGENT_TERMINATED_PREFIX
+                logger.warning(
+                    "TELEGRAM_AGENT_TERMINATED chat_id=%s message_id=%s message=%s",
+                    chat_id,
+                    message_id,
+                    terminal_message,
+                )
+                continue
+
+            if etype == "error":
+                terminal_message = event.get("content", "Unknown error.")
+                terminal_prefix = _ERROR_PREFIX
+                logger.warning(
+                    "TELEGRAM_STREAM_ERROR chat_id=%s message_id=%s message=%s",
+                    chat_id,
+                    message_id,
+                    terminal_message,
+                )
+                continue
+
+        # Decide what to flush onto the placeholder.  Priority:
+        #   1. Text + terminal notice — append notice as a second paragraph.
+        #   2. Text only — flush text.
+        #   3. Terminal notice only — show the notice in place of the ⏳.
+        #   4. Nothing — fallback so the placeholder never stays stuck.
+        if accumulated and terminal_message:
+            final_text = f"{accumulated}\n\n{terminal_prefix}{terminal_message}"
+        elif accumulated:
+            final_text = accumulated
+        elif terminal_message:
+            final_text = f"{terminal_prefix}{terminal_message}"
+        else:
+            final_text = _EMPTY_RESPONSE_FALLBACK
+            logger.warning(
+                "TELEGRAM_EMPTY_STREAM chat_id=%s message_id=%s",
+                chat_id,
+                message_id,
+            )
+
+        await _safe_edit(bot, chat_id, message_id, final_text)
 
         # No bytes to yield — delivery is a side-effect only.
         return
@@ -171,6 +232,46 @@ class TelegramChannel:
         # signature), so callers can ``async for`` over it even though we
         # only ever side-effect through ``edit_message_text``.
         yield
+
+
+async def _handle_tool_use(
+    *,
+    event: StreamEvent,
+    bot: Bot,
+    chat_id: int | str,
+    message_id: int,
+    accumulated: str,
+    chars_since_edit: int,
+    last_edit_at: float,
+) -> tuple[str, int, float]:
+    """Inject a one-line glyph + tool name into the in-flight Telegram edit.
+
+    Extracted from :meth:`TelegramChannel.deliver` to keep that method
+    under the team's per-function statement budget while preserving PR 07's
+    real-time tool-call surfacing. The tool input is intentionally omitted
+    — it can be large or sensitive; only the name + glyph reaches the user.
+
+    Returns the updated ``(accumulated, chars_since_edit, last_edit_at)``
+    triple so the caller can flow it into the next iteration unchanged.
+    """
+    # Lazy import: ``app.integrations.telegram.tool_icons`` lives inside the
+    # Telegram package whose ``__init__`` eagerly imports ``bot.py``, which
+    # in turn imports ``app.channels``. Importing at module scope creates a
+    # circular import during ``app.channels`` init.
+    from app.integrations.telegram.tool_icons import tool_icon  # noqa: PLC0415
+
+    tool_name = event.get("name", "tool")
+    line = f"\n{tool_icon(tool_name)} {tool_name}…"
+    accumulated += line
+    chars_since_edit += len(line)
+    now = asyncio.get_event_loop().time()
+    elapsed = now - last_edit_at
+    if accumulated and (
+        chars_since_edit >= _EDIT_DEBOUNCE_CHARS or elapsed >= _MAX_EDIT_INTERVAL_S
+    ):
+        await _safe_edit(bot, chat_id, message_id, accumulated)
+        return accumulated, 0, now
+    return accumulated, chars_since_edit, last_edit_at
 
 
 async def _safe_edit(
