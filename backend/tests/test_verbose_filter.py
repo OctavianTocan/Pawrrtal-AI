@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.channels.turn_runner import _should_deliver_event
 from app.core.chat_aggregator import (
     VERBOSE_DETAILED,
     VERBOSE_NORMAL,
@@ -85,3 +86,16 @@ class TestDetailed:
     )
     def test_kept(self, ev: StreamEvent) -> None:
         assert should_emit_event(ev, VERBOSE_DETAILED) is True
+
+
+class TestTurnRunnerVerboseBridge:
+    """ChatTurnInput.verbose_level is the seam that applies the filter."""
+
+    def test_none_keeps_everything_for_web_chat(self) -> None:
+        assert _should_deliver_event(_ev("thinking", content="thoughts"), None) is True
+
+    def test_quiet_drops_tool_events_for_telegram(self) -> None:
+        assert _should_deliver_event(_ev("tool_use", name="workspace_read"), VERBOSE_QUIET) is False
+
+    def test_detailed_keeps_thinking_for_telegram(self) -> None:
+        assert _should_deliver_event(_ev("thinking", content="thoughts"), VERBOSE_DETAILED) is True

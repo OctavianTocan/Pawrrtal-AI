@@ -36,7 +36,7 @@ class TestRetryClassifier:
         "message",
         [
             "MCP server failed to start",
-            "mcp__ai_nexus__echo_back not registered",
+            "mcp__pawrrtal__echo_back not registered",
             "MCP transport closed",
         ],
     )
