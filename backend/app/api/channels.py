@@ -6,12 +6,19 @@ The frontend depends on the response shapes here. Don't ship from
 imagination; look at what ``frontend/lib/channels.ts`` reads.
 """
 
-from fastapi import APIRouter, Depends
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio.session import AsyncSession
 
-from app.crud.channel import get_channel_bindings_service
+from app.channels.telegram import SURFACE_TELEGRAM
+from app.crud.channel import (
+    delete_binding_service,
+    get_binding_service,
+    get_channel_bindings_service,
+)
 from app.db import User, get_async_session
-from app.schemas import ChannelBindingRead
+from app.schemas import ChannelBindingRead, TelegramLinkCodeRead
 from app.users import get_allowed_user
 
 
@@ -27,6 +34,43 @@ def get_channels_router() -> APIRouter:
         """List the authenticated user's channel bindings."""
         bindings = await get_channel_bindings_service(user.id, session)
         return [ChannelBindingRead.model_validate(binding) for binding in bindings]
+
+    @router.post("/telegram/link", response_model=TelegramLinkCodeRead)
+    async def link_telegram(
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> TelegramLinkCodeRead:
+        """Issue a fresh one-time Telegram link code for the authenticated user."""
+        binding = await get_binding_service(
+            user_id=user.id, session=session, provider=SURFACE_TELEGRAM
+        )
+        # Return an error if the binding already exists.
+        if binding:
+            raise HTTPException(status_code=400, detail="Binding already exists")
+
+        return TelegramLinkCodeRead(
+            code="TODO",
+            expires_at=datetime.now() + timedelta(seconds=1000),
+            bot_username="TODO",
+            deep_link="TODO",
+        )
+
+    # We set 204, because it worked but we don't need to return anything.
+    @router.delete("/telegram/link", response_model=None, status_code=204)
+    async def unlink_telegram(
+        user: User = Depends(get_allowed_user),
+        session: AsyncSession = Depends(get_async_session),
+    ) -> None:
+        """Unlink the authenticated user's Telegram channel."""
+        binding_deleted = await delete_binding_service(
+            user_id=user.id,
+            session=session,
+            provider=SURFACE_TELEGRAM,
+        )
+        # Return an error if the binding does not exist.
+        if not binding_deleted:
+            raise HTTPException(status_code=400, detail="Binding does not exist")
+        # Return 204 if the binding was deleted.
 
     return router
 

@@ -12,7 +12,7 @@ import uuid
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.sql import select
 
-from app.models import ChannelBinding
+from app.models import ChannelBinding, ChannelLinkCode
 
 
 async def get_channel_bindings_service(
@@ -25,6 +25,42 @@ async def get_channel_bindings_service(
         .order_by(ChannelBinding.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+async def get_binding_service(
+    user_id: uuid.UUID, session: AsyncSession, provider: str
+) -> ChannelBinding | None:
+    """Get a channel binding for a given user and provider. Useful to check if a binding exists for a given provider for a given user."""
+    result = await session.execute(
+        select(ChannelBinding)
+        .where(ChannelBinding.user_id == user_id)
+        .where(ChannelBinding.provider == provider)
+    )
+    return result.scalar_one_or_none()
+
+
+async def delete_binding_service(user_id: uuid.UUID, session: AsyncSession, provider: str) -> bool:
+    """Delete a channel binding for a given user and provider. Useful to unlink a channel for a given user."""
+    binding = await get_binding_service(user_id=user_id, session=session, provider=provider)
+    # Return False if the binding does not exist.
+    if binding is None:
+        return False
+    # Delete the binding.
+    await session.delete(binding)
+    await session.commit()
+    # Return True if the binding was deleted.
+    return True
+
+
+async def issue_link_code_service(
+    user_id: uuid.UUID, session: AsyncSession, provider: str
+) -> ChannelLinkCode:
+    """Issue a link code for a given user and provider. Useful to link a channel for a given user."""
+    # Generate a random code.
+
+    # TODO: need to actually generate the code and pass the properties.
+    link_code: ChannelLinkCode = ChannelLinkCode()
+    return link_code
 
 
 # TODO(pawrrtal-ei4l): codes are short and from a small alphabet — short

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from .base import Channel
 from .sse import SURFACE_ELECTRON, SURFACE_WEB, SSEChannel
+from .telegram import SURFACE_TELEGRAM, TelegramChannel
 
 # ---------------------------------------------------------------------------
 # Registry — explicit mapping of surface name → Channel instance.
@@ -40,9 +41,7 @@ _REGISTRY: dict[str, Channel] = {
     SURFACE_WEB: SSEChannel(surface=SURFACE_WEB),
     # TODO: Is this necessary? What's the point of defining a separate surface if we're basically reusing web for this.
     SURFACE_ELECTRON: SSEChannel(surface=SURFACE_ELECTRON),
-    # TODO(pawrrtal-bn6c): add the Telegram entry once Phase 5 ships
-    #   the adapter. Stateless singleton — one instance, shared across
-    #   every Telegram turn.
+    SURFACE_TELEGRAM: TelegramChannel(),
 }
 
 

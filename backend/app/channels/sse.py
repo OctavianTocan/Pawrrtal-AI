@@ -1,4 +1,4 @@
-"""SSEChannel — HTTP Server-Sent Events delivery for web and Electron.
+r"""SSEChannel — HTTP Server-Sent Events delivery for web and Electron.
 
 Both the web frontend and the Electron desktop shell connect over HTTP and
 consume the same SSE stream format, so a single ``SSEChannel`` implementation
@@ -36,6 +36,7 @@ SURFACE_ELECTRON = "electron"
 
 # HTTP header the frontend sets to identify itself.
 # If absent, the channel defaults to SURFACE_WEB.
+# TODO: Is this actually a good place to put this? Maybe it should be in the base class? It seems biased.
 NEXUS_SURFACE_HEADER = "X-Nexus-Surface"
 
 

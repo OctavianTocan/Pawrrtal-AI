@@ -9,6 +9,45 @@ placeholder message in-place. The Channel protocol returns
 signature still has to hold.
 """
 
+from collections.abc import AsyncIterator
+
+from app.channels.base import Channel, ChannelMessage
+from app.core.providers.base import StreamEvent
+
+SURFACE_TELEGRAM = "telegram"
+
+
+class TelegramChannel(Channel):
+    """Telegram channel implementation."""
+
+    # The surface name for the Telegram channel.
+    surface: str = SURFACE_TELEGRAM
+
+    def __init__(self, surface: str = SURFACE_TELEGRAM) -> None:
+        """Initialize the Telegram channel.
+
+        Args:
+            surface: The surface name for the Telegram channel.
+        """
+        pass
+
+    async def deliver(
+        self, stream: AsyncIterator[StreamEvent], message: ChannelMessage
+    ) -> AsyncIterator[bytes]:
+        """Deliver the stream of events to the Telegram channel.
+
+        Args:
+            stream: The stream of events to deliver.
+            message: The message to deliver.
+
+        Yields:
+            Nothing.
+        """
+        # TODO: Implement this.
+        return
+        yield
+
+
 # TODO(pawrrtal-ro2q): Telegram has a flood-control limit on edits per
 #   chat per minute. A fast-emitting model would blow through it. The
 #   channel needs to debounce — and the right debounce has TWO axes,
