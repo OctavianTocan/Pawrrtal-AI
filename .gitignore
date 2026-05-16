@@ -148,3 +148,6 @@ package-lock.json
 
 # Databases
 *.db
+
+# Docker
+*/.env.docker
