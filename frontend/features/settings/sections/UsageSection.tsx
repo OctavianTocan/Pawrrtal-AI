@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/_shared/ui/button';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsPage, SettingsRow, SettingsSectionHeader } from '../primitives';
 

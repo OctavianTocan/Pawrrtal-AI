@@ -19,8 +19,8 @@ import {
 	PlusIcon,
 } from 'lucide-react';
 import type { ComponentType, ReactNode, SVGProps } from 'react';
-import { SidebarNavRow } from '@/components/ui/sidebar-nav-row';
-import { SidebarSectionHeader } from '@/components/ui/sidebar-section-header';
+import { SidebarNavRow } from '@/features/_shared/ui/sidebar-nav-row';
+import { SidebarSectionHeader } from '@/features/_shared/ui/sidebar-section-header';
 import { cn } from '@/lib/utils';
 import { PROJECT_TONE_CLASSES, TASK_VIEWS } from '../constants';
 import type { TaskProject, TaskViewId } from '../types';

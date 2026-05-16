@@ -16,7 +16,7 @@
 
 import { Check, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/_shared/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import { useTelegramBinding } from '@/features/channels/use-telegram-binding';
 import { MESSAGING_CHANNELS } from '@/lib/personalization/storage';

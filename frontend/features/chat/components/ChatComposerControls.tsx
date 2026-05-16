@@ -14,9 +14,14 @@ import {
 	SquareIcon,
 } from 'lucide-react';
 import type * as React from 'react';
-import { usePromptInputAttachments } from '@/components/ai-elements/prompt-input';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePromptInputAttachments } from '@/features/_shared/ai-elements/prompt-input';
+import { Button } from '@/features/_shared/ui/button';
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from '@/features/_shared/ui/tooltip';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { usePointerDownCommit } from '@/hooks/use-pointer-down-commit';
 import { useTooltipDropdown } from '@/hooks/use-tooltip-dropdown';

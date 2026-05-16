@@ -27,9 +27,9 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import auth_backend, get_jwt_strategy
 from app.core.config import settings
-from app.db import User, get_async_session
-from app.users import auth_backend, get_jwt_strategy
+from app.core.db import User, get_async_session
 
 # Tokens for state values are kept in-process for the lifetime of the
 # OAuth round-trip. In a multi-process deployment swap this for Redis

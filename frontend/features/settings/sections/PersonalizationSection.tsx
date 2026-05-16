@@ -2,9 +2,9 @@
 
 import type * as React from 'react';
 import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Button } from '@/components/ui/button';
-import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/features/_shared/ui/button';
+import { SelectButton, type SelectButtonOption } from '@/features/_shared/ui/select-button';
+import { Textarea } from '@/features/_shared/ui/textarea';
 import {
 	EMPTY_PROFILE,
 	loadPersonalizationProfile,

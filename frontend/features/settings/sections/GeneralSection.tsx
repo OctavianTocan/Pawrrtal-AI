@@ -1,9 +1,9 @@
 'use client';
 
 import type * as React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/features/_shared/ui/avatar';
+import { Input } from '@/features/_shared/ui/input';
+import { Textarea } from '@/features/_shared/ui/textarea';
 import {
 	SettingsCard,
 	SettingsPage,

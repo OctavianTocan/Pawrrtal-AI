@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronUp, Pencil, Plus, Settings as SettingsIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
-import { AppPill } from '@/components/ui/app-pill';
+import { AppPill } from '@/features/_shared/ui/app-pill';
 import { cn } from '@/lib/utils';
 import type { IntegrationAccount, IntegrationBadge, IntegrationDef } from './catalog';
 

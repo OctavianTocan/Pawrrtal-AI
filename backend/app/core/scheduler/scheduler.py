@@ -31,9 +31,9 @@ from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-untyped
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import async_session_maker
 from app.core.event_bus import ScheduledEvent
 from app.core.event_bus.global_bus import publish_if_available
-from app.db import async_session_maker
 from app.models import ScheduledJob
 
 logger = logging.getLogger(__name__)

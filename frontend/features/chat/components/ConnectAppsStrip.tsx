@@ -4,12 +4,12 @@ import { XIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 import { useState } from 'react';
-import { GitHubIcon } from '@/components/brand-icons/GitHubIcon';
-import { GoogleDriveIcon } from '@/components/brand-icons/GoogleDriveIcon';
-import { LinearIcon } from '@/components/brand-icons/LinearIcon';
-import { NotionIcon } from '@/components/brand-icons/NotionIcon';
-import { SlackIcon } from '@/components/brand-icons/SlackIcon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { GitHubIcon } from '@/features/_shared/brand-icons/GitHubIcon';
+import { GoogleDriveIcon } from '@/features/_shared/brand-icons/GoogleDriveIcon';
+import { LinearIcon } from '@/features/_shared/brand-icons/LinearIcon';
+import { NotionIcon } from '@/features/_shared/brand-icons/NotionIcon';
+import { SlackIcon } from '@/features/_shared/brand-icons/SlackIcon';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/features/_shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /** Settings sub-page that owns integrations management. */

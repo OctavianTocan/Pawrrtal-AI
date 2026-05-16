@@ -19,21 +19,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.channels import registered_surfaces, resolve_channel
-from app.channels.base import ChannelMessage
-from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
-from app.core.providers.base import StreamEvent
-from app.core.providers.catalog import default_model
-from app.integrations.telegram.bot_provider_resolution import (
+from app.api.integrations.telegram.bot_provider_resolution import (
     resolve_provider_with_auto_clear as _resolve_provider_with_auto_clear,
 )
-from app.integrations.telegram.handlers import (
+from app.api.integrations.telegram.handlers import (
     TelegramSender,
     TelegramTurnContext,
     handle_model_command,
     handle_plain_message,
     handle_stop_command,
 )
+from app.channels import registered_surfaces, resolve_channel
+from app.channels.base import ChannelMessage
+from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
+from app.core.providers.base import StreamEvent
+from app.core.providers.catalog import default_model
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -275,7 +275,7 @@ class TestHandlePlainMessage:
         sender = TelegramSender(user_id=999, chat_id=999, username=None, full_name="Stranger")
         session = AsyncMock()
         with patch(
-            "app.integrations.telegram.handlers.get_user_id_for_external",
+            "app.api.integrations.telegram.handlers.get_user_id_for_external",
             new=AsyncMock(return_value=None),
         ):
             result = await handle_plain_message(sender=sender, text="hello", session=session)
@@ -296,11 +296,11 @@ class TestHandlePlainMessage:
 
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                "app.api.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
@@ -324,11 +324,11 @@ class TestHandlePlainMessage:
 
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                "app.api.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
                 new=AsyncMock(return_value=fake_conv),
             ),
         ):
@@ -389,11 +389,11 @@ class TestHandleModelCommand:
         update_mock = AsyncMock(return_value=True)
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=uuid.uuid4()),
             ),
             patch(
-                "app.integrations.telegram.handlers.update_conversation_model",
+                "app.api.integrations.telegram.handlers.update_conversation_model",
                 new=update_mock,
             ),
         ):
@@ -408,7 +408,7 @@ class TestHandleModelCommand:
         sender = TelegramSender(user_id=2, chat_id=2, username=None, full_name=None)
         session = AsyncMock()
         with patch(
-            "app.integrations.telegram.handlers.get_user_id_for_external",
+            "app.api.integrations.telegram.handlers.get_user_id_for_external",
             new=AsyncMock(return_value=None),
         ):
             reply = await handle_model_command(
@@ -442,15 +442,15 @@ class TestHandleModelCommand:
         update_mock = AsyncMock(return_value=True)
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                "app.api.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
                 new=AsyncMock(return_value=fake_conv),
             ),
             patch(
-                "app.integrations.telegram.handlers.update_conversation_model",
+                "app.api.integrations.telegram.handlers.update_conversation_model",
                 new=update_mock,
             ),
         ):
@@ -480,15 +480,15 @@ class TestHandleModelCommand:
 
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                "app.api.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
                 new=AsyncMock(return_value=fake_conv),
             ),
             patch(
-                "app.integrations.telegram.handlers.update_conversation_model",
+                "app.api.integrations.telegram.handlers.update_conversation_model",
                 new=AsyncMock(return_value=False),
             ),
         ):
@@ -522,15 +522,15 @@ class TestHandleModelCommand:
         update_mock = AsyncMock(return_value=True)
         with (
             patch(
-                "app.integrations.telegram.handlers.get_user_id_for_external",
+                "app.api.integrations.telegram.handlers.get_user_id_for_external",
                 new=AsyncMock(return_value=nexus_uid),
             ),
             patch(
-                "app.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
+                "app.api.integrations.telegram.handlers.get_or_create_telegram_conversation_full",
                 new=AsyncMock(return_value=fake_conv),
             ),
             patch(
-                "app.integrations.telegram.handlers.update_conversation_model",
+                "app.api.integrations.telegram.handlers.update_conversation_model",
                 new=update_mock,
             ),
         ):
@@ -556,7 +556,7 @@ class TestHandleModelCommand:
 class TestResolveProviderWithAutoClear:
     """Cover the chat-turn safety net that catches unknown/malformed stored IDs.
 
-    The handler in :mod:`app.integrations.telegram.bot` wraps the
+    The handler in :mod:`app.api.integrations.telegram.bot` wraps the
     ``resolve_llm`` call so that an unknown-but-well-formed stored model
     surfaces an immediate user-facing warning, clears the stored value,
     and still completes the current turn using the catalog default.
@@ -598,15 +598,15 @@ class TestResolveProviderWithAutoClear:
 
         with (
             patch(
-                "app.integrations.telegram.bot_provider_resolution.resolve_llm",
+                "app.api.integrations.telegram.bot_provider_resolution.resolve_llm",
                 new=resolve_mock,
             ),
             patch(
-                "app.integrations.telegram.bot_provider_resolution.update_conversation_model",
+                "app.api.integrations.telegram.bot_provider_resolution.update_conversation_model",
                 new=update_mock,
             ),
             patch(
-                "app.integrations.telegram.bot_provider_resolution.async_session_maker",
+                "app.api.integrations.telegram.bot_provider_resolution.async_session_maker",
                 new=fake_session_maker,
             ),
         ):
@@ -646,11 +646,11 @@ class TestResolveProviderWithAutoClear:
 
         with (
             patch(
-                "app.integrations.telegram.bot_provider_resolution.resolve_llm",
+                "app.api.integrations.telegram.bot_provider_resolution.resolve_llm",
                 new=resolve_mock,
             ),
             patch(
-                "app.integrations.telegram.bot_provider_resolution.update_conversation_model",
+                "app.api.integrations.telegram.bot_provider_resolution.update_conversation_model",
                 new=update_mock,
             ),
         ):

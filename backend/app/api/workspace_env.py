@@ -12,14 +12,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
+from app.api.users import get_allowed_user
+from app.core.db import User
 from app.core.keys import (
     OVERRIDABLE_KEYS,
     VALUE_FORBIDDEN_CHARS,
     load_workspace_env,
     save_workspace_env,
 )
-from app.db import User
-from app.users import get_allowed_user
 
 # Maximum number of distinct keys a single PUT may set/update. Each user can
 # set at most this many overrides regardless of MAX_VALUE_LENGTH; this is a

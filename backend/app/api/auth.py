@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.api.users import UserManager, auth_backend, get_jwt_strategy, get_user_manager
 from app.core.config import settings
-from app.users import UserManager, auth_backend, get_jwt_strategy, get_user_manager
 
 
 def get_auth_router() -> APIRouter:

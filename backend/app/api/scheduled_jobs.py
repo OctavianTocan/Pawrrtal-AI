@@ -16,12 +16,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
 from app.core.config import settings
+from app.core.db import User, get_async_session
 from app.core.scheduler import JobScheduler
-from app.db import User, get_async_session
 from app.models import ScheduledJob
 from app.schemas import ScheduledJobCreate, ScheduledJobRead
-from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 

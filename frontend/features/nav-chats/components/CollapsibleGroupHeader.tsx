@@ -1,6 +1,6 @@
 'use client';
 
-import { SidebarSectionHeader } from '@/components/ui/sidebar-section-header';
+import { SidebarSectionHeader } from '@/features/_shared/ui/sidebar-section-header';
 
 interface CollapsibleGroupHeaderProps {
 	/** The date-group label text (e.g. "Today", "Yesterday", "Mar 25"). */

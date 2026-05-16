@@ -3,7 +3,7 @@
 import { GitBranchIcon, GitPullRequestIcon, WorkflowIcon, XIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/features/_shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /** Suggested empty-state prompts displayed below the chat composer. */

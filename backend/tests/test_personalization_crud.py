@@ -5,11 +5,11 @@ from datetime import datetime
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import User
 from app.crud.personalization import (
     get_personalization,
     upsert_personalization,
 )
-from app.db import User
 from app.schemas import PersonalizationProfile
 
 

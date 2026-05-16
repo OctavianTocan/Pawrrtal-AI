@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { startTransition, useState } from 'react';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@/features/_shared/ui/sidebar';
 import type { Conversation } from '@/lib/types';
 import {
 	type UseConversationMetadataActionsResult,

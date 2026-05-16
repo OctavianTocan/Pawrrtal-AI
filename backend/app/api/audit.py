@@ -10,7 +10,7 @@ Routes
 * ``GET /api/v1/audit/summary``    — 24h dashboard aggregate.
 
 Both routes are scoped to the authenticated user via
-:func:`app.users.get_allowed_user`; a user can never see another
+:func:`app.api.users.get_allowed_user`; a user can never see another
 user's events. Admin / cross-user views are not in this PR's scope.
 """
 
@@ -22,7 +22,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
 from app.core.config import settings
+from app.core.db import User, get_async_session
 from app.crud.audit import (
     DEFAULT_DASHBOARD_WINDOW_HOURS,
     DEFAULT_LIST_LIMIT,
@@ -30,9 +32,7 @@ from app.crud.audit import (
     get_user_activity_summary,
     list_audit_events_for_user,
 )
-from app.db import User, get_async_session
 from app.schemas import AuditEventRead
-from app.users import get_allowed_user
 
 # Upper bound on the dashboard window so the aggregation query can't
 # scan the whole table. 90 days matches the default retention.

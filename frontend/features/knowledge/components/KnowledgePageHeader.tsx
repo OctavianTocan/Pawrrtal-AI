@@ -12,7 +12,7 @@
 
 import { LayersIcon, UserIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { AppPill } from '@/components/ui/app-pill';
+import { AppPill } from '@/features/_shared/ui/app-pill';
 import { cn } from '@/lib/utils';
 
 /**

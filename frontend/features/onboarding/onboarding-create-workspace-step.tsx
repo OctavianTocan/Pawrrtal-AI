@@ -2,7 +2,7 @@ import { CloudServerIcon, FolderAddIcon, FolderOpenIcon } from '@hugeicons/core-
 import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from 'react';
 import { useCallback } from 'react';
-import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { DialogDescription, DialogHeader } from '@/features/_shared/ui/dialog';
 import { OPEN_ONBOARDING_SERVER_STEP_EVENT } from '@/features/onboarding/v2/OnboardingFlow';
 import { cn } from '@/lib/utils';
 

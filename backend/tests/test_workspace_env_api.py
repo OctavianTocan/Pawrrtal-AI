@@ -26,7 +26,7 @@ from httpx import AsyncClient
 from app.api.workspace_env import MAX_KEYS, MAX_VALUE_LENGTH
 from app.core import keys
 from app.core.config import settings
-from app.db import User
+from app.core.db import User
 
 
 @pytest.fixture

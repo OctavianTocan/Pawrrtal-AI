@@ -3,7 +3,7 @@
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { Streamdown } from 'streamdown';
-import { Shimmer } from '@/components/ai-elements/shimmer';
+import { Shimmer } from '@/features/_shared/ai-elements/shimmer';
 import { cn } from '@/lib/utils';
 import { getCompletedToolLabel, getToolIcon, getToolLabel } from '../thinking-constants';
 import { parseThinkingSections } from '../thinking-parser';

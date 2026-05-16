@@ -1,9 +1,9 @@
 import { ArrowLeft02Icon, FolderCheckIcon, FolderOpenIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/features/_shared/ui/button';
+import { DialogDescription, DialogHeader } from '@/features/_shared/ui/dialog';
+import { Label } from '@/features/_shared/ui/label';
 import { cn } from '@/lib/utils';
 
 /** Props for the existing-folder onboarding step. */

@@ -11,8 +11,8 @@ import {
 	type PromptInputMessage,
 	PromptInputSubmit,
 	PromptInputTextarea,
-} from '@/components/ai-elements/prompt-input';
-import { Button } from '@/components/ui/button';
+} from '@/features/_shared/ai-elements/prompt-input';
+import { Button } from '@/features/_shared/ui/button';
 import { usePersistedState } from '@/hooks/use-persisted-state';
 import { cn } from '@/lib/utils';
 import { CHAT_STORAGE_KEYS, DEFAULT_PLAN_MODE_VISIBLE } from '../constants';

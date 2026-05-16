@@ -2,7 +2,7 @@
 
 import type * as React from 'react';
 import { useCallback, useEffect, useReducer } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/features/_shared/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import {
 	loadPersonalizationProfile,

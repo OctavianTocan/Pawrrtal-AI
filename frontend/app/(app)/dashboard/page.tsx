@@ -4,7 +4,6 @@
  * @fileoverview Scaffold for experimenting with `SidebarProvider` layout; not the main chat shell.
  */
 
-import { AppSidebar } from '@/components/app-sidebar';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -12,9 +11,10 @@ import {
 	BreadcrumbList,
 	BreadcrumbPage,
 	BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+} from '@/features/_shared/ui/breadcrumb';
+import { Separator } from '@/features/_shared/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/features/_shared/ui/sidebar';
+import { AppSidebar } from '@/features/app-shell/app-sidebar';
 
 export default function Page() {
 	return (

@@ -7,9 +7,9 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
+from app.api.users import get_allowed_user
+from app.core.db import User
 from app.core.providers.catalog import CATALOG_ETAG, MODEL_CATALOG, ModelEntry
-from app.db import User
-from app.users import get_allowed_user
 
 # RFC 7232 requires ``ETag`` values to be wrapped in double quotes.  The
 # ``CATALOG_ETAG`` constant is a bare 16-hex string; we quote it once here

@@ -2,8 +2,8 @@
 
 import { CheckIcon, CopyIcon, RefreshCwIcon, Share2Icon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/features/_shared/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/features/_shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**

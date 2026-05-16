@@ -7,7 +7,7 @@ import hmac
 
 import pytest
 
-from app.integrations.webhooks.auth import (
+from app.api.integrations.webhooks.auth import (
     verify_github_signature,
     verify_shared_secret,
 )

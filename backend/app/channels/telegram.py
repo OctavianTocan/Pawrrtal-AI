@@ -254,11 +254,11 @@ async def _handle_tool_use(
     Returns the updated ``(accumulated, chars_since_edit, last_edit_at)``
     triple so the caller can flow it into the next iteration unchanged.
     """
-    # Lazy import: ``app.integrations.telegram.tool_icons`` lives inside the
+    # Lazy import: ``app.api.integrations.telegram.tool_icons`` lives inside the
     # Telegram package whose ``__init__`` eagerly imports ``bot.py``, which
     # in turn imports ``app.channels``. Importing at module scope creates a
     # circular import during ``app.channels`` init.
-    from app.integrations.telegram.tool_icons import tool_icon  # noqa: PLC0415
+    from app.api.integrations.telegram.tool_icons import tool_icon  # noqa: PLC0415
 
     tool_name = event.get("name", "tool")
     line = f"\n{tool_icon(tool_name)} {tool_name}…"

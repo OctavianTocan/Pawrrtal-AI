@@ -3,10 +3,10 @@ import uuid
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.exceptions import UserNotExists
 
+from app.api.users import UserManager
 from app.core.config import settings
-from app.db import User, async_session_maker
+from app.core.db import User, async_session_maker
 from app.schemas import UserCreate
-from app.users import UserManager
 
 
 async def seed_admin_user() -> None:

@@ -3,7 +3,7 @@
 import { Folder, Pencil } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
-import { SidebarNavRow } from '@/components/ui/sidebar-nav-row';
+import { SidebarNavRow } from '@/features/_shared/ui/sidebar-nav-row';
 import { CONVERSATION_DRAG_MIME } from '@/lib/conversations/drag';
 import { cn } from '@/lib/utils';
 

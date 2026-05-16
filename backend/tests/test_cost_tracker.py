@@ -13,6 +13,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import User
 from app.core.governance.cost_tracker import (
     TOKENS_PER_MTOK,
     CostBudget,
@@ -23,7 +24,6 @@ from app.core.governance.cost_tracker import (
 )
 from app.core.providers.catalog import ModelEntry
 from app.core.providers.model_id import Host, Vendor
-from app.db import User
 from app.models import CostLedger
 
 pytestmark = pytest.mark.anyio

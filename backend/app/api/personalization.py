@@ -5,12 +5,12 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
+from app.core.db import User, get_async_session
 from app.crud import personalization as crud
 from app.crud.workspace import ensure_default_workspace
-from app.db import User, get_async_session
 from app.models import UserPersonalization
 from app.schemas import PersonalizationProfile
-from app.users import get_allowed_user
 
 log = logging.getLogger(__name__)
 

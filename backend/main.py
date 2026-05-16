@@ -19,35 +19,35 @@ from app.api.conversations import get_conversations_router
 from app.api.cost import get_cost_router
 from app.api.exports import get_exports_router
 from app.api.health import get_health_router
+from app.api.integrations.telegram import telegram_lifespan
+from app.api.integrations.webhooks import get_webhooks_router
 from app.api.models import get_models_router
 from app.api.oauth import get_oauth_router
 from app.api.personalization import get_personalization_router
 from app.api.projects import get_projects_router
 from app.api.scheduled_jobs import get_scheduled_jobs_router
 from app.api.stt import get_stt_router
+from app.api.users import auth_backend, fastapi_users
 from app.api.workspace import get_workspace_router
 from app.api.workspace_env import get_workspace_env_router
 from app.cli.admin_seed import seed_admin_user
 from app.core.config import settings
+from app.core.db import create_db_and_tables
 from app.core.event_bus import AgentHandler, EventBus, NotificationService
 from app.core.event_bus.global_bus import set_event_bus
+from app.core.logger_setup import (
+    configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
+)
 from app.core.middleware import BackendApiKeyMiddleware
 from app.core.rate_limit import ChatRateLimitMiddleware
 from app.core.request_logging import RequestLoggingMiddleware
 from app.core.scheduler import JobScheduler
 from app.core.telemetry import setup_tracing, shutdown_tracing
-from app.db import create_db_and_tables
-from app.integrations.telegram import telegram_lifespan
-from app.integrations.webhooks import get_webhooks_router
-from app.logger_setup import (
-    configure_logging,  # Set up logging configuration (this should be done before any loggers are used)
-)
 from app.schemas import (
     UserCreate,
     UserRead,
     UserUpdate,
 )
-from app.users import auth_backend, fastapi_users
 
 # Configure logging at the very start of the application. This ensures that all loggers in the app will use this configuration.
 configure_logging()

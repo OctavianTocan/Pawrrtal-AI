@@ -3,7 +3,7 @@
 Exercises the /api/v1/channels routes plus the underlying
 issue/redeem/unbind helpers. Avoids spinning up the real Telegram bot
 by going through the framework-thin handlers in
-``app.integrations.telegram.handlers``.
+``app.api.integrations.telegram.handlers``.
 """
 
 from __future__ import annotations
@@ -14,19 +14,19 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.integrations.telegram.handlers import (
+    PROVIDER,
+    TelegramSender,
+    handle_plain_message,
+    handle_start_command,
+)
 from app.core.config import settings
+from app.core.db import User
 from app.crud.channel import (
     delete_binding,
     get_user_id_for_external,
     issue_link_code,
     list_bindings,
-)
-from app.db import User
-from app.integrations.telegram.handlers import (
-    PROVIDER,
-    TelegramSender,
-    handle_plain_message,
-    handle_start_command,
 )
 
 pytestmark = pytest.mark.anyio

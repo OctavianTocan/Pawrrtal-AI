@@ -32,11 +32,11 @@ import {
 	ZapIcon,
 } from 'lucide-react';
 import React from 'react';
-import { KeyboardShortcutsDialog } from '@/components/keyboard-shortcuts-dialog';
-import { NewSessionButton } from '@/components/new-session-button';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { Button } from '@/features/_shared/ui/button';
+import { Separator } from '@/features/_shared/ui/separator';
+import { SidebarTrigger, useSidebar } from '@/features/_shared/ui/sidebar';
+import { KeyboardShortcutsDialog } from '@/features/app-shell/keyboard-shortcuts-dialog';
+import { NewSessionButton } from '@/features/app-shell/new-session-button';
 import { OPEN_ONBOARDING_EVENT } from '@/features/onboarding/OnboardingModal';
 import { useIsMacDesktop } from '@/hooks/use-is-mac-desktop';
 import { cn } from '@/lib/utils';

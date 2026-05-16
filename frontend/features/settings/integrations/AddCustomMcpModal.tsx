@@ -3,11 +3,11 @@
 import { AlertTriangle, X } from 'lucide-react';
 import type * as React from 'react';
 import { useId, useState } from 'react';
-import { AppDialog } from '@/components/ui/app-dialog';
-import { AppDialogCallout } from '@/components/ui/app-dialog-callout';
-import { AppFormRow } from '@/components/ui/app-form-row';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AppDialog } from '@/features/_shared/ui/app-dialog';
+import { AppDialogCallout } from '@/features/_shared/ui/app-dialog-callout';
+import { AppFormRow } from '@/features/_shared/ui/app-form-row';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
 
 /** Props for {@link AddCustomMcpModal}. */
 export interface AddCustomMcpModalProps {

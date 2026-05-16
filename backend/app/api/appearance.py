@@ -3,8 +3,9 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
+from app.core.db import User, get_async_session
 from app.crud import appearance as crud
-from app.db import User, get_async_session
 from app.models import UserAppearance
 from app.schemas import (
     AppearanceFonts,
@@ -12,7 +13,6 @@ from app.schemas import (
     AppearanceSettings,
     ThemeColors,
 )
-from app.users import get_allowed_user
 
 
 def _to_settings(row: UserAppearance | None) -> AppearanceSettings:

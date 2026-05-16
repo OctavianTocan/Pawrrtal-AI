@@ -2,8 +2,8 @@
 
 import { Archive } from 'lucide-react';
 import type * as React from 'react';
-import { AppEmptyState } from '@/components/ui/app-empty-state';
-import { Button } from '@/components/ui/button';
+import { AppEmptyState } from '@/features/_shared/ui/app-empty-state';
+import { Button } from '@/features/_shared/ui/button';
 import { useUpdateConversationMetadata } from '@/features/nav-chats/hooks/use-conversation-mutations';
 import useGetConversations from '@/hooks/get-conversations';
 import { toast } from '@/lib/toast';
