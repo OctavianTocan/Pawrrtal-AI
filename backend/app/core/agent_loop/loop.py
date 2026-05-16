@@ -40,6 +40,7 @@ from .types import (
     StreamFn,
     TextContent,
     TextDeltaEvent,
+    ThinkingDeltaEvent,
     ToolCallContent,
     ToolCallEndEvent,
     ToolCallStartEvent,
@@ -579,6 +580,9 @@ def _consume_llm_event(
     """
     if llm_event["type"] == "text_delta":
         events.append(TextDeltaEvent(type="text_delta", text=llm_event["text"]))
+        return None
+    if llm_event["type"] == "thinking_delta":
+        events.append(ThinkingDeltaEvent(type="thinking_delta", text=llm_event["text"]))
         return None
     if llm_event["type"] == "tool_call":
         events.append(
