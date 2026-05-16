@@ -32,13 +32,19 @@ describe('useAuthedFetch', (): void => {
 		});
 	});
 
-	it('redirects to login and throws on 401 responses', async (): Promise<void> => {
+	it('redirects to /login with ?redirect= and throws on 401 responses', async (): Promise<void> => {
+		// On a 401 the hook must preserve where the user was so the login
+		// page can return them after re-authenticating — same contract the
+		// Next.js proxy (``frontend/proxy.ts``) uses when no cookie is
+		// present in the first place.
 		vi.mocked(fetch).mockResolvedValue(new Response('nope', { status: 401 }));
 
 		const { result } = renderHook(() => useAuthedFetch());
 
 		await expect(result.current('/me')).rejects.toThrow('User is not authenticated');
-		expect(replaceMock).toHaveBeenCalledWith('/login');
+		expect(replaceMock).toHaveBeenCalledOnce();
+		// Must point at /login and round-trip the original path through ?redirect=.
+		expect(replaceMock).toHaveBeenCalledWith(expect.stringMatching(/^\/login\?redirect=/));
 	});
 
 	it('includes response bodies in non-auth API errors', async (): Promise<void> => {

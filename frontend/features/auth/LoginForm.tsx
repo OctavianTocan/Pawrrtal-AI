@@ -8,6 +8,18 @@ import { LoginFormView } from './LoginFormView';
 
 interface LoginFormProps extends React.ComponentProps<'div'> {
 	canUseDevAdminLogin?: boolean;
+	/**
+	 * Path to navigate to after a successful sign-in.
+	 *
+	 * The login page reads the URL's ``?redirect=`` query server-side
+	 * (Next.js 15+ ``searchParams`` is a Promise) and validates it
+	 * before threading the value here. Defaults to ``/``.
+	 *
+	 * Keeping the read on the server keeps this component prerender-
+	 * safe — using ``useSearchParams`` inside would force a CSR bail-
+	 * out for the entire ``/login`` page.
+	 */
+	postLoginTarget?: string;
 }
 
 /**
@@ -17,10 +29,12 @@ interface LoginFormProps extends React.ComponentProps<'div'> {
  * Delegates all rendering to `LoginFormView`.
  *
  * @param canUseDevAdminLogin - Whether to show the dev-only admin shortcut button.
+ * @param postLoginTarget - Validated path to ``router.push`` after sign-in.
  */
 export function LoginForm({
 	className,
 	canUseDevAdminLogin = false,
+	postLoginTarget = '/',
 	...props
 }: LoginFormProps): React.JSX.Element {
 	// Destructure onSubmit from rest to avoid conflict with our custom onSubmit prop.
@@ -74,7 +88,7 @@ export function LoginForm({
 
 		try {
 			await loginMutation.mutateAsync({ email, password });
-			push('/');
+			push(postLoginTarget);
 		} catch (error) {
 			setFriendlyNetworkError(error);
 		}
@@ -88,7 +102,7 @@ export function LoginForm({
 
 		try {
 			await devLoginMutation.mutateAsync();
-			push('/');
+			push(postLoginTarget);
 		} catch (error) {
 			setFriendlyNetworkError(error);
 		}

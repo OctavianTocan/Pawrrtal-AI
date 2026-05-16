@@ -33,7 +33,16 @@ export function useAuthedFetch() {
 
 			// Handle expired cookies. (User is not authenticated.)
 			if (response.status === 401) {
-				router.replace('/login');
+				// Preserve where the user was so the login page can return
+				// them after a fresh sign-in. Matches the same ``?redirect=``
+				// param the Next.js middleware (``frontend/middleware.ts``)
+				// sets when no cookie is present in the first place.
+				if (typeof window !== 'undefined') {
+					const target = window.location.pathname + window.location.search;
+					router.replace(`/login?redirect=${encodeURIComponent(target)}`);
+				} else {
+					router.replace('/login');
+				}
 				throw new Error('User is not authenticated');
 			}
 

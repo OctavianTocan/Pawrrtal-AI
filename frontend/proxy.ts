@@ -47,7 +47,14 @@ export function proxy(request: NextRequest) {
 	}
 
 	if (isProtectedRoute(path) && !sessionToken) {
-		return NextResponse.redirect(new URL('/login', request.url));
+		// Preserve where the user was so the login page can return them
+		// after a fresh sign-in (issue #94). ``useAuthedFetch`` uses the
+		// same ``?redirect=`` contract when a stale-token 401 bounces a
+		// running session back to /login.
+		const loginUrl = new URL('/login', request.url);
+		const target = path + request.nextUrl.search;
+		loginUrl.searchParams.set('redirect', target);
+		return NextResponse.redirect(loginUrl);
 	}
 
 	return NextResponse.next();
