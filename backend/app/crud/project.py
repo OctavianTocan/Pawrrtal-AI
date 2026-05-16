@@ -14,7 +14,7 @@ from app.models import Project
 from app.schemas import ProjectCreate, ProjectUpdate
 
 
-async def create_project_service(
+async def create_project(
     user_id: uuid.UUID, session: AsyncSession, payload: ProjectCreate
 ) -> Project:
     """Create a new project owned by the given user.
@@ -40,7 +40,7 @@ async def create_project_service(
     return new_project
 
 
-async def list_projects_service(user_id: uuid.UUID, session: AsyncSession) -> list[Project]:
+async def list_projects(user_id: uuid.UUID, session: AsyncSession) -> list[Project]:
     """List every project owned by the given user, oldest-first.
 
     Args:
@@ -55,7 +55,7 @@ async def list_projects_service(user_id: uuid.UUID, session: AsyncSession) -> li
     return list(result.scalars().all())
 
 
-async def get_project_service(
+async def get_project(
     user_id: uuid.UUID, session: AsyncSession, project_id: uuid.UUID
 ) -> Project | None:
     """Retrieve a single project by ID, scoped to the given user.
@@ -73,7 +73,7 @@ async def get_project_service(
     return result.scalar_one_or_none()
 
 
-async def update_project_service(
+async def update_project(
     payload: ProjectUpdate,
     user_id: uuid.UUID,
     project_id: uuid.UUID,
@@ -90,7 +90,7 @@ async def update_project_service(
     Returns:
         The updated ``Project``, or ``None`` if not found / not owned.
     """
-    project = await get_project_service(user_id, session, project_id)
+    project = await get_project(user_id, session, project_id)
     if project is None:
         return None
 
@@ -106,9 +106,7 @@ async def update_project_service(
     return project
 
 
-async def delete_project_service(
-    user_id: uuid.UUID, session: AsyncSession, project_id: uuid.UUID
-) -> bool:
+async def delete_project(user_id: uuid.UUID, session: AsyncSession, project_id: uuid.UUID) -> bool:
     """Delete an existing project owned by the given user.
 
     Linked conversations have their ``project_id`` cleared by the FK's
@@ -117,7 +115,7 @@ async def delete_project_service(
     Returns:
         ``True`` when a project was deleted, otherwise ``False``.
     """
-    project = await get_project_service(user_id, session, project_id)
+    project = await get_project(user_id, session, project_id)
     if project is None:
         return False
 

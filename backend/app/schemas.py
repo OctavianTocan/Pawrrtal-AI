@@ -39,7 +39,7 @@ def _canonicalise_model_id(raw: str | None) -> str | None:
 
 
 def _canonicalise_model_id_for_read(raw: str | None) -> str | None:
-    """Output validator for ``ConversationResponse.model_id``.
+    """Output validator for ``ConversationRead.model_id``.
 
     Defaults to strict (matches the input contract). When
     ``settings.strict_conversation_read_validation`` is ``False``,
@@ -107,7 +107,7 @@ class ConversationCreate(BaseModel):
     title: ConversationTitle | None = None
 
 
-class ConversationResponse(BaseModel):
+class ConversationRead(BaseModel):
     """Response schema returned for conversation endpoints."""
 
     id: uuid.UUID
@@ -154,7 +154,7 @@ class ConversationUpdate(BaseModel):
     project_id_set: bool = False
 
 
-class ProjectResponse(BaseModel):
+class ProjectRead(BaseModel):
     """Response schema returned for project endpoints."""
 
     id: uuid.UUID

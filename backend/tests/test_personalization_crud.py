@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.personalization import (
-    get_personalization_service,
-    upsert_personalization_service,
+    get_personalization,
+    upsert_personalization,
 )
 from app.db import User
 from app.schemas import PersonalizationProfile
@@ -18,7 +18,7 @@ async def test_get_returns_none_when_no_row_exists(
     db_session: AsyncSession, test_user: User
 ) -> None:
     """A user who has never filled the wizard returns None (not a stub row)."""
-    result = await get_personalization_service(test_user.id, db_session)
+    result = await get_personalization(test_user.id, db_session)
     assert result is None
 
 
@@ -32,7 +32,7 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
         personality="goose",
     )
 
-    row = await upsert_personalization_service(test_user.id, payload, db_session)
+    row = await upsert_personalization(test_user.id, payload, db_session)
 
     assert row.user_id == test_user.id
     assert row.name == "Octavian"
@@ -45,11 +45,11 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
 @pytest.mark.anyio
 async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user: User) -> None:
     """Second upsert is a full replacement: omitted fields go back to None."""
-    await upsert_personalization_service(
+    await upsert_personalization(
         test_user.id, PersonalizationProfile(name="A", role="X"), db_session
     )
 
-    updated = await upsert_personalization_service(
+    updated = await upsert_personalization(
         test_user.id, PersonalizationProfile(name="B"), db_session
     )
 
@@ -62,12 +62,12 @@ async def test_get_returns_persisted_row_after_upsert(
     db_session: AsyncSession, test_user: User
 ) -> None:
     """After upsert the get-side reads the same payload back."""
-    await upsert_personalization_service(
+    await upsert_personalization(
         test_user.id,
         PersonalizationProfile(name="Tavi", custom_instructions="Be terse."),
         db_session,
     )
-    fetched = await get_personalization_service(test_user.id, db_session)
+    fetched = await get_personalization(test_user.id, db_session)
     assert fetched is not None
     assert fetched.name == "Tavi"
     assert fetched.custom_instructions == "Be terse."

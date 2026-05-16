@@ -167,7 +167,7 @@ class Settings(BaseSettings):
     # token budget divided by expected request count.
     chat_rate_limit_per_minute: int = 0
 
-    # When True, ConversationResponse 422s on a non-canonical stored
+    # When True, ConversationRead 422s on a non-canonical stored
     # model_id. When False (operator escape hatch), the bad value falls
     # back to ``catalog.default_model().id`` and the row is logged.
     strict_conversation_read_validation: bool = True

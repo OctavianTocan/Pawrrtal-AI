@@ -8,21 +8,14 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.gemini_utils import generate_text_once
+from app.crud import conversation as crud
 from app.crud.chat_message import get_messages_for_conversation
-from app.crud.conversation import (
-    create_conversation_service,
-    delete_conversation_service,
-    get_conversation_service,
-    get_conversations_for_user_service,
-    update_conversation_service,
-    update_conversation_title_service,
-)
 from app.db import User, get_async_session
 from app.models import ChatMessage, Conversation
 from app.schemas import (
     ChatMessageRead,
     ConversationCreate,
-    ConversationResponse,
+    ConversationRead,
     ConversationUpdate,
 )
 from app.users import get_allowed_user
@@ -99,7 +92,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         state (thinking, tool calls, timeline, duration), so a hard reload
         rehydrates the chat exactly as the user last saw it.
         """
-        conversation = await get_conversation_service(user.id, session, conversation_id)
+        conversation = await crud.get_conversation(user.id, session, conversation_id)
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
@@ -111,13 +104,13 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         conversation_id: uuid.UUID,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> ConversationResponse | None:
+    ) -> ConversationRead | None:
         """Return metadata for a single conversation."""
-        conversation: Conversation | None = await get_conversation_service(
+        conversation: Conversation | None = await crud.get_conversation(
             user.id, session, conversation_id
         )
         if conversation:
-            return ConversationResponse(
+            return ConversationRead(
                 title=conversation.title,
                 id=conversation.id,
                 user_id=conversation.user_id,
@@ -163,7 +156,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
             )
             return ""
 
-        await update_conversation_title_service(
+        await crud.update_conversation_title(
             title=generated_title,
             user_id=user.id,
             conversation_id=conversation_id,
@@ -171,13 +164,13 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         )
         return generated_title
 
-    @router.patch("/{conversation_id}", response_model=ConversationResponse)
+    @router.patch("/{conversation_id}", response_model=ConversationRead)
     async def update_conversation(
         conversation_id: uuid.UUID,
         payload: ConversationUpdate,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> ConversationResponse:
+    ) -> ConversationRead:
         """Update mutable conversation metadata for the authenticated user.
 
         Accepts any combination of: title, is_archived, is_flagged, is_unread,
@@ -186,7 +179,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         if payload.title is not None and not payload.title.strip():
             raise HTTPException(status_code=422, detail="Conversation title cannot be empty")
 
-        conversation = await update_conversation_service(
+        conversation = await crud.update_conversation(
             payload=payload,
             user_id=user.id,
             conversation_id=conversation_id,
@@ -195,7 +188,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         if conversation is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        return ConversationResponse(
+        return ConversationRead(
             title=conversation.title,
             id=conversation.id,
             user_id=conversation.user_id,
@@ -217,7 +210,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a conversation owned by the authenticated user."""
-        deleted = await delete_conversation_service(user.id, session, conversation_id)
+        deleted = await crud.delete_conversation(user.id, session, conversation_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
@@ -225,13 +218,11 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
     async def list_conversations(
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> list[ConversationResponse]:
+    ) -> list[ConversationRead]:
         """List all conversations for the authenticated user, most recent first."""
-        conversations: list[Conversation] = await get_conversations_for_user_service(
-            user.id, session
-        )
+        conversations: list[Conversation] = await crud.list_conversations_for_user(user.id, session)
         return [
-            ConversationResponse(
+            ConversationRead(
                 title=conversation.title,
                 id=conversation.id,
                 user_id=conversation.user_id,
@@ -254,7 +245,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         payload: ConversationCreate | None = Body(default=None),
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> ConversationResponse:
+    ) -> ConversationRead:
         """Create a new conversation with an immediate initial title.
 
         Frontend generates the UUID first; this endpoint persists metadata before
@@ -262,7 +253,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         """
         creation_payload = payload or ConversationCreate()
         try:
-            new_conversation: Conversation = await create_conversation_service(
+            new_conversation: Conversation = await crud.create_conversation(
                 user.id,
                 session,
                 ConversationCreate(id=conversation_id, title=creation_payload.title),
@@ -270,7 +261,7 @@ def get_conversations_router() -> APIRouter:  # noqa: C901 — FastAPI router bu
         except ValueError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 
-        return ConversationResponse(
+        return ConversationRead(
             title=new_conversation.title,
             id=new_conversation.id,
             user_id=new_conversation.user_id,

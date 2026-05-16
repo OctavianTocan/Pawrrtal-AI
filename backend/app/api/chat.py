@@ -29,8 +29,8 @@ from app.core.tools.artifact_agent import (
     build_artifact,
 )
 from app.crud.conversation import (
-    get_conversation_service,
-    update_conversation_model_service,
+    get_conversation,
+    update_conversation_model,
 )
 from app.crud.workspace import get_default_workspace
 from app.db import User, get_async_session
@@ -197,7 +197,7 @@ def get_chat_router() -> APIRouter:
             len(request.question),
         )
 
-        conversation = await get_conversation_service(user.id, session, request.conversation_id)
+        conversation = await get_conversation(user.id, session, request.conversation_id)
         if conversation is None:
             logger.warning(
                 "CHAT_404 rid=%s user_id=%s conversation_id=%s",
@@ -215,7 +215,7 @@ def get_chat_router() -> APIRouter:
 
         # Persist model change if it differs from what is stored
         if model_id != conversation.model_id:
-            await update_conversation_model_service(
+            await update_conversation_model(
                 model_id=model_id,
                 user_id=user.id,
                 conversation_id=request.conversation_id,

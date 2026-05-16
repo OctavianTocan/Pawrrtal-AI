@@ -5,21 +5,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.project import (
-    create_project_service,
-    delete_project_service,
-    list_projects_service,
-    update_project_service,
-)
+from app.crud import project as crud
 from app.db import User, get_async_session
 from app.models import Project
-from app.schemas import ProjectCreate, ProjectResponse, ProjectUpdate
+from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate
 from app.users import get_allowed_user
 
 
-def _serialize(project: Project) -> ProjectResponse:
-    """Build a {@link ProjectResponse} from a Project ORM row."""
-    return ProjectResponse(
+def _serialize(project: Project) -> ProjectRead:
+    """Build a {@link ProjectRead} from a Project ORM row."""
+    return ProjectRead(
         id=project.id,
         user_id=project.user_id,
         name=project.name,
@@ -32,34 +27,34 @@ def get_projects_router() -> APIRouter:
     """Build the projects router."""
     router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
-    @router.get("", response_model=list[ProjectResponse])
+    @router.get("", response_model=list[ProjectRead])
     async def list_projects(
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> list[ProjectResponse]:
+    ) -> list[ProjectRead]:
         """List every project owned by the authenticated user."""
-        projects = await list_projects_service(user.id, session)
+        projects = await crud.list_projects(user.id, session)
         return [_serialize(project) for project in projects]
 
-    @router.post("", response_model=ProjectResponse, status_code=201)
+    @router.post("", response_model=ProjectRead, status_code=201)
     async def create_project(
         payload: ProjectCreate,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> ProjectResponse:
+    ) -> ProjectRead:
         """Create a new project owned by the authenticated user."""
-        project = await create_project_service(user.id, session, payload)
+        project = await crud.create_project(user.id, session, payload)
         return _serialize(project)
 
-    @router.patch("/{project_id}", response_model=ProjectResponse)
+    @router.patch("/{project_id}", response_model=ProjectRead)
     async def update_project(
         project_id: uuid.UUID,
         payload: ProjectUpdate,
         user: User = Depends(get_allowed_user),
         session: AsyncSession = Depends(get_async_session),
-    ) -> ProjectResponse:
+    ) -> ProjectRead:
         """Rename a project (currently the only mutable field)."""
-        project = await update_project_service(
+        project = await crud.update_project(
             payload=payload,
             user_id=user.id,
             project_id=project_id,
@@ -76,7 +71,7 @@ def get_projects_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> None:
         """Delete a project. Linked conversations are unlinked, not deleted."""
-        deleted = await delete_project_service(user.id, session, project_id)
+        deleted = await crud.delete_project(user.id, session, project_id)
         if not deleted:
             raise HTTPException(status_code=404, detail="Project not found")
 
