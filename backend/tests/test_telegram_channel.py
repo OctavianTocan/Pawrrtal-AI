@@ -24,7 +24,10 @@ from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
 from app.core.providers.base import StreamEvent
 from app.core.providers.catalog import default_model
-from app.integrations.telegram.bot import refresh_telegram_commands
+from app.integrations.telegram.bot import (
+    _refresh_telegram_commands_best_effort,
+    refresh_telegram_commands,
+)
 from app.integrations.telegram.bot_provider_resolution import (
     resolve_provider_with_auto_clear as _resolve_provider_with_auto_clear,
 )
@@ -110,6 +113,19 @@ async def test_refresh_telegram_commands_sets_current_command_menu() -> None:
     names = [command.command for command in commands]
     assert names == ["start", "new", "model", "verbose", "stop"]
     assert all(command.description for command in commands)
+
+
+@pytest.mark.anyio
+async def test_refresh_telegram_commands_best_effort_logs_and_continues(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    bot = AsyncMock()
+    bot.set_my_commands.side_effect = RuntimeError("telegram unavailable")
+
+    await _refresh_telegram_commands_best_effort(bot)
+
+    bot.set_my_commands.assert_awaited_once()
+    assert "TELEGRAM_COMMANDS_REFRESH_FAILED" in caplog.text
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ Filesystem seeding lives in ``app.core.workspace`` (``seed_workspace``).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import shutil
 import uuid
@@ -132,7 +133,7 @@ async def ensure_default_workspace(
         # Another concurrent request already inserted the default workspace.
         # The savepoint was rolled back automatically; re-fetch the winner.
         if orphaned_path is not None:
-            _remove_orphan_workspace_dir(orphaned_path)
+            await _remove_orphan_workspace_dir(orphaned_path)
         log.warning(
             "ensure_default_workspace: IntegrityError for user %s — "
             "concurrent insert detected, re-fetching existing row.",
@@ -148,22 +149,30 @@ async def ensure_default_workspace(
         return result
 
 
-def _remove_orphan_workspace_dir(path: Path) -> None:
+async def _remove_orphan_workspace_dir(path: Path) -> None:
     """Remove a just-seeded workspace directory after its DB row rolled back."""
+    resolved = _validated_orphan_workspace_dir(path)
+    if resolved is None:
+        return
+
+    try:
+        await asyncio.to_thread(shutil.rmtree, resolved)
+    except FileNotFoundError:
+        return
+    except OSError:
+        log.warning("Failed to remove orphan workspace directory: %s", resolved, exc_info=True)
+
+
+def _validated_orphan_workspace_dir(path: Path) -> Path | None:
+    """Return a safe workspace path to delete, or None when it is unsafe."""
     try:
         workspace_base = Path(settings.workspace_base_dir).resolve()
         resolved = path.resolve()
         resolved.relative_to(workspace_base)
     except ValueError:
         log.warning("Refusing to remove workspace path outside base dir: %s", path)
-        return
+        return None
     except OSError:
         log.warning("Could not resolve orphan workspace path: %s", path, exc_info=True)
-        return
-
-    try:
-        shutil.rmtree(resolved)
-    except FileNotFoundError:
-        return
-    except OSError:
-        log.warning("Failed to remove orphan workspace directory: %s", resolved, exc_info=True)
+        return None
+    return resolved

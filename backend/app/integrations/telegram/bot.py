@@ -374,6 +374,14 @@ async def refresh_telegram_commands(bot: Bot) -> None:
     )
 
 
+async def _refresh_telegram_commands_best_effort(bot: Bot) -> None:
+    """Refresh command menu without turning Telegram startup into a hard dependency."""
+    try:
+        await refresh_telegram_commands(bot)
+    except Exception:
+        logger.warning("TELEGRAM_COMMANDS_REFRESH_FAILED", exc_info=True)
+
+
 def _sender_from_message(message: Message) -> TelegramSender:
     """Project an aiogram ``Message`` onto our framework-free dataclass."""
     user = message.from_user
@@ -512,7 +520,7 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
         return
 
     service = build_telegram_service()
-    await refresh_telegram_commands(service.bot)
+    await _refresh_telegram_commands_best_effort(service.bot)
 
     if settings.telegram_mode == "polling":
         # Drop any leftover webhook so polling actually receives updates;
