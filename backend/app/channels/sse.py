@@ -28,7 +28,7 @@ from collections.abc import AsyncIterator
 
 from app.core.providers.base import StreamEvent
 
-from .base import ChannelMessage
+from .base import Channel, ChannelMessage
 
 # Sentinel surface names recognized by the registry.
 SURFACE_WEB = "web"
@@ -47,11 +47,13 @@ def _frame(event: StreamEvent) -> bytes:
 _DONE_FRAME = b"data: [DONE]\n\n"
 
 
-class SSEChannel:
+class SSEChannel(Channel):
     """``Channel`` implementation for HTTP SSE (web + Electron).
 
     Instantiated once and shared across requests — it holds no per-request
-    state.
+    state. Explicitly inheriting from ``Channel`` makes mypy/pyright
+    enforce protocol conformance at class-definition time rather than at
+    each call site.
     """
 
     def __init__(self, surface: str = SURFACE_WEB) -> None:
