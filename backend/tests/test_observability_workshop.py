@@ -366,3 +366,201 @@ def test_event_hook_mirrors_stream_events_onto_recorder(
         "arguments": {"q": "x"},
     }
     assert attrs["gen_ai.usage.input_tokens"] == 7
+
+
+# ---------------------------------------------------------------------------
+# turn_runner integration — span layering + history rendering
+# ---------------------------------------------------------------------------
+
+
+def test_build_llm_view_messages_renders_history_and_question() -> None:
+    """Conversation history flows into the Workshop ``gen_ai.input.messages`` panel."""
+    from app.core.observability._turn_view import build_llm_view_messages
+
+    rendered = build_llm_view_messages(
+        history=[
+            {"role": "user", "content": "what's 2+2?"},
+            {"role": "assistant", "content": "4"},
+            {"role": "user", "content": "and 3+3?"},
+            {"role": "assistant", "content": "6"},
+        ],
+        current_question="finally, 4+4?",
+    )
+
+    assert [m["role"] for m in rendered] == ["user", "assistant", "user", "assistant", "user"]
+    # Assistant rows render with a single text-content block + synthetic stop reason.
+    assistant_one = rendered[1]
+    assert assistant_one["role"] == "assistant"  # narrow the AgentMessage union
+    assert assistant_one["content"] == [{"type": "text", "text": "4"}]
+    assert assistant_one["stop_reason"] == "stop"
+    # Current question is appended verbatim as the trailing user turn.
+    assert rendered[-1] == {"role": "user", "content": "finally, 4+4?"}
+
+
+def test_build_llm_view_messages_skips_unknown_roles() -> None:
+    """Rows with unexpected roles (system, tool) are dropped, not crash-rendered."""
+    from app.core.observability._turn_view import build_llm_view_messages
+
+    rendered = build_llm_view_messages(
+        history=[
+            {"role": "user", "content": "hi"},
+            {"role": "system", "content": "noise"},
+            {"role": "tool", "content": "noise"},
+            {"role": "assistant", "content": "hello"},
+        ],
+        current_question="continue please",
+    )
+
+    # Only user / assistant rows survive, plus the trailing current question.
+    assert [m["role"] for m in rendered] == ["user", "assistant", "user"]
+
+
+@pytest.mark.anyio
+async def test_finalize_turn_errors_do_not_taint_llm_span(
+    span_exporter: InMemorySpanExporter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ``_finalize_turn`` failure marks the turn span but NOT the LLM span.
+
+    Greptile reviewer flagged the original layout: ``_finalize_turn`` was
+    called from inside both ``turn_span`` and ``llm_span``, so a database
+    persist failure would bubble through ``llm_span``'s ``except`` clause
+    and stamp the LLM call as errored. The fix nests the contexts so
+    finalisation runs only inside ``turn_span``.
+    """
+    import uuid as _uuid
+
+    from app.channels.turn_runner import ChatTurnInput, run_turn
+
+    # Minimal fake provider — yields one delta + one usage event so the
+    # aggregator + LLM recorder both have something to flush.
+    class _FakeProvider:
+        async def stream(self, *_args: object, **_kwargs: object):
+            yield {"type": "delta", "content": "hi"}
+            yield {
+                "type": "usage",
+                "input_tokens": 1,
+                "output_tokens": 1,
+                "cost_usd": 0.0,
+            }
+
+    # Minimal fake channel — passes events through as bytes verbatim.
+    class _FakeChannel:
+        surface = "test"
+
+        async def deliver(self, stream, _message):
+            async for event in stream:
+                yield str(event).encode()
+
+    channel_message = {
+        "user_id": _uuid.uuid4(),
+        "conversation_id": _uuid.uuid4(),
+        "text": "hello",
+        "surface": "test",
+        "model_id": "test:fake",
+        "metadata": {},
+    }
+
+    # Bypass DB persist + finalize. The persist replacement must return
+    # a (history, assistant_message_id) tuple so run_turn can proceed
+    # past the load step.
+    async def _no_persist(_turn_input):
+        return [{"role": "user", "content": "prior"}], _uuid.uuid4()
+
+    async def _failing_finalize(**_kwargs):
+        raise RuntimeError("simulated DB persist failure")
+
+    monkeypatch.setattr(
+        "app.channels.turn_runner._load_history_and_persist",
+        _no_persist,
+    )
+    monkeypatch.setattr(
+        "app.channels.turn_runner._finalize_turn",
+        _failing_finalize,
+    )
+
+    turn_input = ChatTurnInput(
+        conversation_id=channel_message["conversation_id"],
+        user_id=channel_message["user_id"],
+        question="hello",
+        provider=_FakeProvider(),  # type: ignore[arg-type]
+        channel=_FakeChannel(),  # type: ignore[arg-type]
+        channel_message=channel_message,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(RuntimeError, match="simulated DB persist failure"):
+        async for _chunk in run_turn(turn_input):
+            pass
+
+    llm_chat_span = _span_by_name(span_exporter, "pawrrtal.llm.chat")
+    assert llm_chat_span.status.status_code != trace.StatusCode.ERROR, (
+        "LLM call succeeded — _finalize_turn DB error must not corrupt its status"
+    )
+    # The turn span IS expected to capture the failure since the turn
+    # itself failed at finalisation.
+    turn_span_recorded = _span_by_name(span_exporter, "pawrrtal.turn")
+    assert turn_span_recorded.status.status_code == trace.StatusCode.ERROR
+
+
+@pytest.mark.anyio
+async def test_run_turn_passes_history_into_llm_span(
+    span_exporter: InMemorySpanExporter,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``gen_ai.input.messages`` carries the full conversation, not only the new turn."""
+    import uuid as _uuid
+
+    from app.channels.turn_runner import ChatTurnInput, run_turn
+
+    class _FakeProvider:
+        async def stream(self, *_args: object, **_kwargs: object):
+            yield {"type": "delta", "content": "ack"}
+
+    class _FakeChannel:
+        surface = "test"
+
+        async def deliver(self, stream, _message):
+            async for event in stream:
+                yield str(event).encode()
+
+    channel_message = {
+        "user_id": _uuid.uuid4(),
+        "conversation_id": _uuid.uuid4(),
+        "text": "and 3+3?",
+        "surface": "test",
+        "model_id": "test:fake",
+        "metadata": {},
+    }
+
+    history_rows = [
+        {"role": "user", "content": "what's 2+2?"},
+        {"role": "assistant", "content": "4"},
+    ]
+
+    async def _persist(_turn_input):
+        return history_rows, _uuid.uuid4()
+
+    async def _noop_finalize(**_kwargs):
+        return None
+
+    monkeypatch.setattr("app.channels.turn_runner._load_history_and_persist", _persist)
+    monkeypatch.setattr("app.channels.turn_runner._finalize_turn", _noop_finalize)
+
+    turn_input = ChatTurnInput(
+        conversation_id=channel_message["conversation_id"],
+        user_id=channel_message["user_id"],
+        question="and 3+3?",
+        provider=_FakeProvider(),  # type: ignore[arg-type]
+        channel=_FakeChannel(),  # type: ignore[arg-type]
+        channel_message=channel_message,  # type: ignore[arg-type]
+    )
+
+    async for _chunk in run_turn(turn_input):
+        pass
+
+    llm_chat_span = _span_by_name(span_exporter, "pawrrtal.llm.chat")
+    payload = json.loads(str(_attrs(llm_chat_span)["gen_ai.input.messages"]))
+    assert [m["role"] for m in payload] == ["user", "assistant", "user"]
+    assert payload[0]["parts"][0]["content"] == "what's 2+2?"
+    assert payload[1]["parts"][0]["content"] == "4"
+    assert payload[2]["parts"][0]["content"] == "and 3+3?"

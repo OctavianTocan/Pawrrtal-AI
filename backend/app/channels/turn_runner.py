@@ -23,6 +23,10 @@ from app.core.governance.cost_tracker import (
     record_turn_cost,
 )
 from app.core.governance.workspace_context import load_workspace_context
+from app.core.observability._turn_view import (
+    aggregator_stop_reason,
+    build_llm_view_messages,
+)
 from app.core.observability.workshop import (
     llm_span,
     turn_span,
@@ -115,6 +119,12 @@ async def run_turn(
     every LLM stream and tool call dispatched downstream lands in the
     same trace.  When telemetry is disabled the spans are no-ops and
     add zero overhead (see ``app.core.telemetry.setup_tracing``).
+
+    ``_finalize_turn`` runs **inside** ``turn_span`` but **outside**
+    ``llm_span``: a database failure during persist + cost-ledger write
+    is a turn-level problem, not an LLM problem, so it must not bleed
+    into ``llm_span``'s error path (which would otherwise mark a
+    successful LLM call as ``Status.ERROR`` with a database message).
     """
     started_at = time.perf_counter()
     history, assistant_message_id = await _load_history_and_persist(turn_input)
@@ -123,20 +133,66 @@ async def run_turn(
     counter = _EventCounter()
     model_id = _channel_model_id(turn_input.channel_message)
 
-    with (
-        turn_span(
-            conversation_id=turn_input.conversation_id,
-            user_id=turn_input.user_id,
-            surface=turn_input.log_tag,
-            request_id=_request_id_from_extras(turn_input.log_extras),
-            model_id=model_id,
-        ),
-        llm_span(
-            model_id=model_id or _MODEL_ID_UNKNOWN,
-            messages=[{"role": "user", "content": turn_input.question}],
-            system_prompt=system_prompt,
-        ) as llm_recorder,
+    with turn_span(
+        conversation_id=turn_input.conversation_id,
+        user_id=turn_input.user_id,
+        surface=turn_input.log_tag,
+        request_id=_request_id_from_extras(turn_input.log_extras),
+        model_id=model_id,
     ):
+        try:
+            async for chunk in _stream_with_llm_span(
+                turn_input=turn_input,
+                history=history,
+                system_prompt=system_prompt,
+                aggregator=aggregator,
+                counter=counter,
+                event_hooks=event_hooks,
+                model_id=model_id,
+            ):
+                yield chunk
+        finally:
+            await _finalize_turn(
+                turn_input=turn_input,
+                aggregator=aggregator,
+                assistant_message_id=assistant_message_id,
+                started_at=started_at,
+                event_count=counter.value,
+                event_breakdown=counter.by_type,
+            )
+
+
+async def _stream_with_llm_span(
+    *,
+    turn_input: ChatTurnInput,
+    history: list[dict[str, str]],
+    system_prompt: str | None,
+    aggregator: ChatTurnAggregator,
+    counter: _EventCounter,
+    event_hooks: list[EventHook] | None,
+    model_id: str | None,
+) -> AsyncIterator[bytes]:
+    """Yield channel chunks under one ``llm_span`` context manager.
+
+    Pulled out of ``run_turn`` for two reasons:
+
+    1. Keeps the function below the project's nesting-depth budget
+       (``scripts/check-nesting.py``).
+    2. Scopes ``llm_span`` to the provider/channel stream only — so
+       a downstream database error in ``_finalize_turn`` cannot be
+       caught by ``llm_span``'s ``except`` clause and stamped as an
+       LLM error.
+
+    Workshop's UI panel for ``gen_ai.input.messages`` shows whatever
+    list this function passes in — the full ``history`` plus the new
+    user turn — so operators debugging a multi-turn conversation
+    see the same context the provider sees.
+    """
+    with llm_span(
+        model_id=model_id or _MODEL_ID_UNKNOWN,
+        messages=build_llm_view_messages(history, turn_input.question),
+        system_prompt=system_prompt,
+    ) as llm_recorder:
         hooks = [workshop_event_hook(llm_recorder), *(event_hooks or [])]
         try:
             async for chunk in turn_input.channel.deliver(
@@ -152,19 +208,11 @@ async def run_turn(
             ):
                 yield chunk
         finally:
-            llm_recorder.record_stop(_aggregator_stop_reason(aggregator))
+            llm_recorder.record_stop(aggregator_stop_reason(aggregator))
             llm_recorder.record_usage(
                 input_tokens=aggregator.total_input_tokens,
                 output_tokens=aggregator.total_output_tokens,
                 cost_usd=aggregator.total_cost_usd,
-            )
-            await _finalize_turn(
-                turn_input=turn_input,
-                aggregator=aggregator,
-                assistant_message_id=assistant_message_id,
-                started_at=started_at,
-                event_count=counter.value,
-                event_breakdown=counter.by_type,
             )
 
 
@@ -230,29 +278,6 @@ def _channel_model_id(channel_message: ChannelMessage | None) -> str | None:
         return None
     model_id = channel_message.get("model_id")
     return str(model_id) if model_id else None
-
-
-def _aggregator_stop_reason(aggregator: ChatTurnAggregator) -> str:
-    """Best-effort ``stop_reason`` for the Workshop LLM span.
-
-    The :class:`ChatTurnAggregator` does not track the provider's
-    literal ``stop_reason`` — it normalises the wire shape to
-    ``status`` (``complete`` / ``failed``) at finalisation time.  For
-    Workshop's ``gen_ai.response.finish_reasons`` attribute we infer:
-
-    * ``"error"`` when the aggregator captured an error event,
-    * ``"tool_use"`` when at least one tool call was dispatched,
-    * ``"stop"`` otherwise (the normal text-only finish).
-
-    This matches the three values the agent loop's ``stop_reason``
-    enum can take, so the Workshop UI shows the same labels operators
-    see in the backend logs.
-    """
-    if aggregator.error_text:
-        return "error"
-    if aggregator.tool_calls:
-        return "tool_use"
-    return "stop"
 
 
 def _expand_hook_events(
