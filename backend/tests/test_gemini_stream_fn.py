@@ -28,6 +28,7 @@ from tests.agent_harness import (
     ScriptedStreamFn,
     echo_tool,
     text_turn,
+    thinking_then_text_turn,
     tool_call_turn,
 )
 
@@ -233,6 +234,64 @@ async def test_gemini_provider_surfaces_agent_terminated_from_safety_config(
 
     # The script was cut short — no more than 3 LLM calls.
     assert script.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# Test 4b — thinking_delta events translate to StreamEvent(type="thinking")
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_gemini_provider_emits_thinking_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``LLMThinkingDeltaEvent`` from the stream_fn surfaces as a thinking SSE event.
+
+    Regression test for issue #98 — before the fix, Gemini's StreamFn
+    only forwarded plain text deltas and dropped reasoning chunks, so
+    the frontend's "thinking" pane was always empty for Gemini users
+    even though the type vocabulary supported it.
+
+    Authoring a turn with ``thinking_then_text_turn`` proves the full
+    chain:
+        ScriptedStreamFn yields LLMThinkingDeltaEvent →
+        agent_loop forwards as ThinkingDeltaEvent →
+        GeminiLLM.stream() translates to StreamEvent(type="thinking").
+    Thinking content must NOT appear as a regular ``delta`` event
+    (it would render in the assistant transcript otherwise) and the
+    user-visible reply must still flow through as ``delta``.
+    """
+    from app.core.providers.gemini_provider import GeminiLLM
+
+    provider = GeminiLLM("gemini-test")
+    monkeypatch.setattr(
+        provider,
+        "_stream_fn",
+        ScriptedStreamFn([thinking_then_text_turn("Let me think... 2 + 2 = 4.", "4")]),
+    )
+
+    events: list[StreamEvent] = [
+        event
+        async for event in provider.stream(
+            question="2+2?",
+            conversation_id=uuid4(),
+            user_id=uuid4(),
+            history=[],
+        )
+    ]
+
+    thinking = [e for e in events if e["type"] == "thinking"]
+    delta = [e for e in events if e["type"] == "delta"]
+
+    # At least one thinking event surfaced with the reasoning text.
+    assert len(thinking) >= 1
+    assert any("2 + 2 = 4" in e.get("content", "") for e in thinking)
+
+    # The user-visible reply still flows through as a regular delta.
+    assert any(e.get("content") == "4" for e in delta)
+
+    # Thinking text MUST NOT bleed into the regular delta stream.
+    assert not any("Let me think" in e.get("content", "") for e in delta)
 
 
 # ---------------------------------------------------------------------------

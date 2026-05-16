@@ -57,6 +57,7 @@ from app.core.agent_loop.types import (
     LLMDoneEvent,
     LLMEvent,
     LLMTextDeltaEvent,
+    LLMThinkingDeltaEvent,
     LLMToolCallEvent,
     PermissionAuditSinkFn,
     PermissionCheckFn,
@@ -79,6 +80,36 @@ def text_turn(text: str) -> list[LLMEvent]:
         A two-element list: a ``text_delta`` event and a ``done`` event.
     """
     return [
+        LLMTextDeltaEvent(type="text_delta", text=text),
+        LLMDoneEvent(
+            type="done",
+            stop_reason="stop",
+            content=[TextContent(type="text", text=text)],
+        ),
+    ]
+
+
+def thinking_then_text_turn(thinking: str, text: str) -> list[LLMEvent]:
+    """LLM reasons out loud, then replies with plain text and stops.
+
+    Mirrors what a thinking-capable model (Claude with extended thinking,
+    Gemini with ``include_thoughts=True``, OpenAI o-series) emits during
+    one turn — a stream of ``thinking_delta`` chunks followed by the
+    user-visible ``text_delta``.  The thinking text never appears in
+    the assistant message ``content`` (it's a presentation-only signal),
+    matching production provider behaviour.
+
+    Args:
+        thinking: The internal reasoning the model surfaces.
+        text: The final user-visible reply.
+
+    Returns:
+        A three-element list: a ``thinking_delta`` event, a ``text_delta``
+        event, and a ``done`` event whose ``content`` only carries
+        ``text``.
+    """
+    return [
+        LLMThinkingDeltaEvent(type="thinking_delta", text=thinking),
         LLMTextDeltaEvent(type="text_delta", text=text),
         LLMDoneEvent(
             type="done",

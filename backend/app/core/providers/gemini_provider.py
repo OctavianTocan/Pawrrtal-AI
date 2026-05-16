@@ -19,6 +19,7 @@ from app.core.agent_loop import (
     LLMDoneEvent,
     LLMEvent,
     LLMTextDeltaEvent,
+    LLMThinkingDeltaEvent,
     LLMToolCallEvent,
     StreamFn,
     UserMessage,
@@ -112,6 +113,36 @@ def _resolve_gemini_api_key(user_id: uuid.UUID | None) -> str:
     return settings.google_api_key
 
 
+def _split_chunk_text(chunk: Any) -> tuple[str, str]:
+    """Return ``(thinking_text, response_text)`` for a streaming chunk.
+
+    Gemini's thinking-capable models emit ``Part`` objects with a
+    ``thought=True`` flag for chain-of-thought content; regular response
+    text uses ``thought=False`` (or ``None``).  The ``chunk.text``
+    convenience accessor concatenates *all* text parts regardless of the
+    flag, so consumers that need to render the two streams separately
+    must walk parts explicitly.
+
+    Non-thinking models simply never set ``thought=True``, so the
+    thinking string stays empty and the response string is identical to
+    ``chunk.text``.
+    """
+    thinking_parts: list[str] = []
+    response_parts: list[str] = []
+    for candidate in chunk.candidates or []:
+        if not candidate.content or not candidate.content.parts:
+            continue
+        for part in candidate.content.parts:
+            text = getattr(part, "text", None)
+            if not text:
+                continue
+            if getattr(part, "thought", False):
+                thinking_parts.append(text)
+            else:
+                response_parts.append(text)
+    return "".join(thinking_parts), "".join(response_parts)
+
+
 def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]:
     """Extract Gemini function-call parts from a streaming chunk."""
     calls: list[dict[str, Any]] = []
@@ -165,6 +196,11 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
             system_instruction=_FALLBACK_SYSTEM_PROMPT,
             # Pass None (not []) when there are no tools — some SDK versions raise on empty list.
             tools=gemini_tools or None,
+            # Ask the model to emit reasoning chunks alongside the answer
+            # when it supports it (gemini-2.5-pro / -flash with thinking).
+            # Older / non-thinking models silently ignore the flag, so this
+            # is safe to send unconditionally.
+            thinking_config=gtypes.ThinkingConfig(include_thoughts=True),
         )
 
         full_text = ""
@@ -181,10 +217,17 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
                 config=config,
             )
             async for chunk in stream:
-                # Text delta
-                if chunk.text:
-                    yield LLMTextDeltaEvent(type="text_delta", text=chunk.text)
-                    full_text += chunk.text
+                # Split parts into thoughts (``part.thought is True``) and
+                # regular text.  ``chunk.text`` is a convenience accessor
+                # that concatenates *all* text parts regardless of the
+                # thought flag, so we walk parts explicitly to keep the
+                # two streams separate downstream.
+                thinking_text, response_text = _split_chunk_text(chunk)
+                if thinking_text:
+                    yield LLMThinkingDeltaEvent(type="thinking_delta", text=thinking_text)
+                if response_text:
+                    yield LLMTextDeltaEvent(type="text_delta", text=response_text)
+                    full_text += response_text
 
                 for tool_call in _tool_calls_from_chunk(chunk, len(tool_calls)):
                     yield LLMToolCallEvent(
@@ -232,6 +275,49 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
 def _identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
     """Pass through messages the LLM understands; filter UI-only types."""
     return [m for m in messages if m["role"] in {"user", "assistant", "toolResult"}]
+
+
+def _agent_event_to_stream_event(event: Any) -> StreamEvent | None:
+    """Translate one ``AgentEvent`` from the loop into a frontend ``StreamEvent``.
+
+    Returns ``None`` for events that don't carry user-facing payload
+    (``agent_start`` / ``agent_end`` / ``message_*`` / ``turn_*`` /
+    ``tool_call_end``) — the chat router emits the ``[DONE]`` sentinel
+    itself when the loop completes. Splitting this out of
+    ``GeminiLLM.stream`` keeps that method under the project complexity
+    cap (``C901`` ≤ 12) now that ``thinking_delta`` lives alongside the
+    other branches.
+    """
+    event_type = event["type"]
+    if event_type == "text_delta":
+        return StreamEvent(type="delta", content=event["text"])
+    if event_type == "thinking_delta":
+        return StreamEvent(type="thinking", content=event["text"])
+    if event_type == "tool_call_start":
+        return StreamEvent(
+            type="tool_use",
+            name=event["name"],
+            input={},
+            tool_use_id=event["tool_call_id"],
+        )
+    if event_type == "tool_result":
+        return StreamEvent(
+            type="tool_result",
+            content=event["content"],
+            tool_use_id=event["tool_call_id"],
+        )
+    if event_type == "agent_terminated":
+        # Safety layer tripped — forward the structured event so the
+        # frontend can render a distinct termination notice instead of a
+        # generic error banner. ``reason`` is the machine-readable label;
+        # ``message`` is the human copy.
+        logger.warning(
+            "AGENT_TERMINATED reason=%s details=%s",
+            event["reason"],
+            event["details"],
+        )
+        return StreamEvent(type="agent_terminated", content=event["message"])
+    return None
 
 
 class GeminiLLM:
@@ -338,43 +424,9 @@ class GeminiLLM:
 
         try:
             async for event in agent_loop([prompt], context, config, self._stream_fn):
-                # Narrow the AgentEvent union by its discriminant so TypedDict
-                # field access types as ``str`` instead of ``object``.
-                if event["type"] == "text_delta":
-                    yield StreamEvent(type="delta", content=event["text"])
-
-                elif event["type"] == "tool_call_start":
-                    yield StreamEvent(
-                        type="tool_use",
-                        name=event["name"],
-                        input={},
-                        tool_use_id=event["tool_call_id"],
-                    )
-
-                elif event["type"] == "tool_result":
-                    yield StreamEvent(
-                        type="tool_result",
-                        content=event["content"],
-                        tool_use_id=event["tool_call_id"],
-                    )
-
-                elif event["type"] == "agent_terminated":
-                    # Safety layer tripped — forward the structured event so
-                    # the frontend can render a distinct termination notice
-                    # instead of a generic error banner.  ``reason`` is the
-                    # machine-readable label; ``message`` is the human copy.
-                    logger.warning(
-                        "AGENT_TERMINATED reason=%s details=%s",
-                        event["reason"],
-                        event["details"],
-                    )
-                    yield StreamEvent(
-                        type="agent_terminated",
-                        content=event["message"],
-                    )
-
-                elif event["type"] == "agent_end":
-                    pass  # loop complete — chat.py sends [DONE]
+                stream_event = _agent_event_to_stream_event(event)
+                if stream_event is not None:
+                    yield stream_event
 
         except Exception as exc:
             yield StreamEvent(type="error", content=f"Gemini provider error: {exc}")

@@ -87,6 +87,20 @@ class LLMTextDeltaEvent(TypedDict):
     text: str
 
 
+class LLMThinkingDeltaEvent(TypedDict):
+    """Incremental reasoning / chain-of-thought chunk.
+
+    Yielded by providers whose model supports surfacing intermediate
+    reasoning (Claude with extended-thinking blocks, Gemini with
+    ``ThinkingConfig(include_thoughts=True)``, OpenAI o-series, etc.).
+    The frontend renders these in a separate "thinking" pane so they
+    don't appear in the final assistant transcript.
+    """
+
+    type: Literal["thinking_delta"]
+    text: str
+
+
 class LLMToolCallEvent(TypedDict):
     """Provider-side tool call (the loop dispatches to the matching AgentTool)."""
 
@@ -104,7 +118,7 @@ class LLMDoneEvent(TypedDict):
     content: list[TextContent | ToolCallContent]
 
 
-LLMEvent = LLMTextDeltaEvent | LLMToolCallEvent | LLMDoneEvent
+LLMEvent = LLMTextDeltaEvent | LLMThinkingDeltaEvent | LLMToolCallEvent | LLMDoneEvent
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +156,19 @@ class TextDeltaEvent(TypedDict):
     """Streaming assistant text chunk (provider-neutral counterpart of LLMTextDeltaEvent)."""
 
     type: Literal["text_delta"]
+    text: str
+
+
+class ThinkingDeltaEvent(TypedDict):
+    """Streaming reasoning chunk (provider-neutral counterpart of LLMThinkingDeltaEvent).
+
+    The loop forwards every ``LLMThinkingDeltaEvent`` from the provider
+    as a ``ThinkingDeltaEvent`` so downstream wrappers (the chat router,
+    SSE channel) can translate it into a ``StreamEvent`` of type
+    ``"thinking"`` without growing a separate code path per provider.
+    """
+
+    type: Literal["thinking_delta"]
     text: str
 
 
@@ -213,6 +240,7 @@ AgentEvent = (
     | MessageStartEvent
     | MessageEndEvent
     | TextDeltaEvent
+    | ThinkingDeltaEvent
     | ToolCallStartEvent
     | ToolCallEndEvent
     | ToolResultEvent
