@@ -23,6 +23,8 @@ import time
 from collections.abc import AsyncIterator
 from typing import Any
 
+from app.core.observability.workshop import tool_span
+
 from .types import (
     AgentContext,
     AgentEndEvent,
@@ -110,7 +112,8 @@ async def _execute_and_log_tool_call(
     """
     name: str = tc["name"]
     call_id: str = tc["tool_call_id"]
-    args_preview = _truncate_for_log(tc["arguments"], _LOG_ARGS_MAX_CHARS)
+    arguments: dict[str, Any] = tc["arguments"]
+    args_preview = _truncate_for_log(arguments, _LOG_ARGS_MAX_CHARS)
     _log.info(
         "TOOL_CALL_START iteration=%d name=%s tool_call_id=%s args=%s",
         iteration,
@@ -119,28 +122,20 @@ async def _execute_and_log_tool_call(
         args_preview,
     )
 
-    tool = tool_map.get(name)
-    started_at = time.monotonic()
-    if tool is None:
-        result_text = f"Tool '{name}' not found."
-        is_error = True
-    else:
-        permission_denial = await _check_permission_or_none(
+    # Workshop / OTel tool span — gives the live trace viewer a row
+    # per call with the args + result + duration, scoped under the
+    # surrounding ``pawrrtal.turn`` span.  No-op when telemetry off.
+    with tool_span(name=name, tool_call_id=call_id, arguments=arguments) as ts:
+        started_at = time.monotonic()
+        result_text, is_error = await _dispatch_tool_call(
+            tool_map=tool_map,
+            name=name,
+            call_id=call_id,
+            arguments=arguments,
             config=config,
-            tool_name=name,
-            arguments=tc["arguments"],
         )
-        if permission_denial is not None:
-            result_text = permission_denial
-            is_error = True
-        else:
-            try:
-                result_text = await tool.execute(call_id, **tc["arguments"])
-                is_error = False
-            except Exception as exc:
-                result_text = f"Tool error: {exc}"
-                is_error = True
-    duration_ms = (time.monotonic() - started_at) * 1000.0
+        duration_ms = (time.monotonic() - started_at) * 1000.0
+        ts.record_result(result_text, is_error=is_error)
 
     _log.info(
         "TOOL_CALL_RESULT iteration=%d name=%s tool_call_id=%s "
@@ -158,6 +153,47 @@ async def _execute_and_log_tool_call(
         _truncate_for_log(result_text, _LOG_RESULT_MAX_CHARS),
     )
     return result_text, is_error
+
+
+async def _dispatch_tool_call(
+    *,
+    tool_map: dict[str, AgentTool],
+    name: str,
+    call_id: str,
+    arguments: dict[str, Any],
+    config: AgentLoopConfig,
+) -> tuple[str, bool]:
+    """Resolve permission + execute one tool call, returning ``(result_text, is_error)``.
+
+    Pulled out of :func:`_execute_and_log_tool_call` so the surrounding
+    ``tool_span`` context-manager + log lines keep their own scope and
+    the dispatcher stays inside the team's nesting budget.
+
+    Args:
+        tool_map: ``name → AgentTool`` lookup built once per loop iteration.
+        name: Tool name from the assistant's ``toolCall`` block.
+        call_id: Provider-stable id so a permission gate can echo it.
+        arguments: Kwargs the model produced for the tool.
+        config: Loop config carrying the optional permission gate.
+
+    Returns:
+        ``(result_text, is_error)`` where ``result_text`` is always
+        non-empty.
+    """
+    tool = tool_map.get(name)
+    if tool is None:
+        return f"Tool '{name}' not found.", True
+    permission_denial = await _check_permission_or_none(
+        config=config,
+        tool_name=name,
+        arguments=arguments,
+    )
+    if permission_denial is not None:
+        return permission_denial, True
+    try:
+        return await tool.execute(call_id, **arguments), False
+    except Exception as exc:
+        return f"Tool error: {exc}", True
 
 
 async def agent_loop(

@@ -23,6 +23,15 @@ from app.core.governance.cost_tracker import (
     record_turn_cost,
 )
 from app.core.governance.workspace_context import load_workspace_context
+from app.core.observability._turn_view import (
+    aggregator_stop_reason,
+    build_llm_view_messages,
+)
+from app.core.observability.workshop import (
+    llm_span,
+    turn_span,
+    workshop_event_hook,
+)
 from app.core.providers.model_id import parse_model_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.crud.chat_message import (
@@ -41,6 +50,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 EventHook = Callable[["StreamEvent"], list["StreamEvent"]]
+
+# Fallback for the Workshop LLM span's ``gen_ai.request.model`` attribute
+# when the channel envelope arrives without a resolved model id (e.g.
+# Telegram surfaces that haven't selected one yet). Workshop tolerates
+# any string here but a recognisable placeholder makes it obvious in the
+# UI that the model wasn't pinned for this turn.
+_MODEL_ID_UNKNOWN = "unknown"
 
 
 @dataclass(frozen=True)
@@ -98,63 +114,173 @@ async def run_turn(
     *,
     event_hooks: list[EventHook] | None = None,
 ) -> AsyncIterator[bytes]:
-    """Persist, stream, deliver, and finalize one chat turn."""
+    """Persist, stream, deliver, and finalize one chat turn.
+
+    Wraps the turn body in a Workshop-compatible OTel ``turn_span`` so
+    every LLM stream and tool call dispatched downstream lands in the
+    same trace.  When telemetry is disabled the spans are no-ops and
+    add zero overhead (see ``app.core.telemetry.setup_tracing``).
+
+    ``_finalize_turn`` runs **inside** ``turn_span`` but **outside**
+    ``llm_span``: a database failure during persist + cost-ledger write
+    is a turn-level problem, not an LLM problem, so it must not bleed
+    into ``llm_span``'s error path (which would otherwise mark a
+    successful LLM call as ``Status.ERROR`` with a database message).
+    """
     started_at = time.perf_counter()
     history, assistant_message_id = await _load_history_and_persist(turn_input)
     system_prompt = _workspace_system_prompt(turn_input.workspace_root)
     aggregator = ChatTurnAggregator()
-    hooks = list(event_hooks or [])
     counter = _EventCounter()
+    model_id = _channel_model_id(turn_input.channel_message)
 
-    async def guarded_stream() -> AsyncIterator[StreamEvent]:
+    with turn_span(
+        conversation_id=turn_input.conversation_id,
+        user_id=turn_input.user_id,
+        surface=turn_input.log_tag,
+        request_id=_request_id_from_extras(turn_input.log_extras),
+        model_id=model_id,
+    ):
         try:
-            async for event in turn_input.provider.stream(
-                turn_input.question,
-                turn_input.conversation_id,
-                turn_input.user_id,
+            async for chunk in _stream_with_llm_span(
+                turn_input=turn_input,
                 history=history,
-                tools=turn_input.tools or None,
                 system_prompt=system_prompt,
-                reasoning_effort=turn_input.reasoning_effort,
-                permission_check=turn_input.permission_check,
-                images=turn_input.images,
+                aggregator=aggregator,
+                counter=counter,
+                event_hooks=event_hooks,
+                model_id=model_id,
             ):
-                if not _should_deliver_event(event, turn_input.verbose_level):
-                    continue
-                counter.record(event)
-                aggregator.apply(event)
-                yield event
-                for extra in _expand_hook_events(event, hooks):
-                    counter.record(extra)
-                    aggregator.apply(extra)
-                    yield extra
-        except Exception as exc:
-            logger.exception(
-                "%s_STREAM_ERR conversation_id=%s after %d events",
-                turn_input.log_tag,
-                turn_input.conversation_id,
-                counter.value,
+                yield chunk
+        finally:
+            await _finalize_turn(
+                turn_input=turn_input,
+                aggregator=aggregator,
+                assistant_message_id=assistant_message_id,
+                started_at=started_at,
+                event_count=counter.value,
+                event_breakdown=counter.by_type,
             )
-            error_event: StreamEvent = {"type": "error", "content": str(exc)}
-            counter.record(error_event)
-            aggregator.apply(error_event)
-            yield error_event
 
+
+async def _stream_with_llm_span(
+    *,
+    turn_input: ChatTurnInput,
+    history: list[dict[str, str]],
+    system_prompt: str | None,
+    aggregator: ChatTurnAggregator,
+    counter: _EventCounter,
+    event_hooks: list[EventHook] | None,
+    model_id: str | None,
+) -> AsyncIterator[bytes]:
+    """Yield channel chunks under one ``llm_span`` context manager.
+
+    Pulled out of ``run_turn`` for two reasons:
+
+    1. Keeps the function below the project's nesting-depth budget
+       (``scripts/check-nesting.py``).
+    2. Scopes ``llm_span`` to the provider/channel stream only — so
+       a downstream database error in ``_finalize_turn`` cannot be
+       caught by ``llm_span``'s ``except`` clause and stamped as an
+       LLM error.
+
+    Workshop's UI panel for ``gen_ai.input.messages`` shows whatever
+    list this function passes in — the full ``history`` plus the new
+    user turn — so operators debugging a multi-turn conversation
+    see the same context the provider sees.
+    """
+    with llm_span(
+        model_id=model_id or _MODEL_ID_UNKNOWN,
+        messages=build_llm_view_messages(history, turn_input.question),
+        system_prompt=system_prompt,
+    ) as llm_recorder:
+        hooks = [workshop_event_hook(llm_recorder), *(event_hooks or [])]
+        try:
+            async for chunk in turn_input.channel.deliver(
+                _guarded_stream(
+                    turn_input=turn_input,
+                    history=history,
+                    system_prompt=system_prompt,
+                    aggregator=aggregator,
+                    counter=counter,
+                    hooks=hooks,
+                ),
+                turn_input.channel_message,
+            ):
+                yield chunk
+        finally:
+            llm_recorder.record_stop(aggregator_stop_reason(aggregator))
+            llm_recorder.record_usage(
+                input_tokens=aggregator.total_input_tokens,
+                output_tokens=aggregator.total_output_tokens,
+                cost_usd=aggregator.total_cost_usd,
+            )
+
+
+async def _guarded_stream(
+    *,
+    turn_input: ChatTurnInput,
+    history: list[dict[str, str]],
+    system_prompt: str | None,
+    aggregator: ChatTurnAggregator,
+    counter: _EventCounter,
+    hooks: list[EventHook],
+) -> AsyncIterator[StreamEvent]:
+    """Yield provider events through the aggregator + hook fan-out.
+
+    Pulled out of ``run_turn`` so the surrounding observability
+    context-managers don't make the function exceed the project's
+    nesting budget.  The behaviour is identical to the previous
+    inline closure — any provider exception is logged, surfaced as an
+    ``error`` ``StreamEvent``, and the generator exits cleanly so the
+    channel deliverer can finish its turn-level chrome.
+    """
     try:
-        async for chunk in turn_input.channel.deliver(
-            guarded_stream(),
-            turn_input.channel_message,
+        async for event in turn_input.provider.stream(
+            turn_input.question,
+            turn_input.conversation_id,
+            turn_input.user_id,
+            history=history,
+            tools=turn_input.tools or None,
+            system_prompt=system_prompt,
+            reasoning_effort=turn_input.reasoning_effort,
+            permission_check=turn_input.permission_check,
+            images=turn_input.images,
         ):
-            yield chunk
-    finally:
-        await _finalize_turn(
-            turn_input=turn_input,
-            aggregator=aggregator,
-            assistant_message_id=assistant_message_id,
-            started_at=started_at,
-            event_count=counter.value,
-            event_breakdown=counter.by_type,
+            if not _should_deliver_event(event, turn_input.verbose_level):
+                continue
+            counter.record(event)
+            aggregator.apply(event)
+            yield event
+            for extra in _expand_hook_events(event, hooks):
+                counter.record(extra)
+                aggregator.apply(extra)
+                yield extra
+    except Exception as exc:
+        logger.exception(
+            "%s_STREAM_ERR conversation_id=%s after %d events",
+            turn_input.log_tag,
+            turn_input.conversation_id,
+            counter.value,
         )
+        error_event: StreamEvent = {"type": "error", "content": str(exc)}
+        counter.record(error_event)
+        aggregator.apply(error_event)
+        yield error_event
+
+
+def _request_id_from_extras(extras: dict[str, Any]) -> str:
+    """Pull the request id from ``log_extras`` (set by the chat router)."""
+    raw = extras.get("request_id", "") if extras else ""
+    return str(raw) if raw is not None else ""
+
+
+def _channel_model_id(channel_message: ChannelMessage | None) -> str | None:
+    """Return the ``model_id`` from the channel envelope, or ``None``."""
+    if not channel_message:
+        return None
+    model_id = channel_message.get("model_id")
+    return str(model_id) if model_id else None
 
 
 def _expand_hook_events(

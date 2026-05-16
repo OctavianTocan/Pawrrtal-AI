@@ -1,0 +1,152 @@
+---
+title: Emit OpenLLMetry spans for Raindrop Workshop and other OTel backends
+description: ADR — instrument the agent loop and turn runner with Traceloop-shaped GenAI spans so the Raindrop Workshop local debugger and remote OTel backends share one wire contract.
+---
+
+# ADR: Emit OpenLLMetry spans for Raindrop Workshop and other OTel backends
+
+- **Date:** 2026-05-16
+- **Owners:** OctavianTocan
+- **Tracking:** Workshop integration (this PR); follow-up bean for the
+  `/setup-agent-replay` scaffold against `channels/turn_runner.run_turn`
+  (TBD).
+
+<Callout type="info" title="Status: Accepted">
+Add `app/core/observability/workshop.py` (Workshop-compatible OTel
+spans), wire it into `channels/turn_runner.run_turn` and
+`agent_loop._execute_and_log_tool_call`. Local dev points
+`OTEL_EXPORTER_OTLP_ENDPOINT` at `http://localhost:5899` to render
+traces in the Workshop UI; the same spans route to Grafana / Honeycomb /
+SigNoz in deployed environments.
+</Callout>
+
+## Context
+
+`Raindrop Workshop` (https://github.com/raindrop-ai/workshop) is a
+localhost OTLP collector + UI that renders an agent's tokens, tool
+calls, and turn boundaries live. It ingests OTLP/HTTP-JSON at
+`POST :5899/v1/traces` and normalises spans from three vendor schemas:
+the Vercel AI SDK, the Claude Agent SDK, and **Traceloop /
+OpenLLMetry** (the `gen_ai.*` semantic-convention attribute family).
+
+Pawrrtal already has the OTel SDK + OTLP/HTTP exporter wired in
+`backend/app/core/telemetry.py` (gated by `OTEL_EXPORTER_OTLP_ENDPOINT`).
+The chat pipeline has three architectural seams that Workshop's three
+span types map onto cleanly:
+
+1. **Turn root** — `channels/turn_runner.run_turn` is the single
+   per-turn entry point shared by all surfaces (HTTP `/api/chat`,
+   Telegram, voice).
+2. **LLM call** — same site; `turn_runner` already provides an
+   `EventHook = Callable[[StreamEvent], list[StreamEvent]]` seam so a
+   read-only sidecar consumer can observe the provider stream without
+   changing the channel deliverer.
+3. **Tool execution** — `agent_loop._execute_and_log_tool_call` is the
+   single dispatch site for every tool the agent calls (enforced by
+   `scripts/check-no-tools-in-providers.py`).
+
+## Decision
+
+Emit OpenLLMetry / Traceloop-shaped spans, not a vendor-specific wire
+protocol. Workshop is the local renderer; the same spans route to any
+OTel backend without change.
+
+### Schema we emit
+
+Reference: `workshop/src/spans/adapters/traceloop.ts`.
+
+- **`pawrrtal.turn`** — root span per chat turn.
+  Attributes: `pawrrtal.conversation_id`, `pawrrtal.user_id`,
+  `pawrrtal.surface`, `pawrrtal.request_id`, `gen_ai.request.model`.
+- **`pawrrtal.llm.chat`** — one per LLM call.
+  Discriminator `traceloop.span.kind = "llm"`. Attributes include
+  `gen_ai.operation.name = "chat"`, `gen_ai.request.model` /
+  `gen_ai.response.model`, `gen_ai.input.messages` (JSON),
+  `gen_ai.output.messages` (JSON, stamped on flush),
+  `gen_ai.system_instructions` (JSON, optional),
+  `gen_ai.usage.input_tokens` / `.output_tokens`,
+  `gen_ai.response.finish_reasons`. Span events
+  `gen_ai.content.delta` / `gen_ai.thinking.delta` per streamed chunk.
+- **`<tool_name>.tool`** — one per tool execution.
+  Discriminator `traceloop.span.kind = "tool"`. Attributes
+  `traceloop.entity.name`, `traceloop.entity.input` (JSON args),
+  `traceloop.entity.output` (JSON result), `otel.status.message` on
+  failure.
+
+### Wiring
+
+- `backend/app/core/observability/_schema.py` — attribute-name
+  constants + payload renderers (`render_input_messages`).
+- `backend/app/core/observability/_recorders.py` — `LLMSpanRecorder` +
+  `ToolSpanRecorder` (mutable per-span state).
+- `backend/app/core/observability/workshop.py` — public context
+  managers (`turn_span`, `llm_span`, `tool_span`) + `workshop_event_hook`
+  that mirrors `StreamEvent`s onto a recorder via a flat dispatch table.
+- `backend/app/channels/turn_runner.py` — `run_turn` opens
+  `turn_span` + `llm_span`, registers `workshop_event_hook` ahead of
+  the caller's hooks, stamps usage / stop-reason on the LLM span at
+  finalisation.
+- `backend/app/core/agent_loop/loop.py` —
+  `_execute_and_log_tool_call` wraps the dispatch in `tool_span`. The
+  existing `TOOL_CALL_START` / `TOOL_CALL_RESULT` log lines stay
+  side-by-side with the span.
+
+### Configuration
+
+```bash
+# Local dev with Workshop
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:5899
+OTEL_EXPORTER_OTLP_PROTOCOL=http/json   # Workshop rejects protobuf
+OTEL_SERVICE_NAME=pawrrtal-backend
+```
+
+When the endpoint env var is unset every span is a no-op
+(`trace.get_tracer` returns a no-op tracer), so production installs
+without OTel pay nothing.
+
+## Why this shape
+
+1. **Open standard, not a vendor protocol.** The Traceloop attribute
+   schema is the OTel GenAI semantic convention. Workshop is one
+   consumer; Grafana, Honeycomb, SigNoz, Phoenix all parse the same
+   shape. No second instrumentation pass when we add a remote OTel
+   backend.
+2. **Three sites, three layers.** The instrumentation matches the
+   chat pipeline's existing seams (router → channel → loop). No
+   touching the providers — that surface stays restricted, and the
+   `no-tools-in-providers` rule keeps the tool span centralised in
+   `agent_loop`.
+3. **`EventHook` is the right seam.** `turn_runner` already designed
+   for non-destructive sidecar emission via
+   `EventHook = Callable[[StreamEvent], list[StreamEvent]]`. The
+   workshop hook returns `[]` so the chat aggregator + channel
+   deliverer never see the observability layer.
+
+## Alternatives considered
+
+- **Workshop's TypeScript live-event SDK
+  (`POST /v1/events/track`).** Requires a second protocol on top of
+  OTel and only Workshop consumes it. Rejected: locks us to Workshop.
+- **Custom non-Traceloop attributes.** Would render in Workshop only
+  if we maintained a parallel adapter. Rejected for the same reason.
+- **Patching `providers/` directly.** Forbidden by
+  `.claude/rules/architecture/no-tools-in-providers.md` and the
+  CODEOWNERS scope on the provider files.
+
+## Tests
+
+`backend/tests/test_observability_workshop.py` runs against an
+in-memory OTel `TracerProvider` + `InMemorySpanExporter` and asserts
+the exact Workshop attribute shape (`traceloop.span.kind`,
+`gen_ai.input.messages`, etc.) for every code path. 11 tests; ~120ms
+total. Any future Workshop schema change surfaces as a test failure
+here rather than silently breaking the UI rendering.
+
+## Follow-ups
+
+- `/setup-agent-replay` scaffold: ingest a captured Workshop trace
+  and re-run it through `run_turn` via `ScriptedStreamFn` for live
+  regression coverage of the chat path.
+- Promote the `claude_provider.py` CLI stderr buffer into the LLM
+  span as a span event so process-level errors show up alongside
+  token output in Workshop's timeline.
