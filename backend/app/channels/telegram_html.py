@@ -42,6 +42,25 @@ _INLINE_TAG_MAP: dict[str, str] = {
 _HEADING_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 _BLOCK_PASSTHROUGH = frozenset({"p", "ul", "ol"})
 _PASSTHROUGH_SKIP = frozenset({"html", "body", "head"})
+_TEXT_PRESERVING_TAGS = frozenset(
+    {
+        "a",
+        "b",
+        "blockquote",
+        "code",
+        "del",
+        "em",
+        "i",
+        "li",
+        "p",
+        "pre",
+        "s",
+        "strike",
+        "strong",
+        "u",
+        *_HEADING_TAGS,
+    }
+)
 
 
 class _TelegramRenderer(HTMLParser):
@@ -50,6 +69,7 @@ class _TelegramRenderer(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self._buf: list[str] = []
+        self._open_tags: list[str] = []
         self._in_pre = False
         self._skip_stack: list[str] = []
 
@@ -63,6 +83,8 @@ class _TelegramRenderer(HTMLParser):
         if self._skip_stack:
             self._skip_stack.append(tag)
             return
+        if tag not in {"br", "hr"}:
+            self._open_tags.append(tag)
         self._dispatch_start(tag, attrs)
 
     def handle_endtag(self, tag: str) -> None:
@@ -73,10 +95,12 @@ class _TelegramRenderer(HTMLParser):
                 self._skip_stack.pop()
             return
         self._dispatch_end(tag)
+        self._pop_open_tag(tag)
 
     def handle_data(self, data: str) -> None:
-        if not self._skip_stack:
-            self._buf.append(_html.escape(data))
+        if self._skip_stack or self._is_inter_block_whitespace(data):
+            return
+        self._buf.append(_html.escape(data))
 
     def result(self) -> str:
         """Return the accumulated Telegram-safe HTML string."""
@@ -85,6 +109,17 @@ class _TelegramRenderer(HTMLParser):
     # ------------------------------------------------------------------
     # Dispatch helpers (keep individual methods under complexity limit)
     # ------------------------------------------------------------------
+
+    def _is_inter_block_whitespace(self, data: str) -> bool:
+        """Return true for markdown-it's formatting whitespace between blocks."""
+        is_container_whitespace = data.isspace() and not (
+            set(self._open_tags) & _TEXT_PRESERVING_TAGS
+        )
+        return not self._in_pre and is_container_whitespace
+
+    def _pop_open_tag(self, tag: str) -> None:
+        if self._open_tags and self._open_tags[-1] == tag:
+            self._open_tags.pop()
 
     def _dispatch_start(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         # `match` keeps the dispatch flat (depth-1 in the AST nesting lint)
@@ -98,7 +133,7 @@ class _TelegramRenderer(HTMLParser):
             case t if t in _BLOCK_PASSTHROUGH:
                 pass
             case "li":
-                self._buf.append("\n• ")
+                self._start_list_item()
             case "hr" | "br":
                 self._buf.append("\n")
             case "a":
@@ -122,13 +157,19 @@ class _TelegramRenderer(HTMLParser):
         tag_text = f'<code class="{_html.escape(lang)}">' if lang else "<code>"
         self._buf.append(tag_text)
 
+    def _start_list_item(self) -> None:
+        if not self._buf or self._buf[-1].endswith("\n\n"):
+            self._buf.append("• ")
+            return
+        self._buf.append("\n• ")
+
     def _dispatch_end(self, tag: str) -> None:
         # See ``_dispatch_start`` — same shape, same reason for ``match``.
         match tag:
             case t if t in _HEADING_TAGS:
                 self._buf.append("</b>\n\n")
             case "ul" | "ol":
-                self._buf.append("\n")
+                self._buf.append("\n\n")
             case "p":
                 self._buf.append("\n\n")
             case "li":

@@ -62,6 +62,11 @@ class TestMdToTelegramHtml:
         assert "• item one" in result
         assert "• item two" in result
 
+    def test_list_separator_does_not_include_parser_newlines(self) -> None:
+        md = "Intro.\n\n- item one\n- item two\n\nOutro."
+        result = md_to_telegram_html(md)
+        assert result == "Intro.\n\n• item one\n• item two\n\nOutro."
+
     def test_blockquote(self) -> None:
         result = md_to_telegram_html("> quoted text")
         assert "<blockquote>" in result
@@ -108,3 +113,11 @@ class TestMdToTelegramHtml:
         result = md_to_telegram_html("Just a paragraph.")
         assert "<p>" not in result
         assert "</p>" not in result
+
+    def test_paragraph_separator_is_not_tripled(self) -> None:
+        result = md_to_telegram_html("First paragraph.\n\nSecond paragraph.")
+        assert result == "First paragraph.\n\nSecond paragraph."
+
+    def test_middle_paragraph_separator_matches_source_spacing(self) -> None:
+        result = md_to_telegram_html("First.\n\nSecond.\n\nThird.")
+        assert result == "First.\n\nSecond.\n\nThird."
