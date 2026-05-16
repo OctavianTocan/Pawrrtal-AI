@@ -245,7 +245,7 @@ function KnowledgeContent(props: KnowledgeViewProps): ReactNode {
  * TWO separate elevated panels with a small gap between them.
  *
  * The outer wrapper has no background AND no `overflow-hidden` — the page
- * background (`bg-sidebar` from `AppLayout`) supplies the warm surround,
+ * background (`bg-sidebar` from `AppShell`) supplies the warm surround,
  * and we deliberately let the panels' drop shadows paint outside this
  * wrapper. The earlier `overflow-hidden` clipped the elevated-panel
  * shadows flush against the wrapper's edges, making the cards read as

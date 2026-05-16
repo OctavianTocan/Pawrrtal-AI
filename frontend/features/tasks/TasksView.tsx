@@ -75,7 +75,7 @@ export interface TasksViewProps {
 /**
  * Pure presentation entry point. The outer wrapper is the elevated panel
  * (`rounded-[14px]`, `shadow-minimal`) that sits inside the chat-inset slot
- * provided by `AppLayout`.
+ * provided by `AppShell`.
  */
 export function TasksView(props: TasksViewProps): ReactNode {
 	const {
