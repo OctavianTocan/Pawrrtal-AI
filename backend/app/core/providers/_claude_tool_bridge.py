@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 # ``mcp__<server>__<tool_name>``; both the server name and that prefix
 # are stable so the allowed-tools whitelist is computable from the
 # AgentTool list alone.
-MCP_SERVER_NAME = "ai_nexus"
+MCP_SERVER_NAME = "pawrrtal"
 
 
 def claude_tool_id(name: str) -> str:
@@ -135,7 +135,7 @@ def _strip_namespace(tool_name: str) -> str:
     The cross-provider :class:`PermissionCheckFn` works in terms of
     the unprefixed names every tool factory registers (``Bash``,
     ``workspace_read``, …); the Claude SDK addresses our bridged
-    tools as ``mcp__ai_nexus__<name>``.  Strip the namespace before
+    tools as ``mcp__pawrrtal__<name>``.  Strip the namespace before
     delegating so policy authors don't have to know about Claude's
     addressing scheme.
     """
@@ -174,7 +174,7 @@ async def auto_approve_bridge_tools(
     permission grants on every custom MCP tool call — the integration
     test on PR #131 surfaced this with::
 
-        Claude requested permissions to use mcp__ai_nexus__echo_back,
+        Claude requested permissions to use mcp__pawrrtal__echo_back,
         but you haven't granted it yet.
 
     The ``allowed_tools`` whitelist is necessary but not sufficient:
@@ -209,11 +209,11 @@ def make_can_use_tool(
     When a :class:`PermissionCheckFn` is supplied (PR 03b chat-router
     wire-up), the returned callback:
 
-    1. Rejects anything outside the ``mcp__ai_nexus__*`` namespace
+    1. Rejects anything outside the ``mcp__pawrrtal__*`` namespace
        with the same message the legacy default uses.  Defence in
        depth — even if the gate is misconfigured, an unexpected MCP
        server can't piggy-back on our approval.
-    2. Strips the ``mcp__ai_nexus__`` prefix from the tool name so
+    2. Strips the ``mcp__pawrrtal__`` prefix from the tool name so
        the cross-provider gate sees the bare ``AgentTool.name`` it
        was authored against.
     3. Awaits the gate.  An ``Allow`` decision becomes a Claude SDK

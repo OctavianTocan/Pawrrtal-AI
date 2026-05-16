@@ -162,6 +162,18 @@ class TelegramChannel:
                 )
                 continue
 
+            if etype == "thinking":
+                accumulated, chars_since_edit, last_edit_at = await _handle_thinking(
+                    event=event,
+                    bot=bot,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    accumulated=accumulated,
+                    chars_since_edit=chars_since_edit,
+                    last_edit_at=last_edit_at,
+                )
+                continue
+
             if etype == "delta":
                 chunk: str = event.get("content", "")
                 accumulated += chunk
@@ -262,6 +274,33 @@ async def _handle_tool_use(
 
     tool_name = event.get("name", "tool")
     line = f"\n{tool_icon(tool_name)} {tool_name}…"
+    accumulated += line
+    chars_since_edit += len(line)
+    now = asyncio.get_event_loop().time()
+    elapsed = now - last_edit_at
+    if accumulated and (
+        chars_since_edit >= _EDIT_DEBOUNCE_CHARS or elapsed >= _MAX_EDIT_INTERVAL_S
+    ):
+        await _safe_edit(bot, chat_id, message_id, accumulated)
+        return accumulated, 0, now
+    return accumulated, chars_since_edit, last_edit_at
+
+
+async def _handle_thinking(
+    *,
+    event: StreamEvent,
+    bot: Bot,
+    chat_id: int | str,
+    message_id: int,
+    accumulated: str,
+    chars_since_edit: int,
+    last_edit_at: float,
+) -> tuple[str, int, float]:
+    """Inject a compact thinking line for detailed Telegram verbosity."""
+    chunk = str(event.get("content") or "").strip()
+    if not chunk:
+        return accumulated, chars_since_edit, last_edit_at
+    line = f"\n🧠 Thinking: {chunk}"
     accumulated += line
     chars_since_edit += len(line)
     now = asyncio.get_event_loop().time()

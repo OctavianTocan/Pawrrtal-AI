@@ -57,6 +57,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_TELEGRAM_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("start", "Connect your Pawrrtal account"),
+    ("new", "Start a new conversation"),
+    ("model", "Switch the model for this conversation"),
+    ("verbose", "Set detail level: 0 quiet, 1 tools, 2 thinking"),
+    ("stop", "Stop the active run"),
+)
+
 # Active streaming tasks keyed by Telegram chat_id.  When a new message
 # arrives we cancel any existing task for that chat (preventing two parallel
 # streams into the same placeholder message), then store the new one so
@@ -185,6 +193,11 @@ async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> No
         ),
         log_tag="TELEGRAM",
         log_extras={"chat_id": message.chat.id},
+        verbose_level=(
+            context.verbose_level
+            if context.verbose_level is not None
+            else settings.telegram_verbose_default
+        ),
     )
 
     async def _do_stream() -> None:
@@ -346,6 +359,21 @@ def build_telegram_service() -> TelegramService:  # noqa: PLR0915 — single dis
     return TelegramService(bot=bot, dispatcher=dispatcher)
 
 
+async def refresh_telegram_commands(bot: Bot) -> None:
+    """Publish the current slash-command menu to Telegram."""
+    from aiogram.types import BotCommand  # noqa: PLC0415
+
+    commands = [
+        BotCommand(command=command, description=description)
+        for command, description in _TELEGRAM_COMMANDS
+    ]
+    await bot.set_my_commands(commands)
+    logger.info(
+        "TELEGRAM_COMMANDS_REFRESHED commands=%s",
+        ",".join(command for command, _ in _TELEGRAM_COMMANDS),
+    )
+
+
 def _sender_from_message(message: Message) -> TelegramSender:
     """Project an aiogram ``Message`` onto our framework-free dataclass."""
     user = message.from_user
@@ -484,6 +512,7 @@ async def telegram_lifespan() -> AsyncIterator[TelegramService | None]:
         return
 
     service = build_telegram_service()
+    await refresh_telegram_commands(service.bot)
 
     if settings.telegram_mode == "polling":
         # Drop any leftover webhook so polling actually receives updates;

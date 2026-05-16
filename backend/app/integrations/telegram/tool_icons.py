@@ -22,7 +22,7 @@ from __future__ import annotations
 _DEFAULT_GLYPH = "\U0001f527"
 
 # Map keyed on the bare tool name (without the Claude SDK
-# ``mcp__ai_nexus__`` prefix — the bridge strips that before our
+# ``mcp__pawrrtal__`` prefix — the bridge strips that before our
 # permission gate sees the name, and the channel layer matches the
 # same convention).  Mostly Claude-SDK names + the Pawrrtal-native
 # tool factories that ship in the chat router.

@@ -16,8 +16,9 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -489,6 +490,48 @@ class TestWorkspaceService:
             recovered_ws = await ensure_default_workspace(test_user.id, db_session)
 
         assert recovered_ws.id == real_ws.id
+
+    @pytest.mark.anyio
+    async def test_ensure_default_workspace_removes_orphan_dir_after_integrity_error(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The losing concurrent insert must not leave a seeded directory behind."""
+        from sqlalchemy.exc import IntegrityError as SAIntegrityError
+
+        class FailingSavepoint:
+            async def __aenter__(self) -> None:
+                return None
+
+            async def __aexit__(self, *_args: object) -> None:
+                raise SAIntegrityError("mock", {}, Exception())
+
+        user_id = uuid.uuid4()
+        orphan = tmp_path / str(uuid.uuid4())
+        orphan.mkdir()
+        winner = SimpleNamespace(id=uuid.uuid4())
+
+        def begin_nested() -> FailingSavepoint:
+            return FailingSavepoint()
+
+        fake_session = SimpleNamespace(begin_nested=begin_nested)
+
+        with (
+            patch("app.crud.workspace.settings") as mock_settings,
+            patch(
+                "app.crud.workspace.get_default_workspace",
+                new=AsyncMock(side_effect=[None, winner]),
+            ),
+            patch(
+                "app.crud.workspace.create_workspace",
+                new=AsyncMock(return_value=SimpleNamespace(path=str(orphan))),
+            ),
+        ):
+            mock_settings.workspace_base_dir = str(tmp_path)
+            recovered_ws = await ensure_default_workspace(user_id, fake_session)
+
+        assert recovered_ws is winner
+        assert not orphan.exists()
 
 
 # ---------------------------------------------------------------------------

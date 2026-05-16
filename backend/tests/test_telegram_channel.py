@@ -24,6 +24,7 @@ from app.channels.base import ChannelMessage
 from app.channels.telegram import SURFACE_TELEGRAM, TelegramChannel
 from app.core.providers.base import StreamEvent
 from app.core.providers.catalog import default_model
+from app.integrations.telegram.bot import refresh_telegram_commands
 from app.integrations.telegram.bot_provider_resolution import (
     resolve_provider_with_auto_clear as _resolve_provider_with_auto_clear,
 )
@@ -91,6 +92,24 @@ class TestTelegramRegistry:
 
     def test_registered_surface_included(self) -> None:
         assert "telegram" in registered_surfaces()
+
+
+# ---------------------------------------------------------------------------
+# Bot command publishing
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_refresh_telegram_commands_sets_current_command_menu() -> None:
+    bot = AsyncMock()
+
+    await refresh_telegram_commands(bot)
+
+    bot.set_my_commands.assert_awaited_once()
+    commands = bot.set_my_commands.await_args.args[0]
+    names = [command.command for command in commands]
+    assert names == ["start", "new", "model", "verbose", "stop"]
+    assert all(command.description for command in commands)
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +183,13 @@ class TestTelegramChannelDeliver:
         last_call = calls[-1]
         assert last_call.kwargs["text"] == "Hello, world"
 
-    async def test_non_delta_events_ignored(self) -> None:
-        """``type: thinking`` is skipped; ``tool_use`` injects an inline glyph (PR 07)."""
+    async def test_tool_use_injects_inline_glyph(self) -> None:
+        """``tool_use`` injects an inline glyph when verbose filtering lets it through."""
         bot = _make_bot()
         msg = _make_channel_message(bot)
         channel = TelegramChannel()
 
         events: list[StreamEvent] = [
-            {"type": "thinking", "content": "reasoning..."},
             {"type": "delta", "content": "answer"},
             {"type": "tool_use", "name": "search", "input": {}},
         ]
@@ -180,11 +198,27 @@ class TestTelegramChannelDeliver:
 
         last_call = bot.edit_message_text.call_args_list[-1]
         # PR 07: tool_use surfaces a one-line glyph + tool name so the
-        # user can see what the agent is doing in real time. Thinking
-        # is still silenced.
+        # user can see what the agent is doing in real time.
         assert last_call.kwargs["text"].startswith("answer")
         assert "search" in last_call.kwargs["text"]
-        assert "reasoning..." not in last_call.kwargs["text"]
+
+    async def test_thinking_event_renders_when_verbose_filter_allows_it(self) -> None:
+        """Detailed Telegram verbosity surfaces thinking chunks inline."""
+        bot = _make_bot()
+        msg = _make_channel_message(bot)
+        channel = TelegramChannel()
+
+        events: list[StreamEvent] = [
+            {"type": "thinking", "content": "checking the workspace"},
+            {"type": "delta", "content": "answer"},
+        ]
+        async for _ in channel.deliver(_stream(*events), msg):
+            pass
+
+        last_text = bot.edit_message_text.call_args_list[-1].kwargs["text"]
+        assert "Thinking:" in last_text
+        assert "checking the workspace" in last_text
+        assert "answer" in last_text
 
     async def test_agent_terminated_replaces_placeholder(self) -> None:
         """``agent_terminated`` without any text must show the warning to the user."""
