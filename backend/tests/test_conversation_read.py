@@ -1,4 +1,4 @@
-"""ConversationResponse.model_id validator behaviour with the strict /
+"""ConversationRead.model_id validator behaviour with the strict /
 permissive feature flag."""
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 from app.core.config import settings
 from app.core.providers.catalog import default_model
-from app.schemas import ChatRequest, ConversationResponse
+from app.schemas import ChatRequest, ConversationRead
 
 
 def _read_row(model_id: str | None) -> dict[str, object]:
@@ -35,14 +35,14 @@ def _read_row(model_id: str | None) -> dict[str, object]:
 
 def test_canonical_value_passes_through_unchanged() -> None:
     canonical = default_model().id
-    read = ConversationResponse.model_validate(_read_row(canonical))
+    read = ConversationRead.model_validate(_read_row(canonical))
     assert read.model_id == canonical
 
 
 def test_strict_mode_rejects_bare_id(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "strict_conversation_read_validation", True)
     with pytest.raises(ValidationError):
-        ConversationResponse.model_validate(_read_row("gemini-3-flash-preview"))
+        ConversationRead.model_validate(_read_row("gemini-3-flash-preview"))
 
 
 def test_permissive_mode_falls_back_to_default(
@@ -50,7 +50,7 @@ def test_permissive_mode_falls_back_to_default(
 ) -> None:
     monkeypatch.setattr(settings, "strict_conversation_read_validation", False)
     with caplog.at_level(logging.WARNING, logger="app.schemas"):
-        read = ConversationResponse.model_validate(_read_row("gemini-3-flash-preview"))
+        read = ConversationRead.model_validate(_read_row("gemini-3-flash-preview"))
     assert read.model_id == default_model().id
     assert any("CONVERSATION_READ_FALLBACK" in r.message for r in caplog.records)
 

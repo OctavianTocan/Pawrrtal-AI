@@ -14,7 +14,7 @@ from app.models import Conversation
 from app.schemas import ConversationCreate, ConversationUpdate
 
 
-async def create_conversation_service(
+async def create_conversation(
     user_id: uuid.UUID, session: AsyncSession, schema_data: ConversationCreate
 ) -> Conversation:
     """Create a new conversation with an initial title.
@@ -55,7 +55,7 @@ async def create_conversation_service(
     return new_conversation
 
 
-async def get_conversation_service(
+async def get_conversation(
     user_id: uuid.UUID, session: AsyncSession, conversation_id: uuid.UUID
 ) -> Conversation | None:
     """Retrieve a single conversation by ID, scoped to the given user.
@@ -77,7 +77,7 @@ async def get_conversation_service(
     return result.scalar_one_or_none()
 
 
-async def get_conversations_for_user_service(
+async def list_conversations_for_user(
     user_id: uuid.UUID, session: AsyncSession
 ) -> list[Conversation]:
     """Retrieve all conversations for a user, most-recent first.
@@ -98,7 +98,7 @@ async def get_conversations_for_user_service(
     return list(result.scalars().all())
 
 
-async def update_conversation_title_service(
+async def update_conversation_title(
     title: str, user_id: uuid.UUID, conversation_id: uuid.UUID, session: AsyncSession
 ) -> Conversation | None:
     """Update the title of an existing conversation.
@@ -131,7 +131,7 @@ async def update_conversation_title_service(
     return conversation
 
 
-async def update_conversation_service(
+async def update_conversation(
     payload: ConversationUpdate,
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
@@ -193,7 +193,7 @@ async def update_conversation_service(
     return conversation
 
 
-async def update_conversation_model_service(
+async def update_conversation_model(
     model_id: str,
     user_id: uuid.UUID,
     conversation_id: uuid.UUID,
@@ -229,7 +229,7 @@ async def update_conversation_model_service(
     return conversation
 
 
-async def delete_conversation_service(
+async def delete_conversation(
     user_id: uuid.UUID, session: AsyncSession, conversation_id: uuid.UUID
 ) -> bool:
     """Delete an existing conversation owned by the given user.

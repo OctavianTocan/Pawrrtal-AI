@@ -17,9 +17,7 @@ from app.models import UserAppearance
 from app.schemas import AppearanceSettings
 
 
-async def get_appearance_service(
-    user_id: uuid.UUID, session: AsyncSession
-) -> UserAppearance | None:
+async def get_appearance(user_id: uuid.UUID, session: AsyncSession) -> UserAppearance | None:
     """Fetch the appearance row for the given user.
 
     Returns ``None`` when the user has never customized their appearance —
@@ -30,7 +28,7 @@ async def get_appearance_service(
     return result.scalar_one_or_none()
 
 
-async def upsert_appearance_service(
+async def upsert_appearance(
     user_id: uuid.UUID,
     payload: AppearanceSettings,
     session: AsyncSession,
@@ -42,7 +40,7 @@ async def upsert_appearance_service(
     plain dict. ``mode="json"`` keeps `Literal` / nested-model fields
     serializable directly to the database column.
     """
-    existing = await get_appearance_service(user_id, session)
+    existing = await get_appearance(user_id, session)
     now = datetime.now()
 
     light = payload.light.model_dump(mode="json")
@@ -75,13 +73,13 @@ async def upsert_appearance_service(
     return existing
 
 
-async def reset_appearance_service(user_id: uuid.UUID, session: AsyncSession) -> None:
+async def reset_appearance(user_id: uuid.UUID, session: AsyncSession) -> None:
     """Delete the appearance row so the user falls back to defaults.
 
     Used by the "Reset to defaults" button in the Appearance panel.
     Idempotent — no-ops cleanly when there's no row.
     """
-    existing = await get_appearance_service(user_id, session)
+    existing = await get_appearance(user_id, session)
     if existing is None:
         return
     await session.delete(existing)

@@ -5,10 +5,7 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.personalization import (
-    get_personalization_service,
-    upsert_personalization_service,
-)
+from app.crud import personalization as crud
 from app.crud.workspace import ensure_default_workspace
 from app.db import User, get_async_session
 from app.models import UserPersonalization
@@ -49,7 +46,7 @@ def get_personalization_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> PersonalizationProfile:
         """Return the authenticated user's personalization profile."""
-        row = await get_personalization_service(user.id, session)
+        row = await crud.get_personalization(user.id, session)
         return _to_profile(row)
 
     @router.put("", response_model=PersonalizationProfile)
@@ -63,9 +60,7 @@ def get_personalization_router() -> APIRouter:
         Also seeds the user's default workspace the first time this endpoint
         is called (idempotent — subsequent calls are a no-op for the workspace).
         """
-        row = await upsert_personalization_service(
-            user_id=user.id, payload=payload, session=session
-        )
+        row = await crud.upsert_personalization(user_id=user.id, payload=payload, session=session)
 
         # Seed the default workspace on first personalization save.  This is
         # the natural trigger for "onboarding complete" since the wizard writes

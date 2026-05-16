@@ -3,11 +3,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.appearance import (
-    get_appearance_service,
-    reset_appearance_service,
-    upsert_appearance_service,
-)
+from app.crud import appearance as crud
 from app.db import User, get_async_session
 from app.models import UserAppearance
 from app.schemas import (
@@ -52,7 +48,7 @@ def get_appearance_router() -> APIRouter:
         The frontend layers these on top of the Mistral defaults from
         ``frontend/features/appearance/defaults.ts``.
         """
-        row = await get_appearance_service(user.id, session)
+        row = await crud.get_appearance(user.id, session)
         return _to_settings(row)
 
     @router.put("", response_model=AppearanceSettings)
@@ -62,7 +58,7 @@ def get_appearance_router() -> APIRouter:
         session: AsyncSession = Depends(get_async_session),
     ) -> AppearanceSettings:
         """Create or replace the authenticated user's appearance settings."""
-        row = await upsert_appearance_service(user_id=user.id, payload=payload, session=session)
+        row = await crud.upsert_appearance(user_id=user.id, payload=payload, session=session)
         return _to_settings(row)
 
     @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
@@ -75,6 +71,6 @@ def get_appearance_router() -> APIRouter:
         Idempotent — deletes the persisted row so subsequent GETs return
         an empty settings object that the frontend resolves to defaults.
         """
-        await reset_appearance_service(user.id, session)
+        await crud.reset_appearance(user.id, session)
 
     return router

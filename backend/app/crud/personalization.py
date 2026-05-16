@@ -15,7 +15,7 @@ from app.models import UserPersonalization
 from app.schemas import PersonalizationProfile
 
 
-async def get_personalization_service(
+async def get_personalization(
     user_id: uuid.UUID, session: AsyncSession
 ) -> UserPersonalization | None:
     """Fetch the personalization row for the given user.
@@ -27,7 +27,7 @@ async def get_personalization_service(
     return result.scalar_one_or_none()
 
 
-async def upsert_personalization_service(
+async def upsert_personalization(
     user_id: uuid.UUID,
     payload: PersonalizationProfile,
     session: AsyncSession,
@@ -40,7 +40,7 @@ async def upsert_personalization_service(
     on every step transition, so partial progress round-trips correctly
     without tracking dirty fields.
     """
-    existing = await get_personalization_service(user_id, session)
+    existing = await get_personalization(user_id, session)
     now = datetime.now()
 
     if existing is None:

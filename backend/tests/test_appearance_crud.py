@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.appearance import (
-    get_appearance_service,
-    reset_appearance_service,
-    upsert_appearance_service,
+    get_appearance,
+    reset_appearance,
+    upsert_appearance,
 )
 from app.db import User
 from app.schemas import (
@@ -24,7 +24,7 @@ async def test_get_returns_none_when_no_row_exists(
     db_session: AsyncSession, test_user: User
 ) -> None:
     """A user who has never customized appearance returns None (not a stub row)."""
-    result = await get_appearance_service(test_user.id, db_session)
+    result = await get_appearance(test_user.id, db_session)
     assert result is None
 
 
@@ -38,7 +38,7 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
         options=AppearanceOptions(theme_mode="dark", contrast=72),
     )
 
-    row = await upsert_appearance_service(test_user.id, payload, db_session)
+    row = await upsert_appearance(test_user.id, payload, db_session)
 
     assert row.user_id == test_user.id
     assert row.light == {
@@ -59,7 +59,7 @@ async def test_upsert_inserts_a_new_row(db_session: AsyncSession, test_user: Use
 @pytest.mark.anyio
 async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user: User) -> None:
     """Second upsert is a full replacement: omitted sub-fields revert to None."""
-    await upsert_appearance_service(
+    await upsert_appearance(
         test_user.id,
         AppearanceSettings(
             light=ThemeColors(accent="#AAA111"),
@@ -68,7 +68,7 @@ async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user:
         db_session,
     )
 
-    updated = await upsert_appearance_service(
+    updated = await upsert_appearance(
         test_user.id,
         AppearanceSettings(light=ThemeColors(background="#FAF3DF")),
         db_session,
@@ -83,16 +83,16 @@ async def test_upsert_replaces_existing_row(db_session: AsyncSession, test_user:
 @pytest.mark.anyio
 async def test_reset_deletes_persisted_row(db_session: AsyncSession, test_user: User) -> None:
     """Reset removes the row so subsequent gets fall back to defaults."""
-    await upsert_appearance_service(
+    await upsert_appearance(
         test_user.id,
         AppearanceSettings(light=ThemeColors(accent="#FF0000")),
         db_session,
     )
-    assert await get_appearance_service(test_user.id, db_session) is not None
+    assert await get_appearance(test_user.id, db_session) is not None
 
-    await reset_appearance_service(test_user.id, db_session)
+    await reset_appearance(test_user.id, db_session)
 
-    assert await get_appearance_service(test_user.id, db_session) is None
+    assert await get_appearance(test_user.id, db_session) is None
 
 
 @pytest.mark.anyio
@@ -100,5 +100,5 @@ async def test_reset_is_idempotent_when_no_row_exists(
     db_session: AsyncSession, test_user: User
 ) -> None:
     """Reset on a user who never customized appearance is a no-op (no error)."""
-    await reset_appearance_service(test_user.id, db_session)
-    assert await get_appearance_service(test_user.id, db_session) is None
+    await reset_appearance(test_user.id, db_session)
+    assert await get_appearance(test_user.id, db_session) is None
