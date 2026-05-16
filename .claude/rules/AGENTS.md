@@ -65,6 +65,7 @@ Rules are organized by the domain they protect, not by the technology they menti
 - **`clean-code/`** — Function design, naming, named constants, Python logging/exception narrowing (pawrrtal-specific)
 - **`github-actions/`** — Strict context and design patterns for CI/CD workflows (pawrrtal-specific)
 - **`general/`** — Cross-cutting principles that don't belong to one domain. "Diagnose before workaround." "Verify locally before blaming CI." Rules that apply everywhere because they're about how to think, not what to type.
+  Example: `prefer-semantic-code-search.md` tells agents to try semantic code lookup before raw text search when CodeGraph, Serena, or an equivalent tool is available.
 
 Removed in 2026-05 audit because the underlying stack isn't in this repo: `brownfield/`, `expo/`, `react-native/`, `rust/`, `twinmind/`. If you ever ship a React Native or Rust target, restore those folders from `OctavianTocan/claude-rules` upstream.
 
