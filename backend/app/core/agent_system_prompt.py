@@ -1,4 +1,4 @@
-"""Shared system-prompt fallback for the agent loop.
+r"""Shared system-prompt fallback for the agent loop.
 
 Tavi pushed back on per-provider system-prompt defaults: each provider
 having its own default means \"who the agent is\" silently changes

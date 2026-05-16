@@ -50,19 +50,19 @@ def _make_personalization(**kwargs: Any) -> UserPersonalization:
     feed it to ``seed_workspace`` / ``_build_*_md`` with full type
     fidelity.
     """
-    defaults: dict[str, Any] = dict(
-        user_id=uuid.uuid4(),
-        name="Tavi",
-        role="Engineer",
-        company_website="https://example.com",
-        linkedin="https://linkedin.com/in/tavi",
-        goals=["Build great products", "Automate toil"],
-        personality="direct",
-        custom_instructions=None,
-        chatgpt_context=None,
-        connected_channels=None,
-        updated_at=datetime.now(UTC),
-    )
+    defaults: dict[str, Any] = {
+        "user_id": uuid.uuid4(),
+        "name": "Tavi",
+        "role": "Engineer",
+        "company_website": "https://example.com",
+        "linkedin": "https://linkedin.com/in/tavi",
+        "goals": ["Build great products", "Automate toil"],
+        "personality": "direct",
+        "custom_instructions": None,
+        "chatgpt_context": None,
+        "connected_channels": None,
+        "updated_at": datetime.now(UTC),
+    }
     return UserPersonalization(**{**defaults, **kwargs})
 
 
@@ -435,9 +435,7 @@ class TestWorkspaceService:
             except SAIntegrityError:
                 caught = True
 
-        assert caught, (
-            "Expected IntegrityError from unique index — constraint is not applied"
-        )
+        assert caught, "Expected IntegrityError from unique index — constraint is not applied"
 
         # Only the first workspace must remain.
         from sqlalchemy import func
@@ -678,7 +676,9 @@ class TestWorkspaceAPI:
             await db_session.commit()
 
         # Write a skill via the existing file endpoint.
-        skill_content = "---\nname: my-skill\ntrigger: when testing\nsummary: run tests\n---\n\n# My Skill\n"
+        skill_content = (
+            "---\nname: my-skill\ntrigger: when testing\nsummary: run tests\n---\n\n# My Skill\n"
+        )
         put_resp = await client.put(
             f"/api/v1/workspaces/{ws.id}/files/skills/my-skill/SKILL.md",
             json={"content": skill_content},

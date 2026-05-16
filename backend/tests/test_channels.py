@@ -125,9 +125,7 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream(events), msg):
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in channel.deliver(_make_stream(events), msg)]
 
         # Two data frames + the [DONE] sentinel
         assert len(chunks) == 3
@@ -155,9 +153,12 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream([{"type": "delta", "content": "x"}]), msg):
-            chunks.append(chunk)
+        chunks = [
+            chunk
+            async for chunk in channel.deliver(
+                _make_stream([{"type": "delta", "content": "x"}]), msg
+            )
+        ]
 
         assert chunks[-1] == b"data: [DONE]\n\n"
 
@@ -177,9 +178,7 @@ class TestSSEChannelDeliver:
             "metadata": {},
         }
 
-        chunks = []
-        async for chunk in channel.deliver(_make_stream([]), msg):
-            chunks.append(chunk)
+        chunks = [chunk async for chunk in channel.deliver(_make_stream([]), msg)]
 
         assert chunks == [b"data: [DONE]\n\n"]
 

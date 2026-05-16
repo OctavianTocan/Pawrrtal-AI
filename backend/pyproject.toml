@@ -131,6 +131,9 @@ ignore = [
     "S106",    # hardcoded password (function arg)
     "S108",    # /tmp paths in test scenarios are fine
     "PT018",   # compound asserts in tests are fine if they're checking related state
+    "PLC0415", # lazy/in-fn imports in tests are intentional: avoid module-load
+               # side effects, isolate `importlib.reload` cases, and let fixtures
+               # set env before the SUT is bound. Hoisting defeats those patterns.
 ]
 "tests/conftest.py" = ["D", "E402"]   # sys.path manipulation must come before imports
 "alembic/**" = ["D", "E", "I", "S"]   # migrations are auto-generated

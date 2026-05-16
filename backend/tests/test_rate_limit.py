@@ -26,10 +26,10 @@ def _build_app() -> Starlette:
     response shape) without dragging in auth + DB setup.
     """
 
-    async def _chat(request):  # noqa: ANN001
+    async def _chat(request):
         return JSONResponse({"ok": True})
 
-    async def _other(request):  # noqa: ANN001
+    async def _other(request):
         return JSONResponse({"ok": True, "endpoint": "other"})
 
     app = Starlette(
@@ -93,9 +93,7 @@ def test_returns_429_after_the_limit_is_exceeded() -> None:
         cookies = {"session_token": "tavi.session.jwt"}
         with TestClient(_build_app()) as client:
             for _ in range(3):
-                assert (
-                    client.post(f"{CHAT_PATH_PREFIX}/", cookies=cookies).status_code == 200
-                )
+                assert client.post(f"{CHAT_PATH_PREFIX}/", cookies=cookies).status_code == 200
             blocked = client.post(f"{CHAT_PATH_PREFIX}/", cookies=cookies)
 
     assert blocked.status_code == 429

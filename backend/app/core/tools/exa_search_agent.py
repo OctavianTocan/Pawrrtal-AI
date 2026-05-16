@@ -53,7 +53,7 @@ _PARAMETERS: dict = {
         "num_results": {
             "type": "integer",
             "description": (
-                f"Number of results to return (1–{MAX_NUM_RESULTS}). "
+                f"Number of results to return (1-{MAX_NUM_RESULTS}). "
                 "Default 5 keeps token usage low."
             ),
             "default": 5,

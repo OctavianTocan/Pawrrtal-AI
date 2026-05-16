@@ -870,7 +870,7 @@ class TestFactory:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A token configured in settings must reach :class:`ClaudeLLMConfig`."""
-        from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
+        from app.core.providers import factory
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "from-config")
 
@@ -880,7 +880,7 @@ class TestFactory:
 
     def test_resolve_llm_omits_token_when_blank(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A blank token in settings must coerce to ``None`` so we don't forward an empty value."""
-        from app.core.providers import factory  # noqa: PLC0415 — late import isolates monkeypatch
+        from app.core.providers import factory
 
         monkeypatch.setattr(factory.settings, "claude_code_oauth_token", "")
 

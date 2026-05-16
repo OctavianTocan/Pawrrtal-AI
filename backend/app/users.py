@@ -38,9 +38,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
             )
 
-    async def on_after_register(
-        self, user: User, request: Request | None = None
-    ) -> None:
+    async def on_after_register(self, user: User, request: Request | None = None) -> None:
         """Hook called after a new user registers."""
 
     async def on_after_login(
@@ -62,9 +60,7 @@ async def get_user_manager(
 # --- Transport & Strategy ---------------------------------------------------
 
 should_secure_cookie = (
-    settings.cookie_secure
-    if settings.cookie_secure is not None
-    else settings.is_production
+    settings.cookie_secure if settings.cookie_secure is not None else settings.is_production
 )  # Use secure cookies if requested, otherwise fallback to is_production
 
 cookie_transport = CookieTransport(

@@ -12,7 +12,6 @@ don't need a real collector in CI.
 from __future__ import annotations
 
 import importlib
-import os
 from collections.abc import Iterator
 
 import pytest
@@ -30,7 +29,8 @@ def _clean_telemetry_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     importlib.reload(telemetry_module)
 
 
-def test_setup_tracing_is_a_noop_without_endpoint(_clean_telemetry_state: None) -> None:
+@pytest.mark.usefixtures("_clean_telemetry_state")
+def test_setup_tracing_is_a_noop_without_endpoint() -> None:
     """Default state — no env var, no init, no failure."""
     from app.core.telemetry import setup_tracing
 
@@ -39,20 +39,22 @@ def test_setup_tracing_is_a_noop_without_endpoint(_clean_telemetry_state: None) 
     setup_tracing(app=None)  # idempotent — second call also no-ops
 
 
-def test_setup_tracing_is_idempotent_when_enabled(
-    _clean_telemetry_state: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@pytest.mark.usefixtures("_clean_telemetry_state")
+def test_setup_tracing_is_idempotent_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     """Calling setup twice with an endpoint doesn't double-instrument."""
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318")
     monkeypatch.setenv("OTEL_SERVICE_NAME", "pawrrtal-test")
     from app.core.telemetry import setup_tracing, shutdown_tracing
 
     setup_tracing(app=None)
-    setup_tracing(app=None)  # idempotent — must not raise even though instrumentors already installed
+    setup_tracing(
+        app=None
+    )  # idempotent — must not raise even though instrumentors already installed
     shutdown_tracing()
 
 
-def test_get_tracer_returns_noop_tracer_when_disabled(_clean_telemetry_state: None) -> None:
+@pytest.mark.usefixtures("_clean_telemetry_state")
+def test_get_tracer_returns_noop_tracer_when_disabled() -> None:
     """Call sites can call ``get_tracer().start_as_current_span()`` unconditionally."""
     from app.core.telemetry import get_tracer
 
@@ -64,15 +66,17 @@ def test_get_tracer_returns_noop_tracer_when_disabled(_clean_telemetry_state: No
         span.set_attribute("pawrrtal.test", True)
 
 
-def test_shutdown_tracing_is_safe_before_init(_clean_telemetry_state: None) -> None:
+@pytest.mark.usefixtures("_clean_telemetry_state")
+def test_shutdown_tracing_is_safe_before_init() -> None:
     """Calling shutdown before setup should be a clean no-op."""
     from app.core.telemetry import shutdown_tracing
 
     shutdown_tracing()  # No exception.
 
 
+@pytest.mark.usefixtures("_clean_telemetry_state")
 def test_setup_tracing_handles_missing_optional_packages_gracefully(
-    _clean_telemetry_state: None, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If the OTel extras are not installed, setup must log + return.
 
@@ -105,9 +109,8 @@ def test_setup_tracing_handles_missing_optional_packages_gracefully(
                 sys.modules[name] = value
 
 
-def test_otel_enabled_reads_endpoint_env_var(
-    _clean_telemetry_state: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
+@pytest.mark.usefixtures("_clean_telemetry_state")
+def test_otel_enabled_reads_endpoint_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     """The enabled gate is purely the standard endpoint env var."""
     from app.core.telemetry import _otel_enabled
 

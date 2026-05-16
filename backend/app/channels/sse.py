@@ -1,4 +1,4 @@
-"""SSEChannel — HTTP Server-Sent Events delivery for web and Electron.
+r"""SSEChannel — HTTP Server-Sent Events delivery for web and Electron.
 
 Both the web frontend and the Electron desktop shell connect over HTTP and
 consume the same SSE stream format, so a single ``SSEChannel`` implementation

@@ -143,7 +143,6 @@ describe('useChatTurns', () => {
 			const streamMessage = (_prompt: string): AsyncGenerator<ChatStreamEvent> => {
 				return (async function* gen() {
 					yield { type: 'delta', content: 'x' };
-					// biome-ignore lint/suspicious/useErrorMessage: simulate a non-Error rejection.
 					throw 'just a string';
 				})();
 			};

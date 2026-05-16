@@ -73,9 +73,7 @@ def test_allowed_emails_set_parses_comma_separated_values() -> None:
     from app.core.config import settings as real_settings
 
     overridden = real_settings.model_copy(update={"allowed_emails": raw})
-    assert overridden.allowed_emails_set == frozenset(
-        {"tavi@example.com", "esther@example.com"}
-    )
+    assert overridden.allowed_emails_set == frozenset({"tavi@example.com", "esther@example.com"})
 
 
 def test_allowed_emails_set_is_empty_when_unset() -> None:

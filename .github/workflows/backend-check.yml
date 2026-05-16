@@ -1,0 +1,117 @@
+name: Backend Check
+
+# Gates `ruff check` + `ruff format --check` on the backend so CI matches
+# the local `just check` strictness for Python code. Until this workflow
+# landed, only the frontend half of `just check` (Biome / TS / file
+# budgets) had a CI gate — Python ruff drift could merge silently.
+#
+# Reproduce locally with:
+#   cd backend && uv run ruff check .
+#   cd backend && uv run ruff format --check .
+# Or run the unified gate: `just check`.
+
+on:
+  pull_request:
+    branches: [development, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-check.yml'
+  push:
+    branches: [development, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-check.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: backend-check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff check + format
+    # OctavianTocan-only gate (see .claude/rules/github-actions/
+    # octaviantocan-only-and-self-hosted-runner.md). Push events have no
+    # pull_request payload, so the second clause is vacuously true.
+    if: >-
+      (github.actor == 'OctavianTocan' || github.actor == 'octagent') &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, pawrrtal]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Run ruff lint + format check
+        id: check
+        working-directory: backend
+        run: |
+          set +e
+          {
+            echo '--- ruff check ---'
+            uv run ruff check .
+            lint_status=$?
+            echo '--- ruff format --check ---'
+            uv run ruff format --check .
+            fmt_status=$?
+            exit_status=$(( lint_status | fmt_status ))
+            exit "$exit_status"
+          } 2>&1 | tee ../backend-check-output.txt
+          status=${PIPESTATUS[0]}
+          {
+            echo 'output<<EOF'
+            cat ../backend-check-output.txt
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Comment PR on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        env:
+          CHECK_OUTPUT: ${{ steps.check.outputs.output }}
+        with:
+          script: |
+            const output = process.env.CHECK_OUTPUT || '';
+            const body = [
+              '### Backend `ruff` check failed',
+              '',
+              'The backend lint or format gate reported errors:',
+              '',
+              '- **ruff check** — lint violations',
+              '- **ruff format --check** — formatting drift',
+              '',
+              'Reproduce locally with `cd backend && uv run ruff check .` and `cd backend && uv run ruff format --check .` (or `just check`).',
+              '',
+              '<details><summary>output (last 6000 chars)</summary>',
+              '',
+              '```',
+              output.slice(-6000),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

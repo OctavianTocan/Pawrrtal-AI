@@ -83,7 +83,7 @@ def test_etag_is_stable() -> None:
     assert isinstance(CATALOG_ETAG, str)
     assert len(CATALOG_ETAG) == 16
     # Importing twice yields the same hash (module-level computation).
-    from app.core.providers.catalog import CATALOG_ETAG as ETAG_AGAIN  # noqa: PLC0415
+    from app.core.providers.catalog import CATALOG_ETAG as ETAG_AGAIN
 
     assert ETAG_AGAIN == CATALOG_ETAG
 

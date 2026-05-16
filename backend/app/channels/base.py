@@ -73,8 +73,7 @@ class ChannelMessage(TypedDict):
 
 
 class ChannelResponse(TypedDict, total=False):
-    """Normalized outbound event produced by the core and consumed by
-    ``Channel.deliver()``.
+    """Normalized outbound event consumed by ``Channel.deliver()``.
 
     This is a thin wrapper around ``StreamEvent`` that adds routing context
     so the delivery layer knows *where* to send the response.

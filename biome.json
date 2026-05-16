@@ -140,7 +140,12 @@
 			}
 		},
 		{
-			"includes": ["frontend/e2e/**", "frontend/scripts/**", "scripts/**"],
+			"includes": [
+				"frontend/e2e/**",
+				"frontend/scripts/**",
+				"scripts/**",
+				"electrobun/scripts/**"
+			],
 			"linter": {
 				"rules": {
 					"suspicious": {
@@ -161,6 +166,16 @@
 				"rules": {
 					"complexity": {
 						"noImportantStyles": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["docs/**/*.html"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noDescendingSpecificity": "off"
 					}
 				}
 			}

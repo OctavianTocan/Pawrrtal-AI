@@ -134,9 +134,7 @@ async def _exchange_google_code(code: str) -> str:
 
     email = userinfo.get("email")
     if not email:
-        raise HTTPException(
-            status_code=502, detail="Google account has no verified email."
-        )
+        raise HTTPException(status_code=502, detail="Google account has no verified email.")
     return email
 
 

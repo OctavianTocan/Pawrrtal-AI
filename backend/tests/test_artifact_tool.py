@@ -33,7 +33,6 @@ from app.core.tools.artifact_agent import (
     make_artifact_tool,
 )
 
-
 _VALID_SPEC = {
     "root": "page",
     "elements": {
@@ -135,18 +134,14 @@ def test_agent_tool_metadata() -> None:
 
 def test_agent_tool_execute_returns_summary_on_valid_call() -> None:
     tool = make_artifact_tool()
-    result = asyncio.run(
-        tool.execute(tool_call_id="t1", title="Demo", spec=_VALID_SPEC)
-    )
+    result = asyncio.run(tool.execute(tool_call_id="t1", title="Demo", spec=_VALID_SPEC))
     assert result.startswith("Artifact rendered")
     assert "art_" in result
 
 
 def test_agent_tool_execute_returns_corrective_string_on_bad_spec() -> None:
     tool = make_artifact_tool()
-    result = asyncio.run(
-        tool.execute(tool_call_id="t1", title="Demo", spec="not a dict")
-    )
+    result = asyncio.run(tool.execute(tool_call_id="t1", title="Demo", spec="not a dict"))
     # Should be human-readable so the LLM can self-correct, not raise.
     assert "Error" in result
     assert "render_artifact again" in result
@@ -221,7 +216,6 @@ def test_artifact_tool_is_registered_in_build_agent_tools(tmp_path) -> None:
     This test guards against accidental removal from ``build_agent_tools``.
     It also verifies no duplicate tool names are registered.
     """
-    from pathlib import Path
 
     from app.core.agent_tools import build_agent_tools
 
@@ -261,21 +255,22 @@ class TestArtifactToolScenarios:
         - The agent finishes cleanly in 2 LLM calls.
         """
         from tests.agent_harness import (
-            ScriptedStreamFn,
             make_recording_stream_fn,
             run_scenario,
             text_turn,
             tool_call_turn,
         )
 
-        script = make_recording_stream_fn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Demo Dashboard", "spec": _VALID_SPEC},
-                turn_id="art-tc-1",
-            ),
-            text_turn("Here's your dashboard!"),
-        ])
+        script = make_recording_stream_fn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Demo Dashboard", "spec": _VALID_SPEC},
+                    turn_id="art-tc-1",
+                ),
+                text_turn("Here's your dashboard!"),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -315,22 +310,24 @@ class TestArtifactToolScenarios:
         # Bad spec: root points to an element that doesn't exist in elements.
         bad_spec = {"root": "ghost", "elements": _VALID_SPEC["elements"]}
 
-        script = make_recording_stream_fn([
-            # Turn 1: bad call.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "My Card", "spec": bad_spec},
-                turn_id="art-tc-bad",
-            ),
-            # Turn 2: agent receives corrective string and retries.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "My Card", "spec": _VALID_SPEC},
-                turn_id="art-tc-good",
-            ),
-            # Turn 3: agent says done.
-            text_turn("Artifact is ready!"),
-        ])
+        script = make_recording_stream_fn(
+            [
+                # Turn 1: bad call.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "My Card", "spec": bad_spec},
+                    turn_id="art-tc-bad",
+                ),
+                # Turn 2: agent receives corrective string and retries.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "My Card", "spec": _VALID_SPEC},
+                    turn_id="art-tc-good",
+                ),
+                # Turn 3: agent says done.
+                text_turn("Artifact is ready!"),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -372,18 +369,20 @@ class TestArtifactToolScenarios:
             tool_call_turn,
         )
 
-        script = make_recording_stream_fn([
-            # Turn 1: agent calls echo (simulating any other tool).
-            tool_call_turn("echo", {"value": "search result"}, turn_id="echo-1"),
-            # Turn 2: agent renders the result as an artifact.
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Search Summary", "spec": _VALID_SPEC},
-                turn_id="art-1",
-            ),
-            # Turn 3: agent is done.
-            text_turn("Done."),
-        ])
+        script = make_recording_stream_fn(
+            [
+                # Turn 1: agent calls echo (simulating any other tool).
+                tool_call_turn("echo", {"value": "search result"}, turn_id="echo-1"),
+                # Turn 2: agent renders the result as an artifact.
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Search Summary", "spec": _VALID_SPEC},
+                    turn_id="art-1",
+                ),
+                # Turn 3: agent is done.
+                text_turn("Done."),
+            ]
+        )
 
         events = await run_scenario(
             script,
@@ -406,9 +405,7 @@ class TestArtifactToolScenarios:
         assert "Artifact rendered" in art_tr["content"]
 
         # Final LLM call sees both tool results.
-        final_ctx_tool_results = [
-            m for m in script.messages_seen[2] if m["role"] == "toolResult"
-        ]
+        final_ctx_tool_results = [m for m in script.messages_seen[2] if m["role"] == "toolResult"]
         assert len(final_ctx_tool_results) == 2
 
     @pytest.mark.anyio
@@ -436,19 +433,21 @@ class TestArtifactToolScenarios:
             },
         }
 
-        script = make_recording_stream_fn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Overview", "spec": _VALID_SPEC},
-                turn_id="art-first",
-            ),
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Stats", "spec": spec_b},
-                turn_id="art-second",
-            ),
-            text_turn("Both artifacts delivered."),
-        ])
+        script = make_recording_stream_fn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Overview", "spec": _VALID_SPEC},
+                    turn_id="art-first",
+                ),
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Stats", "spec": spec_b},
+                    turn_id="art-second",
+                ),
+                text_turn("Both artifacts delivered."),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -481,14 +480,16 @@ class TestArtifactToolScenarios:
             tool_call_turn,
         )
 
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Seq Test", "spec": _VALID_SPEC},
-                turn_id="seq-tc",
-            ),
-            text_turn("done"),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Seq Test", "spec": _VALID_SPEC},
+                    turn_id="seq-tc",
+                ),
+                text_turn("done"),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -520,13 +521,15 @@ class TestArtifactToolScenarios:
             tool_call_turn,
         )
 
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                "render_ARTIFACT",  # wrong capitalisation — not registered
-                {"title": "X", "spec": _VALID_SPEC},
-            ),
-            text_turn("done"),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    "render_ARTIFACT",  # wrong capitalisation — not registered
+                    {"title": "X", "spec": _VALID_SPEC},
+                ),
+                text_turn("done"),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -547,13 +550,15 @@ class TestArtifactToolScenarios:
             tool_call_turn,
         )
 
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "", "spec": _VALID_SPEC},
-            ),
-            text_turn("I see the error, fixed."),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "", "spec": _VALID_SPEC},
+                ),
+                text_turn("I see the error, fixed."),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 
@@ -580,13 +585,15 @@ class TestArtifactToolScenarios:
 
         bad_spec = {"root": "page"}  # elements key missing entirely
 
-        script = ScriptedStreamFn([
-            tool_call_turn(
-                ARTIFACT_TOOL_NAME,
-                {"title": "Missing Elements", "spec": bad_spec},
-            ),
-            text_turn("Understood the error."),
-        ])
+        script = ScriptedStreamFn(
+            [
+                tool_call_turn(
+                    ARTIFACT_TOOL_NAME,
+                    {"title": "Missing Elements", "spec": bad_spec},
+                ),
+                text_turn("Understood the error."),
+            ]
+        )
 
         events = await run_scenario(script, tools=[make_artifact_tool()])
 

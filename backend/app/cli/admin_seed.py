@@ -15,9 +15,7 @@ async def seed_admin_user() -> None:
         return  # Admin credentials not set, skip seeding
 
     async with async_session_maker() as session:
-        user_db: SQLAlchemyUserDatabase[User, uuid.UUID] = SQLAlchemyUserDatabase(
-            session, User
-        )
+        user_db: SQLAlchemyUserDatabase[User, uuid.UUID] = SQLAlchemyUserDatabase(session, User)
         manager = UserManager(user_db)
         try:
             await manager.get_by_email(settings.admin_email)

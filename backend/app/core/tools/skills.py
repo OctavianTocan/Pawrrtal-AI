@@ -96,8 +96,8 @@ def _load_manifest(workspace_root: Path) -> dict[str, dict]:
         log.warning("Could not read skill manifest: %s", manifest_path)
         return {}
 
-    for lineno, line in enumerate(text.splitlines(), start=1):
-        line = line.strip()
+    for lineno, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
         if not line:
             continue
         if len(line.encode()) > _MAX_MANIFEST_LINE_BYTES:

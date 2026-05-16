@@ -116,7 +116,6 @@ async def _maintain_typing_indicator(
         return
 
 
-
 async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> None:
     """Drive the LLM streaming pipeline for one Telegram turn.
 
