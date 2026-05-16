@@ -9,7 +9,7 @@ import {
 	AvatarGroup,
 	AvatarGroupCount,
 	AvatarImage,
-} from '@/components/ui/avatar';
+} from '@/features/_shared/ui/avatar';
 import { SummaryText } from './SummaryText';
 import {
 	type AccessRequest,

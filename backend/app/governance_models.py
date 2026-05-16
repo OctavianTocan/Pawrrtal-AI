@@ -32,7 +32,7 @@ from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, Stri
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Text
 
-from .db import Base
+from .core.db import Base
 
 # --- Column-length sizing constants ----------------------------------
 

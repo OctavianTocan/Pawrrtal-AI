@@ -5,12 +5,12 @@ from datetime import datetime
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import User
 from app.crud.appearance import (
     get_appearance,
     reset_appearance,
     upsert_appearance,
 )
-from app.db import User
 from app.schemas import (
     AppearanceFonts,
     AppearanceOptions,

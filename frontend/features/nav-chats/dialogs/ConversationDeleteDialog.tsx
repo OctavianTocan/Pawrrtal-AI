@@ -2,9 +2,9 @@
 
 import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
 import { AlertTriangle } from 'lucide-react';
-import { AppDialog } from '@/components/ui/app-dialog';
-import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
-import { Button } from '@/components/ui/button';
+import { AppDialog } from '@/features/_shared/ui/app-dialog';
+import { AppDialogFooter } from '@/features/_shared/ui/app-dialog-footer';
+import { Button } from '@/features/_shared/ui/button';
 
 interface ConversationDeleteDialogProps {
 	/** Whether the dialog is open. */

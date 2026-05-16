@@ -2,8 +2,8 @@
 
 import { ArrowRight } from 'lucide-react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/features/_shared/ui/button';
+import { Textarea } from '@/features/_shared/ui/textarea';
 import type { PersonalizationProfile } from '@/lib/personalization/storage';
 import { OnboardingShell } from './onboarding-shell';
 

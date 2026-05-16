@@ -2,9 +2,9 @@
 
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Message, MessageContent, MessageResponse } from '@/features/_shared/ai-elements/message';
+import { Button } from '@/features/_shared/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/features/_shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**

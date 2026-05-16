@@ -41,13 +41,13 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.core.config import settings
+from app.core.db import async_session_maker
 from app.core.governance.cost_tracker import (
     CostBudget,
     PostgresCostLedger,
     per_request_reservation_usd,
 )
 from app.core.rate_limit import CHAT_PATH_PREFIX
-from app.db import async_session_maker
 
 logger = logging.getLogger(__name__)
 

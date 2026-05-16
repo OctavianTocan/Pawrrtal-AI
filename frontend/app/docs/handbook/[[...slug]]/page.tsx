@@ -7,7 +7,7 @@ import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getMDXComponents } from '@/components/mdx';
+import { getMDXComponents } from '@/app/docs/_components/mdx';
 import { handbookSource } from '@/lib/source';
 
 /**

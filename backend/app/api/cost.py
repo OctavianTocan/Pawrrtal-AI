@@ -6,7 +6,7 @@ Routes
   window the cost-budget middleware enforces against.
 * ``GET /api/v1/cost/ledger``  — paginated raw rows, newest first.
 
-Both routes are user-scoped via :func:`app.users.get_allowed_user`.
+Both routes are user-scoped via :func:`app.api.users.get_allowed_user`.
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
 from app.core.config import settings
+from app.core.db import User, get_async_session
 from app.crud.cost import (
     DEFAULT_LIST_LIMIT,
     MAX_LIST_LIMIT,
@@ -22,9 +24,7 @@ from app.crud.cost import (
     list_cost_rows_for_user,
     per_model_breakdown,
 )
-from app.db import User, get_async_session
 from app.schemas import CostLedgerRead, CostSummaryRead
-from app.users import get_allowed_user
 
 # Upper bound on the configurable window so the SQL aggregate stays
 # bounded.  90 days mirrors the default audit retention.

@@ -24,8 +24,8 @@
 
 import { Check, Copy, ExternalLink } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useReducer } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/features/_shared/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/features/_shared/ui/dialog';
 import { toast } from '@/lib/toast';
 import { useTelegramBinding } from './use-telegram-binding';
 

@@ -7,10 +7,11 @@ from typing import Any, Literal, cast
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
+from app.core.db import User, get_async_session
 from app.core.gemini_utils import generate_text_once
 from app.crud import conversation as crud
 from app.crud.chat_message import get_messages_for_conversation
-from app.db import User, get_async_session
 from app.models import ChatMessage, Conversation
 from app.schemas import (
     ChatMessageRead,
@@ -18,7 +19,6 @@ from app.schemas import (
     ConversationRead,
     ConversationUpdate,
 )
-from app.users import get_allowed_user
 
 # Logger follows module namespace conventions for consistent filtering and tracing.
 logger = logging.getLogger(__name__)

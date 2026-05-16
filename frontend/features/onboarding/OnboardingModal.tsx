@@ -2,7 +2,7 @@
 
 import type * as React from 'react';
 import { useCallback, useEffect, useId, useReducer, useRef } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/features/_shared/ui/dialog';
 import { OnboardingBackdrop } from '@/features/onboarding/OnboardingBackdrop';
 import { OnboardingCreateWorkspaceStep } from '@/features/onboarding/onboarding-create-workspace-step';
 import { OnboardingLocalWorkspaceStep } from '@/features/onboarding/onboarding-local-workspace-step';

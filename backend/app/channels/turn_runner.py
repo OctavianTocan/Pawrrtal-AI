@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.chat_aggregator import ChatTurnAggregator
 from app.core.config import settings
+from app.core.db import async_session_maker
 from app.core.event_bus import TurnCompletedEvent
 from app.core.event_bus.global_bus import publish_if_available
 from app.core.governance.cost_tracker import (
@@ -31,7 +32,6 @@ from app.crud.chat_message import (
     finalize_assistant_message,
     get_messages_for_conversation,
 )
-from app.db import async_session_maker
 
 if TYPE_CHECKING:
     from app.channels.base import Channel, ChannelMessage

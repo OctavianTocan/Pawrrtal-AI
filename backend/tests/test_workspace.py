@@ -23,6 +23,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import User
 from app.core.workspace import (
     _build_soul_md,
     _build_user_md,
@@ -34,7 +35,6 @@ from app.crud.workspace import (
     get_default_workspace,
     list_workspaces,
 )
-from app.db import User
 from app.models import UserPersonalization
 
 # ---------------------------------------------------------------------------

@@ -1,12 +1,18 @@
 import Link from 'next/link';
 import type React from 'react';
-import { AppleIcon } from '@/components/brand-icons/AppleIcon';
-import { GoogleIcon } from '@/components/brand-icons/GoogleIcon';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { AppleIcon } from '@/features/_shared/brand-icons/AppleIcon';
+import { GoogleIcon } from '@/features/_shared/brand-icons/GoogleIcon';
+import { Alert, AlertDescription, AlertTitle } from '@/features/_shared/ui/alert';
+import { Button } from '@/features/_shared/ui/button';
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/features/_shared/ui/card';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/features/_shared/ui/field';
+import { Input } from '@/features/_shared/ui/input';
 import { API_BASE_URL } from '@/lib/api';
 import { cn } from '@/lib/utils';
 

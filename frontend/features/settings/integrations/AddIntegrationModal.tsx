@@ -3,7 +3,7 @@
 import { ChevronDown, Plus, Search, Settings as SettingsIcon, X } from 'lucide-react';
 import type * as React from 'react';
 import { useState } from 'react';
-import { AppDialog } from '@/components/ui/app-dialog';
+import { AppDialog } from '@/features/_shared/ui/app-dialog';
 import { cn } from '@/lib/utils';
 import { type CatalogIntegration, INTEGRATION_CATALOG } from './catalog';
 

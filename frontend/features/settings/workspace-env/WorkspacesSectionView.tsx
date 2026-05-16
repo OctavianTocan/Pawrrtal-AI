@@ -12,7 +12,7 @@
 
 import { Eye, EyeOff, RotateCcw, Save } from 'lucide-react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/_shared/ui/button';
 import { SettingsCard, SettingsPage, SettingsSectionHeader } from '@/features/settings/primitives';
 import type { WorkspaceEnvKey } from './use-workspace-env';
 

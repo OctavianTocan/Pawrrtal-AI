@@ -3,7 +3,7 @@
 import { Check, Loader2 } from 'lucide-react';
 import type * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/_shared/ui/button';
 import { TelegramConnectDialog } from '@/features/channels/TelegramConnectDialog';
 import { listChannels } from '@/lib/channels';
 import {

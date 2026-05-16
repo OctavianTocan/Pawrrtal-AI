@@ -2,8 +2,8 @@
 
 import { ListChecksIcon } from 'lucide-react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/features/_shared/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/features/_shared/ui/tooltip';
 
 /**
  * Host-local Plan-mode toggle rendered in the composer's `footerActions`

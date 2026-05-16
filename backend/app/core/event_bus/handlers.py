@@ -26,6 +26,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from app.core.db import async_session_maker
 from app.core.event_bus.bus import Event
 from app.core.event_bus.types import (
     AgentResponseEvent,
@@ -33,7 +34,6 @@ from app.core.event_bus.types import (
     WebhookEvent,
 )
 from app.core.providers import default_model, resolve_llm
-from app.db import async_session_maker
 
 logger = logging.getLogger(__name__)
 

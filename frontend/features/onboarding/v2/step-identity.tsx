@@ -1,8 +1,8 @@
 'use client';
 
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
 import type { PersonalizationProfile } from '@/lib/personalization/storage';
 import { cn } from '@/lib/utils';
 import { OnboardingShell } from './onboarding-shell';

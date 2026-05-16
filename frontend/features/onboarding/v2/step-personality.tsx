@@ -2,7 +2,7 @@
 
 import { Check } from 'lucide-react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/_shared/ui/button';
 import {
 	PERSONALITY_OPTIONS,
 	type PersonalityId,

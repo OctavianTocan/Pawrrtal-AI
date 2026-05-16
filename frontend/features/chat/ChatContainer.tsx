@@ -1,7 +1,7 @@
 'use client';
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import type { PromptInputMessage } from '@/features/_shared/ai-elements/prompt-input';
 import { useChatActivity } from '@/features/nav-chats/context/chat-activity-context';
 import { useOnboardingReadiness } from '@/features/onboarding/hooks/use-onboarding-readiness';
 import {

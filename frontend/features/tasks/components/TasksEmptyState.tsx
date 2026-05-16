@@ -9,7 +9,7 @@
  */
 
 import type { ComponentType, ReactNode, SVGProps } from 'react';
-import { AppEmptyState } from '@/components/ui/app-empty-state';
+import { AppEmptyState } from '@/features/_shared/ui/app-empty-state';
 
 export interface TasksEmptyStateProps {
 	icon: ComponentType<SVGProps<SVGSVGElement>>;

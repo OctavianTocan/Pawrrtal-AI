@@ -2,11 +2,11 @@
 
 import { AlertTriangleIcon, RefreshCwIcon } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
-import { Message, MessageContent, MessageResponse } from '@/components/ai-elements/message';
-import { Shimmer } from '@/components/ai-elements/shimmer';
-import { AgentSpinner } from '@/components/ui/agent-spinner';
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Message, MessageContent, MessageResponse } from '@/features/_shared/ai-elements/message';
+import { Shimmer } from '@/features/_shared/ai-elements/shimmer';
+import { AgentSpinner } from '@/features/_shared/ui/agent-spinner';
+import { Button } from '@/features/_shared/ui/button';
+import { Collapsible, CollapsibleContent } from '@/features/_shared/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { ArtifactCard } from '../artifacts';
 import { extractToolChips, type ToolResultChips } from '../tool-result-parsers';

@@ -18,8 +18,8 @@
  */
 
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
+import { Input } from '@/features/_shared/ui/input';
+import { SelectButton, type SelectButtonOption } from '@/features/_shared/ui/select-button';
 import { cn } from '@/lib/utils';
 import {
 	SettingsCard,

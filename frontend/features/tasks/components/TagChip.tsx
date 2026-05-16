@@ -9,7 +9,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { AppPill } from '@/components/ui/app-pill';
+import { AppPill } from '@/features/_shared/ui/app-pill';
 
 export interface TagChipProps {
 	/** Tag label without the leading `#`. The chip prepends it visually. */

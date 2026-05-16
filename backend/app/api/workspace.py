@@ -22,9 +22,10 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
+from app.core.db import User, get_async_session
 from app.core.tools.skills import read_skill_manifest
 from app.crud.workspace import get_default_workspace, list_workspaces
-from app.db import User, get_async_session
 from app.models import Workspace
 from app.schemas import (
     OnboardingStatus,
@@ -35,7 +36,6 @@ from app.schemas import (
     WorkspaceRead,
     WorkspaceTreeResponse,
 )
-from app.users import get_allowed_user
 
 # ---------------------------------------------------------------------------
 # Helpers

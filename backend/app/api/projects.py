@@ -5,11 +5,11 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.users import get_allowed_user
+from app.core.db import User, get_async_session
 from app.crud import project as crud
-from app.db import User, get_async_session
 from app.models import Project
 from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate
-from app.users import get_allowed_user
 
 
 def _serialize(project: Project) -> ProjectRead:

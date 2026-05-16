@@ -9,8 +9,8 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 
-from app.db import User
-from app.users import get_allowed_user
+from app.api.users import get_allowed_user
+from app.core.db import User
 
 
 def _user(email: str) -> User:
@@ -29,7 +29,7 @@ def _user(email: str) -> User:
 async def test_empty_allowlist_lets_everyone_through() -> None:
     """An empty allowlist means the deployment is open (useful for local dev)."""
     stub = SimpleNamespace(allowed_emails_set=frozenset())
-    with patch("app.users.settings", stub):
+    with patch("app.api.users.settings", stub):
         result = await get_allowed_user(_user("anyone@example.com"))
         assert result.email == "anyone@example.com"
 
@@ -40,7 +40,7 @@ async def test_allowlist_admits_listed_email_case_insensitive() -> None:
     stub = SimpleNamespace(
         allowed_emails_set=frozenset({"tavi@example.com", "esther@example.com"}),
     )
-    with patch("app.users.settings", stub):
+    with patch("app.api.users.settings", stub):
         result = await get_allowed_user(_user("Tavi@Example.com"))
         assert result.email == "Tavi@Example.com"
 
@@ -49,7 +49,7 @@ async def test_allowlist_admits_listed_email_case_insensitive() -> None:
 async def test_allowlist_blocks_unlisted_email_with_generic_message() -> None:
     """Unlisted users get 403 with a deliberately generic message."""
     stub = SimpleNamespace(allowed_emails_set=frozenset({"tavi@example.com"}))
-    with patch("app.users.settings", stub):
+    with patch("app.api.users.settings", stub):
         with pytest.raises(HTTPException) as exc_info:
             await get_allowed_user(_user("stranger@example.com"))
         assert exc_info.value.status_code == 403

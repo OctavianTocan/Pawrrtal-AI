@@ -18,9 +18,9 @@ import {
 	Trash2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { EntityRow } from '@/components/ui/entity-row';
-import { useMenuComponents } from '@/components/ui/menu-context';
-import { SidebarMenuItem } from '@/components/ui/sidebar';
+import { EntityRow } from '@/features/_shared/ui/entity-row';
+import { useMenuComponents } from '@/features/_shared/ui/menu-context';
+import { SidebarMenuItem } from '@/features/_shared/ui/sidebar';
 import { NAV_CHATS_LABELS } from '@/features/nav-chats/constants';
 import { CONVERSATION_DRAG_MIME } from '@/lib/conversations/drag';
 import { TOAST_IDS, toast } from '@/lib/toast';

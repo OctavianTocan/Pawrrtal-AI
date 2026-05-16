@@ -12,9 +12,9 @@ import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.api.users import get_allowed_user
+from app.core.db import User
 from app.core.keys import resolve_api_key
-from app.db import User
-from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def get_stt_router() -> APIRouter:  # noqa: C901 — single cohesive STT route +
         # to the configured ``Transcriber`` (Mistral / OpenAI / local
         # whisper.cpp).  The xAI proxy below is the historical default
         # and stays the path when ``settings.voice_provider == "xai"``.
-        from app.integrations.voice import (  # noqa: PLC0415 — local import keeps the route light when voice extras unused
+        from app.api.integrations.voice import (  # noqa: PLC0415 — local import keeps the route light when voice extras unused
             TranscriptionError,
             resolve_transcriber,
         )

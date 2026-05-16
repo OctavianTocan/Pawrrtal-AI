@@ -6,8 +6,8 @@ import {
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from 'react';
-import { Button } from '@/components/ui/button';
-import { DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { Button } from '@/features/_shared/ui/button';
+import { DialogDescription, DialogHeader } from '@/features/_shared/ui/dialog';
 
 const FEATURE_ITEMS = [
 	{

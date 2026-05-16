@@ -4,12 +4,12 @@ import { ModalHeader } from '@octavian-tocan/react-overlay';
 import { FolderPlus, Lightbulb } from 'lucide-react';
 import type * as React from 'react';
 import { useId, useState } from 'react';
-import { AppDialog } from '@/components/ui/app-dialog';
-import { AppDialogCallout } from '@/components/ui/app-dialog-callout';
-import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
-import { AppFormRow } from '@/components/ui/app-form-row';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AppDialog } from '@/features/_shared/ui/app-dialog';
+import { AppDialogCallout } from '@/features/_shared/ui/app-dialog-callout';
+import { AppDialogFooter } from '@/features/_shared/ui/app-dialog-footer';
+import { AppFormRow } from '@/features/_shared/ui/app-form-row';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
 
 /** Props for {@link CreateProjectModal}. */
 export interface CreateProjectModalProps {

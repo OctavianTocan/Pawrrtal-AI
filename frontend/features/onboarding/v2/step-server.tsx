@@ -3,8 +3,8 @@
 import { ArrowRight, CheckCircle2Icon, CloudIcon, ServerIcon } from 'lucide-react';
 import type * as React from 'react';
 import { useCallback, useId, useReducer } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
 import { API_BASE_URL, saveBackendConfig } from '@/lib/api';
 import type { PersonalizationProfile } from '@/lib/personalization/storage';
 import { cn } from '@/lib/utils';

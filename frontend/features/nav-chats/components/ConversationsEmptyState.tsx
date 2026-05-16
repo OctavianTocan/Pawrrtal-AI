@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AppEmptyState } from '@/components/ui/app-empty-state';
+import { AppEmptyState } from '@/features/_shared/ui/app-empty-state';
 
 interface ConversationsEmptyStateProps {
 	/** Icon rendered inside a subtle container above the title. */

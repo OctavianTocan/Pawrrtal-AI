@@ -17,10 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api._chat_cost_budget import enforce_cost_budget
 from app.api._chat_events import publish_turn_started
 from app.api._chat_permissions import build_chat_permission_check
+from app.api.users import get_allowed_user
 from app.channels import resolve_channel, surface_from_header
 from app.channels.base import ChannelMessage
 from app.channels.turn_runner import ChatTurnInput, EventHook, run_turn
 from app.core.agent_tools import build_agent_tools
+from app.core.db import User, get_async_session
 from app.core.providers import StreamEvent, default_model, resolve_llm
 from app.core.request_logging import get_request_id
 from app.core.tools.artifact_agent import (
@@ -33,9 +35,7 @@ from app.crud.conversation import (
     update_conversation_model,
 )
 from app.crud.workspace import get_default_workspace
-from app.db import User, get_async_session
 from app.schemas import ChatRequest
-from app.users import get_allowed_user
 
 logger = logging.getLogger(__name__)
 

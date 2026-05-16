@@ -16,10 +16,10 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 
 from app import models  # noqa: F401  # Registers ORM models on Base metadata.
-from app.db import User, get_async_session
-from app.db_base import Base
+from app.api.users import current_active_user
+from app.core.db import User, get_async_session
+from app.core.db_base import Base
 from app.models import Workspace
-from app.users import current_active_user
 from main import create_app
 
 

@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db import User
 from app.crud.conversation import (
     create_conversation,
     get_conversation,
@@ -17,7 +18,6 @@ from app.crud.project import (
     list_projects,
     update_project,
 )
-from app.db import User
 from app.schemas import (
     ConversationCreate,
     ConversationUpdate,

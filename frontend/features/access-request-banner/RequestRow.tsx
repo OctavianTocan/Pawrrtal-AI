@@ -1,7 +1,7 @@
 'use client';
 
 import * as m from 'motion/react-m';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/features/_shared/ui/avatar';
 import { DecisionPill } from './DecisionPill';
 import { BOUNCY_SPRING, getInitials, type RequestRowProps } from './types';
 

@@ -17,8 +17,6 @@
 'use client';
 
 import React from 'react';
-import { NavUser, type NavUserIdentity } from '@/components/nav-user';
-import { NewSessionButton } from '@/components/new-session-button';
 import {
 	Sidebar,
 	SidebarContent,
@@ -26,7 +24,9 @@ import {
 	SidebarInset,
 	SidebarProvider,
 	useSidebar,
-} from '@/components/ui/sidebar';
+} from '@/features/_shared/ui/sidebar';
+import { NavUser, type NavUserIdentity } from '@/features/app-shell/nav-user';
+import { NewSessionButton } from '@/features/app-shell/new-session-button';
 import { ChatActivityProvider } from '@/features/nav-chats/context/chat-activity-context';
 import { SidebarFocusProvider, useFocusZone } from '@/features/nav-chats/context/sidebar-focus';
 import { NavChats } from '@/features/nav-chats/NavChats';

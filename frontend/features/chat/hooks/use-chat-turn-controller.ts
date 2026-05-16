@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useRef } from 'react';
-import type { PromptInputMessage } from '@/components/ai-elements/prompt-input';
+import type { PromptInputMessage } from '@/features/_shared/ai-elements/prompt-input';
 import type { ChatMessage } from '@/lib/types';
 import { type ChatReasoningLevel, FALLBACK_TITLE_MAX_LENGTH } from '../constants';
 import { extractImageInputs } from '../lib/extract-image-inputs';

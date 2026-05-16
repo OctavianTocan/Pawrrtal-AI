@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog } from '@/features/_shared/ui/dialog';
 import { OnboardingWelcomeStep } from './onboarding-welcome-step';
 
 const wrap = (node: React.ReactElement): React.ReactElement => (

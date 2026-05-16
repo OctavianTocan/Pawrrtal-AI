@@ -3,11 +3,11 @@
 import { ModalDescription, ModalHeader } from '@octavian-tocan/react-overlay';
 import { Pencil } from 'lucide-react';
 import { useId } from 'react';
-import { AppDialog } from '@/components/ui/app-dialog';
-import { AppDialogFooter } from '@/components/ui/app-dialog-footer';
-import { AppFormRow } from '@/components/ui/app-form-row';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AppDialog } from '@/features/_shared/ui/app-dialog';
+import { AppDialogFooter } from '@/features/_shared/ui/app-dialog-footer';
+import { AppFormRow } from '@/features/_shared/ui/app-form-row';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
 
 interface ConversationRenameDialogProps {
 	/** Whether the dialog is open. */

@@ -19,9 +19,9 @@
 
 import { Shuffle } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SelectButton, type SelectButtonOption } from '@/components/ui/select-button';
+import { Button } from '@/features/_shared/ui/button';
+import { Input } from '@/features/_shared/ui/input';
+import { SelectButton, type SelectButtonOption } from '@/features/_shared/ui/select-button';
 import {
 	DEFAULT_WHIMSY_CONFIG,
 	isWhimsyThemeName,
