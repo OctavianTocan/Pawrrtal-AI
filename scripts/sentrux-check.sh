@@ -19,6 +19,13 @@ should_exclude_from_sentrux() {
 		third_party/*)
 			return 0
 			;;
+		# `electrobun/` is a desktop-shell spike (see electrobun/package.json
+		# "description"). It has its own tsconfig + vitest config and predates
+		# Pawrrtal's architecture rules. Including it counted an internal
+		# 4-file cycle against the main app's quality budget.
+		electrobun/*)
+			return 0
+			;;
 		*)
 			return 1
 			;;

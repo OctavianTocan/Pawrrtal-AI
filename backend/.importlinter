@@ -39,7 +39,7 @@ layers =
     api : users : integrations
     crud
     models : schemas
-    core : db : logger_setup
+    core : db : logger_setup : db_base
 ; `app.channels` is intentionally NOT in any layer here:
 ; `channels/base.py` + `channels/registry.py` are foundational, but
 ; `channels/turn_runner.py` (added in #204) is orchestration that
@@ -47,10 +47,9 @@ layers =
 ; should be split — tracked as a follow-up. Until then it stays
 ; unlayered (sentrux ignores unlayered files).
 ;
-; The lazy `from app import models` inside `init_db()` (db.py:55) is the
-; one cycle sentrux also tolerates via `max_cycles = 1`. Fixing it (by
-; extracting `Base` into its own module) recovers ~5000 quality points.
-; Tracked in beans `pawrrtal-ey9p` → see `.beans/`.
+; PR #223 extracted `Base` into `app.db_base`, breaking the legacy
+; `app.db -> app.models` cycle that previously needed grandfathering here.
+;
 ; Stack A (PRs #208–#225) landed several `app.core.*` modules that read ORM
 ; rows / call CRUD directly — pragmatic for governance/audit pipelines that
 ; need to write audit_event/cost_ledger rows in-process. Grandfathered here
@@ -59,7 +58,6 @@ layers =
 ; the api/crud layer) in a follow-up. Pattern mirrors `EXEMPT_FUNCTIONS` in
 ; `scripts/check-nesting.py`.
 ignore_imports =
-    app.db -> app.models
     app.core.exporters.markdown_export -> app.models
     app.core.exporters.html_export -> app.models
     app.core.exporters.json_export -> app.models
