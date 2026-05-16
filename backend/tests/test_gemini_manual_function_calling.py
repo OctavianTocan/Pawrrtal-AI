@@ -102,7 +102,7 @@ def test_gemini_contents_replay_function_call_and_function_response() -> None:
     assert function_call.args == {"query": "google-genai function calling"}
 
     tool_content = contents[2]
-    assert tool_content.role == "tool"
+    assert tool_content.role == "user"
     tool_parts = tool_content.parts or []
     assert len(tool_parts) == 1
     function_response = tool_parts[0].function_response
