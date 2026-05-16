@@ -380,7 +380,7 @@ class ClaudeLLM:
                 MCP server via
                 :mod:`app.core.providers._claude_tool_bridge` and mounted
                 under ``ClaudeAgentOptions.mcp_servers``; the matching
-                ``mcp__ai_nexus__<name>`` IDs are appended to the
+                ``mcp__pawrrtal__<name>`` IDs are appended to the
                 allowed-tools whitelist so the SDK actually permits
             permission_check: Optional cross-provider permission gate.
                 When supplied, bound into ``ClaudeAgentOptions.can_use_tool``

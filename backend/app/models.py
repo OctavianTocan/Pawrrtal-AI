@@ -205,14 +205,6 @@ class ChannelBinding(Base):
     # Display handle captured at bind time. Stored for admin/debug only,
     # never used for authentication.
     display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    # The conversation that is currently active for non-topic DMs.
-    # NULL until the first message arrives.  ON DELETE SET NULL so
-    # removing the conversation doesn't orphan the binding.
-    active_conversation_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid,
-        ForeignKey("conversations.id", ondelete="SET NULL"),
-        nullable=True,
-    )
     # True when this Telegram chat has Bot API 9.3+ Topics enabled.
     # Drives the routing branch in the inbound message handler.
     has_topics_enabled: Mapped[bool] = mapped_column(

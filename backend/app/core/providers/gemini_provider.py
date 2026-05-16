@@ -26,7 +26,12 @@ from app.core.agent_loop import (
     agent_loop,
 )
 from app.core.agent_loop.safety_factory import safety_from_settings
-from app.core.agent_loop.types import PermissionCheckFn, TextContent, ToolCallContent
+from app.core.agent_loop.types import (
+    PermissionCheckFn,
+    TextContent,
+    ToolCallContent,
+    ToolResultMessage,
+)
 from app.core.agent_system_prompt import (
     DEFAULT_AGENT_SYSTEM_PROMPT as _FALLBACK_SYSTEM_PROMPT,
 )
@@ -53,8 +58,6 @@ logger = logging.getLogger(__name__)
 # The local alias is kept for grep continuity with the previous
 # in-file constant of the same name.
 
-_GEMINI_ROLE = {"user": "user", "assistant": "model"}
-
 
 def _build_gemini_tool_declarations(
     tools: list[AgentTool],
@@ -62,47 +65,82 @@ def _build_gemini_tool_declarations(
     """Convert AgentTools to Gemini FunctionDeclarations."""
     if not tools:
         return None
+    # This is how we declare the tools to the model.
     declarations = [
         gtypes.FunctionDeclaration(
             name=t.name,
             description=t.description,
-            # ``AgentTool.parameters`` is a raw JSON Schema dict; the
-            # SDK's ``parameters`` field expects a ``Schema`` model
-            # (Pydantic coerces a dict at runtime, mypy doesn't).
-            # Validating into a Schema makes the conversion explicit.
-            parameters=gtypes.Schema.model_validate(t.parameters),
+            parameters_json_schema=t.parameters,
         )
         for t in tools
     ]
     return [gtypes.Tool(function_declarations=declarations)]
 
 
-def _build_gemini_contents(
-    messages: list[AgentMessage],
-) -> list[gtypes.Content]:
-    """Convert AgentMessage list to Gemini Contents, oldest-first."""
-    contents: list[gtypes.Content] = []
-    for msg in messages:
-        role = _GEMINI_ROLE.get(msg.get("role", ""), "")
-        if not role:
-            continue  # skip tool_result messages; Gemini uses function_response parts
-        if msg["role"] in {"user", "assistant"}:
-            content = msg["content"]
-            if isinstance(content, str):
-                text = content
-            else:
-                # ``content`` is a ``list[TextContent | ToolCallContent]``;
-                # only TextContent has a ``text`` field. Narrow on
-                # ``type == "text"`` so mypy resolves the union and
-                # ``b["text"]`` types as ``str``.
-                text = " ".join(b["text"] for b in content if b["type"] == "text")
+def _assistant_parts(content: list[TextContent | ToolCallContent]) -> list[gtypes.Part]:
+    """Convert one assistant message's text/tool-call blocks to Gemini parts."""
+    parts: list[gtypes.Part] = []
+
+    for block in content:
+        if block["type"] == "text":
+            text = block["text"]
             if text.strip():
-                contents.append(
-                    gtypes.Content(
-                        role=role,
-                        parts=[gtypes.Part.from_text(text=text)],
-                    )
-                )
+                parts.append(gtypes.Part.from_text(text=text))
+            continue
+
+        parts.append(
+            gtypes.Part.from_function_call(
+                name=block["name"],
+                args=block["arguments"],
+            )
+        )
+
+    return parts
+
+
+def _tool_result_content(msg: ToolResultMessage) -> gtypes.Content:
+    """Convert a loop tool result to Gemini's function-response content."""
+    text: str = "\n".join(block["text"] for block in msg["content"])
+    response_key: str = "error" if msg["is_error"] else "result"
+    return gtypes.UserContent(
+        parts=[
+            gtypes.Part.from_function_response(
+                name=msg["name"],
+                response={response_key: text},
+            )
+        ]
+    )
+
+
+def _build_gemini_contents(messages: list[AgentMessage]) -> list[gtypes.Content]:
+    """Convert AgentMessages to Gemini Contents, oldest-first.
+
+    Args:
+        messages: The list of AgentMessages to convert.
+
+    Returns:
+        The list of Gemini Contents.
+    """
+    contents: list[gtypes.Content] = []
+
+    for msg in messages:
+        if msg["role"] == "user":
+            text = msg["content"]
+            if text.strip():
+                contents.append(gtypes.UserContent(parts=[gtypes.Part.from_text(text=text)]))
+            continue
+        if msg["role"] == "assistant":
+            # TODO(pawrrtal-55sw): If the assistant message carries
+            # provider_state["gemini"]["model_content"], replay that native
+            # content instead of reconstructing function_call parts. This
+            # preserves Gemini thought signatures per the official docs:
+            # https://ai.google.dev/gemini-api/docs/thought-signatures
+            parts = _assistant_parts(msg["content"])
+            if parts:
+                contents.append(gtypes.ModelContent(parts=parts))
+            continue
+        contents.append(_tool_result_content(msg))
+
     return contents
 
 
@@ -155,6 +193,9 @@ def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]
             fc = part.function_call
             fn_name = fc.name or ""
             tool_call_id = f"call-{fn_name}-{start_index + len(calls)}"
+            # TODO(pawrrtal-55sw): Also preserve the original Gemini Part or
+            # enclosing ModelContent for provider_state; name/args alone are
+            # insufficient for Gemini 3 function calls with thought_signature.
             calls.append(
                 {
                     "tool_call_id": tool_call_id,
@@ -193,14 +234,21 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
         # rather than make the helper return the wide type.
         gemini_tools: list[Any] | None = _build_gemini_tool_declarations(tools)
         config = gtypes.GenerateContentConfig(
+            # TODO(pawrrtal-df2v): Thread the request system prompt into this
+            # StreamFn instead of always using the provider fallback.
             system_instruction=_FALLBACK_SYSTEM_PROMPT,
             # Pass None (not []) when there are no tools — some SDK versions raise on empty list.
             tools=gemini_tools or None,
+            # TODO(pawrrtal-1qlk): Set automatic_function_calling disable=True
+            # so google-genai only emits function_call parts and Pawrrtal's
+            # provider-agnostic agent_loop remains the sole tool executor.
+            # Docs: https://github.com/googleapis/python-genai/blob/main/README.md
             # Ask the model to emit reasoning chunks alongside the answer
             # when it supports it (gemini-2.5-pro / -flash with thinking).
             # Older / non-thinking models silently ignore the flag, so this
             # is safe to send unconditionally.
             thinking_config=gtypes.ThinkingConfig(include_thoughts=True),
+            automatic_function_calling=gtypes.AutomaticFunctionCallingConfig(disable=True),
         )
 
         full_text = ""
@@ -267,6 +315,9 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
             for tc in tool_calls
         )
 
+        # TODO(pawrrtal-55sw): Include Gemini native model content in
+        # LLMDoneEvent.provider_state so the next iteration can replay the
+        # model's exact function_call parts, not lossy reconstructed ones.
         yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
 
     return stream_fn

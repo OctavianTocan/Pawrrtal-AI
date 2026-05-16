@@ -6,15 +6,19 @@ Filesystem seeding lives in ``app.core.workspace`` (``seed_workspace``).
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import shutil
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.workspace import seed_workspace
 
 log = logging.getLogger(__name__)
@@ -110,6 +114,7 @@ async def ensure_default_workspace(
     if existing is not None:
         return existing
 
+    orphaned_path: Path | None = None
     try:
         # Use a savepoint so a constraint violation only rolls back this
         # nested transaction, not the whole outer session.
@@ -122,10 +127,13 @@ async def ensure_default_workspace(
                 is_default=True,
                 personalization=personalization,
             )
+            orphaned_path = Path(ws.path)
         return ws
     except IntegrityError:
         # Another concurrent request already inserted the default workspace.
         # The savepoint was rolled back automatically; re-fetch the winner.
+        if orphaned_path is not None:
+            await _remove_orphan_workspace_dir(orphaned_path)
         log.warning(
             "ensure_default_workspace: IntegrityError for user %s — "
             "concurrent insert detected, re-fetching existing row.",
@@ -139,3 +147,32 @@ async def ensure_default_workspace(
                 f"for user {user_id} after IntegrityError"
             ) from None
         return result
+
+
+async def _remove_orphan_workspace_dir(path: Path) -> None:
+    """Remove a just-seeded workspace directory after its DB row rolled back."""
+    resolved = _validated_orphan_workspace_dir(path)
+    if resolved is None:
+        return
+
+    try:
+        await asyncio.to_thread(shutil.rmtree, resolved)
+    except FileNotFoundError:
+        return
+    except OSError:
+        log.warning("Failed to remove orphan workspace directory: %s", resolved, exc_info=True)
+
+
+def _validated_orphan_workspace_dir(path: Path) -> Path | None:
+    """Return a safe workspace path to delete, or None when it is unsafe."""
+    try:
+        workspace_base = Path(settings.workspace_base_dir).resolve()
+        resolved = path.resolve()
+        resolved.relative_to(workspace_base)
+    except ValueError:
+        log.warning("Refusing to remove workspace path outside base dir: %s", path)
+        return None
+    except OSError:
+        log.warning("Could not resolve orphan workspace path: %s", path, exc_info=True)
+        return None
+    return resolved

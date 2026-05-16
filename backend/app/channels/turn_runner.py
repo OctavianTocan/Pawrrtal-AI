@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.chat_aggregator import ChatTurnAggregator
+from app.core.chat_aggregator import ChatTurnAggregator, should_emit_event
 from app.core.config import settings
 from app.core.event_bus import TurnCompletedEvent
 from app.core.event_bus.global_bus import publish_if_available
@@ -87,6 +87,7 @@ class ChatTurnInput:
     history_window: int = 20
     log_tag: str = "TURN"
     log_extras: dict[str, Any] = field(default_factory=dict)
+    verbose_level: int | None = None
 
 
 @dataclass
@@ -246,6 +247,8 @@ async def _guarded_stream(
             permission_check=turn_input.permission_check,
             images=turn_input.images,
         ):
+            if not _should_deliver_event(event, turn_input.verbose_level):
+                continue
             counter.record(event)
             aggregator.apply(event)
             yield event
@@ -287,6 +290,13 @@ def _expand_hook_events(
     """Yield extra events produced by each hook for the upstream event."""
     for hook in hooks:
         yield from hook(event)
+
+
+def _should_deliver_event(event: StreamEvent, verbose_level: int | None) -> bool:
+    """Apply per-channel verbosity filtering when a channel requests it."""
+    if verbose_level is None:
+        return True
+    return should_emit_event(event, verbose_level)
 
 
 async def _load_history_and_persist(

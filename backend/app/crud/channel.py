@@ -369,7 +369,7 @@ async def _get_or_create_telegram_conv_row(
             select(Conversation)
             .where(
                 Conversation.user_id == user_id,
-                Conversation.title.like("Telegram%"),
+                Conversation.origin_channel == "telegram",
                 Conversation.telegram_thread_id.is_(None),
             )
             .order_by(Conversation.updated_at.desc())

@@ -277,6 +277,9 @@ async def _run_loop(
             content=stream_outcome.assistant_content,
             stop_reason=stream_outcome.stop_reason,
         )
+        # TODO(pawrrtal-55sw): Copy opaque provider_state from the terminal
+        # LLMDoneEvent into this AssistantMessage so the next provider call
+        # can replay native model content while the loop remains generic.
         messages.append(assistant_msg)
         new_messages.append(assistant_msg)
 
@@ -406,6 +409,7 @@ async def _collect_tool_results(
         tool_result_msg = ToolResultMessage(
             role="toolResult",
             tool_call_id=tc["tool_call_id"],
+            name=tc["name"],
             content=[ToolResultContent(type="text", text=result_text)],
             is_error=is_error,
         )
@@ -638,6 +642,8 @@ def _consume_llm_event(
         )
         return None
     if llm_event["type"] == "done":
+        # TODO(pawrrtal-55sw): Return provider_state here once LLMDoneEvent
+        # supports it; _stream_with_retry should preserve it in _StreamOutcome.
         return {
             "content": llm_event["content"],
             "stop_reason": llm_event["stop_reason"],
