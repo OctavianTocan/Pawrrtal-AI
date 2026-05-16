@@ -1,11 +1,81 @@
 /**
  * Shared TypeScript type definitions for conversations, messages, and sidebar items.
  *
- * @fileoverview Types consumed by both the sidebar and the chat view.
+ * @fileoverview Types consumed by both the sidebar and the chat view. The
+ * message-streaming types below (`ChatToolCallBase`, `ChatTimelineEntry`,
+ * `AssistantMessageStatus`, `ChatArtifactPayload`) live here so that
+ * `ChatMessage` can describe its streaming-only fields without `lib/`
+ * reaching upward into `features/chat/`. Feature-internal extensions —
+ * parsed source chips, json-render specs at runtime — stay in
+ * `features/chat/types.ts` and extend these base types.
  */
 
 /** The role of a message sender: human user, AI assistant, or a plan artifact. */
 export type MessageRole = 'user' | 'assistant' | 'plan';
+
+/** Lifecycle of an assistant turn — drives the failed-state UI. */
+export type AssistantMessageStatus = 'streaming' | 'complete' | 'failed';
+
+/** Lifecycle of a single tool invocation as observed from the SSE stream. */
+export type ChatToolCallStatus = 'pending' | 'completed' | 'failed';
+
+/**
+ * The transport-level shape of a tool invocation, without any parsed-source
+ * denormalisations. `features/chat/types.ts` extends this with `webSources`
+ * etc. for tool-specific chip rendering.
+ */
+export interface ChatToolCallBase {
+	/** Stable id supplied by the backend (`tool_use.id`) — used to match results. */
+	id: string;
+	/** Tool name as declared by the assistant. */
+	name: string;
+	/** Input arguments the assistant passed to the tool. */
+	input: Record<string, unknown>;
+	/** Tool result text (only present once the tool has finished). */
+	result?: string;
+	/** Whether the result has arrived yet. */
+	status: ChatToolCallStatus;
+}
+
+/**
+ * One slot in the chain-of-thought timeline.
+ *
+ * The container records every thinking burst and tool invocation in arrival
+ * order so the chain-of-thought view can render them chronologically instead
+ * of bucketing all thinking text above all tool steps.
+ */
+export type ChatTimelineEntry =
+	| { kind: 'thinking'; text: string }
+	| { kind: 'tool'; toolCallId: string };
+
+/**
+ * Structured `render_artifact` payload — emitted as a sibling of the
+ * matching `tool_use` so the frontend can render an inline preview card
+ * without round-tripping the spec back through the LLM. The catalog of
+ * allowed component `type` strings is enforced inside the chat renderer;
+ * unknown names render a fallback placeholder rather than the model's free
+ * text.
+ */
+export interface ChatArtifactPayload {
+	/** Server-minted id, e.g. `art_3f9b2e1a8c01`. */
+	id: string;
+	/** Short label shown on the preview card and dialog header. */
+	title: string;
+	/** json-render flat-spec object — `{ root, elements }`. */
+	spec: {
+		root: string;
+		elements: Record<
+			string,
+			{
+				type: string;
+				props?: Record<string, unknown>;
+				children?: string[];
+			}
+		>;
+	};
+	/** The originating tool_use_id; useful for correlating with chain-of-thought. */
+	tool_use_id: string;
+}
 
 /** Structured label attached to a conversation (e.g. status tags, categories). */
 export type ConversationLabel = {
@@ -102,7 +172,10 @@ export interface Project {
  * `thinking_started_at`, `thinking_duration_seconds`, `assistant_status`) are
  * optional so that history fetched from the server (which only persists
  * `role` + `content`) hydrates unchanged; they're populated live during
- * streaming by {@link import('@/features/chat/ChatContainer').default}.
+ * streaming by the chat container in `features/chat/`. `tool_calls` is
+ * typed against the transport-level `ChatToolCallBase`; the chat feature
+ * extends this with parsed source chips (`webSources`, etc.) that the
+ * renderer reads from feature-internal context.
  */
 export interface ChatMessage {
 	/** Sender of the message. Excludes `'plan'` from {@link MessageRole}. */
@@ -112,18 +185,18 @@ export interface ChatMessage {
 	/** Accumulated reasoning text from `thinking` SSE events on the assistant turn. */
 	thinking?: string;
 	/** Tool invocations and their results captured during streaming. */
-	tool_calls?: import('@/features/chat/types').ChatToolCall[];
+	tool_calls?: ChatToolCallBase[];
 	/** Arrival-ordered timeline of thinking bursts and tool invocations. */
-	timeline?: import('@/features/chat/types').ChatTimelineEntry[];
+	timeline?: ChatTimelineEntry[];
 	/** Wall-clock millis when the first thinking/tool/delta event landed. */
 	thinking_started_at?: number;
 	/** Total reasoning duration in whole seconds — set when streaming completes. */
 	thinking_duration_seconds?: number;
 	/** Lifecycle of the assistant turn — drives the failed-state UI. */
-	assistant_status?: import('@/features/chat/types').AssistantMessageStatus;
+	assistant_status?: AssistantMessageStatus;
 	/**
 	 * Artifacts the agent rendered during this turn (one per `render_artifact`
 	 * tool call). v0 lives on the in-memory message only — reload drops them.
 	 */
-	artifacts?: import('@/features/chat/types').ChatArtifactPayload[];
+	artifacts?: ChatArtifactPayload[];
 }
