@@ -278,6 +278,8 @@ async def test_agent_loop_executes_tool_calls_and_loops() -> None:
 
     # Messages: user prompt, assistant (tool call), tool result, assistant (final)
     assert len(returned_messages) == 4
+    assert returned_messages[2]["role"] == "toolResult"
+    assert returned_messages[2]["name"] == "echo"
 
 
 # ---------------------------------------------------------------------------

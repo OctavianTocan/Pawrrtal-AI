@@ -64,10 +64,11 @@ class AssistantMessage(TypedDict):
 
 
 class ToolResultMessage(TypedDict):
-    """Result message paired with a previous ``ToolCallContent`` by tool_call_id."""
+    """Result message paired with a previous ``ToolCallContent``."""
 
     role: Literal["toolResult"]
     tool_call_id: str
+    name: str
     content: list[ToolResultContent]
     is_error: bool
 

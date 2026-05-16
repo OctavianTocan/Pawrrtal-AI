@@ -370,6 +370,7 @@ async def _collect_tool_results(
         tool_result_msg = ToolResultMessage(
             role="toolResult",
             tool_call_id=tc["tool_call_id"],
+            name=tc["name"],
             content=[ToolResultContent(type="text", text=result_text)],
             is_error=is_error,
         )

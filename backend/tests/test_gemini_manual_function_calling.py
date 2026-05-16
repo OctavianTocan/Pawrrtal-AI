@@ -77,6 +77,7 @@ def test_gemini_contents_replay_function_call_and_function_response() -> None:
         ToolResultMessage(
             role="toolResult",
             tool_call_id="tc-search",
+            name="exa_search",
             content=[
                 ToolResultContent(
                     type="text",

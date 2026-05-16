@@ -116,6 +116,7 @@ async def _maintain_typing_indicator(
         return
 
 
+# TODO: This is pretty nonsensical. We have a custom entire chat impkementation that just duplicates the logic here.
 async def _run_llm_turn(*, message: Message, context: TelegramTurnContext) -> None:
     """Drive the LLM streaming pipeline for one Telegram turn.
 
