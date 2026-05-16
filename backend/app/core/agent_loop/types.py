@@ -61,6 +61,9 @@ class AssistantMessage(TypedDict):
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
+    # TODO(pawrrtal-55sw): Add an optional provider_state field for
+    # opaque native replay data. Gemini needs this for thought signatures:
+    # https://ai.google.dev/gemini-api/docs/thought-signatures
 
 
 class ToolResultMessage(TypedDict):
@@ -117,6 +120,9 @@ class LLMDoneEvent(TypedDict):
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
+    # TODO(pawrrtal-55sw): Mirror AssistantMessage.provider_state here so
+    # StreamFn implementations can return provider-native replay state
+    # without exposing it to StreamEvent/Telegram/persistence.
 
 
 LLMEvent = LLMTextDeltaEvent | LLMThinkingDeltaEvent | LLMToolCallEvent | LLMDoneEvent

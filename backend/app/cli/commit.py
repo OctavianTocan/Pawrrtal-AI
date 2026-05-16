@@ -24,7 +24,7 @@ if not os.environ.get("GOOGLE_API_KEY"):
     print("GOOGLE_API_KEY not found in environment or .env file.", file=sys.stderr)
     sys.exit(1)
 
-COMMIT_AGENT_MODEL = "gemini-2.5-flash-preview-05-20"
+COMMIT_AGENT_MODEL = os.environ.get("COMMIT_AGENT_MODEL", "gemini-2.5-flash")
 
 COMMIT_PROMPT = """\
 You are a commit message generator. Given the staged git diff below, produce a single \

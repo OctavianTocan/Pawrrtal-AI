@@ -130,6 +130,11 @@ def _build_gemini_contents(messages: list[AgentMessage]) -> list[gtypes.Content]
                 contents.append(gtypes.UserContent(parts=[gtypes.Part.from_text(text=text)]))
             continue
         if msg["role"] == "assistant":
+            # TODO(pawrrtal-55sw): If the assistant message carries
+            # provider_state["gemini"]["model_content"], replay that native
+            # content instead of reconstructing function_call parts. This
+            # preserves Gemini thought signatures per the official docs:
+            # https://ai.google.dev/gemini-api/docs/thought-signatures
             parts = _assistant_parts(msg["content"])
             if parts:
                 contents.append(gtypes.ModelContent(parts=parts))
@@ -188,6 +193,9 @@ def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]
             fc = part.function_call
             fn_name = fc.name or ""
             tool_call_id = f"call-{fn_name}-{start_index + len(calls)}"
+            # TODO(pawrrtal-55sw): Also preserve the original Gemini Part or
+            # enclosing ModelContent for provider_state; name/args alone are
+            # insufficient for Gemini 3 function calls with thought_signature.
             calls.append(
                 {
                     "tool_call_id": tool_call_id,
@@ -307,6 +315,9 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
             for tc in tool_calls
         )
 
+        # TODO(pawrrtal-55sw): Include Gemini native model content in
+        # LLMDoneEvent.provider_state so the next iteration can replay the
+        # model's exact function_call parts, not lossy reconstructed ones.
         yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
 
     return stream_fn
