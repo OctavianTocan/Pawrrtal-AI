@@ -340,34 +340,29 @@ class ChatMessageRead(BaseModel):
 
 
 class ChannelBindingRead(BaseModel):
-    """Public view of a third-party messaging binding.
-
-    Returned by ``GET /api/v1/channels`` so the Settings UI can list which
-    services the user has connected. Sensitive provider IDs are exposed only
-    to their owner via the authenticated route.
-    """
+    """Public shape returned by ``GET /api/v1/channels``."""
 
     provider: str
     external_user_id: str
+    # external_chat_id + display_handle remain on the read shape because
+    # the Settings UI renders the handle (``@{display_handle}``) on the
+    # connected-state dialog and the binding hook reads the chat id.
     external_chat_id: str | None = None
     display_handle: str | None = None
     created_at: datetime
 
+    model_config = ConfigDict(from_attributes=True)
 
-class ChannelLinkCodeResponse(BaseModel):
-    """Response shape returned when the web app requests a fresh link code.
 
-    `code` is the plaintext the user types (or the bot reads from a
-    `t.me/<bot>?start=<code>` deep link); the server only persists its
-    HMAC. `expires_at` powers the countdown timer the frontend renders.
-    `bot_username` is included so the frontend can render the deep link
-    without hard-coding the bot identity.
-    """
+class TelegramLinkCodeRead(BaseModel):
+    """Response shape from ``POST /api/v1/channels/telegram/link``."""
 
     code: str
     expires_at: datetime
     bot_username: str | None = None
     deep_link: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Workspace schemas --------------------------------------------------------
