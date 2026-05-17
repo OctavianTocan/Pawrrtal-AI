@@ -223,12 +223,6 @@ class ChannelBinding(Base):
     # connected-state ("@<display_handle>"); never trusted for auth.
     display_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    # Pointer to the currently active conversation for non-topic DMs.
-    # NULL until the first message creates one. Column lives in DB
-    # via migration 011.
-    active_conversation_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True
-    )
     # Whether the Telegram chat has Topics (forum threads) enabled.
     has_topics_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
