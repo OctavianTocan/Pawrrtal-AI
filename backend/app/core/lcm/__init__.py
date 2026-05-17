@@ -28,6 +28,13 @@ from app.models import ChatMessage, LCMContextItem, LCMSummary, LCMSummarySource
 
 _log = logging.getLogger(__name__)
 
+# Character cap for the deterministic-truncation fallback when both the
+# normal and aggressive provider summarisations fail or return empty
+# text.  Tuned to roughly 375 tokens (4 chars ≈ 1 token), small enough
+# to keep the assembled context tight while still leaving the model
+# enough surface to recover continuity.
+_FALLBACK_TRUNCATE_CHARS = 1500
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -241,6 +248,13 @@ async def _summarize(
         ``(summary_text, summary_kind)`` where ``summary_kind`` is one of
         ``"normal"``, ``"aggressive"``, or ``"fallback"``.
     """
+    # Narrow exception classes to the failure modes we expect from the
+    # provider/streaming layer (network, timeout, transient provider
+    # errors).  Programmer errors (``TypeError``, ``AttributeError``,
+    # ``ImportError``) intentionally bubble up so they surface during
+    # development rather than being masked as a summarisation flake;
+    # the deterministic-truncation fallback below covers the legitimate
+    # transient-failure case.
     for prompt_template, kind in (
         (_PROMPT_NORMAL, "normal"),
         (_PROMPT_AGGRESSIVE, "aggressive"),
@@ -257,11 +271,11 @@ async def _summarize(
             text = await _collect_stream(stream)
             if text:
                 return text, kind
-        except Exception:
+        except (OSError, RuntimeError, ValueError, TimeoutError):
             _log.warning("LCM_SUMMARIZE_%s_FAILED", kind.upper(), exc_info=True)
 
     # Deterministic truncation — always produces output.
-    return turns_text[:1500], "fallback"
+    return turns_text[:_FALLBACK_TRUNCATE_CHARS], "fallback"
 
 
 # ---------------------------------------------------------------------------

@@ -24,8 +24,11 @@ other on:
   pins a connection across the full LLM round-trip.
 
 Different conversations stay parallel; only same-conversation runs
-queue.  When a lock has no waiters and is not held it is dropped
-from the registry so the dict doesn't grow unbounded.
+queue.  A reference count next to the lock tracks how many pending
++ in-flight tasks exist for the conversation; the lock entry drops
+out of the registry only when the count reaches 0, so a waiter
+suspended mid-``acquire`` is never separated from the live lock the
+running holder is about to release.
 """
 
 from __future__ import annotations
@@ -33,6 +36,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from dataclasses import dataclass
+
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
 from app.core.lcm import compact_leaf_if_needed
@@ -47,10 +53,28 @@ logger = logging.getLogger(__name__)
 # doesn't grow unbounded.
 _LCM_COMPACT_TASKS: set[asyncio.Task[None]] = set()
 
+
+@dataclass
+class _LockSlot:
+    """One conversation's lock plus a refcount of pending + in-flight tasks.
+
+    ``refcount`` is incremented in ``schedule_lcm_compaction`` (the
+    synchronous half) and decremented in the task's ``finally``.  The
+    slot is dropped from the registry only when the count returns to
+    0 — i.e. when nothing is waiting on, holding, or about to acquire
+    the lock.  This is the simplest correct way to avoid the
+    "``Lock.release`` does not yield, so ``lock.locked()`` is always
+    ``False`` in ``finally``" race that a naïve check has.
+    """
+
+    lock: asyncio.Lock
+    refcount: int
+
+
 # Per-conversation lock registry — serializes compaction passes for the
 # same conversation across concurrent turns.  See module docstring for
 # the concurrency model.
-_LCM_COMPACT_LOCKS: dict[uuid.UUID, asyncio.Lock] = {}
+_LCM_COMPACT_LOCKS: dict[uuid.UUID, _LockSlot] = {}
 
 
 def schedule_lcm_compaction(
@@ -65,9 +89,19 @@ def schedule_lcm_compaction(
     the gate.  The task keeps a strong reference in
     :data:`_LCM_COMPACT_TASKS` to survive GC and self-cleans on
     completion.
+
+    The lock-slot refcount is bumped here — synchronously, before the
+    task is created — so a waiter scheduled on top of an already-held
+    lock cannot be orphaned by an in-flight ``finally`` block from a
+    previous task that's already releasing the lock.
     """
     if not settings.lcm_enabled:
         return
+    slot = _LCM_COMPACT_LOCKS.get(conversation_id)
+    if slot is None:
+        slot = _LockSlot(lock=asyncio.Lock(), refcount=0)
+        _LCM_COMPACT_LOCKS[conversation_id] = slot
+    slot.refcount += 1
     task = asyncio.create_task(
         _lcm_compact_bg(
             conversation_id=conversation_id,
@@ -89,12 +123,17 @@ async def _lcm_compact_bg(
 
     Opens its own session so it runs independently of the request
     lifecycle and acquires the per-conversation lock so concurrent
-    runs queue instead of racing.  All exceptions are caught and
-    logged.
+    runs queue instead of racing.
+
+    Caught errors are limited to provider/network/DB classes so that
+    real programmer errors (``TypeError``, ``AttributeError``,
+    ``ImportError`` …) surface to asyncio's default exception handler
+    instead of being silently swallowed under a generic
+    ``LCM_COMPACT_BG_ERR`` log line.
     """
-    lock = _LCM_COMPACT_LOCKS.setdefault(conversation_id, asyncio.Lock())
+    slot = _LCM_COMPACT_LOCKS[conversation_id]
     try:
-        async with lock, async_session_maker() as compact_session:
+        async with slot.lock, async_session_maker() as compact_session:
             await compact_leaf_if_needed(
                 compact_session,
                 conversation_id=conversation_id,
@@ -104,15 +143,12 @@ async def _lcm_compact_bg(
                 max_chunk_tokens=settings.lcm_leaf_chunk_tokens,
             )
             await compact_session.commit()
-    except Exception:
+    except (OSError, RuntimeError, ValueError, TimeoutError, SQLAlchemyError):
         logger.exception(
             "LCM_COMPACT_BG_ERR conversation_id=%s",
             conversation_id,
         )
     finally:
-        # Drop the lock entry when nothing else is waiting; this keeps
-        # the registry from growing unbounded for one-shot conversations
-        # while leaving busy conversations' locks pinned until their
-        # queue drains.
-        if not lock.locked() and conversation_id in _LCM_COMPACT_LOCKS:
+        slot.refcount -= 1
+        if slot.refcount <= 0:
             _LCM_COMPACT_LOCKS.pop(conversation_id, None)

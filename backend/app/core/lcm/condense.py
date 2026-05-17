@@ -107,22 +107,31 @@ async def _condense_at_depth(
     all_items = list(all_items_result.scalars().all())
 
     summary_item_ids = [i.item_id for i in all_items if i.item_kind == "summary"]
-    if len(summary_item_ids) < _MIN_CONDENSE_SOURCES:
+    if not summary_item_ids:
         return False
 
-    s_result = await session.execute(select(LCMSummary).where(LCMSummary.id.in_(summary_item_ids)))
+    # Filter by ``depth`` at the DB layer so a context list that holds
+    # summaries at multiple depths (one depth-0, one depth-1, ...) only
+    # round-trips the rows that this pass could actually fold.  The
+    # previous shape counted summaries-at-any-depth in a Python-side
+    # guard and then issued the IN-query anyway when the count was ≥ 2,
+    # which wasted a query whenever the depth-specific subset was < 2.
+    s_result = await session.execute(
+        select(LCMSummary).where(
+            LCMSummary.id.in_(summary_item_ids),
+            LCMSummary.depth == depth,
+        )
+    )
     summaries_by_id: dict[uuid.UUID, LCMSummary] = {s.id: s for s in s_result.scalars().all()}
+
+    if len(summaries_by_id) < _MIN_CONDENSE_SOURCES:
+        return False
 
     eligible: list[tuple[LCMContextItem, LCMSummary]] = [
         (item, summaries_by_id[item.item_id])
         for item in all_items
-        if item.item_kind == "summary"
-        and item.item_id in summaries_by_id
-        and summaries_by_id[item.item_id].depth == depth
+        if item.item_kind == "summary" and item.item_id in summaries_by_id
     ]
-
-    if len(eligible) < _MIN_CONDENSE_SOURCES:
-        return False
 
     selected_items: list[LCMContextItem] = []
     selected_messages: list[dict[str, str]] = []

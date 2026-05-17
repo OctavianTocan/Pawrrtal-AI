@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 # ---------------------------------------------------------------------------
 # Content blocks (inside messages)
@@ -55,7 +55,7 @@ class UserMessage(TypedDict):
     content: str
 
 
-class AssistantMessage(TypedDict, total=False):
+class AssistantMessage(TypedDict):
     """One assistant turn (text + optional tool calls) with its stop reason.
 
     ``provider_state`` is an opaque, optional slot for provider-native
@@ -64,12 +64,17 @@ class AssistantMessage(TypedDict, total=False):
     follow-up turns can replay ``thought_signature`` bytes that Vertex
     rejects without; see
     https://ai.google.dev/gemini-api/docs/thought-signatures.
+
+    Note: ``role``, ``content`` and ``stop_reason`` are mandatory; only
+    ``provider_state`` is marked ``NotRequired`` so the discriminant
+    fields keep TypeChecker-driven narrowing in ``_consume_llm_event``
+    and ``_build_gemini_contents``.
     """
 
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
-    provider_state: dict[str, Any]
+    provider_state: NotRequired[dict[str, Any]]
 
 
 class ToolResultMessage(TypedDict):
@@ -120,7 +125,7 @@ class LLMToolCallEvent(TypedDict):
     arguments: dict[str, Any]
 
 
-class LLMDoneEvent(TypedDict, total=False):
+class LLMDoneEvent(TypedDict):
     """Terminal event yielded by a provider to flush the assembled assistant turn.
 
     ``provider_state`` mirrors :class:`AssistantMessage.provider_state`:
@@ -128,12 +133,17 @@ class LLMDoneEvent(TypedDict, total=False):
     here without exposing it to ``StreamEvent`` / Telegram / persistence.
     The loop copies it onto the resulting :class:`AssistantMessage` so
     the next turn's StreamFn can replay native content.
+
+    The discriminant ``type`` and the loop-consumed ``stop_reason`` /
+    ``content`` are mandatory; only ``provider_state`` is
+    ``NotRequired`` so the union discriminant in ``LLMEvent`` keeps
+    exhaustive narrowing.
     """
 
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
-    provider_state: dict[str, Any]
+    provider_state: NotRequired[dict[str, Any]]
 
 
 LLMEvent = LLMTextDeltaEvent | LLMThinkingDeltaEvent | LLMToolCallEvent | LLMDoneEvent

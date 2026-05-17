@@ -339,7 +339,13 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
     _patch(monkeypatch, _make_provider("compacted+condensed"))
 
     # Patch settings so incremental_max_depth=1 and fresh_tail=2.
+    # Both ``app.core.lcm`` and ``app.core.lcm.condense`` hold their own
+    # ``settings`` binding (each imported the symbol at module load),
+    # so the patch has to land on both — otherwise the cascade reads
+    # the real settings object and the test passes only by accident
+    # when the real defaults happen to align with ``_S``.
     import app.core.lcm as _lcm
+    import app.core.lcm.condense as _lcm_condense
 
     class _S:
         lcm_summary_model = ""
@@ -347,8 +353,11 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
         lcm_leaf_chunk_tokens = 100_000
         lcm_incremental_max_depth = 1
 
-    original = _lcm._settings
-    _lcm._settings = _S()  # type: ignore[assignment]
+    fake_settings = _S()
+    original_lcm = _lcm._settings
+    original_condense = _lcm_condense._settings
+    _lcm._settings = fake_settings  # type: ignore[assignment]
+    _lcm_condense._settings = fake_settings  # type: ignore[assignment]
     try:
         # First compaction — compacts msgs 0-3 (4 items outside fresh tail of 2).
         await compact_leaf_if_needed(
@@ -410,7 +419,8 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
         )
         await db_session.commit()
     finally:
-        _lcm._settings = original  # type: ignore[assignment]
+        _lcm._settings = original_lcm  # type: ignore[assignment]
+        _lcm_condense._settings = original_condense  # type: ignore[assignment]
 
     # After the second compaction + condensation pass, there should be a depth-1 summary.
     all_summaries = (
@@ -443,6 +453,7 @@ async def test_compact_skips_condensation_when_depth_is_0(
     _patch(monkeypatch, _make_provider("leaf"))
 
     import app.core.lcm as _lcm
+    import app.core.lcm.condense as _lcm_condense
 
     class _S:
         lcm_summary_model = ""
@@ -450,8 +461,11 @@ async def test_compact_skips_condensation_when_depth_is_0(
         lcm_leaf_chunk_tokens = 100_000
         lcm_incremental_max_depth = 0  # <-- condensation disabled
 
-    original = _lcm._settings
-    _lcm._settings = _S()  # type: ignore[assignment]
+    fake_settings = _S()
+    original_lcm = _lcm._settings
+    original_condense = _lcm_condense._settings
+    _lcm._settings = fake_settings  # type: ignore[assignment]
+    _lcm_condense._settings = fake_settings  # type: ignore[assignment]
     try:
         # compact_leaf_if_needed won't compact because the eligible items are
         # summaries (item_kind="summary"), not messages.  So it returns False
@@ -466,7 +480,8 @@ async def test_compact_skips_condensation_when_depth_is_0(
         )
         await db_session.commit()
     finally:
-        _lcm._settings = original  # type: ignore[assignment]
+        _lcm._settings = original_lcm  # type: ignore[assignment]
+        _lcm_condense._settings = original_condense  # type: ignore[assignment]
 
     # ran=False because compact_leaf sees no message items to compact;
     # condensation also did not run.
