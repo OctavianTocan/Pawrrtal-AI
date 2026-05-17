@@ -355,14 +355,18 @@ class ChannelBindingRead(BaseModel):
 
 
 class TelegramLinkCodeRead(BaseModel):
-    """Response shape from ``POST /api/v1/channels/telegram/link``."""
+    """Response shape from ``POST /api/v1/channels/telegram/link``.
+
+    Always constructed from scalar kwargs by the route — never
+    ``.model_validate(orm_row)``. The closest ORM row (``ChannelLinkCode``)
+    only stores ``code_hash``, never the plaintext ``code`` returned here,
+    so attribute-mode validation would be a bug, not a convenience.
+    """
 
     code: str
     expires_at: datetime
     bot_username: str | None = None
     deep_link: str | None = None
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Workspace schemas --------------------------------------------------------

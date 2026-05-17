@@ -188,7 +188,9 @@ class ChannelLinkCode(Base):
     )
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # Indexed because the cleanup job scans on (expires_at, used_at IS NULL)
+    # to GC unredeemed codes; matches migration 007's ix_channel_link_codes_expires_at.
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     # NULL while the code is unredeemed; populated once the bot consumes it.
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
