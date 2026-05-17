@@ -214,6 +214,60 @@ async def test_assemble_respects_fresh_tail_count(
 
 
 @pytest.mark.anyio
+async def test_assemble_keeps_summaries_when_messages_exceed_fresh_tail(
+    db_session: AsyncSession, test_user: User
+) -> None:
+    """Regression: summaries at low ordinals must be delivered to the provider.
+
+    After the first leaf compaction the context list looks like
+    ``[summary@0, msg@1, ..., msg@N]`` with N > ``fresh_tail_count``.  A
+    naive ``ORDER BY ordinal DESC LIMIT fresh_tail_count`` clips off the
+    summary at ordinal 0, silently dropping the only handle the model has
+    on the compacted history.  ``assemble_context`` must keep every
+    summary while only capping the message tail.
+    """
+    conv = await _make_conversation(db_session, test_user)
+    summary = LCMSummary(
+        conversation_id=conv.id,
+        depth=0,
+        content="ancient history",
+        token_count=5,
+    )
+    db_session.add(summary)
+    await db_session.flush()
+    db_session.add(
+        LCMContextItem(
+            conversation_id=conv.id,
+            ordinal=0,
+            item_kind="summary",
+            item_id=summary.id,
+        )
+    )
+    # 5 messages at ordinals 1-5; fresh_tail_count=3 → keep only msg2-4
+    # (the last three messages) but ALSO keep the summary at ordinal 0.
+    for i in range(5):
+        msg = await _make_message(db_session, test_user, conv, "user", f"msg{i}", i)
+        db_session.add(
+            LCMContextItem(
+                conversation_id=conv.id,
+                ordinal=i + 1,
+                item_kind="message",
+                item_id=msg.id,
+            )
+        )
+    await db_session.commit()
+
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=3)
+
+    # First entry must be the summary (NOT clipped), followed by the
+    # most-recent three messages.
+    assert len(context) == 4
+    assert context[0]["content"].startswith("[Summary of earlier conversation]")
+    assert "ancient history" in context[0]["content"]
+    assert [c["content"] for c in context[1:]] == ["msg2", "msg3", "msg4"]
+
+
+@pytest.mark.anyio
 async def test_assemble_filters_non_chat_roles(db_session: AsyncSession, test_user: User) -> None:
     """Messages with roles other than user/assistant are excluded."""
     conv = await _make_conversation(db_session, test_user)

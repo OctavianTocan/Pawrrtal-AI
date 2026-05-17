@@ -32,6 +32,7 @@ from pathlib import Path
 from app.core.agent_loop.types import AgentTool
 from app.core.config import settings
 from app.core.keys import resolve_api_key
+from app.core.providers.catalog import default_model
 from app.core.tools.artifact_agent import make_artifact_tool
 from app.core.tools.exa_search_agent import make_exa_search_tool
 from app.core.tools.image_gen_agent import make_image_gen_tool
@@ -165,11 +166,17 @@ def build_agent_tools(
         tools.append(make_lcm_list_summaries_tool(conversation_id=conversation_id))
         tools.append(make_lcm_describe_tool(conversation_id=conversation_id))
         if user_id is not None:
+            # When the caller didn't pin a model, fall back to the
+            # catalog's canonical default rather than a hardcoded
+            # preview ID — hardcoded preview IDs drift the moment the
+            # catalog moves (see commit 08318a1 for the analogous fix in
+            # ``app.cli.commit``).
+            expand_model_id = model_id or default_model().id
             tools.append(
                 make_lcm_expand_query_tool(
                     conversation_id=conversation_id,
                     user_id=user_id,
-                    model_id=model_id or "gemini-2.5-flash-preview-05-20",
+                    model_id=expand_model_id,
                 )
             )
 

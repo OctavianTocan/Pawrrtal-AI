@@ -77,36 +77,53 @@ async def assemble_context(
 ) -> list[dict[str, Any]]:
     """Return the assembled context window for a conversation turn.
 
-    Fetches the last ``fresh_tail_count`` entries from ``lcm_context_items``
-    (DESC + LIMIT, then reversed to chronological order), resolves each entry
-    to its backing row, and returns a list of ``{"role": ..., "content": ...}``
-    dicts ready to pass to a provider's ``history`` parameter.
+    Implements the per-turn assembly contract from ``docs/design/lcm.md``:
+    the **protected fresh tail** of the most recent raw messages (up to
+    ``fresh_tail_count``) plus **every summary item** that precedes /
+    interleaves them.  Summaries are *always* delivered — they are the
+    only handle the model has on compacted history — and a naive
+    ``ORDER BY ordinal DESC LIMIT fresh_tail_count`` over all items
+    would silently drop the (older, lower-ordinal) summary rows once
+    compaction has run.
 
     Item-kind handling:
 
-    * ``"message"`` — resolved to its :class:`~app.models.ChatMessage`; only
-      ``user`` and ``assistant`` roles are included.
-    * ``"summary"`` — resolved to its :class:`~app.models.LCMSummary` and
-      injected as a synthetic ``user`` message with a
-      ``[Summary of earlier conversation]`` prefix so both the model and human
-      readers recognise it as compacted history rather than a real turn.
+    * ``"message"`` — resolved to its :class:`~app.models.ChatMessage`;
+      only ``user`` and ``assistant`` roles are included.  Capped to
+      the most-recent ``fresh_tail_count`` messages.
+    * ``"summary"`` — resolved to its :class:`~app.models.LCMSummary`
+      and injected as a synthetic ``user`` message with a
+      ``[Summary of earlier conversation]`` prefix so both the model
+      and human readers recognise it as compacted history rather than
+      a real turn.  All summaries for the conversation are kept.
 
     Returns an empty list if no items exist yet.
     """
     result = await session.execute(
         select(LCMContextItem)
         .where(LCMContextItem.conversation_id == conversation_id)
-        .order_by(LCMContextItem.ordinal.desc())
-        .limit(fresh_tail_count)
+        .order_by(LCMContextItem.ordinal.asc())
     )
-    items = list(result.scalars().all())
-    items.reverse()  # oldest first
-
-    if not items:
+    all_items = list(result.scalars().all())
+    if not all_items:
         return []
 
-    message_ids = [item.item_id for item in items if item.item_kind == "message"]
-    summary_ids = [item.item_id for item in items if item.item_kind == "summary"]
+    # Cap message items to the most-recent ``fresh_tail_count`` while
+    # preserving every summary item.  Walking the ordinal-ordered list
+    # in reverse lets us tag the eligible message tail without
+    # disturbing summary ordering.
+    message_tail_quota = fresh_tail_count
+    keep: list[LCMContextItem] = []
+    for item in reversed(all_items):
+        if item.item_kind == "message":
+            if message_tail_quota <= 0:
+                continue
+            message_tail_quota -= 1
+        keep.append(item)
+    keep.reverse()  # restore chronological order
+
+    message_ids = [item.item_id for item in keep if item.item_kind == "message"]
+    summary_ids = [item.item_id for item in keep if item.item_kind == "summary"]
 
     messages_by_id: dict[uuid.UUID, ChatMessage] = {}
     if message_ids:
@@ -121,7 +138,7 @@ async def assemble_context(
         summaries_by_id = {s.id: s for s in sum_result.scalars().all()}
 
     context: list[dict[str, Any]] = []
-    for item in items:
+    for item in keep:
         turn = _assemble_item_to_turn(item, messages_by_id, summaries_by_id)
         if turn is not None:
             context.append(turn)
