@@ -13,8 +13,7 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from pathlib import Path
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,10 +22,7 @@ from app.core.tools.lcm_describe import lcm_describe, lcm_list_summaries
 from app.db import User
 from app.models import Conversation, LCMSummary, LCMSummarySource
 
-
-
 # Helpers
-
 
 
 async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
@@ -34,8 +30,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="describe test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -63,9 +59,7 @@ async def _make_summary(
     return s
 
 
-
 # lcm_describe
-
 
 
 @pytest.mark.anyio
@@ -76,9 +70,7 @@ async def test_describe_returns_metadata_and_content(
     summary = await _make_summary(db_session, conv, "User asked about deploying to Hetzner.")
     await db_session.commit()
 
-    result = await lcm_describe(
-        db_session, conversation_id=conv.id, summary_id=summary.id
-    )
+    result = await lcm_describe(db_session, conversation_id=conv.id, summary_id=summary.id)
 
     assert str(summary.id) in result
     assert "depth" in result.lower()
@@ -86,9 +78,7 @@ async def test_describe_returns_metadata_and_content(
 
 
 @pytest.mark.anyio
-async def test_describe_includes_source_edges(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_describe_includes_source_edges(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     summary = await _make_summary(db_session, conv, "Summary with sources")
     source_id = uuid.uuid4()
@@ -102,59 +92,43 @@ async def test_describe_includes_source_edges(
     )
     await db_session.commit()
 
-    result = await lcm_describe(
-        db_session, conversation_id=conv.id, summary_id=summary.id
-    )
+    result = await lcm_describe(db_session, conversation_id=conv.id, summary_id=summary.id)
 
     assert "message" in result
     assert str(source_id) in result
 
 
 @pytest.mark.anyio
-async def test_describe_unknown_id_returns_error(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_describe_unknown_id_returns_error(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
-    result = await lcm_describe(
-        db_session, conversation_id=conv.id, summary_id=uuid.uuid4()
-    )
+    result = await lcm_describe(db_session, conversation_id=conv.id, summary_id=uuid.uuid4())
     assert "not found" in result.lower()
 
 
 @pytest.mark.anyio
-async def test_describe_scoped_to_conversation(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_describe_scoped_to_conversation(db_session: AsyncSession, test_user: User) -> None:
     """A summary from another conversation should not be visible."""
     conv_a = await _make_conversation(db_session, test_user)
     conv_b = await _make_conversation(db_session, test_user)
     summary_b = await _make_summary(db_session, conv_b, "Private summary in conv B")
     await db_session.commit()
 
-    result = await lcm_describe(
-        db_session, conversation_id=conv_a.id, summary_id=summary_b.id
-    )
+    result = await lcm_describe(db_session, conversation_id=conv_a.id, summary_id=summary_b.id)
     assert "not found" in result.lower()
-
 
 
 # lcm_list_summaries
 
 
-
 @pytest.mark.anyio
-async def test_list_summaries_empty_conversation(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_list_summaries_empty_conversation(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     result = await lcm_list_summaries(db_session, conversation_id=conv.id)
     assert "no summaries" in result.lower()
 
 
 @pytest.mark.anyio
-async def test_list_summaries_returns_all_nodes(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_list_summaries_returns_all_nodes(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     for i in range(3):
         await _make_summary(db_session, conv, f"Summary {i} content")
@@ -175,6 +149,3 @@ async def test_list_summaries_shows_id_and_excerpt(
     result = await lcm_list_summaries(db_session, conversation_id=conv.id)
     assert str(s.id) in result
     assert "Unique content" in result
-
-
-

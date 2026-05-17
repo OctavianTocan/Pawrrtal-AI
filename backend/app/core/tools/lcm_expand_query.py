@@ -32,7 +32,6 @@ When to use it vs. lcm_grep
 from __future__ import annotations
 
 import uuid
-from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,70 +82,16 @@ async def lcm_expand_query(
     if not prompt.strip():
         return "lcm_expand_query: empty prompt — nothing to answer."
 
-    # ------------------------------------------------------------------ 1
-    # Fetch the full context list (bounded).
-    items_result = await session.execute(
-        select(LCMContextItem)
-        .where(LCMContextItem.conversation_id == conversation_id)
-        .order_by(LCMContextItem.ordinal.asc())
-        .limit(_MAX_EXPAND_ITEMS)
-    )
-    items = list(items_result.scalars().all())
-
-    if not items:
+    turns = await _collect_full_history_turns(session, conversation_id=conversation_id)
+    if turns is None:
         return (
             "lcm_expand_query: no conversation history found.  "
             "The conversation may be empty or LCM ingest has not run yet."
         )
-
-    # ------------------------------------------------------------------ 2
-    # Batch-resolve all backing rows.
-    message_ids = [i.item_id for i in items if i.item_kind == "message"]
-    summary_ids = [i.item_id for i in items if i.item_kind == "summary"]
-
-    messages_by_id: dict[uuid.UUID, ChatMessage] = {}
-    if message_ids:
-        m_res = await session.execute(
-            select(ChatMessage).where(ChatMessage.id.in_(message_ids))
-        )
-        messages_by_id = {m.id: m for m in m_res.scalars().all()}
-
-    summaries_by_id: dict[uuid.UUID, LCMSummary] = {}
-    if summary_ids:
-        s_res = await session.execute(
-            select(LCMSummary).where(LCMSummary.id.in_(summary_ids))
-        )
-        summaries_by_id = {s.id: s for s in s_res.scalars().all()}
-
-    # ------------------------------------------------------------------ 3
-    # Build the full-history transcript.
-    turns: list[dict[str, str]] = []
-    for item in items:
-        if item.item_kind == "message":
-            msg = messages_by_id.get(item.item_id)
-            if msg and msg.role in {"user", "assistant"} and msg.content:
-                turns.append({"role": msg.role, "content": msg.content})
-        elif item.item_kind == "summary":
-            summ = summaries_by_id.get(item.item_id)
-            if summ and summ.content:
-                turns.append(
-                    {
-                        "role": "user",
-                        "content": f"[Compacted summary, depth={summ.depth}]\n{summ.content}",
-                    }
-                )
-
     if not turns:
         return "lcm_expand_query: resolved to an empty history — nothing to answer."
 
-    history_text = _format_turns(turns)
-    expansion_prompt = (
-        f"CONVERSATION HISTORY:\n{history_text}\n\n"
-        f"QUESTION:\n{prompt}"
-    )
-
-    # ------------------------------------------------------------------ 4
-    # Single focused LLM call.
+    expansion_prompt = f"CONVERSATION HISTORY:\n{_format_turns(turns)}\n\nQUESTION:\n{prompt}"
     expand_model = _settings.lcm_summary_model or model_id
     provider = resolve_llm(expand_model, user_id=user_id)
 
@@ -165,3 +110,68 @@ async def lcm_expand_query(
         return "lcm_expand_query: the model returned an empty response."
     except Exception as exc:
         return f"lcm_expand_query: expansion call failed — {exc}"
+
+
+async def _collect_full_history_turns(
+    session: AsyncSession,
+    *,
+    conversation_id: uuid.UUID,
+) -> list[dict[str, str]] | None:
+    """Resolve every LCM context item into a ``{role, content}`` turn list.
+
+    Returns ``None`` when there are no context items at all (caller renders
+    the explicit "no history" message), or an empty list when items exist
+    but none resolve to non-empty content.  Bounded by
+    ``_MAX_EXPAND_ITEMS`` so a runaway conversation can't blow the model's
+    context window.
+    """
+    items_result = await session.execute(
+        select(LCMContextItem)
+        .where(LCMContextItem.conversation_id == conversation_id)
+        .order_by(LCMContextItem.ordinal.asc())
+        .limit(_MAX_EXPAND_ITEMS)
+    )
+    items = list(items_result.scalars().all())
+    if not items:
+        return None
+
+    message_ids = [i.item_id for i in items if i.item_kind == "message"]
+    summary_ids = [i.item_id for i in items if i.item_kind == "summary"]
+
+    messages_by_id: dict[uuid.UUID, ChatMessage] = {}
+    if message_ids:
+        m_res = await session.execute(select(ChatMessage).where(ChatMessage.id.in_(message_ids)))
+        messages_by_id = {m.id: m for m in m_res.scalars().all()}
+
+    summaries_by_id: dict[uuid.UUID, LCMSummary] = {}
+    if summary_ids:
+        s_res = await session.execute(select(LCMSummary).where(LCMSummary.id.in_(summary_ids)))
+        summaries_by_id = {s.id: s for s in s_res.scalars().all()}
+
+    turns: list[dict[str, str]] = []
+    for item in items:
+        turn = _resolve_item_to_turn(item, messages_by_id, summaries_by_id)
+        if turn is not None:
+            turns.append(turn)
+    return turns
+
+
+def _resolve_item_to_turn(
+    item: LCMContextItem,
+    messages_by_id: dict[uuid.UUID, ChatMessage],
+    summaries_by_id: dict[uuid.UUID, LCMSummary],
+) -> dict[str, str] | None:
+    """Map one ``LCMContextItem`` to its ``{role, content}`` shape, or ``None`` to drop."""
+    if item.item_kind == "message":
+        msg = messages_by_id.get(item.item_id)
+        if msg and msg.role in {"user", "assistant"} and msg.content:
+            return {"role": msg.role, "content": msg.content}
+        return None
+    if item.item_kind == "summary":
+        summ = summaries_by_id.get(item.item_id)
+        if summ and summ.content:
+            return {
+                "role": "user",
+                "content": f"[Compacted summary, depth={summ.depth}]\n{summ.content}",
+            }
+    return None

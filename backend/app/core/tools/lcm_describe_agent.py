@@ -57,9 +57,7 @@ def make_lcm_list_summaries_tool(*, conversation_id: uuid.UUID) -> AgentTool:
 
     async def _execute(tool_call_id: str, **kwargs: object) -> str:
         async with async_session_maker() as session:
-            return await lcm_list_summaries(
-                session, conversation_id=conversation_id
-            )
+            return await lcm_list_summaries(session, conversation_id=conversation_id)
 
     return AgentTool(
         name=_LIST_TOOL_NAME,

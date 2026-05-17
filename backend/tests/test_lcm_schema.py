@@ -48,9 +48,7 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
 
 
 @pytest.mark.anyio
-async def test_summary_insert_round_trips(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_summary_insert_round_trips(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     summary = LCMSummary(
         conversation_id=conv.id,
@@ -102,12 +100,16 @@ async def test_summary_sources_support_mixed_kinds(
     await db_session.commit()
 
     sources = (
-        await db_session.execute(
-            select(LCMSummarySource)
-            .where(LCMSummarySource.summary_id == parent.id)
-            .order_by(LCMSummarySource.source_ordinal)
+        (
+            await db_session.execute(
+                select(LCMSummarySource)
+                .where(LCMSummarySource.summary_id == parent.id)
+                .order_by(LCMSummarySource.source_ordinal)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert [s.source_kind for s in sources] == ["message", "summary"]
 
 
@@ -158,15 +160,9 @@ def test_cascade_metadata_is_declared() -> None:
         (LCMContextItem.__table__, "conversation_id"): "CASCADE",
     }
     for (table, column_name), expected in expected_cascades.items():
-        matching_fks = [
-            fk
-            for fk in table.foreign_keys
-            if fk.parent.name == column_name
-        ]
+        matching_fks = [fk for fk in table.foreign_keys if fk.parent.name == column_name]
         assert matching_fks, f"missing FK on {table.name}.{column_name}"
         assert matching_fks[0].ondelete == expected, (
             f"{table.name}.{column_name} expected ondelete={expected!r} "
             f"got {matching_fks[0].ondelete!r}"
         )
-
-

@@ -17,8 +17,7 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from pathlib import Path
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,10 +30,7 @@ from app.models import (
     LCMSummary,
 )
 
-
-
 # Helpers
-
 
 
 async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
@@ -42,8 +38,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="grep test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -66,8 +62,8 @@ async def _make_message(
         ordinal=ordinal,
         role=role,
         content=content,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(msg)
     await session.flush()
@@ -91,9 +87,7 @@ async def _make_summary(
     return s
 
 
-
 # _excerpt unit tests
-
 
 
 def test_excerpt_short_text_not_truncated() -> None:
@@ -124,9 +118,7 @@ def test_excerpt_no_match_returns_prefix() -> None:
     assert "nothing" in result
 
 
-
 # lcm_grep — query handling
-
 
 
 @pytest.mark.anyio
@@ -142,16 +134,12 @@ async def test_grep_no_matches(db_session: AsyncSession, test_user: User) -> Non
     await _make_message(db_session, test_user, conv, "user", "hello world", 0)
     await db_session.commit()
 
-    result = await lcm_grep(
-        db_session, conversation_id=conv.id, query="NONEXISTENT_XYZZY"
-    )
+    result = await lcm_grep(db_session, conversation_id=conv.id, query="NONEXISTENT_XYZZY")
     assert "no matches" in result.lower()
 
 
 @pytest.mark.anyio
-async def test_grep_finds_message_hit(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_finds_message_hit(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     await _make_message(db_session, test_user, conv, "user", "deploy to Hetzner VPS", 0)
     await db_session.commit()
@@ -162,9 +150,7 @@ async def test_grep_finds_message_hit(
 
 
 @pytest.mark.anyio
-async def test_grep_finds_summary_hit(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_finds_summary_hit(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     await _make_summary(db_session, conv, "User discussed deploying the Hetzner VPS")
     await db_session.commit()
@@ -191,9 +177,7 @@ async def test_grep_returns_both_message_and_summary_hits(
 
 
 @pytest.mark.anyio
-async def test_grep_case_insensitive(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_case_insensitive(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     await _make_message(db_session, test_user, conv, "user", "Deploy to HETZNER vps", 0)
     await db_session.commit()
@@ -203,14 +187,10 @@ async def test_grep_case_insensitive(
 
 
 @pytest.mark.anyio
-async def test_grep_limit_caps_results(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_limit_caps_results(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     for i in range(5):
-        await _make_message(
-            db_session, test_user, conv, "user", f"mention target {i}", i
-        )
+        await _make_message(db_session, test_user, conv, "user", f"mention target {i}", i)
     await db_session.commit()
 
     result = await lcm_grep(db_session, conversation_id=conv.id, query="target", limit=2)
@@ -219,9 +199,7 @@ async def test_grep_limit_caps_results(
 
 
 @pytest.mark.anyio
-async def test_grep_scoped_to_conversation(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_scoped_to_conversation(db_session: AsyncSession, test_user: User) -> None:
     """Messages in other conversations must not appear in results."""
     conv_a = await _make_conversation(db_session, test_user)
     conv_b = await _make_conversation(db_session, test_user)
@@ -233,9 +211,7 @@ async def test_grep_scoped_to_conversation(
 
 
 @pytest.mark.anyio
-async def test_grep_excludes_system_role(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_grep_excludes_system_role(db_session: AsyncSession, test_user: User) -> None:
     conv = await _make_conversation(db_session, test_user)
     await _make_message(db_session, test_user, conv, "system", "system needle here", 0)
     await db_session.commit()
@@ -244,8 +220,4 @@ async def test_grep_excludes_system_role(
     assert "no matches" in result.lower()
 
 
-
 # build_agent_tools integration
-
-
-

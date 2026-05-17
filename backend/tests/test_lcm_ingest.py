@@ -19,7 +19,7 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -34,7 +34,6 @@ from app.models import (
     LCMSummary,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -45,8 +44,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="LCM ingest test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -69,8 +68,8 @@ async def _make_message(
         ordinal=ordinal,
         role=role,
         content=content,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(msg)
     await session.flush()
@@ -83,22 +82,16 @@ async def _make_message(
 
 
 @pytest.mark.anyio
-async def test_ingest_creates_context_item(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_ingest_creates_context_item(db_session: AsyncSession, test_user: User) -> None:
     """``ingest_message`` inserts exactly one LCMContextItem."""
     conv = await _make_conversation(db_session, test_user)
     msg = await _make_message(db_session, test_user, conv, "user", "hello", 0)
 
-    item = await ingest_message(
-        db_session, conversation_id=conv.id, message_id=msg.id
-    )
+    item = await ingest_message(db_session, conversation_id=conv.id, message_id=msg.id)
     await db_session.commit()
 
     fetched = (
-        await db_session.execute(
-            select(LCMContextItem).where(LCMContextItem.id == item.id)
-        )
+        await db_session.execute(select(LCMContextItem).where(LCMContextItem.id == item.id))
     ).scalar_one()
 
     assert fetched.item_kind == "message"
@@ -108,9 +101,7 @@ async def test_ingest_creates_context_item(
 
 
 @pytest.mark.anyio
-async def test_ingest_ordinals_increment(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_ingest_ordinals_increment(db_session: AsyncSession, test_user: User) -> None:
     """Consecutive ingests get monotonically increasing ordinals."""
     conv = await _make_conversation(db_session, test_user)
     msgs = [
@@ -172,21 +163,15 @@ async def test_ingest_ordinals_are_independent_per_conversation(
 
 
 @pytest.mark.anyio
-async def test_assemble_empty_conversation(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_assemble_empty_conversation(db_session: AsyncSession, test_user: User) -> None:
     """An empty conversation returns an empty context list."""
     conv = await _make_conversation(db_session, test_user)
-    result = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    result = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
     assert result == []
 
 
 @pytest.mark.anyio
-async def test_assemble_returns_oldest_first(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_assemble_returns_oldest_first(db_session: AsyncSession, test_user: User) -> None:
     """assemble_context returns messages in ascending ordinal order."""
     conv = await _make_conversation(db_session, test_user)
     turns = [
@@ -199,9 +184,7 @@ async def test_assemble_returns_oldest_first(
         await ingest_message(db_session, conversation_id=conv.id, message_id=msg.id)
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
 
     assert context == [
         {"role": "user", "content": "hi"},
@@ -222,9 +205,7 @@ async def test_assemble_respects_fresh_tail_count(
         await ingest_message(db_session, conversation_id=conv.id, message_id=msg.id)
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=3
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=3)
 
     # Last 3 ordinals are 2, 3, 4 → contents "msg2", "msg3", "msg4".
     assert len(context) == 3
@@ -233,23 +214,17 @@ async def test_assemble_respects_fresh_tail_count(
 
 
 @pytest.mark.anyio
-async def test_assemble_filters_non_chat_roles(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_assemble_filters_non_chat_roles(db_session: AsyncSession, test_user: User) -> None:
     """Messages with roles other than user/assistant are excluded."""
     conv = await _make_conversation(db_session, test_user)
     user_msg = await _make_message(db_session, test_user, conv, "user", "hi", 0)
     system_msg = await _make_message(db_session, test_user, conv, "system", "sys", 1)
-    asst_msg = await _make_message(
-        db_session, test_user, conv, "assistant", "hello", 2
-    )
+    asst_msg = await _make_message(db_session, test_user, conv, "assistant", "hello", 2)
     for msg in (user_msg, system_msg, asst_msg):
         await ingest_message(db_session, conversation_id=conv.id, message_id=msg.id)
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
 
     assert context == [
         {"role": "user", "content": "hi"},
@@ -258,9 +233,7 @@ async def test_assemble_filters_non_chat_roles(
 
 
 @pytest.mark.anyio
-async def test_assemble_includes_summary_items(
-    db_session: AsyncSession, test_user: User
-) -> None:
+async def test_assemble_includes_summary_items(db_session: AsyncSession, test_user: User) -> None:
     """item_kind='summary' rows are resolved and returned as synthetic user messages.
 
     PR #3 added real summary support to assemble_context.  Summaries are
@@ -298,9 +271,7 @@ async def test_assemble_includes_summary_items(
     )
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
 
     # Summary comes first (ordinal 0), then the real message.
     assert len(context) == 2

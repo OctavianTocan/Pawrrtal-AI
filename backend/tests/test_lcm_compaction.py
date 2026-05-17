@@ -20,9 +20,9 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy import select
@@ -39,7 +39,6 @@ from app.models import (
     LCMSummarySource,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -50,8 +49,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="LCM compaction test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -74,8 +73,8 @@ async def _make_message(
         ordinal=ordinal,
         role=role,
         content=content,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(msg)
     await session.flush()
@@ -130,7 +129,7 @@ def _make_failing_provider() -> Any:
 
 # Patch the provider resolution so compaction uses our mock.
 def _patch_resolve_llm(monkeypatch: pytest.MonkeyPatch, provider: Any) -> None:
-    import app.core.lcm as _lcm  # noqa: PLC0415
+    import app.core.lcm as _lcm
 
     monkeypatch.setattr(_lcm, "resolve_llm", lambda *args, **kwargs: provider)
 
@@ -240,22 +239,24 @@ async def test_compact_creates_summary_and_sources(
     await db_session.commit()
 
     summaries = (
-        await db_session.execute(
-            select(LCMSummary).where(LCMSummary.conversation_id == conv.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(LCMSummary).where(LCMSummary.conversation_id == conv.id)))
+        .scalars()
+        .all()
+    )
     assert len(summaries) == 1
     assert summaries[0].content == "hello world summary"
     assert summaries[0].depth == 0
     assert summaries[0].summary_kind == "normal"
 
     sources = (
-        await db_session.execute(
-            select(LCMSummarySource).where(
-                LCMSummarySource.summary_id == summaries[0].id
+        (
+            await db_session.execute(
+                select(LCMSummarySource).where(LCMSummarySource.summary_id == summaries[0].id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     # Only msg0 ("hello") is outside the fresh tail of 2 and should be compacted.
     assert len(sources) == 1
     assert sources[0].source_kind == "message"
@@ -287,12 +288,16 @@ async def test_compact_replaces_message_items_with_summary_item(
     await db_session.commit()
 
     items = (
-        await db_session.execute(
-            select(LCMContextItem)
-            .where(LCMContextItem.conversation_id == conv.id)
-            .order_by(LCMContextItem.ordinal)
+        (
+            await db_session.execute(
+                select(LCMContextItem)
+                .where(LCMContextItem.conversation_id == conv.id)
+                .order_by(LCMContextItem.ordinal)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # 3 items before → 3 items after (summary + 2 message items in fresh tail).
     assert len(items) == 3
@@ -321,7 +326,7 @@ async def test_compact_multiple_eligible_messages(
             ("assistant", "b"),
             ("user", "c"),
             ("assistant", "d"),  # fresh tail starts here
-            ("user", "e"),       # fresh tail end
+            ("user", "e"),  # fresh tail end
         ],
     )
     _patch_resolve_llm(monkeypatch, _make_fake_provider("summary abc"))
@@ -337,20 +342,22 @@ async def test_compact_multiple_eligible_messages(
     await db_session.commit()
 
     items = (
-        await db_session.execute(
-            select(LCMContextItem)
-            .where(LCMContextItem.conversation_id == conv.id)
-            .order_by(LCMContextItem.ordinal)
+        (
+            await db_session.execute(
+                select(LCMContextItem)
+                .where(LCMContextItem.conversation_id == conv.id)
+                .order_by(LCMContextItem.ordinal)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # 5 items → 1 summary + 2 fresh = 3 items total.
     assert len(items) == 3
     assert items[0].item_kind == "summary"
 
-    sources = (
-        await db_session.execute(select(LCMSummarySource))
-    ).scalars().all()
+    sources = (await db_session.execute(select(LCMSummarySource))).scalars().all()
     # msgs 0, 1, 2 should all be sources of the summary.
     source_ids = {s.source_id for s in sources}
     assert msgs[0].id in source_ids
@@ -377,9 +384,9 @@ async def test_compact_respects_token_budget(
         test_user,
         conv,
         [
-            ("user", "first message here"),   # ~5 tokens
-            ("assistant", "second one here"), # ~5 tokens
-            ("user", "fresh tail msg"),       # fresh tail
+            ("user", "first message here"),  # ~5 tokens
+            ("assistant", "second one here"),  # ~5 tokens
+            ("user", "fresh tail msg"),  # fresh tail
         ],
     )
     _patch_resolve_llm(monkeypatch, _make_fake_provider("first only"))
@@ -394,9 +401,7 @@ async def test_compact_respects_token_budget(
     )
     await db_session.commit()
 
-    sources = (
-        await db_session.execute(select(LCMSummarySource))
-    ).scalars().all()
+    sources = (await db_session.execute(select(LCMSummarySource))).scalars().all()
     # Only the first message should be in sources.
     assert len(sources) == 1
     assert sources[0].source_id == msgs[0].id
@@ -404,16 +409,20 @@ async def test_compact_respects_token_budget(
     # Second message (budget overflow) and third (fresh tail) should still be
     # message items in lcm_context_items.
     items = (
-        await db_session.execute(
-            select(LCMContextItem)
-            .where(LCMContextItem.conversation_id == conv.id)
-            .order_by(LCMContextItem.ordinal)
+        (
+            await db_session.execute(
+                select(LCMContextItem)
+                .where(LCMContextItem.conversation_id == conv.id)
+                .order_by(LCMContextItem.ordinal)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     kinds = [i.item_kind for i in items]
     assert kinds[0] == "summary"
-    assert kinds[1] == "message"   # second message still in place
-    assert kinds[2] == "message"   # fresh tail
+    assert kinds[1] == "message"  # second message still in place
+    assert kinds[2] == "message"  # fresh tail
 
 
 # ---------------------------------------------------------------------------
@@ -447,10 +456,10 @@ async def test_compact_uses_fallback_when_provider_fails(
 
     assert ran is True
     summaries = (
-        await db_session.execute(
-            select(LCMSummary).where(LCMSummary.conversation_id == conv.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(LCMSummary).where(LCMSummary.conversation_id == conv.id)))
+        .scalars()
+        .all()
+    )
     assert len(summaries) == 1
     assert summaries[0].summary_kind == "fallback"
     # Deterministic fallback contains the raw transcript text.
@@ -486,9 +495,7 @@ async def test_assemble_after_compaction_returns_summary_plus_fresh(
     )
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
 
     assert len(context) == 3
     # First entry is the injected summary.

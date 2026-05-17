@@ -38,6 +38,8 @@ from app.core.agent_system_prompt import (
 from app.core.config import settings
 from app.core.keys import resolve_api_key
 
+from ._gemini_events import agent_event_to_stream_event, identity_convert
+from ._gemini_replay import function_call_content_for, replay_content_for
 from .base import ReasoningEffort, StreamEvent
 
 logger = logging.getLogger(__name__)
@@ -130,11 +132,15 @@ def _build_gemini_contents(messages: list[AgentMessage]) -> list[gtypes.Content]
                 contents.append(gtypes.UserContent(parts=[gtypes.Part.from_text(text=text)]))
             continue
         if msg["role"] == "assistant":
-            # TODO(pawrrtal-55sw): If the assistant message carries
-            # provider_state["gemini"]["model_content"], replay that native
-            # content instead of reconstructing function_call parts. This
-            # preserves Gemini thought signatures per the official docs:
+            # When the assistant message carries the original Gemini
+            # ``ModelContent`` (saved on the producing turn), replay it
+            # verbatim.  This preserves ``thought_signature`` bytes that
+            # Vertex / Gemini-3 require for follow-up tool turns:
             # https://ai.google.dev/gemini-api/docs/thought-signatures
+            replay = replay_content_for(msg)
+            if replay is not None:
+                contents.append(replay)
+                continue
             parts = _assistant_parts(msg["content"])
             if parts:
                 contents.append(gtypes.ModelContent(parts=parts))
@@ -182,7 +188,13 @@ def _split_chunk_text(chunk: Any) -> tuple[str, str]:
 
 
 def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]:
-    """Extract Gemini function-call parts from a streaming chunk."""
+    """Extract Gemini function-call parts from a streaming chunk.
+
+    Only the name + args are surfaced to the agent loop; the enclosing
+    ``ModelContent`` (with its ``thought_signature`` bytes) is captured
+    separately by :func:`function_call_content_for` and forwarded as opaque
+    ``provider_state`` on the terminal ``LLMDoneEvent``.
+    """
     calls: list[dict[str, Any]] = []
     for candidate in chunk.candidates or []:
         if not candidate.content or not candidate.content.parts:
@@ -193,9 +205,6 @@ def _tool_calls_from_chunk(chunk: Any, start_index: int) -> list[dict[str, Any]]
             fc = part.function_call
             fn_name = fc.name or ""
             tool_call_id = f"call-{fn_name}-{start_index + len(calls)}"
-            # TODO(pawrrtal-55sw): Also preserve the original Gemini Part or
-            # enclosing ModelContent for provider_state; name/args alone are
-            # insufficient for Gemini 3 function calls with thought_signature.
             calls.append(
                 {
                     "tool_call_id": tool_call_id,
@@ -253,6 +262,12 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
 
         full_text = ""
         tool_calls: list[dict[str, Any]] = []
+        # Holds the native ``ModelContent`` from whichever chunk produced
+        # the function_call parts (Gemini delivers function calls in a
+        # single chunk).  When set, the loop forwards it as
+        # ``LLMDoneEvent.provider_state["gemini"]["model_content"]`` so
+        # the next turn's request can replay ``thought_signature`` bytes.
+        function_call_content: gtypes.Content | None = None
 
         try:
             # google-genai's async ``generate_content_stream`` returns
@@ -277,14 +292,23 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
                     yield LLMTextDeltaEvent(type="text_delta", text=response_text)
                     full_text += response_text
 
-                for tool_call in _tool_calls_from_chunk(chunk, len(tool_calls)):
-                    yield LLMToolCallEvent(
-                        type="tool_call",
-                        tool_call_id=tool_call["tool_call_id"],
-                        name=tool_call["name"],
-                        arguments=tool_call["arguments"],
-                    )
-                    tool_calls.append(tool_call)
+                chunk_tool_calls = _tool_calls_from_chunk(chunk, len(tool_calls))
+                if chunk_tool_calls:
+                    # Capture the original Gemini ``ModelContent`` so
+                    # follow-up turns can replay ``thought_signature``
+                    # bytes verbatim.  Only the first function-call chunk
+                    # is preserved — Gemini emits function calls in a
+                    # single chunk so this is sufficient.
+                    if function_call_content is None:
+                        function_call_content = function_call_content_for(chunk)
+                    for tool_call in chunk_tool_calls:
+                        yield LLMToolCallEvent(
+                            type="tool_call",
+                            tool_call_id=tool_call["tool_call_id"],
+                            name=tool_call["name"],
+                            arguments=tool_call["arguments"],
+                        )
+                        tool_calls.append(tool_call)
 
         except Exception as exc:
             # Log so the error is visible in app.log — previously swallowed silently.
@@ -315,60 +339,22 @@ def make_gemini_stream_fn(model_id: str, user_id: uuid.UUID | None = None) -> St
             for tc in tool_calls
         )
 
-        # TODO(pawrrtal-55sw): Include Gemini native model content in
-        # LLMDoneEvent.provider_state so the next iteration can replay the
-        # model's exact function_call parts, not lossy reconstructed ones.
-        yield LLMDoneEvent(type="done", stop_reason=stop_reason, content=content)
+        # When the turn made any tool calls, forward the original Gemini
+        # ``ModelContent`` as opaque ``provider_state`` so the next
+        # iteration's request body replays the exact function_call parts
+        # (preserving ``thought_signature`` bytes that Gemini-3 / Vertex
+        # require).  Pure-text turns omit the field — there is nothing
+        # for the next turn to replay.
+        done_event: LLMDoneEvent = LLMDoneEvent(
+            type="done",
+            stop_reason=stop_reason,
+            content=content,
+        )
+        if function_call_content is not None:
+            done_event["provider_state"] = {"gemini": {"model_content": function_call_content}}
+        yield done_event
 
     return stream_fn
-
-
-def _identity_convert(messages: list[AgentMessage]) -> list[AgentMessage]:
-    """Pass through messages the LLM understands; filter UI-only types."""
-    return [m for m in messages if m["role"] in {"user", "assistant", "toolResult"}]
-
-
-def _agent_event_to_stream_event(event: Any) -> StreamEvent | None:
-    """Translate one ``AgentEvent`` from the loop into a frontend ``StreamEvent``.
-
-    Returns ``None`` for events that don't carry user-facing payload
-    (``agent_start`` / ``agent_end`` / ``message_*`` / ``turn_*`` /
-    ``tool_call_end``) — the chat router emits the ``[DONE]`` sentinel
-    itself when the loop completes. Splitting this out of
-    ``GeminiLLM.stream`` keeps that method under the project complexity
-    cap (``C901`` ≤ 12) now that ``thinking_delta`` lives alongside the
-    other branches.
-    """
-    event_type = event["type"]
-    if event_type == "text_delta":
-        return StreamEvent(type="delta", content=event["text"])
-    if event_type == "thinking_delta":
-        return StreamEvent(type="thinking", content=event["text"])
-    if event_type == "tool_call_start":
-        return StreamEvent(
-            type="tool_use",
-            name=event["name"],
-            input={},
-            tool_use_id=event["tool_call_id"],
-        )
-    if event_type == "tool_result":
-        return StreamEvent(
-            type="tool_result",
-            content=event["content"],
-            tool_use_id=event["tool_call_id"],
-        )
-    if event_type == "agent_terminated":
-        # Safety layer tripped — forward the structured event so the
-        # frontend can render a distinct termination notice instead of a
-        # generic error banner. ``reason`` is the machine-readable label;
-        # ``message`` is the human copy.
-        logger.warning(
-            "AGENT_TERMINATED reason=%s details=%s",
-            event["reason"],
-            event["details"],
-        )
-        return StreamEvent(type="agent_terminated", content=event["message"])
-    return None
 
 
 class GeminiLLM:
@@ -468,14 +454,14 @@ class GeminiLLM:
         # etc.) without a code deploy.  Defaults are conservative and appropriate
         # for the interactive chat path; raise them for long-running automations.
         config = AgentLoopConfig(
-            convert_to_llm=_identity_convert,
+            convert_to_llm=identity_convert,
             safety=safety_from_settings(settings),
             permission_check=permission_check,
         )
 
         try:
             async for event in agent_loop([prompt], context, config, self._stream_fn):
-                stream_event = _agent_event_to_stream_event(event)
+                stream_event = agent_event_to_stream_event(event)
                 if stream_event is not None:
                     yield stream_event
 

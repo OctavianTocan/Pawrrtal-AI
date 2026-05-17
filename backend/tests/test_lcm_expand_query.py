@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -32,10 +32,7 @@ from app.models import (
     LCMSummary,
 )
 
-
-
 # Helpers
-
 
 
 async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
@@ -43,8 +40,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="expand test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -67,8 +64,8 @@ async def _make_message(
         ordinal=ordinal,
         role=role,
         content=content,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(msg)
     session.add(
@@ -129,13 +126,13 @@ def _make_failing_provider() -> Any:
 
 
 def _patch_provider(monkeypatch: pytest.MonkeyPatch, provider: Any) -> None:
-    import app.core.tools.lcm_expand_query as _mod  # noqa: PLC0415
+    import app.core.tools.lcm_expand_query as _mod
 
     monkeypatch.setattr(_mod, "resolve_llm", lambda *a, **kw: provider)
 
 
 def _patch_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.core.tools.lcm_expand_query as _mod  # noqa: PLC0415
+    import app.core.tools.lcm_expand_query as _mod
 
     class _Fake:
         lcm_summary_model = ""
@@ -143,9 +140,7 @@ def _patch_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(_mod, "_settings", _Fake())
 
 
-
 # Tests
-
 
 
 @pytest.mark.anyio
@@ -254,5 +249,3 @@ async def test_expand_provider_failure_returns_error_string(
         prompt="What happened?",
     )
     assert "failed" in result.lower() or "error" in result.lower()
-
-

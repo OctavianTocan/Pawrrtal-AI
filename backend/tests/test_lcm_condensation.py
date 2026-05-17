@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -24,7 +24,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.lcm import _condense_at_depth, assemble_context, compact_leaf_if_needed
+from app.core.lcm import assemble_context, compact_leaf_if_needed
+from app.core.lcm.condense import _condense_at_depth
 from app.db import User
 from app.models import (
     ChatMessage,
@@ -33,7 +34,6 @@ from app.models import (
     LCMSummary,
     LCMSummarySource,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -45,8 +45,8 @@ async def _make_conversation(session: AsyncSession, user: User) -> Conversation:
         id=uuid.uuid4(),
         user_id=user.id,
         title="condensation test",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(conv)
     await session.commit()
@@ -69,8 +69,8 @@ async def _make_message(
         ordinal=ordinal,
         role=role,
         content=content,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
     session.add(msg)
     await session.flush()
@@ -116,9 +116,7 @@ async def _seed_context(
     for i, (role, content) in enumerate(turns):
         msg = await _make_message(session, user, conv, role, content, i)
         session.add(
-            LCMContextItem(
-                conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id
-            )
+            LCMContextItem(conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id)
         )
         messages.append(msg)
     await session.commit()
@@ -135,9 +133,14 @@ def _make_provider(answer: str = "CONDENSED") -> Any:
 
 
 def _patch(monkeypatch: pytest.MonkeyPatch, provider: Any) -> None:
-    import app.core.lcm as _lcm  # noqa: PLC0415
+    import app.core.lcm as _lcm
+    import app.core.lcm.condense as _lcm_condense
 
     monkeypatch.setattr(_lcm, "resolve_llm", lambda *a, **kw: provider)
+    # Condensation lives in app.core.lcm.condense (split out for the
+    # file-line budget) — patch its resolve_llm import too so
+    # monkeypatched providers reach _condense_at_depth.
+    monkeypatch.setattr(_lcm_condense, "resolve_llm", lambda *a, **kw: provider)
 
 
 # ---------------------------------------------------------------------------
@@ -210,10 +213,10 @@ async def test_condense_creates_depth1_parent(
 
     assert ran is True
     summaries = (
-        await db_session.execute(
-            select(LCMSummary).where(LCMSummary.conversation_id == conv.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(LCMSummary).where(LCMSummary.conversation_id == conv.id)))
+        .scalars()
+        .all()
+    )
     depths = [s.depth for s in summaries]
     # Two depth-0 + one depth-1.
     assert depths.count(0) == 2
@@ -251,12 +254,14 @@ async def test_condense_source_edges_point_at_leaves(
         )
     ).scalar_one()
     sources = (
-        await db_session.execute(
-            select(LCMSummarySource).where(
-                LCMSummarySource.summary_id == parent.id
+        (
+            await db_session.execute(
+                select(LCMSummarySource).where(LCMSummarySource.summary_id == parent.id)
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     source_ids = {s.source_id for s in sources}
     assert leaf_a.id in source_ids
@@ -276,9 +281,7 @@ async def test_condense_replaces_leaf_items_with_parent_item(
     msg = await _make_message(db_session, test_user, conv, "user", "tail", 2)
     session = db_session
     session.add(
-        LCMContextItem(
-            conversation_id=conv.id, ordinal=2, item_kind="message", item_id=msg.id
-        )
+        LCMContextItem(conversation_id=conv.id, ordinal=2, item_kind="message", item_id=msg.id)
     )
     await db_session.commit()
 
@@ -294,12 +297,16 @@ async def test_condense_replaces_leaf_items_with_parent_item(
     await db_session.commit()
 
     items = (
-        await db_session.execute(
-            select(LCMContextItem)
-            .where(LCMContextItem.conversation_id == conv.id)
-            .order_by(LCMContextItem.ordinal)
+        (
+            await db_session.execute(
+                select(LCMContextItem)
+                .where(LCMContextItem.conversation_id == conv.id)
+                .order_by(LCMContextItem.ordinal)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     # 3 items before (2 leaf summaries + 1 message) →
     # 2 items after (1 depth-1 summary + 1 message).
@@ -325,16 +332,14 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
         role = "user" if i % 2 == 0 else "assistant"
         msg = await _make_message(db_session, test_user, conv, role, f"msg{i}", i)
         db_session.add(
-            LCMContextItem(
-                conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id
-            )
+            LCMContextItem(conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id)
         )
     await db_session.commit()
 
     _patch(monkeypatch, _make_provider("compacted+condensed"))
 
     # Patch settings so incremental_max_depth=1 and fresh_tail=2.
-    import app.core.lcm as _lcm  # noqa: PLC0415
+    import app.core.lcm as _lcm
 
     class _S:
         lcm_summary_model = ""
@@ -359,13 +364,17 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
         # Now the context has: [summary(depth=0)] + [msg4, msg5].
         # There's only one depth-0 summary, so condensation is a no-op.
         depth1_after_first = (
-            await db_session.execute(
-                select(LCMSummary).where(
-                    LCMSummary.conversation_id == conv.id,
-                    LCMSummary.depth == 1,
+            (
+                await db_session.execute(
+                    select(LCMSummary).where(
+                        LCMSummary.conversation_id == conv.id,
+                        LCMSummary.depth == 1,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(depth1_after_first) == 0  # not enough leaves yet
 
         # Add two more messages so there's something outside the fresh tail again.
@@ -405,10 +414,10 @@ async def test_compact_triggers_condensation_when_depth_ge_1(
 
     # After the second compaction + condensation pass, there should be a depth-1 summary.
     all_summaries = (
-        await db_session.execute(
-            select(LCMSummary).where(LCMSummary.conversation_id == conv.id)
-        )
-    ).scalars().all()
+        (await db_session.execute(select(LCMSummary).where(LCMSummary.conversation_id == conv.id)))
+        .scalars()
+        .all()
+    )
     depths = [s.depth for s in all_summaries]
     assert 1 in depths, f"Expected a depth-1 summary, got depths: {depths}"
 
@@ -427,15 +436,13 @@ async def test_compact_skips_condensation_when_depth_is_0(
     for i in range(2, 4):
         msg = await _make_message(db_session, test_user, conv, "user", f"m{i}", i)
         db_session.add(
-            LCMContextItem(
-                conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id
-            )
+            LCMContextItem(conversation_id=conv.id, ordinal=i, item_kind="message", item_id=msg.id)
         )
     await db_session.commit()
 
     _patch(monkeypatch, _make_provider("leaf"))
 
-    import app.core.lcm as _lcm  # noqa: PLC0415
+    import app.core.lcm as _lcm
 
     class _S:
         lcm_summary_model = ""
@@ -465,13 +472,17 @@ async def test_compact_skips_condensation_when_depth_is_0(
     # condensation also did not run.
     assert ran is False
     depth1 = (
-        await db_session.execute(
-            select(LCMSummary).where(
-                LCMSummary.conversation_id == conv.id,
-                LCMSummary.depth == 1,
+        (
+            await db_session.execute(
+                select(LCMSummary).where(
+                    LCMSummary.conversation_id == conv.id,
+                    LCMSummary.depth == 1,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(depth1) == 0
 
 
@@ -490,9 +501,7 @@ async def test_assemble_after_condensation(
     await _insert_summary_item(db_session, conv, "leaf B", ordinal=1, depth=0)
     msg = await _make_message(db_session, test_user, conv, "user", "fresh tail", 2)
     db_session.add(
-        LCMContextItem(
-            conversation_id=conv.id, ordinal=2, item_kind="message", item_id=msg.id
-        )
+        LCMContextItem(conversation_id=conv.id, ordinal=2, item_kind="message", item_id=msg.id)
     )
     await db_session.commit()
 
@@ -507,9 +516,7 @@ async def test_assemble_after_condensation(
     )
     await db_session.commit()
 
-    context = await assemble_context(
-        db_session, conversation_id=conv.id, fresh_tail_count=64
-    )
+    context = await assemble_context(db_session, conversation_id=conv.id, fresh_tail_count=64)
 
     assert len(context) == 2
     assert "[Summary of earlier conversation]" in context[0]["content"]

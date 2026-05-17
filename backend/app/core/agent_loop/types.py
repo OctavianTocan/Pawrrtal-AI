@@ -55,15 +55,21 @@ class UserMessage(TypedDict):
     content: str
 
 
-class AssistantMessage(TypedDict):
-    """One assistant turn (text + optional tool calls) with its stop reason."""
+class AssistantMessage(TypedDict, total=False):
+    """One assistant turn (text + optional tool calls) with its stop reason.
+
+    ``provider_state`` is an opaque, optional slot for provider-native
+    replay metadata.  The loop never inspects its contents — providers
+    own the keyspace.  Gemini stores its ``ModelContent`` here so
+    follow-up turns can replay ``thought_signature`` bytes that Vertex
+    rejects without; see
+    https://ai.google.dev/gemini-api/docs/thought-signatures.
+    """
 
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
-    # TODO(pawrrtal-55sw): Add an optional provider_state field for
-    # opaque native replay data. Gemini needs this for thought signatures:
-    # https://ai.google.dev/gemini-api/docs/thought-signatures
+    provider_state: dict[str, Any]
 
 
 class ToolResultMessage(TypedDict):
@@ -114,15 +120,20 @@ class LLMToolCallEvent(TypedDict):
     arguments: dict[str, Any]
 
 
-class LLMDoneEvent(TypedDict):
-    """Terminal event yielded by a provider to flush the assembled assistant turn."""
+class LLMDoneEvent(TypedDict, total=False):
+    """Terminal event yielded by a provider to flush the assembled assistant turn.
+
+    ``provider_state`` mirrors :class:`AssistantMessage.provider_state`:
+    StreamFn implementations can return provider-native replay state
+    here without exposing it to ``StreamEvent`` / Telegram / persistence.
+    The loop copies it onto the resulting :class:`AssistantMessage` so
+    the next turn's StreamFn can replay native content.
+    """
 
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
-    # TODO(pawrrtal-55sw): Mirror AssistantMessage.provider_state here so
-    # StreamFn implementations can return provider-native replay state
-    # without exposing it to StreamEvent/Telegram/persistence.
+    provider_state: dict[str, Any]
 
 
 LLMEvent = LLMTextDeltaEvent | LLMThinkingDeltaEvent | LLMToolCallEvent | LLMDoneEvent

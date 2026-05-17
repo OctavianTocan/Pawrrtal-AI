@@ -277,9 +277,12 @@ async def _run_loop(
             content=stream_outcome.assistant_content,
             stop_reason=stream_outcome.stop_reason,
         )
-        # TODO(pawrrtal-55sw): Copy opaque provider_state from the terminal
-        # LLMDoneEvent into this AssistantMessage so the next provider call
-        # can replay native model content while the loop remains generic.
+        # Forward opaque provider replay state so the next provider call
+        # can replay native model content (e.g. Gemini ``thought_signature``)
+        # while the loop remains generic.  The slot is optional and the
+        # loop never inspects its contents.
+        if stream_outcome.provider_state is not None:
+            assistant_msg["provider_state"] = stream_outcome.provider_state
         messages.append(assistant_msg)
         new_messages.append(assistant_msg)
 
@@ -482,6 +485,7 @@ class _StreamOutcome:
         "assistant_content",
         "consecutive_llm_errors_after",
         "events",
+        "provider_state",
         "stop_reason",
         "terminated_event",
     )
@@ -493,12 +497,14 @@ class _StreamOutcome:
         stop_reason: str,
         consecutive_llm_errors_after: int,
         terminated_event: AgentTerminatedEvent | None,
+        provider_state: dict[str, Any] | None = None,
     ) -> None:
         self.events = events
         self.assistant_content = assistant_content
         self.stop_reason = stop_reason
         self.consecutive_llm_errors_after = consecutive_llm_errors_after
         self.terminated_event = terminated_event
+        self.provider_state = provider_state
 
 
 async def _stream_with_retry(
@@ -528,6 +534,7 @@ async def _stream_with_retry(
         events: list[AgentEvent] = []
         assistant_content: list[TextContent | ToolCallContent] = []
         stop_reason = "stop"
+        provider_state: dict[str, Any] | None = None
 
         try:
             async for llm_event in stream_fn(llm_messages, tools):
@@ -537,6 +544,7 @@ async def _stream_with_retry(
                 # the assignments here capture the final state.
                 assistant_content = done["content"] if done else assistant_content
                 stop_reason = done["stop_reason"] if done else stop_reason
+                provider_state = _carry_provider_state(done, provider_state)
         except Exception as exc:
             consecutive_llm_errors += 1
             _log.warning(
@@ -565,6 +573,7 @@ async def _stream_with_retry(
             stop_reason=stop_reason,
             consecutive_llm_errors_after=0,
             terminated_event=None,
+            provider_state=provider_state,
         )
 
 
@@ -642,13 +651,36 @@ def _consume_llm_event(
         )
         return None
     if llm_event["type"] == "done":
-        # TODO(pawrrtal-55sw): Return provider_state here once LLMDoneEvent
-        # supports it; _stream_with_retry should preserve it in _StreamOutcome.
-        return {
+        result: dict[str, Any] = {
             "content": llm_event["content"],
             "stop_reason": llm_event["stop_reason"],
         }
+        # Forward opaque provider replay state if the StreamFn populated
+        # it.  ``provider_state`` is a ``total=False`` field on
+        # ``LLMDoneEvent`` so we read it with ``.get`` and only copy it
+        # forward when the provider actually returned one.  See
+        # ``_stream_with_retry`` for the per-turn capture.
+        provider_state = llm_event.get("provider_state")
+        if provider_state is not None:
+            result["provider_state"] = provider_state
+        return result
     return None
+
+
+def _carry_provider_state(
+    done: dict[str, Any] | None,
+    current: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Return the provider_state from ``done`` if present, else keep ``current``.
+
+    Extracted out of :func:`_stream_with_retry` so the streaming loop's
+    body stays under the project nesting-depth budget.  The loop never
+    inspects the contents — providers own the keyspace; we just forward
+    the slot.
+    """
+    if done is not None and "provider_state" in done:
+        return done["provider_state"]
+    return current
 
 
 def _terminated(

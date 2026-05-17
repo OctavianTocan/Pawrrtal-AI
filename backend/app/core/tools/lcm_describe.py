@@ -20,7 +20,12 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import LCMContextItem, LCMSummary, LCMSummarySource
+from app.models import LCMSummary, LCMSummarySource
+
+# Number of characters from a summary's content shown as the per-node
+# excerpt in ``lcm_list_summaries``.  Wide enough to pick up the first
+# sentence; narrow enough to keep the list compact in agent context.
+_LIST_EXCERPT_CHARS = 120
 
 
 def _format_summary(
@@ -40,8 +45,7 @@ def _format_summary(
         f"Sources:      {len(sources)} item(s)",
     ]
     if sources:
-        for s in sources:
-            lines.append(f"  [{s.source_ordinal}] {s.source_kind} id={s.source_id}")
+        lines.extend(f"  [{s.source_ordinal}] {s.source_kind} id={s.source_id}" for s in sources)
     if include_full_content:
         lines.append("")
         lines.append("Content:")
@@ -116,8 +120,8 @@ async def lcm_list_summaries(
     header = f"lcm_list_summaries: {len(summaries)} node(s)\n"
     rows: list[str] = []
     for s in summaries:
-        excerpt = s.content[:120].replace("\n", " ")
-        if len(s.content) > 120:
+        excerpt = s.content[:_LIST_EXCERPT_CHARS].replace("\n", " ")
+        if len(s.content) > _LIST_EXCERPT_CHARS:
             excerpt += "…"
         rows.append(
             f"  id={s.id}  depth={s.depth}  kind={s.summary_kind}  "

@@ -1,6 +1,6 @@
 """build_agent_tools wiring tests for all LCM tools.
 
-These tests were deferred from PRs 7–9 because they require
+These tests were deferred from PRs 7-9 because they require
 build_agent_tools to accept conversation_id and model_id (this PR).
 
 Covers:
@@ -23,8 +23,8 @@ import pytest
 def test_lcm_grep_tool_present_when_lcm_enabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", True)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -36,8 +36,8 @@ def test_lcm_grep_tool_present_when_lcm_enabled(
 def test_lcm_grep_tool_absent_when_lcm_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", False)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -49,8 +49,8 @@ def test_lcm_grep_tool_absent_when_lcm_disabled(
 def test_lcm_grep_tool_absent_when_no_conversation_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", True)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -62,8 +62,8 @@ def test_lcm_grep_tool_absent_when_no_conversation_id(
 def test_describe_tools_present_when_lcm_enabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", True)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -77,8 +77,8 @@ def test_describe_tools_present_when_lcm_enabled(
 def test_describe_tools_absent_when_lcm_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", False)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -92,8 +92,8 @@ def test_describe_tools_absent_when_lcm_disabled(
 def test_expand_query_tool_present_when_user_id_provided(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", True)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -109,8 +109,8 @@ def test_expand_query_tool_present_when_user_id_provided(
 def test_expand_query_tool_absent_without_user_id(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", True)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
@@ -128,8 +128,8 @@ def test_expand_query_tool_absent_without_user_id(
 def test_expand_query_tool_absent_when_lcm_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from app.core.agent_tools import build_agent_tools
     from app.core import config as _cfg
+    from app.core.agent_tools import build_agent_tools
 
     monkeypatch.setattr(_cfg.settings, "lcm_enabled", False)
     monkeypatch.setattr(_cfg.settings, "exa_api_key", None)
