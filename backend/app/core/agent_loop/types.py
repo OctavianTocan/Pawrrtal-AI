@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
 # ---------------------------------------------------------------------------
 # Content blocks (inside messages)
@@ -56,14 +56,25 @@ class UserMessage(TypedDict):
 
 
 class AssistantMessage(TypedDict):
-    """One assistant turn (text + optional tool calls) with its stop reason."""
+    """One assistant turn (text + optional tool calls) with its stop reason.
+
+    ``provider_state`` is an opaque, optional slot for provider-native
+    replay metadata.  The loop never inspects its contents — providers
+    own the keyspace.  Gemini stores its ``ModelContent`` here so
+    follow-up turns can replay ``thought_signature`` bytes that Vertex
+    rejects without; see
+    https://ai.google.dev/gemini-api/docs/thought-signatures.
+
+    Note: ``role``, ``content`` and ``stop_reason`` are mandatory; only
+    ``provider_state`` is marked ``NotRequired`` so the discriminant
+    fields keep TypeChecker-driven narrowing in ``_consume_llm_event``
+    and ``_build_gemini_contents``.
+    """
 
     role: Literal["assistant"]
     content: list[TextContent | ToolCallContent]
     stop_reason: str  # "stop" | "tool_use" | "error" | "aborted"
-    # TODO(pawrrtal-55sw): Add an optional provider_state field for
-    # opaque native replay data. Gemini needs this for thought signatures:
-    # https://ai.google.dev/gemini-api/docs/thought-signatures
+    provider_state: NotRequired[dict[str, Any]]
 
 
 class ToolResultMessage(TypedDict):
@@ -115,14 +126,24 @@ class LLMToolCallEvent(TypedDict):
 
 
 class LLMDoneEvent(TypedDict):
-    """Terminal event yielded by a provider to flush the assembled assistant turn."""
+    """Terminal event yielded by a provider to flush the assembled assistant turn.
+
+    ``provider_state`` mirrors :class:`AssistantMessage.provider_state`:
+    StreamFn implementations can return provider-native replay state
+    here without exposing it to ``StreamEvent`` / Telegram / persistence.
+    The loop copies it onto the resulting :class:`AssistantMessage` so
+    the next turn's StreamFn can replay native content.
+
+    The discriminant ``type`` and the loop-consumed ``stop_reason`` /
+    ``content`` are mandatory; only ``provider_state`` is
+    ``NotRequired`` so the union discriminant in ``LLMEvent`` keeps
+    exhaustive narrowing.
+    """
 
     type: Literal["done"]
     stop_reason: str
     content: list[TextContent | ToolCallContent]
-    # TODO(pawrrtal-55sw): Mirror AssistantMessage.provider_state here so
-    # StreamFn implementations can return provider-native replay state
-    # without exposing it to StreamEvent/Telegram/persistence.
+    provider_state: NotRequired[dict[str, Any]]
 
 
 LLMEvent = LLMTextDeltaEvent | LLMThinkingDeltaEvent | LLMToolCallEvent | LLMDoneEvent

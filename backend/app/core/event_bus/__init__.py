@@ -25,6 +25,7 @@ the bus + agent handler split lives outside ``providers/``.
 """
 
 from app.core.event_bus.bus import Event, EventBus, EventHandler
+from app.core.event_bus.global_bus import publish_if_available
 from app.core.event_bus.handlers import AgentHandler, NotificationService
 from app.core.event_bus.types import (
     AgentResponseEvent,
@@ -45,4 +46,5 @@ __all__ = [
     "TurnCompletedEvent",
     "TurnStartedEvent",
     "WebhookEvent",
+    "publish_if_available",
 ]

@@ -272,6 +272,8 @@ def get_chat_router() -> APIRouter:
             user_id=user.id,
             send_fn=_web_send_fn,
             surface=surface,
+            conversation_id=request.conversation_id,
+            model_id=model_id,
         )
 
         def _artifact_hook(event: StreamEvent) -> list[StreamEvent]:

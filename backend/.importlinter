@@ -65,6 +65,18 @@ ignore_imports =
     app.core.governance.cost_tracker -> app.models
     app.core.scheduler.scheduler -> app.models
     app.core.event_bus.handlers -> app.crud.workspace
+    ; LCM (Stack B / PRs #186–#196) owns three ORM tables
+    ; (lcm_summaries, lcm_summary_sources, lcm_context_items) and must
+    ; read/write them directly to assemble context, compact leaves, and
+    ; condense same-depth summaries.  Same shape as the governance and
+    ; exporter grandfathers above — flatten in a follow-up (e.g. inject
+    ; a Protocol the caller satisfies, or move the side-effect into the
+    ; api/crud layer).
+    app.core.lcm -> app.models
+    app.core.lcm.condense -> app.models
+    app.core.tools.lcm_describe -> app.models
+    app.core.tools.lcm_grep -> app.models
+    app.core.tools.lcm_expand_query -> app.models
 
 ; --- Contract 2: the legacy db ↔ models cycle is the one cycle sentrux
 ; allows (max_cycles = 1). Pin it explicitly so any *new* cycle fails CI. -

@@ -9,6 +9,10 @@ SigNoz, Tempo, etc.) — Workshop is just the local renderer.
 .. _Raindrop Workshop: https://github.com/raindrop-ai/workshop
 """
 
+from app.core.observability._turn_view import (
+    aggregator_stop_reason,
+    build_llm_view_messages,
+)
 from app.core.observability.workshop import (
     LLMSpanRecorder,
     ToolSpanRecorder,
@@ -21,6 +25,8 @@ from app.core.observability.workshop import (
 __all__ = [
     "LLMSpanRecorder",
     "ToolSpanRecorder",
+    "aggregator_stop_reason",
+    "build_llm_view_messages",
     "llm_span",
     "tool_span",
     "turn_span",

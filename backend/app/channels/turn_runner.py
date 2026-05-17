@@ -14,25 +14,21 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.channels._turn_cost import record_turn_cost_if_enabled
 from app.core.chat_aggregator import ChatTurnAggregator, should_emit_event
 from app.core.config import settings
-from app.core.event_bus import TurnCompletedEvent
-from app.core.event_bus.global_bus import publish_if_available
-from app.core.governance.cost_tracker import (
-    PostgresCostLedger,
-    record_turn_cost,
-)
+from app.core.event_bus import TurnCompletedEvent, publish_if_available
 from app.core.governance.workspace_context import load_workspace_context
-from app.core.observability._turn_view import (
+from app.core.lcm import assemble_context as lcm_assemble_context
+from app.core.lcm import ingest_message as lcm_ingest_message
+from app.core.lcm.background import schedule_lcm_compaction
+from app.core.observability import (
     aggregator_stop_reason,
     build_llm_view_messages,
-)
-from app.core.observability.workshop import (
     llm_span,
     turn_span,
     workshop_event_hook,
 )
-from app.core.providers.model_id import parse_model_id
 from app.core.tools.agents_md import assemble_workspace_prompt
 from app.crud.chat_message import (
     append_assistant_placeholder,
@@ -302,19 +298,35 @@ def _should_deliver_event(event: StreamEvent, verbose_level: int | None) -> bool
 async def _load_history_and_persist(
     turn_input: ChatTurnInput,
 ) -> tuple[list[dict[str, str]], uuid.UUID]:
-    """Read recent history, then persist the current user turn and placeholder."""
+    """Read recent history, then persist the current user turn and placeholder.
+
+    When ``settings.lcm_enabled`` is ``True``, the history slice is
+    assembled from the LCM context list (``lcm_context_items``) so that
+    compacted summaries are visible to the provider, and both the user
+    turn and assistant placeholder are ingested into the LCM context
+    list before the stream starts.  When LCM is off the behaviour is
+    unchanged — a raw ``LIMIT history_window`` query over
+    ``chat_messages``.
+    """
     async with _turn_session(turn_input) as session:
-        recent_rows = await get_messages_for_conversation(
-            session,
-            turn_input.conversation_id,
-            limit=turn_input.history_window,
-        )
-        history = [
-            {"role": row.role, "content": row.content or ""}
-            for row in recent_rows
-            if row.role in {"user", "assistant"}
-        ]
-        await append_user_message(
+        if settings.lcm_enabled:
+            history = await lcm_assemble_context(
+                session,
+                conversation_id=turn_input.conversation_id,
+                fresh_tail_count=settings.lcm_fresh_tail_count,
+            )
+        else:
+            recent_rows = await get_messages_for_conversation(
+                session,
+                turn_input.conversation_id,
+                limit=turn_input.history_window,
+            )
+            history = [
+                {"role": row.role, "content": row.content or ""}
+                for row in recent_rows
+                if row.role in {"user", "assistant"}
+            ]
+        user_msg = await append_user_message(
             session,
             conversation_id=turn_input.conversation_id,
             user_id=turn_input.user_id,
@@ -325,6 +337,17 @@ async def _load_history_and_persist(
             conversation_id=turn_input.conversation_id,
             user_id=turn_input.user_id,
         )
+        if settings.lcm_enabled:
+            await lcm_ingest_message(
+                session,
+                conversation_id=turn_input.conversation_id,
+                message_id=user_msg.id,
+            )
+            await lcm_ingest_message(
+                session,
+                conversation_id=turn_input.conversation_id,
+                message_id=assistant_row.id,
+            )
         await session.commit()
         return history, assistant_row.id
 
@@ -381,10 +404,17 @@ async def _finalize_turn(
             # persist so a failed commit leaves no orphaned ledger row.
             # Runs for every surface (web + Telegram) so the per-user
             # cap applies uniformly.
-            await _record_turn_cost(
+            channel_message = turn_input.channel_message
+            cost_model_id = (channel_message.get("model_id") or "") if channel_message else ""
+            cost_surface = (channel_message.get("surface") or "") if channel_message else ""
+            await record_turn_cost_if_enabled(
                 session=session,
-                turn_input=turn_input,
                 aggregator=aggregator,
+                user_id=turn_input.user_id,
+                conversation_id=turn_input.conversation_id,
+                model_id=cost_model_id,
+                surface=cost_surface,
+                log_tag=turn_input.log_tag,
             )
             await session.commit()
     except Exception:
@@ -429,56 +459,12 @@ async def _finalize_turn(
             source=turn_input.log_tag.lower(),
         )
     )
-
-
-async def _record_turn_cost(
-    *,
-    session: AsyncSession,
-    turn_input: ChatTurnInput,
-    aggregator: ChatTurnAggregator,
-) -> None:
-    """Append the turn's spend to ``cost_ledger`` (PR 04).
-
-    No-op when cost tracking is disabled or the aggregator saw zero
-    usage events (early failures, errors before the terminal turn).
-    Catches and logs DB errors so a ledger write failure never leaves
-    the assistant row unpersisted — the caller commits in the same
-    transaction.
-    """
-    if not settings.cost_tracker_enabled:
-        return
-    if (
-        aggregator.total_input_tokens <= 0
-        and aggregator.total_output_tokens <= 0
-        and aggregator.total_cost_usd <= 0
-    ):
-        return
-    model_id = (
-        (turn_input.channel_message.get("model_id") or "") if turn_input.channel_message else ""
+    # Fire-and-forget LCM leaf compaction.  Runs after the assistant row is
+    # finalized so the just-completed turn is eligible for compaction.
+    # The helper handles the ``settings.lcm_enabled`` gate, task-strong-ref
+    # bookkeeping, and exception suppression in one place.
+    schedule_lcm_compaction(
+        conversation_id=turn_input.conversation_id,
+        user_id=turn_input.user_id,
+        model_id=model_id or "",
     )
-    surface = (
-        (turn_input.channel_message.get("surface") or "") if turn_input.channel_message else ""
-    )
-    try:
-        provider_slug = parse_model_id(model_id).host.value if model_id else "unknown"
-    except Exception:
-        provider_slug = "unknown"
-    ledger = PostgresCostLedger(session=session)
-    try:
-        await record_turn_cost(
-            ledger,
-            user_id=turn_input.user_id,
-            conversation_id=turn_input.conversation_id,
-            provider=provider_slug,
-            model_id=model_id,
-            input_tokens=aggregator.total_input_tokens,
-            output_tokens=aggregator.total_output_tokens,
-            cost_usd=aggregator.total_cost_usd,
-            surface=surface,
-        )
-    except Exception:
-        logger.exception(
-            "%s_COST_LEDGER_ERR conversation_id=%s",
-            turn_input.log_tag,
-            turn_input.conversation_id,
-        )
