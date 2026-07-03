@@ -16,16 +16,6 @@ export const Ids = {
   user: Uuid.annotate({
     identifier: 'UserId',
     description: 'The ID of the user.'
-  }),
-  /** Conversation ID schema. */
-  conversation: Uuid.annotate({
-    identifier: 'ConversationId',
-    description: 'The ID of the conversation.'
-  }),
-  /** Chat message ID schema. */
-  chatMessage: Uuid.annotate({
-    identifier: 'ChatMessageId',
-    description: 'The ID of the chat message.'
   })
 } as const;
 
@@ -33,7 +23,3 @@ export const Ids = {
 export type ProjectId = Schema.Schema.Type<typeof Ids.project>;
 /** User ID. */
 export type UserId = Schema.Schema.Type<typeof Ids.user>;
-/** Conversation ID. */
-export type ConversationId = Schema.Schema.Type<typeof Ids.conversation>;
-/** Chat message ID. */
-export type ChatMessageId = Schema.Schema.Type<typeof Ids.chatMessage>;

@@ -7,7 +7,8 @@ describe('completions command', (): void => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('_paw_doctor');
-    expect(result.stdout).toContain('doctor context completions');
+    expect(result.stdout).toContain('providers');
+    expect(result.stdout).toContain('sessions');
   });
 
   it('generates zsh completions for the supported commands', async (): Promise<void> => {

@@ -39,8 +39,12 @@
     "frontend/lib/react-dropdown",
     "frontend/lib/react-overlay",
     "frontend/lib/react-chat-composer",
+    "backend-ts/packages/domain-core",
     "backend-ts/packages/api-core",
+    "backend-ts/packages/rpc-core",
+    "backend-ts/packages/harness",
     "backend-ts/apps/api",
+    "backend-ts/apps/rpc",
     "packages/ci/skill-gen",
     "packages/paw-cli"
   ],

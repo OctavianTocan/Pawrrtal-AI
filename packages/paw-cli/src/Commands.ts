@@ -6,6 +6,8 @@ import type { UsageError } from './Helpers/Errors';
 import { failUsage } from './Helpers/Errors';
 import { COMPLETIONS_METADATA, makeCompletionsCommand } from './Modules/Completions/Command';
 import { ContextCommand } from './Modules/Context/Command';
+import { ProvidersCommand } from './Modules/Agent/ProvidersCommand';
+import { SessionsCommand } from './Modules/Agent/SessionsCommand';
 import { DoctorCommand } from './Modules/Doctor/Command';
 
 export type RegisteredCommandModule = {
@@ -18,7 +20,7 @@ export type CommandRegistry = {
   readonly rootMetadata: ReturnType<typeof makeRootMetadata>;
 };
 
-type RuntimeCommandModule = typeof DoctorCommand | typeof ContextCommand;
+type RuntimeCommandModule = typeof DoctorCommand | typeof ContextCommand | typeof ProvidersCommand | typeof SessionsCommand;
 export type RuntimeCommandRegistry = {
   readonly modules: ReadonlyArray<RuntimeCommandModule | ReturnType<typeof makeCompletionsCommand>>;
   readonly rootMetadata: ReturnType<typeof makeRootMetadata>;
@@ -31,7 +33,9 @@ type CommandRegistryLike = {
   readonly rootMetadata: CommandMetadata;
 };
 
-const BASE_COMMANDS = [DoctorCommand, ContextCommand] as const satisfies ReadonlyArray<RuntimeCommandModule>;
+const BASE_COMMANDS = [DoctorCommand, ContextCommand, ProvidersCommand, SessionsCommand] as const satisfies ReadonlyArray<
+  RuntimeCommandModule
+>;
 
 /** Default command registry used by the Bun entrypoint. */
 export const DefaultCommandRegistry = makeRuntimeCommandRegistry(BASE_COMMANDS);

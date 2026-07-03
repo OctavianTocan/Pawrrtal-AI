@@ -6,18 +6,29 @@ How we lay out Effect TS backend. One section per file role. More sections later
 
 | Package | Path | Job |
 |---------|------|-----|
-| Contract | `packages/api-core/` | Schemas, routes, errors. No DB. No server boot. |
-| Runtime | `apps/api/` | Handlers, services, repos, auth, `Main.ts` |
+| Domain contracts | `packages/domain-core/` | Transport-neutral schemas, branded ids, and tagged public errors. No HTTP, RPC, DB, or provider runtime. |
+| HTTP/OpenAPI contracts | `packages/api-core/` | `HttpApi` groups, endpoint declarations, OpenAPI annotations, and root API composition. |
+| RPC contracts | `packages/rpc-core/` | Effect RPC protocol declarations. Imports shared shapes from `domain-core`, never from `api-core`. |
+| Provider harness | `packages/harness/` | Provider adapter contract, registry, normalized streams, conformance, cancellation, and continuation behavior. |
+| HTTP runtime | `apps/api/` | HTTP handlers, services, repos, auth, app layers, and `Main.ts`. |
+| RPC runtime | `apps/rpc/` | RPC handlers and runtime layer composition. |
 
 Shape like `backend/vendor/comcom`. Effect v4 from `backend/vendor/effect-smol` (`ai-docs/`). Not comcom v3 `@effect/platform` imports.
 
+For 006 and newer work, `api-core` means HTTP/OpenAPI only. Put shared
+schema/error values in `domain-core`, provider execution behavior in `harness`,
+and RPC declarations in `rpc-core`.
+
 ---
 
-## `Domain.ts` (api-core)
+## `Domain.ts` (domain-core)
 
 **Job**
 
-Data shapes for one feature: IDs, response entities, create/update bodies. All Effect `Schema`. Same types in `Api.ts`, handlers, services. JSON validate + OpenAPI + typecheck.
+Data shapes for one feature: IDs, response entities, create/update bodies,
+capability manifests, normalized events, and public errors. All values are
+Effect `Schema`. The same schemas are imported by `Api.ts`, RPC protocols,
+handlers, services, harness adapters, CLI consumers, and tests.
 
 **Why "domain"**
 
@@ -26,10 +37,11 @@ DDD name. Business *what data looks like* — not HTTP, not SQL, not workflow. E
 **Path**
 
 ```text
-packages/api-core/src/Modules/<Feature>/Domain.ts
+packages/domain-core/src/Modules/<Feature>/Domain.ts
 ```
 
-e.g. `Modules/Projects/Domain.ts` = conversation folders (`/api/v1/projects` in Python).
+Existing legacy modules may still live in `api-core`, but new provider-session
+work uses `domain-core`.
 
 **Put here**
 
@@ -41,11 +53,12 @@ e.g. `Modules/Projects/Domain.ts` = conversation folders (`/api/v1/projects` in 
 | Update body | PATCH payload | `ProjectUpdate` |
 | Enums | Fixed values | `SessionStatus` |
 
-`Schema.Class` for objects. `.annotations({ description: "..." })` on fields when OpenAPI needs docs (comcom style).
+`Schema.Class` for objects. Use `.annotate({ description: "..." })` on fields
+and top-level schemas when OpenAPI, RPC, generated docs, or agents need docs.
 
 **Not here**
 
-- HTTP method/path/status -> `Api.ts`
+- HTTP method/path/status -> `Api.ts` in `api-core`
 - `ProjectNotFoundError` etc -> `Errors.ts`
 - SQL -> `Repo.ts` (`apps/api`)
 - Auth -> `Policy.ts` (`apps/api`)
@@ -58,7 +71,7 @@ Errors.ts  -> fail modes (404, 409)
 Api.ts     -> WHERE on wire (GET /, POST /, :id)
 ```
 
-`Api.ts` pulls types:
+`Api.ts` pulls shared types:
 
 ```typescript
 .addSuccess(Project)
@@ -67,9 +80,10 @@ Api.ts     -> WHERE on wire (GET /, POST /, :id)
 
 `Service.ts` / `Repo.ts` import same types for row -> response mapping.
 
-**Python**
+**006 session engine**
 
-Same as Pydantic in `backend/app/schemas.py` (`ProjectRead`, `ProjectCreate`, `ProjectUpdate`). Strangler: mirror fields in `Domain.ts` first, then `Api.ts`.
+Use `Sessions`, `AgentProviders`, and `AgentTurns`; do not add new provider
+execution behavior to the old backend-ts `Conversations` practice module.
 
 ---
 

@@ -12,14 +12,14 @@
 
 **Purpose**: Align the backend-ts toolchain and create the package/app boundaries required by the plan.
 
-- [ ] T001 Align backend-ts to TypeScript 6 and the latest compatible Effect v4 beta, including `@anthropic-ai/claude-agent-sdk`, in `backend-ts/package.json`
-- [ ] T002 Refresh the backend-ts dependency lock after package alignment in `backend-ts/bun.lock`
-- [ ] T003 [P] Create the shared domain package boundary in `backend-ts/packages/domain-core/package.json` and `backend-ts/packages/domain-core/tsconfig.json`
-- [ ] T004 [P] Create the Effect RPC contract package boundary in `backend-ts/packages/rpc-core/package.json` and `backend-ts/packages/rpc-core/tsconfig.json`
-- [ ] T005 [P] Create the provider harness package boundary in `backend-ts/packages/harness/package.json` and `backend-ts/packages/harness/tsconfig.json`
-- [ ] T006 [P] Create the RPC app boundary in `backend-ts/apps/rpc/package.json` and `backend-ts/apps/rpc/tsconfig.json`
-- [ ] T007 Add new workspace dependencies to the HTTP app and HTTP contract packages in `backend-ts/apps/api/package.json` and `backend-ts/packages/api-core/package.json`
-- [ ] T008 Tighten backend-ts TypeScript/Vitest wiring for the new packages in `backend-ts/tsconfig.base.json`, `backend-ts/vitest.config.ts`, and `backend-ts/vitest.shared.ts`
+- [X] T001 Align backend-ts to TypeScript 6 and the latest compatible Effect v4 beta, including `@anthropic-ai/claude-agent-sdk`, in `backend-ts/package.json`
+- [X] T002 Refresh the backend-ts dependency lock after package alignment in `backend-ts/bun.lock`
+- [X] T003 [P] Create the shared domain package boundary in `backend-ts/packages/domain-core/package.json` and `backend-ts/packages/domain-core/tsconfig.json`
+- [X] T004 [P] Create the Effect RPC contract package boundary in `backend-ts/packages/rpc-core/package.json` and `backend-ts/packages/rpc-core/tsconfig.json`
+- [X] T005 [P] Create the provider harness package boundary in `backend-ts/packages/harness/package.json` and `backend-ts/packages/harness/tsconfig.json`
+- [X] T006 [P] Create the RPC app boundary in `backend-ts/apps/rpc/package.json` and `backend-ts/apps/rpc/tsconfig.json`
+- [X] T007 Add new workspace dependencies to the HTTP app and HTTP contract packages in `backend-ts/apps/api/package.json` and `backend-ts/packages/api-core/package.json`
+- [X] T008 Tighten backend-ts TypeScript/Vitest wiring for the new packages in `backend-ts/tsconfig.base.json`, `backend-ts/vitest.config.ts`, and `backend-ts/vitest.shared.ts`
 
 ---
 
@@ -29,13 +29,13 @@
 
 **Critical**: No user story work should begin until this phase is complete.
 
-- [ ] T009 [P] Define shared branded ids and TypeIds for sessions, turns, providers, provider sessions, workspaces, and events in `backend-ts/packages/domain-core/src/Lib/TypeIds.ts`
-- [ ] T010 [P] Define public Session schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/Sessions/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/Sessions/Errors.ts`
-- [ ] T011 [P] Define public AgentProvider schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/AgentProviders/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/AgentProviders/Errors.ts`
-- [ ] T012 [P] Define public AgentTurn, ProviderSession, normalized event, and capability-boundary schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/AgentTurns/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/AgentTurns/Errors.ts`
-- [ ] T013 [P] Export the domain-core public modules from `backend-ts/packages/domain-core/src/index.ts`
-- [ ] T014 [P] Add schema annotation and docstring coverage for public domain values in `backend-ts/packages/domain-core/test/SchemaAnnotations.test.ts`
-- [ ] T015 Add dependency-boundary tests for `domain-core`, `api-core`, `rpc-core`, `harness`, `apps/api`, and `apps/rpc` in `backend-ts/apps/api/test/unit/Boundaries/PackageBoundaries.test.ts`
+- [X] T009 [P] Define shared branded ids and TypeIds for sessions, turns, providers, provider sessions, workspaces, and events in `backend-ts/packages/domain-core/src/Lib/TypeIds.ts`
+- [X] T010 [P] Define public Session schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/Sessions/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/Sessions/Errors.ts`
+- [X] T011 [P] Define public AgentProvider schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/AgentProviders/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/AgentProviders/Errors.ts`
+- [X] T012 [P] Define public AgentTurn, ProviderSession, normalized event, and capability-boundary schemas and tagged errors in `backend-ts/packages/domain-core/src/Modules/AgentTurns/Domain.ts` and `backend-ts/packages/domain-core/src/Modules/AgentTurns/Errors.ts`
+- [X] T013 [P] Export the domain-core public modules from `backend-ts/packages/domain-core/src/index.ts`
+- [X] T014 [P] Add schema annotation and docstring coverage for public domain values in `backend-ts/packages/domain-core/test/SchemaAnnotations.test.ts`
+- [X] T015 Add dependency-boundary tests for `domain-core`, `api-core`, `rpc-core`, `harness`, `apps/api`, and `apps/rpc` in `backend-ts/apps/api/test/unit/Boundaries/PackageBoundaries.test.ts`
 
 **Checkpoint**: Shared schemas/errors and package boundaries are ready; story implementation can now begin.
 
@@ -49,31 +49,31 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add base provider conformance tests for manifest decode, simple turn, and deterministic provider success in `backend-ts/packages/harness/test/ProviderConformance.test.ts`
-- [ ] T017 [P] [US1] Add normalized event mapping tests for the canonical event taxonomy in `backend-ts/packages/harness/test/EventNormalization.test.ts`
-- [ ] T018 [P] [US1] Add provider HTTP contract tests for list, get, and conformance reads in `backend-ts/apps/api/test/unit/Modules/AgentProviders/Http.test.ts`
-- [ ] T019 [P] [US1] Add session and turn HTTP contract tests for create, send, events, and normalized output in `backend-ts/apps/api/test/unit/Modules/AgentTurns/Http.test.ts`
-- [ ] T020 [P] [US1] Add `paw providers` and `paw sessions send/events` integration tests against the deterministic provider in `packages/paw-cli/test/integration/agent-session-engine.test.ts`
+- [X] T016 [P] [US1] Add base provider conformance tests for manifest decode, simple turn, and deterministic provider success in `backend-ts/packages/harness/test/ProviderConformance.test.ts`
+- [X] T017 [P] [US1] Add normalized event mapping tests for the canonical event taxonomy in `backend-ts/packages/harness/test/EventNormalization.test.ts`
+- [X] T018 [P] [US1] Add provider HTTP contract tests for list, get, and conformance reads in `backend-ts/apps/api/test/unit/Modules/AgentProviders/Http.test.ts`
+- [X] T019 [P] [US1] Add session and turn HTTP contract tests for create, send, events, and normalized output in `backend-ts/apps/api/test/unit/Modules/AgentTurns/Http.test.ts`
+- [X] T020 [P] [US1] Add `paw providers` and `paw sessions send/events` integration tests against the deterministic provider in `packages/paw-cli/test/integration/agent-session-engine.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Implement the provider and query service contracts in `backend-ts/packages/harness/src/Provider/Contract.ts` and `backend-ts/packages/harness/src/Provider/Service.ts`
-- [ ] T022 [US1] Implement provider-private decoded payload schemas and Effect tagged provider errors in `backend-ts/packages/harness/src/Provider/InternalDomain.ts` and `backend-ts/packages/harness/src/Provider/Errors.ts`
-- [ ] T023 [US1] Implement the first selectable deterministic provider success path in `backend-ts/packages/harness/src/Providers/Deterministic.ts`
-- [ ] T024 [US1] Implement the initial Claude Agent SDK adapter and normalized event mapping in `backend-ts/packages/harness/src/Providers/ClaudeAgentSdk.ts`
-- [ ] T025 [US1] Implement the provider registry and Effect Config decoding for provider setup in `backend-ts/packages/harness/src/Provider/Registry.ts` and `backend-ts/packages/harness/src/Provider/Config.ts`
-- [ ] T026 [US1] Add HTTP/OpenAPI-only contract groups for sessions, providers, and turns in `backend-ts/packages/api-core/src/Modules/Sessions/Api.ts`, `backend-ts/packages/api-core/src/Modules/AgentProviders/Api.ts`, and `backend-ts/packages/api-core/src/Modules/AgentTurns/Api.ts`
-- [ ] T027 [US1] Register the new HTTP groups and exports in `backend-ts/packages/api-core/src/Api.ts` and `backend-ts/packages/api-core/src/index.ts`
-- [ ] T028 [US1] Implement session repository and business service behavior in `backend-ts/apps/api/src/Modules/Sessions/Repo.ts` and `backend-ts/apps/api/src/Modules/Sessions/Service.ts`
-- [ ] T029 [US1] Implement provider registry composition and readiness service behavior in `backend-ts/apps/api/src/Modules/AgentProviders/Registry.ts` and `backend-ts/apps/api/src/Modules/AgentProviders/Service.ts`
-- [ ] T030 [US1] Implement turn, provider-session, and event repository/service behavior in `backend-ts/apps/api/src/Modules/AgentTurns/Repo.ts` and `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
-- [ ] T031 [US1] Implement HTTP handlers for sessions, providers, and turns in `backend-ts/apps/api/src/Modules/Sessions/Http.ts`, `backend-ts/apps/api/src/Modules/AgentProviders/Http.ts`, and `backend-ts/apps/api/src/Modules/AgentTurns/Http.ts`
-- [ ] T032 [US1] Define Effect RPC protocols for provider and turn operations in `backend-ts/packages/rpc-core/src/Modules/AgentProviders/RpcProtocol.ts` and `backend-ts/packages/rpc-core/src/Modules/AgentTurns/RpcProtocol.ts`
-- [ ] T033 [US1] Implement RPC handlers for provider and turn operations in `backend-ts/apps/rpc/src/Modules/AgentProviders/Rpc.ts` and `backend-ts/apps/rpc/src/Modules/AgentTurns/Rpc.ts`
-- [ ] T034 [US1] Add the `paw` HTTP/RPC client helper for agent-session commands in `packages/paw-cli/src/Modules/Agent/ApiClient.ts`
-- [ ] T035 [US1] Implement `paw providers list` and register it in `packages/paw-cli/src/Modules/Agent/ProvidersCommand.ts` and `packages/paw-cli/src/Commands.ts`
-- [ ] T036 [US1] Implement `paw sessions send` and `paw sessions events` and register them in `packages/paw-cli/src/Modules/Agent/SessionsCommand.ts` and `packages/paw-cli/src/Commands.ts`
-- [ ] T037 [US1] Remove or replace the practice Conversations module from the active Sessions path in `backend-ts/packages/api-core/src/Modules/Conversations/`, `backend-ts/apps/api/src/Modules/Conversations/`, and `backend-ts/apps/api/test/unit/Modules/Conversations/`
+- [X] T021 [US1] Implement the provider and query service contracts in `backend-ts/packages/harness/src/Provider/Contract.ts` and `backend-ts/packages/harness/src/Provider/Service.ts`
+- [X] T022 [US1] Implement provider-private decoded payload schemas and Effect tagged provider errors in `backend-ts/packages/harness/src/Provider/InternalDomain.ts` and `backend-ts/packages/harness/src/Provider/Errors.ts`
+- [X] T023 [US1] Implement the first selectable deterministic provider success path in `backend-ts/packages/harness/src/Providers/Deterministic.ts`
+- [X] T024 [US1] Implement the initial Claude Agent SDK adapter and normalized event mapping in `backend-ts/packages/harness/src/Providers/ClaudeAgentSdk.ts`
+- [X] T025 [US1] Implement the provider registry and Effect Config decoding for provider setup in `backend-ts/packages/harness/src/Provider/Registry.ts` and `backend-ts/packages/harness/src/Provider/Config.ts`
+- [X] T026 [US1] Add HTTP/OpenAPI-only contract groups for sessions, providers, and turns in `backend-ts/packages/api-core/src/Modules/Sessions/Api.ts`, `backend-ts/packages/api-core/src/Modules/AgentProviders/Api.ts`, and `backend-ts/packages/api-core/src/Modules/AgentTurns/Api.ts`
+- [X] T027 [US1] Register the new HTTP groups and exports in `backend-ts/packages/api-core/src/Api.ts` and `backend-ts/packages/api-core/src/index.ts`
+- [X] T028 [US1] Implement session repository and business service behavior in `backend-ts/apps/api/src/Modules/Sessions/Repo.ts` and `backend-ts/apps/api/src/Modules/Sessions/Service.ts`
+- [X] T029 [US1] Implement provider registry composition and readiness service behavior in `backend-ts/apps/api/src/Modules/AgentProviders/Registry.ts` and `backend-ts/apps/api/src/Modules/AgentProviders/Service.ts`
+- [X] T030 [US1] Implement turn, provider-session, and event repository/service behavior in `backend-ts/apps/api/src/Modules/AgentTurns/Repo.ts` and `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
+- [X] T031 [US1] Implement HTTP handlers for sessions, providers, and turns in `backend-ts/apps/api/src/Modules/Sessions/Http.ts`, `backend-ts/apps/api/src/Modules/AgentProviders/Http.ts`, and `backend-ts/apps/api/src/Modules/AgentTurns/Http.ts`
+- [X] T032 [US1] Define Effect RPC protocols for provider and turn operations in `backend-ts/packages/rpc-core/src/Modules/AgentProviders/RpcProtocol.ts` and `backend-ts/packages/rpc-core/src/Modules/AgentTurns/RpcProtocol.ts`
+- [X] T033 [US1] Implement RPC handlers for provider and turn operations in `backend-ts/apps/rpc/src/Modules/AgentProviders/Rpc.ts` and `backend-ts/apps/rpc/src/Modules/AgentTurns/Rpc.ts`
+- [X] T034 [US1] Add the `paw` HTTP/RPC client helper for agent-session commands in `packages/paw-cli/src/Modules/Agent/ApiClient.ts`
+- [X] T035 [US1] Implement `paw providers list` and register it in `packages/paw-cli/src/Modules/Agent/ProvidersCommand.ts` and `packages/paw-cli/src/Commands.ts`
+- [X] T036 [US1] Implement `paw sessions send` and `paw sessions events` and register them in `packages/paw-cli/src/Modules/Agent/SessionsCommand.ts` and `packages/paw-cli/src/Commands.ts`
+- [X] T037 [US1] Remove or replace the practice Conversations module from the active Sessions path in `backend-ts/packages/api-core/src/Modules/Conversations/`, `backend-ts/apps/api/src/Modules/Conversations/`, and `backend-ts/apps/api/test/unit/Modules/Conversations/`
 
 **Checkpoint**: US1 is functional through backend HTTP/RPC and `paw`, with deterministic provider proof and Claude smoke when available.
 
@@ -87,17 +87,17 @@
 
 ### Tests for User Story 2
 
-- [ ] T038 [P] [US2] Add active-query, follow-up ordering, and admin-interruption tests in `backend-ts/packages/harness/test/SessionRunner.test.ts`
-- [ ] T039 [P] [US2] Add pending/running restart recovery and stale-state tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/Recovery.test.ts`
-- [ ] T040 [P] [US2] Add `paw sessions events --follow` and `paw sessions cancel-turn` integration tests in `packages/paw-cli/test/integration/agent-turn-controls.test.ts`
+- [X] T038 [P] [US2] Add active-query, follow-up ordering, and admin-interruption tests in `backend-ts/packages/harness/test/SessionRunner.test.ts`
+- [X] T039 [P] [US2] Add pending/running restart recovery and stale-state tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/Recovery.test.ts`
+- [X] T040 [P] [US2] Add `paw sessions events --follow` and `paw sessions cancel-turn` integration tests in `packages/paw-cli/test/integration/agent-turn-controls.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T041 [US2] Implement the NanoClaw-style active provider query loop in `backend-ts/packages/harness/src/Runtime/SessionRunner.ts`
-- [ ] T042 [US2] Implement ordinary follow-up and runner/admin command queue semantics in `backend-ts/packages/harness/src/Runtime/TurnInputQueue.ts`
-- [ ] T043 [US2] Implement provider cancellation and terminal-output suppression rules in `backend-ts/packages/harness/src/Runtime/Cancellation.ts`
-- [ ] T044 [US2] Implement pending, running, waiting, failed, cancelled, complete, and stale recovery transitions in `backend-ts/apps/api/src/Modules/AgentTurns/Recovery.ts`
-- [ ] T045 [US2] Extend the `paw` sessions command group with follow, cancellation, and resulting-state output in `packages/paw-cli/src/Modules/Agent/SessionsCommand.ts`
+- [X] T041 [US2] Implement the NanoClaw-style active provider query loop in `backend-ts/packages/harness/src/Runtime/SessionRunner.ts`
+- [X] T042 [US2] Implement ordinary follow-up and runner/admin command queue semantics in `backend-ts/packages/harness/src/Runtime/TurnInputQueue.ts`
+- [X] T043 [US2] Implement provider cancellation and terminal-output suppression rules in `backend-ts/packages/harness/src/Runtime/Cancellation.ts`
+- [X] T044 [US2] Implement pending, running, waiting, failed, cancelled, complete, and stale recovery transitions in `backend-ts/apps/api/src/Modules/AgentTurns/Recovery.ts`
+- [X] T045 [US2] Extend the `paw` sessions command group with follow, cancellation, and resulting-state output in `packages/paw-cli/src/Modules/Agent/SessionsCommand.ts`
 
 **Checkpoint**: US2 can be tested without UI by using deterministic provider scripts and `paw`.
 
@@ -111,17 +111,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T046 [P] [US3] Add provider registry, manifest rejection, and conformance-status tests in `backend-ts/packages/harness/test/ProviderRegistry.test.ts`
-- [ ] T047 [P] [US3] Add provider switch and continuation ownership tests in `backend-ts/apps/api/test/unit/Modules/AgentProviders/ProviderSwitch.test.ts`
+- [X] T046 [P] [US3] Add provider registry, manifest rejection, and conformance-status tests in `backend-ts/packages/harness/test/ProviderRegistry.test.ts`
+- [X] T047 [P] [US3] Add provider switch and continuation ownership tests in `backend-ts/apps/api/test/unit/Modules/AgentProviders/ProviderSwitch.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T048 [US3] Implement the shared provider conformance runner in `backend-ts/packages/harness/src/Provider/Conformance.ts`
-- [ ] T049 [US3] Enforce provider definition validation and contract rejection in `backend-ts/packages/harness/src/Provider/Registry.ts`
-- [ ] T050 [US3] Implement provider diagnostic redaction rules in `backend-ts/packages/harness/src/Provider/Diagnostics.ts`
-- [ ] T051 [US3] Implement provider selection, override, and provider-session ownership rules in `backend-ts/apps/api/src/Modules/AgentProviders/Service.ts`
-- [ ] T052 [US3] Expose provider conformance summaries through HTTP handlers in `backend-ts/packages/api-core/src/Modules/AgentProviders/Api.ts` and `backend-ts/apps/api/src/Modules/AgentProviders/Http.ts`
-- [ ] T053 [US3] Implement `paw providers doctor [provider]` using public diagnostics in `packages/paw-cli/src/Modules/Agent/ProvidersCommand.ts`
+- [X] T048 [US3] Implement the shared provider conformance runner in `backend-ts/packages/harness/src/Provider/Conformance.ts`
+- [X] T049 [US3] Enforce provider definition validation and contract rejection in `backend-ts/packages/harness/src/Provider/Registry.ts`
+- [X] T050 [US3] Implement provider diagnostic redaction rules in `backend-ts/packages/harness/src/Provider/Diagnostics.ts`
+- [X] T051 [US3] Implement provider selection, override, and provider-session ownership rules in `backend-ts/apps/api/src/Modules/AgentProviders/Service.ts`
+- [X] T052 [US3] Expose provider conformance summaries through HTTP handlers in `backend-ts/packages/api-core/src/Modules/AgentProviders/Api.ts` and `backend-ts/apps/api/src/Modules/AgentProviders/Http.ts`
+- [X] T053 [US3] Implement `paw providers doctor [provider]` using public diagnostics in `packages/paw-cli/src/Modules/Agent/ProvidersCommand.ts`
 
 **Checkpoint**: US3 proves the abstraction is not Claude-only and provider-native details stay behind the provider boundary.
 
@@ -135,14 +135,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T054 [P] [US4] Add capability policy tests for allowed, denied, unsupported, and provider-native capability attempts in `backend-ts/packages/harness/test/CapabilityPolicy.test.ts`
-- [ ] T055 [P] [US4] Add API-level capability denial and normalized event tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/CapabilityPolicy.test.ts`
+- [X] T054 [P] [US4] Add capability policy tests for allowed, denied, unsupported, and provider-native capability attempts in `backend-ts/packages/harness/test/CapabilityPolicy.test.ts`
+- [X] T055 [P] [US4] Add API-level capability denial and normalized event tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/CapabilityPolicy.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] Implement host-owned capability decision evaluation in `backend-ts/packages/harness/src/Provider/CapabilityPolicy.ts`
-- [ ] T057 [US4] Enforce capability boundary decisions before and during turns in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
-- [ ] T058 [US4] Add deterministic provider scripts for capability denial and unsupported behavior in `backend-ts/packages/harness/src/Providers/Deterministic.ts`
+- [X] T056 [US4] Implement host-owned capability decision evaluation in `backend-ts/packages/harness/src/Provider/CapabilityPolicy.ts`
+- [X] T057 [US4] Enforce capability boundary decisions before and during turns in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
+- [X] T058 [US4] Add deterministic provider scripts for capability denial and unsupported behavior in `backend-ts/packages/harness/src/Providers/Deterministic.ts`
 
 **Checkpoint**: US4 proves capability gaps are visible outcomes, not stalled provider work.
 
@@ -156,14 +156,14 @@
 
 ### Tests for User Story 5
 
-- [ ] T059 [P] [US5] Add history maintenance threshold and no-Workspace-snapshot tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/HistoryMaintenance.test.ts`
-- [ ] T060 [P] [US5] Add stale continuation rotation tests in `backend-ts/packages/harness/test/ContinuationRotation.test.ts`
+- [X] T059 [P] [US5] Add history maintenance threshold and no-Workspace-snapshot tests in `backend-ts/apps/api/test/unit/Modules/AgentTurns/HistoryMaintenance.test.ts`
+- [X] T060 [P] [US5] Add stale continuation rotation tests in `backend-ts/packages/harness/test/ContinuationRotation.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T061 [US5] Implement session history summary/archive maintenance in `backend-ts/apps/api/src/Modules/AgentTurns/HistoryMaintenance.ts`
-- [ ] T062 [US5] Implement provider-scoped continuation rotation decisions in `backend-ts/packages/harness/src/Provider/ContinuationRotation.ts`
-- [ ] T063 [US5] Surface reset, rotation, and stale-session diagnostics through turn state reads in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
+- [X] T061 [US5] Implement session history summary/archive maintenance in `backend-ts/apps/api/src/Modules/AgentTurns/HistoryMaintenance.ts`
+- [X] T062 [US5] Implement provider-scoped continuation rotation decisions in `backend-ts/packages/harness/src/Provider/ContinuationRotation.ts`
+- [X] T063 [US5] Surface reset, rotation, and stale-session diagnostics through turn state reads in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
 
 **Checkpoint**: US5 keeps long-lived session history usable while preserving the no Workspace snapshot rule.
 
@@ -177,14 +177,14 @@
 
 ### Tests for User Story 6
 
-- [ ] T064 [P] [US6] Add two-Workspace provider isolation tests in `backend-ts/packages/harness/test/WorkspaceIsolation.test.ts`
-- [ ] T065 [P] [US6] Add session workspace binding and diagnostics tests in `backend-ts/apps/api/test/unit/Modules/Sessions/WorkspaceBinding.test.ts`
+- [X] T064 [P] [US6] Add two-Workspace provider isolation tests in `backend-ts/packages/harness/test/WorkspaceIsolation.test.ts`
+- [X] T065 [P] [US6] Add session workspace binding and diagnostics tests in `backend-ts/apps/api/test/unit/Modules/Sessions/WorkspaceBinding.test.ts`
 
 ### Implementation for User Story 6
 
-- [ ] T066 [US6] Implement the Workspace materializer port for decoded turn-time context in `backend-ts/packages/harness/src/Workspace/Materializer.ts`
-- [ ] T067 [US6] Implement app-side Workspace materialization summaries in `backend-ts/apps/api/src/Modules/Workspaces/Materialization.ts`
-- [ ] T068 [US6] Wire selected Workspace identity and materialization-status diagnostics into turn reads in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
+- [X] T066 [US6] Implement the Workspace materializer port for decoded turn-time context in `backend-ts/packages/harness/src/Workspace/Materializer.ts`
+- [X] T067 [US6] Implement app-side Workspace materialization summaries in `backend-ts/apps/api/src/Modules/Workspaces/Materialization.ts`
+- [X] T068 [US6] Wire selected Workspace identity and materialization-status diagnostics into turn reads in `backend-ts/apps/api/src/Modules/AgentTurns/Service.ts`
 
 **Checkpoint**: US6 proves Workspace isolation without adding Workspace preview, Workspace diff, or full effective-context inspection.
 
@@ -194,12 +194,12 @@
 
 **Purpose**: Update project guidance and run the agreed gates.
 
-- [ ] T069 [P] Document the `domain-core`, `api-core`, `rpc-core`, `harness`, `apps/api`, and `apps/rpc` boundaries in `backend-ts/CONVENTIONS.md`
-- [ ] T070 [P] Update Effect/backend session guidance for future agents in `.agent/skills/domain-effect/SKILL.md`
-- [ ] T071 [P] Update CLI skill fragments for the new provider/session operator commands in `packages/paw-cli/src/Skills/Fragments.ts`
-- [ ] T072 Run backend-ts typecheck, Biome, and provider tests and record any gate notes in `specs/006-claude-agent-session-engine/quickstart.md`
-- [ ] T073 Run `paw` provider/session smoke commands and record any gate notes in `specs/006-claude-agent-session-engine/quickstart.md`
-- [ ] T074 Run the repo-level `just check` integration gate and record any known unrelated failures in `specs/006-claude-agent-session-engine/quickstart.md`
+- [X] T069 [P] Document the `domain-core`, `api-core`, `rpc-core`, `harness`, `apps/api`, and `apps/rpc` boundaries in `backend-ts/CONVENTIONS.md`
+- [X] T070 [P] Update Effect/backend session guidance for future agents in `.agent/skills/domain-effect/SKILL.md`
+- [X] T071 [P] Update CLI skill fragments for the new provider/session operator commands in `packages/paw-cli/src/Skills/Fragments.ts`
+- [X] T072 Run backend-ts typecheck, Biome, and provider tests and record any gate notes in `specs/006-claude-agent-session-engine/quickstart.md`
+- [X] T073 Run `paw` provider/session smoke commands and record any gate notes in `specs/006-claude-agent-session-engine/quickstart.md`
+- [X] T074 Run the repo-level `just check` integration gate and record any known unrelated failures in `specs/006-claude-agent-session-engine/quickstart.md`
 
 ---
 

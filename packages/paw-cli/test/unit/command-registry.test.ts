@@ -7,7 +7,7 @@ describe('command registry', (): void => {
   it('registers the built-in command surface plus completions', (): void => {
     const commandNames = DefaultCommandRegistry.modules.map((module) => module.metadata.name);
 
-    expect(commandNames).toEqual(['doctor', 'context', 'completions']);
+    expect(commandNames).toEqual(['doctor', 'context', 'providers', 'sessions', 'completions']);
   });
 
   it('registers a feature-owned fixture through the same metadata path', (): void => {

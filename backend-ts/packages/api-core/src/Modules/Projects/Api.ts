@@ -43,7 +43,7 @@ export class ProjectsApi extends HttpApiGroup.make('projects')
       error: ProjectNotFoundError
     })
       .annotate(OpenApi.Summary, 'Delete project')
-      .annotate(OpenApi.Description, 'Delete a project; linked conversations are unlinked, not deleted')
+      .annotate(OpenApi.Description, 'Delete a project; linked Sessions are left untouched')
   )
   .middleware(AllowedUserMiddlewareService)
   .middleware(AuthenticationMiddlewareService)

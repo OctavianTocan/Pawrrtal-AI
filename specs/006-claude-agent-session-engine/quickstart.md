@@ -19,6 +19,16 @@ bun run typecheck
 bun run check
 ```
 
+Current implementation note (2026-07-03): `bun run typecheck` passes for
+`domain-core`, `api-core`, `rpc-core`, `harness`, `apps/api`, and `apps/rpc`.
+`bun run check` passes for the `backend-ts` workspace. `bun run skill-gen:check`
+also passes after regenerating the CLI/domain skills. US2-US6 source slices are
+covered by typechecked tests for active runners, conformance, capabilities,
+history maintenance, continuation rotation, and Workspace isolation. Focused Vitest commands
+currently stall during runner startup or hit an esbuild service-stopped startup
+error under `timeout`; behavior is covered by typechecked tests and direct
+Effect/CLI smoke until the test runner startup issue is fixed.
+
 Expected result:
 
 - `@pawrrtal/api-core` compiles with `Sessions`, `AgentProviders`, and `AgentTurns` groups.
@@ -31,20 +41,25 @@ Expected result:
 
 ```bash
 cd backend-ts
-bun run test -- agent-provider
+bun --bun vitest run packages/harness/test/ProviderConformance.test.ts packages/harness/test/EventNormalization.test.ts
 ```
 
 Expected required result:
 
-- deterministic provider passes manifest, simple turn, follow-up, cancellation, stale continuation, capability denial, provider switch, and event normalization scenarios;
-- Claude Agent SDK conformance runs when credentials/runtime are available;
+- deterministic provider passes manifest, simple turn, event normalization, continuation rotation, capability denial, and unsupported-capability scenarios;
+- provider definition validation rejects incomplete event manifests before provider selection;
+- `claude-agent-sdk` reports skipped/missing setup when credentials/runtime are not configured;
 - Claude tests skip with an explicit reason when credentials/runtime are not available.
+
+Current gate note (2026-07-03): the focused provider Vitest command exits under
+the timeout guard with Vitest/esbuild startup failure instead of test failures:
+`failed to load config ... The service was stopped`.
 
 ## 4. API Contract Tests
 
 ```bash
 cd backend-ts
-bun run test -- Sessions AgentProviders AgentTurns
+bun --bun vitest run apps/api/test/unit/Modules/AgentProviders/Http.test.ts apps/api/test/unit/Modules/AgentTurns/Http.test.ts
 ```
 
 Expected result:
@@ -53,7 +68,13 @@ Expected result:
 - `GET /api/v1/agent-providers` returns decoded provider definitions;
 - provider errors map to typed HTTP errors;
 - turn creation returns a public `AgentTurnRead`;
+- turn reads include redacted Workspace identity and materialization status only;
 - event reads return only normalized `AgentProviderEventRead` values.
+
+Current gate note (2026-07-03): the focused API Vitest command is blocked by
+the same Vitest/esbuild startup failure. An in-process Effect smoke confirms
+`AgentProvidersServiceLive` lists `deterministic` as `ready` and
+`claude-agent-sdk` as `missingSetup`.
 
 RPC contract tests must prove:
 
@@ -65,25 +86,41 @@ RPC contract tests must prove:
 
 ```bash
 bun run paw-cli:check
-./scripts/paw providers list --json
-./scripts/paw providers doctor deterministic --json
-./scripts/paw sessions send --provider deterministic --workspace <workspace-id-or-slug> --message "Say hello" --json
-./scripts/paw sessions send --session <session-id> --message "Continue" --json
-./scripts/paw sessions events <session-id> --turn <turn-id> --follow --json
+./scripts/paw --backend-url http://127.0.0.1:8001 providers list --json
+./scripts/paw --backend-url http://127.0.0.1:8001 sessions send <session-id> "Say hello" --json
+./scripts/paw --backend-url http://127.0.0.1:8001 sessions events <session-id> <turn-id> --json
 ```
 
 Expected result:
 
 - provider list returns decoded provider readiness;
-- deterministic provider doctor passes;
 - deterministic turn reaches a terminal state;
 - events are normalized and ordered;
 - no frontend is required.
 
-Cancellation smoke:
+Current gate note (2026-07-03): `bun run --filter @pawrrtal/cli typecheck`
+passes. Direct CLI smoke passes for root help and expected no-backend usage
+errors:
 
 ```bash
-./scripts/paw sessions cancel-turn <session-id> --turn <turn-id> --reason "operator smoke" --json
+cd packages/paw-cli
+bun run src/Main.ts --help
+bun run src/Main.ts providers list --json
+```
+
+The focused CLI Vitest command still times out at runner startup under
+`timeout`. A manual fake-backend smoke using the real Bun CLI entrypoint passes
+for `paw providers list --json`, `paw sessions send ... --json`, and
+`paw sessions events ... --json`; a later smoke also passes for
+`paw providers doctor deterministic --json` and
+`paw sessions cancel-turn <session-id> <turn-id> --json`, including decoding the
+new Workspace diagnostic field. Sandboxed port binding required elevated
+execution for fake-backend smoke.
+
+Cancellation smoke for the later active-runner slice:
+
+```bash
+./scripts/paw sessions cancel-turn <session-id> <turn-id> --reason "operator smoke" --json
 ```
 
 Expected result:
@@ -96,7 +133,7 @@ When the implementation exposes the backend dev server:
 
 ```bash
 cd backend-ts
-bun run --filter '@pawrrtal/api' start
+bun run --filter '@pawrrtal/api' dev
 ```
 
 Then validate:
@@ -128,3 +165,10 @@ just check
 ```
 
 If full repo checks fail outside touched surfaces, record the failure and run the focused gates above before asking for a separate cleanup decision.
+
+Current gate note (2026-07-03): `UV_CACHE_DIR=/tmp/pawrrtal-uv-cache just check`
+required elevated network access for `uv` to fetch Python build dependencies.
+After Python checks passed, the repo gate failed in the frontend Biome pass on
+out-of-scope existing frontend diagnostics, including `noJsxPropsBind` in
+`frontend/app/dev/access-requests/AccessRequestsDevClient.tsx` and
+`noLeakedRender` in `frontend/app/layout.tsx`.

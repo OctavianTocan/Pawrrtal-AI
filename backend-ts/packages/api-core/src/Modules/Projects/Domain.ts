@@ -3,7 +3,7 @@
 import { Schema } from 'effect';
 import { Ids } from '../../Lib/TypeIds';
 
-/** A project groups conversations together. */
+/** A project groups Pawrrtal work under one user-visible label. */
 export class Project extends Schema.Class<Project>('Project')(
   {
     id: Ids.project,
@@ -21,7 +21,7 @@ export class Project extends Schema.Class<Project>('Project')(
   {
     identifier: 'Project',
     title: 'Project',
-    description: 'A project is a collection of conversations'
+    description: 'A project groups Pawrrtal work under one label.'
   }
 ) {}
 
