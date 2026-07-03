@@ -8,24 +8,36 @@ import { ProjectNotFoundError } from '@pawrrtal/api-core/Modules/Projects/Errors
 import { Effect, Exit, Layer } from 'effect';
 import { HttpApiTest } from 'effect/unstable/httpapi';
 import { describe, it } from 'vitest';
-import { AllowedUserMiddlewareStubLive, AuthMiddlewareStubLive } from '../../_helpers/AuthStub';
+import {
+  AllowedUserMiddlewareStubLive,
+  AuthClientMiddlewareStubLive,
+  AuthMiddlewareStubLive
+} from '../../_helpers/AuthStub';
 import type { ProjectsTestClient } from '../../_helpers/ProjectsStub';
 import { FAKE_PROJECT_ID, fakeProject, makeHandlerLayer } from '../../_helpers/ProjectsStub';
 
 describe('Projects.Http (handler stubs)', () => {
-  // TODO: Should be using Bun?
   const platformLayer = NodeHttpServer.layerHttpServices;
 
   const getClient = async (handlerLayer: ReturnType<typeof makeHandlerLayer>): Promise<ProjectsTestClient> =>
     Effect.runPromise(
-      HttpApiTest.groups(Api, ['projects']).pipe(
-        Effect.scoped,
-        Effect.provide([
-          platformLayer,
-          // Auth is a dependency of the handler layer (see `HttpProjectsLive`), not a sibling layer.
-          handlerLayer.pipe(Layer.provide(Layer.mergeAll(AuthMiddlewareStubLive, AllowedUserMiddlewareStubLive)))
-        ])
-      ) as unknown as Effect.Effect<ProjectsTestClient, never, never>
+      Effect.gen(function* () {
+        const client = yield* HttpApiTest.groups(Api, ['projects']).pipe(
+          Effect.scoped,
+          Effect.provide(handlerLayer),
+          Effect.provide(Layer.mergeAll(AuthMiddlewareStubLive, AllowedUserMiddlewareStubLive)),
+          Effect.provide(AuthClientMiddlewareStubLive),
+          Effect.provide(platformLayer)
+        );
+        return {
+          projects: {
+            list: () => client.projects.list({ responseMode: 'decoded-only' }),
+            create: (request) => client.projects.create({ ...request, responseMode: 'decoded-only' }),
+            update: (request) => client.projects.update({ ...request, responseMode: 'decoded-only' }),
+            delete: (request) => client.projects.delete({ ...request, responseMode: 'decoded-only' })
+          }
+        } satisfies ProjectsTestClient;
+      })
     );
 
   it('GET /api/v1/projects returns 200 with the list', async () => {

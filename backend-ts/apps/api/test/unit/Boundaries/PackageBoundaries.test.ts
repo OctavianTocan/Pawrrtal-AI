@@ -9,19 +9,19 @@ type BoundaryRule = {
 
 const rules: readonly BoundaryRule[] = [
   {
-    root: 'backend-ts/packages/domain-core/src',
+    root: 'packages/domain-core/src',
     disallowed: ['@pawrrtal/api-core', '@pawrrtal/rpc-core', '@pawrrtal/harness', '@pawrrtal/api', '@pawrrtal/rpc']
   },
   {
-    root: 'backend-ts/packages/api-core/src',
+    root: 'packages/api-core/src',
     disallowed: ['@pawrrtal/rpc-core', '@pawrrtal/harness', '@pawrrtal/api', '@pawrrtal/rpc']
   },
   {
-    root: 'backend-ts/packages/rpc-core/src',
+    root: 'packages/rpc-core/src',
     disallowed: ['@pawrrtal/api-core', '@pawrrtal/harness', '@pawrrtal/api', '@pawrrtal/rpc']
   },
   {
-    root: 'backend-ts/packages/harness/src',
+    root: 'packages/harness/src',
     disallowed: ['@pawrrtal/api-core', '@pawrrtal/rpc-core', '@pawrrtal/api', '@pawrrtal/rpc']
   }
 ];

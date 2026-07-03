@@ -45,7 +45,8 @@ describe('AgentTurns HTTP contract service', (): void => {
           message: 'hello from api contract test'
         })
       );
-      yield* Effect.sleep('10 millis');
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
       const completed = yield* turns.get(ownerId, sessionRecord.session.sessionId, turn.turnId);
       const events = yield* turns.events(ownerId, sessionRecord.session.sessionId, turn.turnId);
 

@@ -21,7 +21,7 @@ describe('domain-core schema annotations', (): void => {
       const document = Schema.toJsonSchemaDocument(schema, { generateDescriptions: true });
       const rendered = JSON.stringify(document);
       assert.include(rendered, '"description"');
-      assert.include(rendered, '"$schema"');
+      assert.include(rendered, '"dialect":"draft-2020-12"');
     }
   });
 });

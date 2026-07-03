@@ -1,7 +1,8 @@
 /** Public HTTP client helpers for provider/session operator commands. */
 
 import { Effect, Schema } from 'effect';
-import { ExternalError, failUsage, type UsageError, VerificationError } from '../../Helpers/Errors';
+import type { UsageError } from '../../Helpers/Errors';
+import { ExternalError, failUsage, VerificationError } from '../../Helpers/Errors';
 import { ActiveCliContext } from '../../Infrastructure/ActiveContext';
 
 type HttpMethod = 'GET' | 'POST';
@@ -55,11 +56,12 @@ export function requestJson<S extends Schema.Constraint>(
     });
 
     return yield* Schema.decodeEffect(schema)(value).pipe(
-      Effect.mapError((schemaError) =>
-        new VerificationError({
-          message: 'Backend response did not match the CLI schema.',
-          details: String(schemaError),
-        })
+      Effect.mapError(
+        (schemaError) =>
+          new VerificationError({
+            message: 'Backend response did not match the CLI schema.',
+            details: String(schemaError),
+          })
       )
     );
   });

@@ -5,11 +5,20 @@ import { AuthorizationError } from '@pawrrtal/api-core/Modules/Auth/Errors';
 import { Cause, ConfigProvider, Effect, Exit, Layer } from 'effect';
 import { HttpApiTest } from 'effect/unstable/httpapi';
 import { assert, describe, it } from 'vitest';
-import { AuthMiddlewareStubLive } from '../../_helpers/AuthStub';
+import { AuthClientMiddlewareStubLive, AuthMiddlewareStubLive } from '../../_helpers/AuthStub';
 import type { ProjectsTestClient } from '../../_helpers/ProjectsStub';
 import { fakeProject, makeHandlerLayer } from '../../_helpers/ProjectsStub';
 
-describe('Authentication.AllowedUser', () => {
+/** Extracts the AuthorizationError from an Effect failure cause. */
+const findAuthorizationError = <A>(exit: Exit.Exit<A, object>): AuthorizationError | null => {
+  if (!Exit.isFailure(exit)) {
+    return null;
+  }
+  const errors = exit.cause.reasons.filter(Cause.isFailReason).map((reason) => reason.error);
+  return errors.find((error): error is AuthorizationError => error instanceof AuthorizationError) ?? null;
+};
+
+describe('Authentication.AllowedUser', (): void => {
   const platformLayer = NodeHttpServer.layerHttpServices;
 
   // Build a client for the handler layer.
@@ -19,23 +28,28 @@ describe('Authentication.AllowedUser', () => {
   ): Promise<ProjectsTestClient> => {
     const provider = ConfigProvider.fromEnv({ env });
     return Effect.runPromise(
-      HttpApiTest.groups(Api, ['projects']).pipe(
-        Effect.scoped,
-        Effect.provide([
-          platformLayer,
-          handlerLayer.pipe(
-            Layer.provide(
-              Layer.mergeAll(AuthMiddlewareStubLive, HttpAllowedUserLive).pipe(
-                Layer.provide(ConfigProvider.layer(provider))
-              )
-            )
-          )
-        ])
-      ) as unknown as Effect.Effect<ProjectsTestClient, never, never>
+      Effect.gen(function* () {
+        const client = yield* HttpApiTest.groups(Api, ['projects']).pipe(
+          Effect.scoped,
+          Effect.provide(handlerLayer),
+          Effect.provide(AuthMiddlewareStubLive),
+          Effect.provide(HttpAllowedUserLive.pipe(Layer.provide(ConfigProvider.layer(provider)))),
+          Effect.provide(AuthClientMiddlewareStubLive),
+          Effect.provide(platformLayer)
+        );
+        return {
+          projects: {
+            list: () => client.projects.list({ responseMode: 'decoded-only' }),
+            create: (request) => client.projects.create({ ...request, responseMode: 'decoded-only' }),
+            update: (request) => client.projects.update({ ...request, responseMode: 'decoded-only' }),
+            delete: (request) => client.projects.delete({ ...request, responseMode: 'decoded-only' })
+          }
+        } satisfies ProjectsTestClient;
+      })
     );
   };
 
-  it('should return a 403 if the user is not allowed to access the resource', async () => {
+  it('should return a 403 if the user is not allowed to access the resource', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([])
     });
@@ -44,15 +58,12 @@ describe('Authentication.AllowedUser', () => {
 
     const exit = await Effect.runPromise(client.projects.list().pipe(Effect.exit));
     assert.isTrue(Exit.isFailure(exit));
-    if (Exit.isFailure(exit)) {
-      const errors = exit.cause.reasons.filter(Cause.isFailReason).map((reason) => reason.error as any);
-      assert.isTrue(errors.some((error) => error instanceof AuthorizationError));
-      const authError = errors.find((error) => error instanceof AuthorizationError) as AuthorizationError;
-      assert.strictEqual(authError.message, 'This Pawrrtal deployment is private.');
-    }
+    const authError = findAuthorizationError(exit);
+    assert.isNotNull(authError);
+    assert.strictEqual(authError?.message, 'This Pawrrtal deployment is private.');
   });
 
-  it('should let everyone through if the allowlist is empty', async () => {
+  it('should let everyone through if the allowlist is empty', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([fakeProject({ name: 'y' })])
     });
@@ -62,7 +73,7 @@ describe('Authentication.AllowedUser', () => {
     assert.strictEqual(list[0]?.name, 'y');
   });
 
-  it('should admit listed email case-insensitive', async () => {
+  it('should admit listed email case-insensitive', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([fakeProject({ name: 'y' })])
     });
@@ -72,22 +83,19 @@ describe('Authentication.AllowedUser', () => {
     assert.strictEqual(list[0]?.name, 'y');
   });
 
-  it('should block unlisted email with a generic message', async () => {
+  it('should block unlisted email with a generic message', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([])
     });
     const client = await getClient(handler, { ALLOWED_EMAILS: 'other@example.com' });
     const exit = await Effect.runPromise(client.projects.list().pipe(Effect.exit));
     assert.isTrue(Exit.isFailure(exit));
-    if (Exit.isFailure(exit)) {
-      const errors = exit.cause.reasons.filter(Cause.isFailReason).map((reason) => reason.error as any);
-      const authError = errors.find((error) => error instanceof AuthorizationError) as AuthorizationError;
-      assert.isDefined(authError);
-      assert.strictEqual(authError.message, 'This Pawrrtal deployment is private.');
-    }
+    const authError = findAuthorizationError(exit);
+    assert.isNotNull(authError);
+    assert.strictEqual(authError?.message, 'This Pawrrtal deployment is private.');
   });
 
-  it('should parse comma-separated values', async () => {
+  it('should parse comma-separated values', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([fakeProject({ name: 'y' })])
     });
@@ -96,7 +104,7 @@ describe('Authentication.AllowedUser', () => {
     assert.strictEqual(list.length, 1);
   });
 
-  it('should be empty when unset', async () => {
+  it('should be empty when unset', async (): Promise<void> => {
     const handler = makeHandlerLayer({
       list: () => Effect.succeed([fakeProject({ name: 'y' })])
     });

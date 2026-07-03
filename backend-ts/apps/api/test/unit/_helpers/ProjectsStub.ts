@@ -12,13 +12,13 @@ export const FAKE_DATE = DateTime.makeUnsafe('2026-06-08T12:00:00.000Z');
 
 export type ProjectsTestClient = {
   readonly projects: {
-    readonly list: () => Effect.Effect<ReadonlyArray<Project>>;
-    readonly create: (request: { readonly payload: ProjectCreateInput }) => Effect.Effect<Project>;
+    readonly list: () => Effect.Effect<ReadonlyArray<Project>, object>;
+    readonly create: (request: { readonly payload: ProjectCreateInput }) => Effect.Effect<Project, object>;
     readonly update: (request: {
       readonly params: { readonly project_id: string };
       readonly payload: ProjectUpdateInput;
-    }) => Effect.Effect<Project>;
-    readonly delete: (request: { readonly params: { readonly project_id: string } }) => Effect.Effect<void>;
+    }) => Effect.Effect<Project, object>;
+    readonly delete: (request: { readonly params: { readonly project_id: string } }) => Effect.Effect<void, object>;
   };
 };
 

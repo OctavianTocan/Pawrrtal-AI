@@ -12,7 +12,7 @@ describe('agent turn control CLI commands', (): void => {
     const server = makeTurnControlServer();
     try {
       const result = await runCli({
-        args: ['--backend-url', server.url, 'sessions', 'events', sessionId, turnId, '--follow', '--json']
+        args: ['--backend-url', server.url, 'sessions', 'events', sessionId, turnId, '--follow', '--json'],
       });
 
       expect(result.exitCode).toBe(0);
@@ -26,7 +26,17 @@ describe('agent turn control CLI commands', (): void => {
     const server = makeTurnControlServer();
     try {
       const result = await runCli({
-        args: ['--backend-url', server.url, 'sessions', 'cancel-turn', sessionId, turnId, '--reason', 'operator', '--json']
+        args: [
+          '--backend-url',
+          server.url,
+          'sessions',
+          'cancel-turn',
+          sessionId,
+          turnId,
+          '--reason',
+          'operator',
+          '--json',
+        ],
       });
 
       expect(result.exitCode).toBe(0);
@@ -54,12 +64,12 @@ function makeTurnControlServer(): { readonly url: string; readonly stop: () => v
       }
 
       return new Response('not found', { status: 404 });
-    }
+    },
   });
 
   return {
     url: `http://${server.hostname}:${server.port}`,
-    stop: () => server.stop(true)
+    stop: () => server.stop(true),
   };
 }
 
@@ -78,7 +88,7 @@ const turnPayload = {
   workspace: {
     workspaceId: '00000000-0000-4000-8000-000000000414',
     name: 'Workspace 00000000',
-    materializationStatus: 'resolved'
+    materializationStatus: 'resolved',
   },
   inputMessageId: messageId,
   state: 'complete',
@@ -87,7 +97,7 @@ const turnPayload = {
   failure: null,
   createdAt,
   startedAt: createdAt,
-  finishedAt: createdAt
+  finishedAt: createdAt,
 } as const satisfies JsonValue;
 
 const eventPayloads = [
@@ -98,7 +108,7 @@ const eventPayloads = [
     type: 'turn.started',
     visibility: 'operator',
     payload: { text: 'started' },
-    createdAt
+    createdAt,
   },
   {
     eventId: '00000000-0000-4000-8000-000000000416',
@@ -107,6 +117,6 @@ const eventPayloads = [
     type: 'turn.completed',
     visibility: 'user',
     payload: { text: 'done' },
-    createdAt
-  }
+    createdAt,
+  },
 ] as const satisfies JsonValue;

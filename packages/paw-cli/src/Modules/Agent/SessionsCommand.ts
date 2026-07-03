@@ -5,7 +5,7 @@ import {
   AgentCancellationInput,
   AgentProviderEventRead,
   AgentTurnCreateInput,
-  AgentTurnRead
+  AgentTurnRead,
 } from '@pawrrtal/domain-core/Modules/AgentTurns/Domain';
 import { Console, Effect, Option, Schema } from 'effect';
 import { Argument, Command, Flag } from 'effect/unstable/cli';
@@ -130,10 +130,7 @@ const SESSIONS_CANCEL_METADATA = {
     { name: 'session-id', description: 'Existing Session id', kind: 'string', required: true },
     { name: 'turn-id', description: 'Turn id to cancel', kind: 'string', required: true },
   ],
-  flags: [
-    ...AUTOMATION_FLAG_METADATA,
-    { name: 'reason', description: 'Safe cancellation reason', kind: 'string' },
-  ],
+  flags: [...AUTOMATION_FLAG_METADATA, { name: 'reason', description: 'Safe cancellation reason', kind: 'string' }],
   examples: [
     {
       command:
@@ -202,7 +199,11 @@ const SessionsCancelCommand = {
 export const SessionsCommand = {
   command: applyCommandMetadata(
     Command.make('sessions').pipe(
-      Command.withSubcommands([SessionsSendCommand.command, SessionsEventsCommand.command, SessionsCancelCommand.command])
+      Command.withSubcommands([
+        SessionsSendCommand.command,
+        SessionsEventsCommand.command,
+        SessionsCancelCommand.command,
+      ])
     ),
     SESSIONS_METADATA
   ),
@@ -232,7 +233,12 @@ function handleSend(
       providerId,
       message: options.message,
     });
-    const turn = yield* requestJson('POST', `/sessions/${sessionId}/agent-turns/`, AgentTurnRead, JSON.stringify(payload));
+    const turn = yield* requestJson(
+      'POST',
+      `/sessions/${sessionId}/agent-turns/`,
+      AgentTurnRead,
+      JSON.stringify(payload)
+    );
     const output = yield* formatOutput(turn, mode, turnFormatters);
     yield* Console.log(output);
   });
@@ -279,8 +285,16 @@ function handleCancel(
 function readTurnEvents(
   sessionId: AgentTurnRead['sessionId'],
   turnId: AgentTurnRead['turnId']
-): Effect.Effect<ReadonlyArray<AgentProviderEventRead>, UsageError | ExternalError | VerificationError, ActiveCliContext> {
-  return requestJson('GET', `/sessions/${sessionId}/agent-turns/${turnId}/events`, Schema.Array(AgentProviderEventRead));
+): Effect.Effect<
+  ReadonlyArray<AgentProviderEventRead>,
+  UsageError | ExternalError | VerificationError,
+  ActiveCliContext
+> {
+  return requestJson(
+    'GET',
+    `/sessions/${sessionId}/agent-turns/${turnId}/events`,
+    Schema.Array(AgentProviderEventRead)
+  );
 }
 
 /** Polls turn events until a terminal public state is visible or polling stops. */
@@ -288,7 +302,11 @@ function readEventsUntilTerminal(
   sessionId: AgentTurnRead['sessionId'],
   turnId: AgentTurnRead['turnId'],
   remainingPolls: number
-): Effect.Effect<ReadonlyArray<AgentProviderEventRead>, UsageError | ExternalError | VerificationError, ActiveCliContext> {
+): Effect.Effect<
+  ReadonlyArray<AgentProviderEventRead>,
+  UsageError | ExternalError | VerificationError,
+  ActiveCliContext
+> {
   return Effect.gen(function* () {
     const events = yield* readTurnEvents(sessionId, turnId);
     const turn = yield* requestJson('GET', `/sessions/${sessionId}/agent-turns/${turnId}`, AgentTurnRead);
@@ -307,7 +325,9 @@ function isTerminalState(state: AgentTurnRead['state']): boolean {
 
 const turnFormatters = {
   human: (turn: AgentTurnRead): string =>
-    [`Turn: ${turn.turnId}`, `Session: ${turn.sessionId}`, `Provider: ${turn.providerId}`, `State: ${turn.state}`].join('\n'),
+    [`Turn: ${turn.turnId}`, `Session: ${turn.sessionId}`, `Provider: ${turn.providerId}`, `State: ${turn.state}`].join(
+      '\n'
+    ),
   json: {
     schema: AgentTurnRead,
     render: (turn: AgentTurnRead): AgentTurnRead => turn,

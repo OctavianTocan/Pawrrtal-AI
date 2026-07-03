@@ -55,7 +55,14 @@ const PROVIDERS_DOCTOR_METADATA = {
   summary: 'Check Agent Provider conformance',
   description: 'Read provider readiness and conformance diagnostics through the public Pawrrtal API.',
   owner: '@pawrrtal/cli/Modules/Agent',
-  arguments: [{ name: 'provider', description: 'Provider id to inspect; omitted means every provider', kind: 'string', required: false }],
+  arguments: [
+    {
+      name: 'provider',
+      description: 'Provider id to inspect; omitted means every provider',
+      kind: 'string',
+      required: false,
+    },
+  ],
   flags: AUTOMATION_FLAG_METADATA,
   examples: [
     { command: 'paw providers doctor deterministic', description: 'Check deterministic provider conformance' },
@@ -100,7 +107,10 @@ const ProvidersListCommand = {
 >;
 
 const ProvidersDoctorCommand = {
-  command: applyCommandMetadata(Command.make('doctor', providerDoctorFlags, handleProvidersDoctor), PROVIDERS_DOCTOR_METADATA),
+  command: applyCommandMetadata(
+    Command.make('doctor', providerDoctorFlags, handleProvidersDoctor),
+    PROVIDERS_DOCTOR_METADATA
+  ),
   metadata: PROVIDERS_DOCTOR_METADATA,
 } satisfies CommandModule<
   'doctor',
@@ -113,7 +123,9 @@ const ProvidersDoctorCommand = {
 /** Command group for provider diagnostics. */
 export const ProvidersCommand = {
   command: applyCommandMetadata(
-    Command.make('providers').pipe(Command.withSubcommands([ProvidersListCommand.command, ProvidersDoctorCommand.command])),
+    Command.make('providers').pipe(
+      Command.withSubcommands([ProvidersListCommand.command, ProvidersDoctorCommand.command])
+    ),
     PROVIDERS_METADATA
   ),
   metadata: PROVIDERS_METADATA,
@@ -184,7 +196,9 @@ function readProviderConformance(
 }
 
 /** Decodes a CLI provider id through the public provider id schema. */
-function decodeProviderId(provider: string): Effect.Effect<ProviderConformanceResultRead['providerId'], VerificationError> {
+function decodeProviderId(
+  provider: string
+): Effect.Effect<ProviderConformanceResultRead['providerId'], VerificationError> {
   return Schema.decodeEffect(Ids.provider)(provider).pipe(
     Effect.mapError(
       (schemaError) =>
@@ -201,7 +215,9 @@ const providerListFormatters = {
   human: (providers: ReadonlyArray<AgentProviderRead>): string =>
     providers.length === 0
       ? 'No providers are registered.'
-      : providers.map((provider) => `${provider.providerId}\t${provider.readiness}\t${provider.kind}\t${provider.displayName}`).join('\n'),
+      : providers
+          .map((provider) => `${provider.providerId}\t${provider.readiness}\t${provider.kind}\t${provider.displayName}`)
+          .join('\n'),
   json: {
     schema: Schema.Array(AgentProviderRead),
     render: (providers: ReadonlyArray<AgentProviderRead>): ReadonlyArray<AgentProviderRead> => providers,
@@ -215,13 +231,14 @@ const providerConformanceFormatters = {
     rows.length === 0
       ? 'No provider conformance rows were reported.'
       : rows
-          .map((row) => `${row.providerId}\t${row.scenarioId}\t${row.result}\t${row.diagnostics.map((d) => `${d.key}:${d.value}`).join(',')}`)
+          .map(
+            (row) =>
+              `${row.providerId}\t${row.scenarioId}\t${row.result}\t${row.diagnostics.map((d) => `${d.key}:${d.value}`).join(',')}`
+          )
           .join('\n'),
   json: {
     schema: Schema.Array(ProviderConformanceResultRead),
-    render: (
-      rows: ReadonlyArray<ProviderConformanceResultRead>
-    ): ReadonlyArray<ProviderConformanceResultRead> => rows,
+    render: (rows: ReadonlyArray<ProviderConformanceResultRead>): ReadonlyArray<ProviderConformanceResultRead> => rows,
   },
   plain: (rows: ReadonlyArray<ProviderConformanceResultRead>): string =>
     rows.map((row) => `${row.providerId}\t${row.scenarioId}\t${row.result}`).join('\n'),

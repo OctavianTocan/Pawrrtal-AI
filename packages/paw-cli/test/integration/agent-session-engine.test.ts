@@ -14,7 +14,7 @@ describe('agent session CLI commands', (): void => {
     const server = makeAgentSessionServer();
     try {
       const result = await runCli({
-        args: ['--backend-url', server.url, 'providers', 'list', '--json']
+        args: ['--backend-url', server.url, 'providers', 'list', '--json'],
       });
 
       expect(result.exitCode).toBe(0);
@@ -28,10 +28,10 @@ describe('agent session CLI commands', (): void => {
     const server = makeAgentSessionServer();
     try {
       const send = await runCli({
-        args: ['--backend-url', server.url, 'sessions', 'send', sessionId, 'hello', '--json']
+        args: ['--backend-url', server.url, 'sessions', 'send', sessionId, 'hello', '--json'],
       });
       const events = await runCli({
-        args: ['--backend-url', server.url, 'sessions', 'events', sessionId, turnId, '--json']
+        args: ['--backend-url', server.url, 'sessions', 'events', sessionId, turnId, '--json'],
       });
 
       expect(send.exitCode).toBe(0);
@@ -61,12 +61,12 @@ function makeAgentSessionServer(): { readonly url: string; readonly stop: () => 
       }
 
       return new Response('not found', { status: 404 });
-    }
+    },
   });
 
   return {
     url: `http://${server.hostname}:${server.port}`,
-    stop: () => server.stop(true)
+    stop: () => server.stop(true),
   };
 }
 
@@ -92,11 +92,11 @@ const providerPayload = {
     tools: 'host',
     userQuestions: 'hostMediated',
     workspaceInjection: ['systemPrompt'],
-    eventTypes: ['turn.started', 'activity', 'answer.completed', 'turn.completed']
+    eventTypes: ['turn.started', 'activity', 'answer.completed', 'turn.completed'],
   },
   continuation: 'rotationOnly',
   setupRequirements: [],
-  diagnostics: []
+  diagnostics: [],
 } as const satisfies JsonValue;
 
 const turnPayload = {
@@ -107,7 +107,7 @@ const turnPayload = {
   workspace: {
     workspaceId: '00000000-0000-4000-8000-000000000404',
     name: 'Workspace 00000000',
-    materializationStatus: 'resolved'
+    materializationStatus: 'resolved',
   },
   inputMessageId: messageId,
   state: 'complete',
@@ -116,7 +116,7 @@ const turnPayload = {
   failure: null,
   createdAt,
   startedAt: createdAt,
-  finishedAt: createdAt
+  finishedAt: createdAt,
 } as const satisfies JsonValue;
 
 const eventPayloads = [
@@ -127,7 +127,7 @@ const eventPayloads = [
     type: 'turn.started',
     visibility: 'operator',
     payload: { text: 'started' },
-    createdAt
+    createdAt,
   },
   {
     eventId: secondEventId,
@@ -136,6 +136,6 @@ const eventPayloads = [
     type: 'turn.completed',
     visibility: 'user',
     payload: { text: 'done' },
-    createdAt
-  }
+    createdAt,
+  },
 ] as const satisfies JsonValue;

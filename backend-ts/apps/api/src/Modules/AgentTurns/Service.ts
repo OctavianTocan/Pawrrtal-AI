@@ -1,23 +1,17 @@
 /** Agent Turn service that runs provider queries through the harness boundary. */
 
-import type { AgentTurnId, MessageId, ProviderId, ProviderSessionId, SessionId, UserId } from '@pawrrtal/domain-core';
-import { Ids } from '@pawrrtal/domain-core';
+import type { AgentTurnId, ProviderId, SessionId, UserId } from '@pawrrtal/domain-core';
 import type { ProviderContractError } from '@pawrrtal/domain-core/Modules/AgentProviders/Errors';
 import { ProviderNotReadyError } from '@pawrrtal/domain-core/Modules/AgentProviders/Errors';
 import type {
   AgentCancellationInput,
-  AgentTurnCreateInput,
-  CapabilityDecisionRead
-} from '@pawrrtal/domain-core/Modules/AgentTurns/Domain';
-import {
   AgentProviderEventRead,
-  AgentTurnFailureRead,
+  AgentTurnCreateInput,
   AgentTurnRead,
-  CapabilityDeniedEventPayload,
   ProviderSessionRead
 } from '@pawrrtal/domain-core/Modules/AgentTurns/Domain';
+import { AgentTurnFailureRead } from '@pawrrtal/domain-core/Modules/AgentTurns/Domain';
 import { AgentTurnConflictError, AgentTurnNotFoundError } from '@pawrrtal/domain-core/Modules/AgentTurns/Errors';
-import type { WorkspaceDiagnosticRead } from '@pawrrtal/domain-core/Modules/Sessions/Domain';
 import type { SessionNotFoundError } from '@pawrrtal/domain-core/Modules/Sessions/Errors';
 import type { AgentQuery, ProviderFollowUpInput } from '@pawrrtal/harness';
 import {
@@ -25,19 +19,29 @@ import {
   AgentProviderServiceLive,
   CapabilityPolicyInput,
   cancelActiveQuery,
-  collectQueryEvents,
   evaluateTurnPromptCapability,
   materializeWorkspaceForTurn,
   ProviderCancellationReason,
   ProviderQueryInput,
   WorkspaceMaterializationInput
 } from '@pawrrtal/harness';
-import { Context, DateTime, Effect, Layer, Ref, Schema } from 'effect';
+import { Context, Effect, Layer, Ref } from 'effect';
 import { SessionsService, SessionsServiceLive } from '../Sessions/Service';
 import { makeWorkspaceDiagnostic } from '../Workspaces/Materialization';
+import { ActiveTurnQueries, removeActiveQuery, runQueryToCompletion } from './ActiveQueries';
 import { isRecoverableTurnState } from './Recovery';
 import type { AgentTurnRecord } from './Repo';
 import { AgentTurnsRepo, AgentTurnsRepoLive } from './Repo';
+import {
+  makeCapabilityDeniedEvent,
+  makeCapabilityDeniedTurn,
+  makeMessageId,
+  makeProviderSession,
+  makeProviderSessionId,
+  makeRunningTurn,
+  makeTerminalTurn,
+  makeTurnId
+} from './TurnBuilders';
 
 /** Agent Turn service scoped by authenticated owner id. */
 export class AgentTurnsService extends Context.Service<
@@ -100,13 +104,6 @@ export class AgentTurnsService extends Context.Service<
   }
 >()('@apps/api/AgentTurns/Service') {}
 
-/** In-memory active query handles for the first API-owned runner slice. */
-class ActiveTurnQueries extends Context.Service<ActiveTurnQueries, Ref.Ref<ReadonlyMap<AgentTurnId, AgentQuery>>>()(
-  '@apps/api/AgentTurns/ActiveTurnQueries'
-) {
-  static readonly layer = Layer.effect(ActiveTurnQueries, Ref.make<ReadonlyMap<AgentTurnId, AgentQuery>>(new Map()));
-}
-
 /** Dependencies needed to build the live Agent Turn service body. */
 interface AgentTurnsDependencies {
   /** Turn persistence port. */
@@ -126,206 +123,9 @@ type GetTurnRecord = (
   turnId: AgentTurnId
 ) => Effect.Effect<AgentTurnRecord, SessionNotFoundError | AgentTurnNotFoundError>;
 
-/** Decodes a new id with the supplied schema. */
-const makeTurnId = (): AgentTurnId => Schema.decodeSync(Ids.agentTurn)(crypto.randomUUID());
-const makeMessageId = (): MessageId => Schema.decodeSync(Ids.message)(crypto.randomUUID());
-const makeProviderSessionId = (): ProviderSessionId => Schema.decodeSync(Ids.providerSession)(crypto.randomUUID());
-const makeEventId = (): AgentProviderEventRead['eventId'] => Schema.decodeSync(Ids.event)(crypto.randomUUID());
-
 /** Maps provider start failures to public provider errors. */
 const providerStartFailure = (providerId: ProviderId, detail: string): ProviderNotReadyError =>
   new ProviderNotReadyError({ detail, providerId });
-
-/** Creates a public provider-session record for one turn. */
-const makeProviderSession = (
-  sessionId: SessionId,
-  providerId: ProviderId,
-  providerSessionId: ProviderSessionId,
-  rotationReason: string | null = null
-): Effect.Effect<ProviderSessionRead> =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now;
-    return new ProviderSessionRead({
-      providerSessionId,
-      sessionId,
-      providerId,
-      continuationFingerprint: `${providerId}:fresh`,
-      resumeMode: 'rotationOnly',
-      status: 'active',
-      lastActivityAt: now,
-      rotationReason,
-      invalidatedAt: null
-    });
-  });
-
-/** Creates a denied-capability event for a turn that never reaches the provider. */
-const makeCapabilityDeniedEvent = (input: {
-  readonly turnId: AgentTurnId;
-  readonly decision: CapabilityDecisionRead;
-}): Effect.Effect<AgentProviderEventRead> =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now;
-    return new AgentProviderEventRead({
-      eventId: makeEventId(),
-      turnId: input.turnId,
-      sequence: 1,
-      type: 'capability.denied',
-      visibility: 'user',
-      payload: new CapabilityDeniedEventPayload({
-        capabilityId: input.decision.capabilityId,
-        decision: input.decision.decision,
-        reason: input.decision.reason,
-        safeNextAction: 'Change the Workspace capability boundary before retrying this turn.'
-      }),
-      createdAt: now
-    });
-  });
-
-/** Builds the first public running turn before provider events are drained. */
-const makeRunningTurn = (input: {
-  readonly turnId: AgentTurnId;
-  readonly sessionId: SessionId;
-  readonly providerId: ProviderId;
-  readonly providerSessionId: ProviderSessionId;
-  readonly inputMessageId: MessageId;
-  readonly sequence: number;
-  readonly workspace: WorkspaceDiagnosticRead;
-}): Effect.Effect<AgentTurnRead> =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now;
-    return new AgentTurnRead({
-      turnId: input.turnId,
-      sessionId: input.sessionId,
-      providerId: input.providerId,
-      providerSessionId: input.providerSessionId,
-      workspace: input.workspace,
-      inputMessageId: input.inputMessageId,
-      state: 'running',
-      sequence: input.sequence,
-      lastProgressAt: now,
-      failure: null,
-      createdAt: now,
-      startedAt: now,
-      finishedAt: null
-    });
-  });
-
-/** Builds a terminal turn for host-denied capability attempts. */
-const makeCapabilityDeniedTurn = (input: {
-  readonly turnId: AgentTurnId;
-  readonly sessionId: SessionId;
-  readonly providerId: ProviderId;
-  readonly inputMessageId: MessageId;
-  readonly sequence: number;
-  readonly workspace: WorkspaceDiagnosticRead;
-  readonly decision: CapabilityDecisionRead;
-}): Effect.Effect<AgentTurnRead> =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now;
-    return new AgentTurnRead({
-      turnId: input.turnId,
-      sessionId: input.sessionId,
-      providerId: input.providerId,
-      providerSessionId: null,
-      workspace: input.workspace,
-      inputMessageId: input.inputMessageId,
-      state: 'failed',
-      sequence: input.sequence,
-      lastProgressAt: now,
-      failure: new AgentTurnFailureRead({
-        code: `capability.${input.decision.decision}`,
-        message: input.decision.reason,
-        safeNextAction: 'Change the Workspace capability boundary before retrying this turn.'
-      }),
-      createdAt: now,
-      startedAt: null,
-      finishedAt: now
-    });
-  });
-
-/** Builds a terminal public turn while preserving its original identity. */
-const makeTerminalTurn = (input: {
-  readonly turn: AgentTurnRead;
-  readonly state: AgentTurnRead['state'];
-  readonly events: ReadonlyArray<AgentProviderEventRead>;
-  readonly failure: AgentTurnFailureRead | null;
-}): Effect.Effect<AgentTurnRead> =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now;
-    const lastEvent = input.events.length === 0 ? null : (input.events[input.events.length - 1] ?? null);
-    return new AgentTurnRead({
-      turnId: input.turn.turnId,
-      sessionId: input.turn.sessionId,
-      providerId: input.turn.providerId,
-      providerSessionId: input.turn.providerSessionId,
-      workspace: input.turn.workspace,
-      inputMessageId: input.turn.inputMessageId,
-      state: input.state,
-      sequence: input.turn.sequence,
-      lastProgressAt: lastEvent === null ? input.turn.lastProgressAt : lastEvent.createdAt,
-      failure: input.failure,
-      createdAt: input.turn.createdAt,
-      startedAt: input.turn.startedAt,
-      finishedAt: now
-    });
-  });
-
-/** Removes an active query handle from the in-memory map. */
-const removeActiveQuery = (
-  activeQueries: Ref.Ref<ReadonlyMap<AgentTurnId, AgentQuery>>,
-  turnId: AgentTurnId
-): Effect.Effect<void> =>
-  Ref.update(activeQueries, (queries) => {
-    const next = new Map(queries);
-    next.delete(turnId);
-    return next;
-  });
-
-/** Records provider stream completion or failure for one running turn. */
-const runQueryToCompletion = (input: {
-  readonly repo: AgentTurnsRepo['Service'];
-  readonly activeQueries: Ref.Ref<ReadonlyMap<AgentTurnId, AgentQuery>>;
-  readonly query: AgentQuery;
-  readonly turn: AgentTurnRead;
-}): Effect.Effect<void> =>
-  collectQueryEvents(input.query).pipe(
-    Effect.flatMap((events) =>
-      Effect.gen(function* () {
-        const terminal = yield* makeTerminalTurn({
-          turn: input.turn,
-          state: 'complete',
-          events,
-          failure: null
-        });
-        yield* input.repo.updateRecord(input.turn.sessionId, input.turn.turnId, (current) => {
-          if (current.turn.state === 'cancelled') {
-            return current;
-          }
-          return { ...current, turn: terminal, events };
-        });
-      })
-    ),
-    Effect.catchTag('ProviderStreamError', (error) =>
-      Effect.gen(function* () {
-        const failure = new AgentTurnFailureRead({
-          code: error._tag,
-          message: error.detail,
-          safeNextAction: error.safeNextAction
-        });
-        const terminal = yield* makeTerminalTurn({
-          turn: input.turn,
-          state: 'failed',
-          events: [],
-          failure
-        });
-        yield* input.repo.updateRecord(input.turn.sessionId, input.turn.turnId, (current) => ({
-          ...current,
-          turn: current.turn.state === 'cancelled' ? current.turn : terminal
-        }));
-      })
-    ),
-    Effect.ensuring(removeActiveQuery(input.activeQueries, input.turn.turnId))
-  );
 
 /** Creates the authorized turn-record reader. */
 const makeGetRecord = (deps: AgentTurnsDependencies): GetTurnRecord =>

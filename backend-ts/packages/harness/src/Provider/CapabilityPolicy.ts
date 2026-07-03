@@ -58,14 +58,6 @@ const asksForProviderNative = (prompt: string): boolean => {
 export function evaluateTurnPromptCapability(
   input: CapabilityPolicyInput
 ): Effect.Effect<CapabilityDecisionRead | null> {
-  if (asksForShell(input.prompt)) {
-    return Effect.succeed(
-      input.capabilityBoundaryId === RestrictedCapabilityBoundaryId
-        ? decision(ShellCapabilityId, input, 'denied', 'Shell access is denied for this boundary.')
-        : decision(ShellCapabilityId, input, 'allowed', 'Shell access is allowed for this boundary.')
-    );
-  }
-
   if (asksForProviderNative(input.prompt)) {
     return Effect.succeed(
       decision(
@@ -74,6 +66,14 @@ export function evaluateTurnPromptCapability(
         'unsupported',
         'Provider-native actions must use Pawrrtal host flows.'
       )
+    );
+  }
+
+  if (asksForShell(input.prompt)) {
+    return Effect.succeed(
+      input.capabilityBoundaryId === RestrictedCapabilityBoundaryId
+        ? decision(ShellCapabilityId, input, 'denied', 'Shell access is denied for this boundary.')
+        : decision(ShellCapabilityId, input, 'allowed', 'Shell access is allowed for this boundary.')
     );
   }
 
