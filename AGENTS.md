@@ -11,5 +11,5 @@ Also read each session: `.agent/memory/personal/PREFERENCES.md`, `.agent/memory/
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/005-effect-cli-boundaries/plan.md
+at specs/006-claude-agent-session-engine/plan.md
 <!-- SPECKIT END -->

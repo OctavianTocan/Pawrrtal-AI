@@ -7,8 +7,13 @@ changing API syntax.
 ## Contract Layer
 
 Put endpoint declarations in `backend-ts/packages/api-core/src/Modules/<Name>/Api.ts`.
-Contracts should contain schemas and endpoint definitions only. They must not
-construct services, read env vars, allocate refs, or own mutable state.
+HTTP contracts should contain endpoint definitions and OpenAPI annotations only.
+Shared request/response schemas, ids, and public tagged errors belong in
+`backend-ts/packages/domain-core/src/Modules/<Name>/`.
+
+`api-core` may import shared shapes from `domain-core`. It must not import
+`rpc-core`, `harness`, app services, app repos, config, platform services, or
+mutable runtime state.
 
 ## Runtime Layer
 
@@ -28,6 +33,7 @@ Handlers should not:
 - Store mutable state in module scope.
 - Decide provider/channel behavior.
 - Start servers in tests.
+- Define RPC protocols.
 
 ## Auth
 

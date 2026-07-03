@@ -7,7 +7,7 @@ plugin platform.
 ## Language
 
 **Kernel**:
-The small mandatory Pawrrtal runtime that owns identity, workspaces, conversations, persistence, audit, turn orchestration, and the plugin host.
+The small mandatory Pawrrtal runtime that owns identity, workspaces, sessions, persistence, audit, turn orchestration, and the plugin host.
 _Avoid_: core, app core, god layer
 
 **Plugin**:
@@ -38,6 +38,30 @@ _Avoid_: post-turn hook
 An adapter that runs a session-owning agent backend behind a stable Pawrrtal interface.
 _Avoid_: agent harness capability, subagent implementation, provider special case
 
+**Session**:
+A durable user-visible interaction thread with routing, context, lifecycle, and resumable execution state.
+_Avoid_: conversation when naming the canonical Pawrrtal concept
+
+**Workspace**:
+A long-lived agent home containing instructions, memory, skills, tools, protocols, files, environment policy, and plugin state.
+_Avoid_: agent context, context ref
+
+**Agent Session**:
+A Session whose turns are executed through the agent provider engine.
+_Avoid_: agent conversation, Claude conversation, provider thread
+
+**Agent Session Binding**:
+The per-session selection of provider, capability boundary, and active provider continuation.
+_Avoid_: agent target, implicit agent id
+
+**Agent Provider**:
+A runtime that executes Agent Session turns while declaring readiness, capabilities, continuation, events, cancellation, and recovery behavior.
+_Avoid_: model provider when the runtime owns a full agent loop
+
+**Provider Harness**:
+The runtime boundary that drives Agent Providers and normalizes their lifecycle into Pawrrtal turns and events.
+_Avoid_: API, HTTP handler, capability
+
 **Agent Profile**:
 A named agent definition that carries instructions, allowed tools, model/runtime preferences, selection metadata, and optional memory policy.
 _Avoid_: agent type when discussing persona/config, plugin-owned subagent
@@ -57,6 +81,10 @@ _Avoid_: subagent plugin, plugin-implemented subagent
 - Memory-writing and analytics-style work are **Turn Observers**, not generic post-turn hooks.
 - Codex/Pi-style delegated runtimes are **Agent Runtime Adapters**, not provider-specific branches in the agent loop.
 - A **Delegated Agent Job** uses one captured **Agent Profile** and one captured **Agent Runtime Adapter** snapshot.
+- A **Session** belongs to exactly one **Workspace**.
+- An **Agent Session** is a **Session** plus an **Agent Session Binding**.
+- An **Agent Session Binding** references exactly one selected **Agent Provider** at a time.
+- A **Provider Harness** runs **Agent Providers** and emits Pawrrtal turn state; it is not a user-facing API.
 
 ## Example Dialogue
 
@@ -69,3 +97,6 @@ _Avoid_: subagent plugin, plugin-implemented subagent
 - "capability" was used for both user/Paw-facing operations and infrastructure seams. Resolved: use **Capability** for searchable/selectable/invokable surfaces, and **Adapter** for infrastructure implementations.
 - "agent harness" was used as a capability type. Resolved: use **Agent Runtime Adapter** for the runtime seam.
 - "subagent" was used for plugin contribution, persona, and runtime execution. Resolved: plugins may contribute **Agent Profiles**; the kernel creates **Delegated Agent Jobs** through **Agent Runtime Adapters**. UI copy may still call a delegated job a subagent run when that is clearer to users.
+- "conversation" was used as the canonical Pawrrtal thread term. Resolved: use **Session** for the canonical product/domain concept.
+- "agent target" was used for CLI routing before an agent registry exists. Resolved: use **Agent Session Binding** for Workspace/provider routing on a Session.
+- "agent context ref" was used for the agent environment. Resolved: use **Workspace** / `workspaceId`; workspace is the Pawrrtal-owned agent home that provider turns materialize from.

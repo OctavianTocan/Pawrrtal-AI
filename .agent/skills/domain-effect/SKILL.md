@@ -10,10 +10,22 @@ paths:
 
 Pawrrtal's Effect workspace is `backend-ts/`:
 
-- `backend-ts/packages/api-core` (`@pawrrtal/api-core`) owns shared contracts:
-  domain schemas, tagged errors, HttpApi groups, and root `Api`.
-- `backend-ts/apps/api` (`@pawrrtal/api`) owns runtime wiring: HTTP handlers,
+- `backend-ts/packages/domain-core` (`@pawrrtal/domain-core`) owns shared
+  transport-neutral contracts: domain schemas, ids, branded values, and public
+  tagged errors used by HTTP, RPC, harness, services, and tests.
+- `backend-ts/packages/api-core` (`@pawrrtal/api-core`) owns HTTP/OpenAPI
+  contracts only: `HttpApi` groups, endpoint declarations, OpenAPI
+  annotations, and root `Api`.
+- `backend-ts/packages/rpc-core` (`@pawrrtal/rpc-core`) owns Effect RPC
+  protocol contracts only. It imports shared schemas/errors from
+  `domain-core`; it must not import from `api-core`.
+- `backend-ts/packages/harness` (`@pawrrtal/harness`) owns provider lifecycle,
+  adapters, normalized streams, cancellation, continuation, and conformance. It
+  may import `domain-core`, but not HTTP/RPC app handlers.
+- `backend-ts/apps/api` (`@pawrrtal/api`) owns HTTP runtime wiring: handlers,
   services, repos, policies, infrastructure layers, auth, and `Main.ts`.
+- `backend-ts/apps/rpc` owns RPC runtime wiring: protocol handlers, streaming
+  transport, auth/profile boundary, and app composition.
 - `backend/vendor/effect-smol` is the Effect v4 beta source of truth. Do not
   infer APIs from Effect v3 docs or `backend/vendor/effect`.
 
@@ -33,8 +45,22 @@ references.
 
 ## Rules
 
-- Contracts live in `@pawrrtal/api-core`; runtime behavior lives in
-  `@pawrrtal/api`.
+- For new 006+ Effect TS work, shared schemas/errors live in
+  `@pawrrtal/domain-core`; HTTP contracts live in `@pawrrtal/api-core`; RPC
+  contracts live in `@pawrrtal/rpc-core`; runtime behavior lives in app
+  packages.
+- Existing modules may still keep schemas/errors in `api-core`; when touching
+  those boundaries for new work, move toward the split instead of deepening the
+  old coupling.
+- Do not put `RpcProtocol.ts` in `api-core`. Put RPC protocol declarations in
+  `rpc-core`, RPC handlers in `apps/rpc`, and HTTP handlers in `apps/api`.
+- `rpc-core` must not import `api-core`, and `api-core` must not import
+  `rpc-core`; both should depend on `domain-core` when they share shapes.
+- The provider harness is a reusable library boundary, not an API transport. It
+  should not define HTTP routes or RPC handlers.
+- For the 006 session engine, use `Sessions` as the canonical domain module and
+  remove/replace the old backend-ts `Conversations` practice module. Do not add
+  new provider execution behavior under `Conversations`.
 - Http handlers unpack input, call services, apply auth/policy, and translate
   boundary errors. They do not own mutable state.
 - Services own business rules and dependency composition.
@@ -52,4 +78,5 @@ references.
 - [Module Structure](references/module-structure.md)
 - [Services And Layers](references/services-layers.md)
 - [HTTP API](references/http-api.md)
+- [RPC And Shared Contracts](references/rpc-and-contracts.md)
 - [Testing](references/testing.md)

@@ -26,7 +26,10 @@ export class ProjectsService extends Effect.Service<ProjectsService>()(
 ## Rules
 
 - Use service identifiers that match package ownership:
-  `@pawrrtal/api/<Module>/<Role>` or `@pawrrtal/api-core/<Module>/<Role>`.
+  `@pawrrtal/api/<Module>/<Role>`, `@pawrrtal/rpc/<Module>/<Role>`,
+  `@pawrrtal/harness/<Module>/<Role>`, or the package that owns the service.
+  `api-core`, `rpc-core`, and `domain-core` are contract packages; avoid
+  putting runtime services there.
 - Use `scoped:` instead of `effect:` when constructing resources with
   finalizers, queues, forks, or acquire/release lifecycles.
 - Use `Effect.fn('Service.method')` for service/repo/policy methods that deserve
