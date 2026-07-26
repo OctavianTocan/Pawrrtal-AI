@@ -56,7 +56,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           submodules: recursive
 
@@ -70,12 +70,12 @@ jobs:
       # fallback below.  The self-hosted `pawrrtal` runners ship bun
       # but not Node, so we provision it here.
       - name: Setup Node
-        uses: actions/setup-node@v6.4.0
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: '22'
 
       - name: Setup Python (for backend dev-login)
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
