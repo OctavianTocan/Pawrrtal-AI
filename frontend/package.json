@@ -56,8 +56,8 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
-    "@biomejs/biome": "2.5.1",
-    "@browserbasehq/stagehand": "^3.5.0",
+    "@biomejs/biome": "2.5.10",
+    "@browserbasehq/stagehand": "^4.0.2",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@tanstack/react-query-devtools": "^5.101.0",
